@@ -371,6 +371,7 @@ export const useCRM = create<State>()(
       alertas: seed.alertas,
       customFields: [],
       colunasCliente: colunasPadrao,
+      modelosColunas: [],
       nichos: seedNichos,
       statusOptions: seedStatus,
 
@@ -536,6 +537,22 @@ export const useCRM = create<State>()(
             })
             .filter(Boolean) as ColumnConfig[],
         })),
+
+      saveModeloColunas: (nome) =>
+        set((s) => ({
+          modelosColunas: [
+            ...s.modelosColunas,
+            { id: uid(), nome, colunas: s.colunasCliente.map((c) => ({ ...c })), created_at: today() },
+          ],
+        })),
+      applyModeloColunas: (id) =>
+        set((s) => {
+          const m = s.modelosColunas.find((x) => x.id === id);
+          if (!m) return s;
+          return { colunasCliente: m.colunas.map((c) => ({ ...c })) };
+        }),
+      deleteModeloColunas: (id) =>
+        set((s) => ({ modelosColunas: s.modelosColunas.filter((m) => m.id !== id) })),
 
       addCustomField: (f) =>
         set((s) => ({ customFields: [...s.customFields, { ...f, id: uid(), ordem: s.customFields.length }] })),
