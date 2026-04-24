@@ -191,9 +191,8 @@ const colunasPadrao: ColumnConfig[] = [
   { key: "ultimo_comentario", label: "Últimos Comentários", tipo: "texto", ordem: 2, oculta: false, fixada: false, largura: 280 },
   { key: "nicho", label: "Nicho", tipo: "dropdown", ordem: 3, oculta: false, fixada: false, largura: 160, opcoes: seedNichos },
   { key: "status_cliente", label: "Status Cliente", tipo: "status", ordem: 4, oculta: false, fixada: false, largura: 180, fixa: true, opcoes: seedStatus },
-  { key: "data_inicio_contrato", label: "Data Início", tipo: "data", ordem: 5, oculta: false, fixada: false, largura: 140 },
-  { key: "data_fim_contrato", label: "Data Fim", tipo: "data", ordem: 6, oculta: false, fixada: false, largura: 140 },
-  { key: "observacoes", label: "Observações", tipo: "texto", ordem: 7, oculta: false, fixada: false, largura: 240 },
+  { key: "periodo_contrato", label: "Período do Contrato", tipo: "texto", ordem: 5, oculta: false, fixada: false, largura: 180, fixa: true },
+  { key: "observacoes", label: "Observações", tipo: "texto", ordem: 6, oculta: false, fixada: false, largura: 240 },
 ];
 
 // gera 12 cards + 12 posts para um cliente

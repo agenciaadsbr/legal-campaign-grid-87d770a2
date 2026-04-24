@@ -247,6 +247,23 @@ function CelulaValor({ col, cliente }: { col: ColumnConfig; cliente: any }) {
   const { responsaveis, nichos, statusOptions } = useCRM();
   const valor = cliente[col.key] ?? cliente.custom?.[col.key];
 
+  if (col.key === "periodo_contrato") {
+    const ini = cliente.data_inicio_contrato;
+    const fim = cliente.data_fim_contrato;
+    return (
+      <div className="flex flex-col gap-0.5 text-sm leading-tight">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground w-8">Início</span>
+          <span>{ini ? new Date(ini).toLocaleDateString("pt-BR") : "—"}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground w-8">Fim</span>
+          <span>{fim ? new Date(fim).toLocaleDateString("pt-BR") : "—"}</span>
+        </div>
+      </div>
+    );
+  }
+
   switch (col.tipo) {
     case "responsaveis": {
       const ids: string[] = valor ?? [];
