@@ -164,6 +164,39 @@ const addMonths = (date: Date, m: number) => {
   return d;
 };
 
+// resolve qual cliente um comentário pertence (direto ou via post→card)
+function resolveClienteId(
+  com: Comentario | undefined,
+  posts: Post[],
+  cards: Card[]
+): string | undefined {
+  if (!com) return undefined;
+  if (com.cliente_id) return com.cliente_id;
+  if (com.post_id) {
+    const post = posts.find((p) => p.id === com.post_id);
+    const card = post ? cards.find((c) => c.id === post.card_id) : undefined;
+    return card?.cliente_id;
+  }
+  return undefined;
+}
+
+// gera o resumo "ultimo_comentario" do cliente (mais recente entre diretos + de posts)
+function computeUltimoComentario(
+  cliente_id: string,
+  comentarios: Comentario[],
+  posts: Post[],
+  cards: Card[],
+  responsaveis: Responsavel[]
+): string {
+  const relacionados = comentarios.filter((c) => resolveClienteId(c, posts, cards) === cliente_id);
+  if (relacionados.length === 0) return "";
+  const ultimo = relacionados.reduce((a, b) => (a.created_at > b.created_at ? a : b));
+  const autor = responsaveis.find((r) => r.id === ultimo.usuario_id)?.nome ?? "Usuário";
+  const trecho = ultimo.comentario_texto.slice(0, 60);
+  const data = new Date(ultimo.created_at).toLocaleDateString("pt-BR");
+  return `${autor}: ${trecho} — ${data}`;
+}
+
 // ===================== Seeds =====================
 const seedResponsaveis: Responsavel[] = [
   { id: "r1", nome: "Ana Costa", cor: "#6366f1", permissao: "admin", email: "ana@crm.com" },
