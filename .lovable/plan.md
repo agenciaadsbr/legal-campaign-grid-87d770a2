@@ -1,33 +1,26 @@
-## Histórico Interativo de Comentários (estilo ClickUp)
+## Coluna "Posts" automática em Clientes
 
-### 1. Atualizar Store (`src/store/crm.ts`)
-- Adicionar ações:
-  - `updateComentario(id, patch)` — edita texto/anexos de um comentário existente.
-  - `deleteComentario(id)` — remove comentário.
-- Criar helper interno `recomputeUltimoComentario(clienteId)` que recalcula o campo `ultimo_comentario` do cliente com base no comentário mais recente (direto + de posts vinculados). Chamar após add/update/delete.
+### 1. Store (`src/store/crm.ts`)
+- Em `colunasPadrao`, adicionar nova coluna fixa:
+  - `{ key: "posts", label: "Posts", visivel: true, fixa: true }` posicionada após `periodo_contrato` (antes de `ultimo_comentario`).
+- Bumpar versão da persistência Zustand de `crm-juridico-v2` para `crm-juridico-v3` para forçar migração da estrutura de colunas no localStorage existente.
 
-### 2. Novo componente `src/components/HistoricoComentariosDialog.tsx`
-- Props: `clienteId`, `open`, `onOpenChange`.
-- Layout (usando `Dialog` + `ScrollArea`):
-  - Header: "Histórico de Comentários — {nome do cliente}".
-  - Lista cronológica (mais recente no topo) mesclando comentários diretos do cliente e de posts vinculados, com badge indicando origem ("Direto" ou nome do post).
-  - Cada item: avatar/autor, data formatada pt-BR, texto, anexos (se houver), e ações no hover: **Editar** e **Excluir**.
-  - Edição inline: troca o texto por `Textarea`; salvar com botão ou `Ctrl+Enter`; cancelar com `Esc`.
-  - Exclusão: confirmação via `AlertDialog`.
-  - Composer fixo no rodapé: `Textarea` + botão "Adicionar comentário" (cria comentário direto no cliente).
-- Toasts de sucesso via `sonner` para criar/editar/excluir.
+### 2. Renderização (`src/pages/Clientes.tsx`)
+- No `CelulaValor`, tratar `col.key === "posts"`:
+  - Buscar `contrato` do cliente em `state.contratos` (o mais recente/ativo).
+  - Calcular a partir de `state.cards` filtrados pelo `contrato.id`:
+    - `total` = `contrato.total_posts` (referência do contrato).
+    - `postados` = cards com `status === "Postado"`.
+    - `agendados` = cards com `status === "Agendar"`.
+  - UI compacta em duas linhas (igual à imagem):
+    - Linha 1: `{postados}/{total} postados` (fonte tabular, destaque).
+    - Linha 2: `{agendados} agendados` (texto menor, `text-muted-foreground`).
+  - Caso não haja contrato: exibir `—`.
+- Reatividade: como os dados vêm direto do store via `useCRM`, a coluna se atualiza automaticamente sempre que cards mudarem de status no Kanban ou novos posts forem criados.
 
-### 3. Integração na tabela (`src/pages/Clientes.tsx`)
-- No `CelulaValor`, quando `col.key === "ultimo_comentario"`:
-  - Renderizar como `<button>` clicável (estilo link/hover) que abre o `HistoricoComentariosDialog`.
-  - Usar `e.stopPropagation()` para não disparar o clique da linha (que abre o detalhe).
-  - Mostrar preview do último comentário (truncado) ou "Adicionar comentário" se vazio.
-- Estado local na página: `historicoClienteId: string | null` controla qual diálogo está aberto.
-
-### 4. UX
-- Confirmação de exclusão obrigatória.
-- Atalhos: `Ctrl+Enter` envia/salva; `Esc` cancela edição.
-- Lista atualiza reativamente via Zustand após cada ação.
+### 3. UX
+- Tipografia tabular (`tabular-nums`) para alinhamento vertical perfeito dos números.
+- Sem hex hardcoded — apenas tokens (`text-foreground`, `text-muted-foreground`).
 
 ### Resultado
-Clicar em "Últimos Comentários" na tabela abre um modal completo onde o usuário visualiza todo o histórico do cliente, podendo adicionar, editar e excluir comentários sem sair da página.
+Nova coluna "Posts" exibe automaticamente o progresso de cada cliente (postados/total e agendados), atualizando em tempo real conforme o status dos cards muda.
