@@ -139,6 +139,8 @@ interface State {
   updatePost: (id: string, patch: Partial<Post>) => void;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => void;
+  updateComentario: (id: string, patch: Partial<Pick<Comentario, "comentario_texto" | "imagem_url">>) => void;
+  deleteComentario: (id: string) => void;
 
   resolverAlerta: (id: string) => void;
 
