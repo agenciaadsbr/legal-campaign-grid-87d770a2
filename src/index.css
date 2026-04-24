@@ -54,14 +54,14 @@
 
     --radius: 0.625rem;
 
-    /* Sidebar light = azul escuro (identidade) */
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 96%;
+    /* Sidebar light = superfície clara alinhada ao restante */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 40% 12%;
     --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 18%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 20%;
+    --sidebar-accent: 220 30% 94%;
+    --sidebar-accent-foreground: 221 83% 35%;
+    --sidebar-border: 220 20% 90%;
     --sidebar-ring: 221 83% 53%;
   }
 
