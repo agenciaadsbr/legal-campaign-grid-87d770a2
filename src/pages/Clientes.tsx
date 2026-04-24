@@ -424,6 +424,12 @@ export default function Clientes() {
           </table>
         </div>
       </div>
+
+      <HistoricoComentariosDialog
+        clienteId={historicoClienteId}
+        open={!!historicoClienteId}
+        onOpenChange={(v) => !v && setHistoricoClienteId(null)}
+      />
     </div>
   );
 }
