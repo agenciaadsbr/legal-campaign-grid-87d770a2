@@ -468,6 +468,6 @@ export const useCRM = create<State>()(
       addNicho: (n) => set((s) => ({ nichos: [...s.nichos, n] })),
       addStatusOption: (s2) => set((s) => ({ statusOptions: [...s.statusOptions, s2] })),
     }),
-    { name: "crm-juridico-v1" }
+    { name: "crm-juridico-v2" }
   )
 );
