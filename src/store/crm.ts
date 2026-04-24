@@ -113,6 +113,13 @@ export interface DropdownOption {
   cor: string;
 }
 
+export interface ModeloColunas {
+  id: string;
+  nome: string;
+  colunas: ColumnConfig[];
+  created_at: string;
+}
+
 interface State {
   responsaveis: Responsavel[];
   clientes: Cliente[];
@@ -123,6 +130,7 @@ interface State {
   alertas: Alerta[];
   customFields: CustomField[];
   colunasCliente: ColumnConfig[];
+  modelosColunas: ModeloColunas[];
   nichos: DropdownOption[];
   statusOptions: DropdownOption[];
 
@@ -148,6 +156,9 @@ interface State {
   updateColumn: (key: string, patch: Partial<ColumnConfig>) => void;
   deleteColumn: (key: string) => void;
   reorderColumns: (keys: string[]) => void;
+  saveModeloColunas: (nome: string) => void;
+  applyModeloColunas: (id: string) => void;
+  deleteModeloColunas: (id: string) => void;
 
   addCustomField: (f: Omit<CustomField, "id" | "ordem">) => void;
   deleteCustomField: (id: string) => void;
