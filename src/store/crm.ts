@@ -424,12 +424,8 @@ export const useCRM = create<State>()(
 
       addComentario: (c) => {
         const com: Comentario = { ...c, id: uid(), created_at: today() };
-        const { responsaveis } = get();
-        const autor = responsaveis.find((r) => r.id === c.usuario_id)?.nome ?? "Usuário";
-        const trecho = c.comentario_texto.slice(0, 60);
-        const data = new Date().toLocaleDateString("pt-BR");
-        const resumo = `${autor}: ${trecho} — ${data}`;
         set((s) => {
+          const comentarios = [...s.comentarios, com];
           let cliente_id = c.cliente_id;
           if (!cliente_id && c.post_id) {
             const post = s.posts.find((p) => p.id === c.post_id);
@@ -437,11 +433,45 @@ export const useCRM = create<State>()(
             cliente_id = card?.cliente_id;
           }
           const clientes = cliente_id
-            ? s.clientes.map((cl) => (cl.id === cliente_id ? { ...cl, ultimo_comentario: resumo } : cl))
+            ? s.clientes.map((cl) =>
+                cl.id === cliente_id
+                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id!, comentarios, s.posts, s.cards, s.responsaveis) }
+                  : cl
+              )
             : s.clientes;
-          return { comentarios: [...s.comentarios, com], clientes };
+          return { comentarios, clientes };
         });
       },
+
+      updateComentario: (id, patch) =>
+        set((s) => {
+          const comentarios = s.comentarios.map((c) => (c.id === id ? { ...c, ...patch } : c));
+          const alvo = s.comentarios.find((c) => c.id === id);
+          const cliente_id = resolveClienteId(alvo, s.posts, s.cards);
+          const clientes = cliente_id
+            ? s.clientes.map((cl) =>
+                cl.id === cliente_id
+                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id, comentarios, s.posts, s.cards, s.responsaveis) }
+                  : cl
+              )
+            : s.clientes;
+          return { comentarios, clientes };
+        }),
+
+      deleteComentario: (id) =>
+        set((s) => {
+          const alvo = s.comentarios.find((c) => c.id === id);
+          const comentarios = s.comentarios.filter((c) => c.id !== id);
+          const cliente_id = resolveClienteId(alvo, s.posts, s.cards);
+          const clientes = cliente_id
+            ? s.clientes.map((cl) =>
+                cl.id === cliente_id
+                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id, comentarios, s.posts, s.cards, s.responsaveis) }
+                  : cl
+              )
+            : s.clientes;
+          return { comentarios, clientes };
+        }),
 
       resolverAlerta: (id) =>
         set((s) => ({ alertas: s.alertas.map((a) => (a.id === id ? { ...a, status: "Resolvido" } : a)) })),
