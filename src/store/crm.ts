@@ -163,8 +163,12 @@ interface State {
   addCustomField: (f: Omit<CustomField, "id" | "ordem">) => void;
   deleteCustomField: (id: string) => void;
 
-  addNicho: (n: DropdownOption) => void;
-  addStatusOption: (s: DropdownOption) => void;
+  addNicho: (n: DropdownOption) => boolean;
+  updateNicho: (oldLabel: string, patch: Partial<DropdownOption>) => number;
+  deleteNicho: (label: string) => number;
+  addStatusOption: (s: DropdownOption) => boolean;
+  updateStatusOption: (oldLabel: string, patch: Partial<DropdownOption>) => number;
+  deleteStatusOption: (label: string) => number;
 }
 
 const uid = () => crypto.randomUUID();
@@ -559,8 +563,94 @@ export const useCRM = create<State>()(
       deleteCustomField: (id) =>
         set((s) => ({ customFields: s.customFields.filter((f) => f.id !== id) })),
 
-      addNicho: (n) => set((s) => ({ nichos: [...s.nichos, n] })),
-      addStatusOption: (s2) => set((s) => ({ statusOptions: [...s.statusOptions, s2] })),
+      addNicho: (n) => {
+        const label = n.label.trim();
+        if (!label) return false;
+        const { nichos } = get();
+        if (nichos.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
+        set((s) => ({ nichos: [...s.nichos, { ...n, label }] }));
+        return true;
+      },
+      updateNicho: (oldLabel, patch) => {
+        const { nichos, clientes } = get();
+        const novoLabel = patch.label?.trim();
+        if (novoLabel !== undefined && !novoLabel) return -1;
+        if (
+          novoLabel &&
+          novoLabel.toLowerCase() !== oldLabel.toLowerCase() &&
+          nichos.some((x) => x.label.toLowerCase() === novoLabel.toLowerCase())
+        ) {
+          return -1;
+        }
+        const afetados = novoLabel && novoLabel !== oldLabel
+          ? clientes.filter((c) => c.nicho === oldLabel).length
+          : 0;
+        set((s) => ({
+          nichos: s.nichos.map((n) =>
+            n.label === oldLabel ? { ...n, ...patch, label: novoLabel ?? n.label } : n
+          ),
+          clientes: novoLabel && novoLabel !== oldLabel
+            ? s.clientes.map((c) => (c.nicho === oldLabel ? { ...c, nicho: novoLabel } : c))
+            : s.clientes,
+        }));
+        return afetados;
+      },
+      deleteNicho: (label) => {
+        const { clientes } = get();
+        const afetados = clientes.filter((c) => c.nicho === label).length;
+        set((s) => ({
+          nichos: s.nichos.filter((n) => n.label !== label),
+          clientes: s.clientes.map((c) => (c.nicho === label ? { ...c, nicho: "" } : c)),
+        }));
+        return afetados;
+      },
+
+      addStatusOption: (opt) => {
+        const label = opt.label.trim();
+        if (!label) return false;
+        const { statusOptions } = get();
+        if (statusOptions.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
+        set((s) => ({ statusOptions: [...s.statusOptions, { ...opt, label }] }));
+        return true;
+      },
+      updateStatusOption: (oldLabel, patch) => {
+        const { statusOptions, clientes } = get();
+        const novoLabel = patch.label?.trim();
+        if (novoLabel !== undefined && !novoLabel) return -1;
+        if (
+          novoLabel &&
+          novoLabel.toLowerCase() !== oldLabel.toLowerCase() &&
+          statusOptions.some((x) => x.label.toLowerCase() === novoLabel.toLowerCase())
+        ) {
+          return -1;
+        }
+        const afetados = novoLabel && novoLabel !== oldLabel
+          ? clientes.filter((c) => c.status_cliente === oldLabel).length
+          : 0;
+        set((s) => ({
+          statusOptions: s.statusOptions.map((o) =>
+            o.label === oldLabel ? { ...o, ...patch, label: novoLabel ?? o.label } : o
+          ),
+          clientes: novoLabel && novoLabel !== oldLabel
+            ? s.clientes.map((c) =>
+                c.status_cliente === oldLabel ? { ...c, status_cliente: novoLabel as StatusCliente } : c
+              )
+            : s.clientes,
+        }));
+        return afetados;
+      },
+      deleteStatusOption: (label) => {
+        const { clientes, statusOptions } = get();
+        const afetados = clientes.filter((c) => c.status_cliente === label).length;
+        const fallback = statusOptions.find((s) => s.label !== label)?.label ?? "Pausado";
+        set((s) => ({
+          statusOptions: s.statusOptions.filter((o) => o.label !== label),
+          clientes: s.clientes.map((c) =>
+            c.status_cliente === label ? { ...c, status_cliente: fallback as StatusCliente } : c
+          ),
+        }));
+        return afetados;
+      },
     }),
     { name: "crm-juridico-v3" }
   )
