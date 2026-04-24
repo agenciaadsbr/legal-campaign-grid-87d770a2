@@ -2,7 +2,7 @@ import { useCRM, ColumnConfig, DropdownOption } from "@/store/crm";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff } from "lucide-react";
+import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AvatarStack } from "@/components/AvatarStack";
 import { ColorBadge } from "@/components/StatusBadge";
@@ -17,6 +17,23 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { HistoricoComentariosDialog } from "@/components/HistoricoComentariosDialog";
 import { MessageSquare, MessageSquarePlus } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const { responsaveis, addResponsavel } = useCRM();
@@ -160,18 +177,105 @@ function NovoClienteDialog() {
   );
 }
 
+function SortableColunaRow({
+  c,
+  onUpdate,
+  onDelete,
+}: {
+  c: ColumnConfig;
+  onUpdate: (patch: Partial<ColumnConfig>) => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: c.key });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 p-2 rounded-md border bg-card",
+        isDragging && "ring-2 ring-primary shadow-lg",
+      )}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+        aria-label="Arrastar coluna"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <Input
+        value={c.label}
+        onChange={(e) => onUpdate({ label: e.target.value })}
+        className="h-8 text-sm flex-1"
+      />
+      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onUpdate({ oculta: !c.oculta })} title={c.oculta ? "Mostrar" : "Ocultar"}>
+        {c.oculta ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </Button>
+      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onUpdate({ fixada: !c.fixada })}>
+        {c.fixada ? <Pin className="h-3.5 w-3.5 text-primary" /> : <PinOff className="h-3.5 w-3.5" />}
+      </Button>
+      {!c.fixa && (
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function GerenciarColunas() {
-  const { colunasCliente, updateColumn, deleteColumn, addColumn, reorderColumns } = useCRM();
+  const {
+    colunasCliente,
+    updateColumn,
+    deleteColumn,
+    addColumn,
+    reorderColumns,
+    modelosColunas,
+    saveModeloColunas,
+    applyModeloColunas,
+    deleteModeloColunas,
+  } = useCRM();
   const [open, setOpen] = useState(false);
   const [novoNome, setNovoNome] = useState("");
   const [novoTipo, setNovoTipo] = useState<ColumnConfig["tipo"]>("texto");
+  const [nomeModelo, setNomeModelo] = useState("");
 
-  const move = (idx: number, dir: -1 | 1) => {
-    const sorted = [...colunasCliente].sort((a, b) => a.ordem - b.ordem);
-    const target = idx + dir;
-    if (target < 0 || target >= sorted.length) return;
-    [sorted[idx], sorted[target]] = [sorted[target], sorted[idx]];
-    reorderColumns(sorted.map((c) => c.key));
+  const sorted = useMemo(
+    () => [...colunasCliente].sort((a, b) => a.ordem - b.ordem),
+    [colunasCliente],
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sorted.findIndex((c) => c.key === active.id);
+    const newIndex = sorted.findIndex((c) => c.key === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const next = arrayMove(sorted, oldIndex, newIndex);
+    reorderColumns(next.map((c) => c.key));
+  };
+
+  const onSalvarModelo = () => {
+    const nome = nomeModelo.trim();
+    if (!nome) {
+      toast.error("Informe um nome para o modelo");
+      return;
+    }
+    saveModeloColunas(nome);
+    setNomeModelo("");
+    toast.success(`Modelo "${nome}" salvo`);
   };
 
   return (
@@ -181,31 +285,76 @@ function GerenciarColunas() {
           <Settings2 className="h-4 w-4" /> Colunas
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-96">
+      <SheetContent className="w-96 overflow-y-auto">
         <SheetHeader><SheetTitle>Gerenciar Colunas</SheetTitle></SheetHeader>
-        <div className="mt-4 space-y-2">
-          {[...colunasCliente].sort((a, b) => a.ordem - b.ordem).map((c, idx) => (
-            <div key={c.key} className="flex items-center gap-2 p-2 rounded-md border bg-card">
-              <button onClick={() => move(idx, -1)} className="text-muted-foreground hover:text-foreground"><GripVertical className="h-4 w-4" /></button>
-              <Input
-                value={c.label}
-                onChange={(e) => updateColumn(c.key, { label: e.target.value })}
-                className="h-8 text-sm flex-1"
-              />
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateColumn(c.key, { oculta: !c.oculta })} title={c.oculta ? "Mostrar" : "Ocultar"}>
-                {c.oculta ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              </Button>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateColumn(c.key, { fixada: !c.fixada })}>
-                {c.fixada ? <Pin className="h-3.5 w-3.5 text-primary" /> : <PinOff className="h-3.5 w-3.5" />}
-              </Button>
-              {!c.fixa && (
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteColumn(c.key)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-          ))}
+
+        <div className="mt-4">
+          <div className="text-xs text-muted-foreground mb-2">Arraste pelo ícone <GripVertical className="h-3 w-3 inline" /> para reordenar</div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={sorted.map((c) => c.key)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {sorted.map((c) => (
+                  <SortableColunaRow
+                    key={c.key}
+                    c={c}
+                    onUpdate={(patch) => updateColumn(c.key, patch)}
+                    onDelete={() => deleteColumn(c.key)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
+
+        <div className="mt-6 border-t pt-4 space-y-2">
+          <div className="text-sm font-medium flex items-center gap-1.5"><BookmarkCheck className="h-4 w-4" /> Modelos salvos</div>
+          {modelosColunas.length === 0 ? (
+            <div className="text-xs text-muted-foreground">Nenhum modelo salvo ainda.</div>
+          ) : (
+            <div className="space-y-1.5">
+              {modelosColunas.map((m) => (
+                <div key={m.id} className="flex items-center gap-2 p-2 rounded-md border bg-card">
+                  <span className="text-sm flex-1 truncate">{m.nome}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      applyModeloColunas(m.id);
+                      toast.success(`Modelo "${m.nome}" aplicado`);
+                    }}
+                  >
+                    Aplicar
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-destructive"
+                    onClick={() => {
+                      deleteModeloColunas(m.id);
+                      toast.success("Modelo removido");
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <Input
+              placeholder="Nome do modelo"
+              value={nomeModelo}
+              onChange={(e) => setNomeModelo(e.target.value)}
+              className="h-9 text-sm"
+              onKeyDown={(e) => e.key === "Enter" && onSalvarModelo()}
+            />
+            <Button size="sm" onClick={onSalvarModelo} className="gap-1.5">
+              <Save className="h-3.5 w-3.5" /> Salvar
+            </Button>
+          </div>
+        </div>
+
         <div className="mt-6 border-t pt-4 space-y-2">
           <div className="text-sm font-medium">Adicionar coluna</div>
           <Input placeholder="Nome da coluna" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} className="h-9" />
