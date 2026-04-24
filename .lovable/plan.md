@@ -1,26 +1,32 @@
-## Coluna "Posts" automática em Clientes
+# Edição e remoção de Nichos e Status do Cliente
 
-### 1. Store (`src/store/crm.ts`)
-- Em `colunasPadrao`, adicionar nova coluna fixa:
-  - `{ key: "posts", label: "Posts", visivel: true, fixa: true }` posicionada após `periodo_contrato` (antes de `ultimo_comentario`).
-- Bumpar versão da persistência Zustand de `crm-juridico-v2` para `crm-juridico-v3` para forçar migração da estrutura de colunas no localStorage existente.
+## 1. Store (`src/store/crm.ts`)
 
-### 2. Renderização (`src/pages/Clientes.tsx`)
-- No `CelulaValor`, tratar `col.key === "posts"`:
-  - Buscar `contrato` do cliente em `state.contratos` (o mais recente/ativo).
-  - Calcular a partir de `state.cards` filtrados pelo `contrato.id`:
-    - `total` = `contrato.total_posts` (referência do contrato).
-    - `postados` = cards com `status === "Postado"`.
-    - `agendados` = cards com `status === "Agendar"`.
-  - UI compacta em duas linhas (igual à imagem):
-    - Linha 1: `{postados}/{total} postados` (fonte tabular, destaque).
-    - Linha 2: `{agendados} agendados` (texto menor, `text-muted-foreground`).
-  - Caso não haja contrato: exibir `—`.
-- Reatividade: como os dados vêm direto do store via `useCRM`, a coluna se atualiza automaticamente sempre que cards mudarem de status no Kanban ou novos posts forem criados.
+Adicionar à interface `State` e implementar as ações:
 
-### 3. UX
-- Tipografia tabular (`tabular-nums`) para alinhamento vertical perfeito dos números.
-- Sem hex hardcoded — apenas tokens (`text-foreground`, `text-muted-foreground`).
+- `updateNicho(oldLabel, patch)` → renomeia/recolore. Se label mudou, atualiza `clientes[].nicho` correspondentes. Retorna nº de clientes afetados.
+- `deleteNicho(label)` → remove da lista; limpa `clientes[].nicho` em quem usava. Retorna nº de clientes afetados.
+- `updateStatusOption(oldLabel, patch)` → idem para `statusOptions`, atualiza `clientes[].status_cliente`.
+- `deleteStatusOption(label)` → remove e limpa `clientes[].status_cliente` (vira string vazia / "Pausado" como fallback seguro). Retorna nº afetados.
 
-### Resultado
-Nova coluna "Posts" exibe automaticamente o progresso de cada cliente (postados/total e agendados), atualizando em tempo real conforme o status dos cards muda.
+Validações dentro das ações: ignorar label vazio; não permitir duplicados (retorna -1 como sinal).
+
+## 2. UI (`src/pages/Configuracoes.tsx`)
+
+Criar componente reutilizável `OpcoesEditor` usado pelos cards de **Nichos** e **Status do Cliente**:
+
+- Renderiza cada opção como linha com:
+  - Swatch de cor (input `type="color"` quando em edição)
+  - Input de label
+  - Botões: **Editar** (lápis) → entra em modo edição inline; **Salvar** (check) e **Cancelar** (X) durante edição; **Excluir** (lixeira) com `AlertDialog` de confirmação informando quantos clientes serão afetados.
+- Atalhos: `Enter` salva, `Esc` cancela.
+- Toasts via `sonner` em todas as ações ("Nicho atualizado", "Status removido — N clientes afetados", erro de duplicado, etc.).
+- Mantém o formulário "Adicionar novo" existente abaixo da lista.
+
+## 3. Detalhes de UX
+
+- Cores em edição via `<input type="color">` pequeno ao lado do label.
+- Itens fixos não existem aqui (todos editáveis), mas avisar antes de excluir status que está em uso.
+- Lista usa estilo já presente (badge com swatch + cor de fundo translúcida).
+
+Após aprovação, implemento store + refator do `Configuracoes.tsx`.
