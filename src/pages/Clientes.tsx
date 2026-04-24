@@ -246,8 +246,25 @@ function GerenciarColunas() {
 }
 
 function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cliente: any; onAbrirHistorico?: (id: string) => void }) {
-  const { responsaveis, nichos, statusOptions } = useCRM();
+  const { responsaveis, nichos, statusOptions, contratos, cards } = useCRM();
   const valor = cliente[col.key] ?? cliente.custom?.[col.key];
+
+  if (col.key === "posts") {
+    const contrato = contratos.find((c) => c.cliente_id === cliente.id);
+    const cardsCliente = cards.filter((c) => c.cliente_id === cliente.id);
+    if (!contrato && cardsCliente.length === 0) {
+      return <span className="text-muted-foreground text-xs">—</span>;
+    }
+    const total = contrato?.total_posts ?? cardsCliente.length;
+    const postados = cardsCliente.filter((c) => c.status_card === "Postado").length;
+    const agendados = cardsCliente.filter((c) => c.status_card === "Agendar").length;
+    return (
+      <div className="flex flex-col leading-tight tabular-nums">
+        <span className="text-sm font-medium">{postados}/{total} postados</span>
+        <span className="text-xs text-muted-foreground">{agendados} agendados</span>
+      </div>
+    );
+  }
 
   if (col.key === "periodo_contrato") {
     const ini = cliente.data_inicio_contrato;
