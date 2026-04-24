@@ -113,6 +113,13 @@ export interface DropdownOption {
   cor: string;
 }
 
+export interface ModeloColunas {
+  id: string;
+  nome: string;
+  colunas: ColumnConfig[];
+  created_at: string;
+}
+
 interface State {
   responsaveis: Responsavel[];
   clientes: Cliente[];
@@ -123,6 +130,7 @@ interface State {
   alertas: Alerta[];
   customFields: CustomField[];
   colunasCliente: ColumnConfig[];
+  modelosColunas: ModeloColunas[];
   nichos: DropdownOption[];
   statusOptions: DropdownOption[];
 
@@ -148,6 +156,9 @@ interface State {
   updateColumn: (key: string, patch: Partial<ColumnConfig>) => void;
   deleteColumn: (key: string) => void;
   reorderColumns: (keys: string[]) => void;
+  saveModeloColunas: (nome: string) => void;
+  applyModeloColunas: (id: string) => void;
+  deleteModeloColunas: (id: string) => void;
 
   addCustomField: (f: Omit<CustomField, "id" | "ordem">) => void;
   deleteCustomField: (id: string) => void;
@@ -360,6 +371,7 @@ export const useCRM = create<State>()(
       alertas: seed.alertas,
       customFields: [],
       colunasCliente: colunasPadrao,
+      modelosColunas: [],
       nichos: seedNichos,
       statusOptions: seedStatus,
 
@@ -525,6 +537,22 @@ export const useCRM = create<State>()(
             })
             .filter(Boolean) as ColumnConfig[],
         })),
+
+      saveModeloColunas: (nome) =>
+        set((s) => ({
+          modelosColunas: [
+            ...s.modelosColunas,
+            { id: uid(), nome, colunas: s.colunasCliente.map((c) => ({ ...c })), created_at: today() },
+          ],
+        })),
+      applyModeloColunas: (id) =>
+        set((s) => {
+          const m = s.modelosColunas.find((x) => x.id === id);
+          if (!m) return s;
+          return { colunasCliente: m.colunas.map((c) => ({ ...c })) };
+        }),
+      deleteModeloColunas: (id) =>
+        set((s) => ({ modelosColunas: s.modelosColunas.filter((m) => m.id !== id) })),
 
       addCustomField: (f) =>
         set((s) => ({ customFields: [...s.customFields, { ...f, id: uid(), ordem: s.customFields.length }] })),
