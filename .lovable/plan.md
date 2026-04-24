@@ -1,25 +1,33 @@
-## Unificar Colunas de Data na Tabela de Clientes
+## Histórico Interativo de Comentários (estilo ClickUp)
 
-### Objetivo
-Substituir as colunas separadas "Data Início" e "Data Fim" por uma única coluna "Período do Contrato", onde as duas datas serão exibidas verticalmente (uma acima da outra) dentro da mesma célula da tabela.
+### 1. Atualizar Store (`src/store/crm.ts`)
+- Adicionar ações:
+  - `updateComentario(id, patch)` — edita texto/anexos de um comentário existente.
+  - `deleteComentario(id)` — remove comentário.
+- Criar helper interno `recomputeUltimoComentario(clienteId)` que recalcula o campo `ultimo_comentario` do cliente com base no comentário mais recente (direto + de posts vinculados). Chamar após add/update/delete.
 
-### Arquivos a Modificar
+### 2. Novo componente `src/components/HistoricoComentariosDialog.tsx`
+- Props: `clienteId`, `open`, `onOpenChange`.
+- Layout (usando `Dialog` + `ScrollArea`):
+  - Header: "Histórico de Comentários — {nome do cliente}".
+  - Lista cronológica (mais recente no topo) mesclando comentários diretos do cliente e de posts vinculados, com badge indicando origem ("Direto" ou nome do post).
+  - Cada item: avatar/autor, data formatada pt-BR, texto, anexos (se houver), e ações no hover: **Editar** e **Excluir**.
+  - Edição inline: troca o texto por `Textarea`; salvar com botão ou `Ctrl+Enter`; cancelar com `Esc`.
+  - Exclusão: confirmação via `AlertDialog`.
+  - Composer fixo no rodapé: `Textarea` + botão "Adicionar comentário" (cria comentário direto no cliente).
+- Toasts de sucesso via `sonner` para criar/editar/excluir.
 
-1.  **`src/store/crm.ts`** (Linha 188+): Atualizar o array `colunasPadrao`.
-    *   **Remover** as colunas `data_inicio_contrato` (tipo: data) e `data_fim_contrato` (tipo: data).
-    *   **Adicionar** uma nova coluna `periodo_contrato` (tipo: texto, fixa: true, largura: 160) com o label "Período do Contrato".
+### 3. Integração na tabela (`src/pages/Clientes.tsx`)
+- No `CelulaValor`, quando `col.key === "ultimo_comentario"`:
+  - Renderizar como `<button>` clicável (estilo link/hover) que abre o `HistoricoComentariosDialog`.
+  - Usar `e.stopPropagation()` para não disparar o clique da linha (que abre o detalhe).
+  - Mostrar preview do último comentário (truncado) ou "Adicionar comentário" se vazio.
+- Estado local na página: `historicoClienteId: string | null` controla qual diálogo está aberto.
 
-2.  **`src/pages/Clientes.tsx`** (Linha 246+): Atualizar o componente `CelulaValor`.
-    *   **Adicionar** um caso específico para quando `col.key === "periodo_contrato"`.
-    *   Neste caso, renderizar um container `div` com layout `flex-col` (flex-direction: column).
-    *   Exibir `cliente.data_inicio_contrato` com um label "Início" em fonte menor/muted.
-    *   Exibir `cliente.data_fim_contrato` com um label "Fim" em fonte menor/muted, abaixo da data de início.
-    *   Garantir que ambas as datas sejam formatadas para o padrão local (pt-BR) usando `toLocaleDateString`.
+### 4. UX
+- Confirmação de exclusão obrigatória.
+- Atalhos: `Ctrl+Enter` envia/salva; `Esc` cancela edição.
+- Lista atualiza reativamente via Zustand após cada ação.
 
-### Resultado Esperado
-Na tabela de clientes, as colunas individuais de Data Início e Data Fim desaparecerão. Surgirá uma coluna única "Período do Contrato". Cada linha nesta coluna mostrará:
-```
-Início: 01/04/2026
-Fim:    01/07/2026
-```
-Isso economiza espaço horizontal na tabela e melhora a experiência do usuário ao visualizar o vínculo temporal do contrato de forma compacta.
+### Resultado
+Clicar em "Últimos Comentários" na tabela abre um modal completo onde o usuário visualiza todo o histórico do cliente, podendo adicionar, editar e excluir comentários sem sair da página.

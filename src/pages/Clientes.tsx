@@ -15,6 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { HistoricoComentariosDialog } from "@/components/HistoricoComentariosDialog";
+import { MessageSquare, MessageSquarePlus } from "lucide-react";
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const { responsaveis, addResponsavel } = useCRM();
@@ -243,7 +245,7 @@ function GerenciarColunas() {
   );
 }
 
-function CelulaValor({ col, cliente }: { col: ColumnConfig; cliente: any }) {
+function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cliente: any; onAbrirHistorico?: (id: string) => void }) {
   const { responsaveis, nichos, statusOptions } = useCRM();
   const valor = cliente[col.key] ?? cliente.custom?.[col.key];
 
@@ -261,6 +263,30 @@ function CelulaValor({ col, cliente }: { col: ColumnConfig; cliente: any }) {
           <span>{fim ? new Date(fim).toLocaleDateString("pt-BR") : "—"}</span>
         </div>
       </div>
+    );
+  }
+
+  if (col.key === "ultimo_comentario") {
+    const tem = !!valor;
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onAbrirHistorico?.(cliente.id); }}
+        className={cn(
+          "w-full text-left flex items-center gap-2 px-2 py-1 -mx-2 -my-1 rounded hover:bg-accent group transition-colors",
+          !tem && "text-muted-foreground"
+        )}
+        title="Abrir histórico de comentários"
+      >
+        {tem ? (
+          <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-primary" />
+        ) : (
+          <MessageSquarePlus className="h-3.5 w-3.5 shrink-0 group-hover:text-primary" />
+        )}
+        <span className="text-sm truncate flex-1">
+          {tem ? valor : "Adicionar comentário"}
+        </span>
+      </button>
     );
   }
 
@@ -290,6 +316,7 @@ export default function Clientes() {
   const { clientes, colunasCliente, statusOptions } = useCRM();
   const [busca, setBusca] = useState("");
   const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
+  const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
 
   const colunasVisiveis = useMemo(
     () => [...colunasCliente].filter((c) => !c.oculta).sort((a, b) => a.ordem - b.ordem),
@@ -381,7 +408,7 @@ export default function Clientes() {
                                 {cliente.nome_cliente}
                               </Link>
                             ) : (
-                              <CelulaValor col={col} cliente={cliente} />
+                              <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />
                             )}
                           </td>
                         ))}
@@ -397,6 +424,12 @@ export default function Clientes() {
           </table>
         </div>
       </div>
+
+      <HistoricoComentariosDialog
+        clienteId={historicoClienteId}
+        open={!!historicoClienteId}
+        onOpenChange={(v) => !v && setHistoricoClienteId(null)}
+      />
     </div>
   );
 }

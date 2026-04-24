@@ -139,6 +139,8 @@ interface State {
   updatePost: (id: string, patch: Partial<Post>) => void;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => void;
+  updateComentario: (id: string, patch: Partial<Pick<Comentario, "comentario_texto" | "imagem_url">>) => void;
+  deleteComentario: (id: string) => void;
 
   resolverAlerta: (id: string) => void;
 
@@ -161,6 +163,39 @@ const addMonths = (date: Date, m: number) => {
   d.setMonth(d.getMonth() + m);
   return d;
 };
+
+// resolve qual cliente um comentário pertence (direto ou via post→card)
+function resolveClienteId(
+  com: Comentario | undefined,
+  posts: Post[],
+  cards: Card[]
+): string | undefined {
+  if (!com) return undefined;
+  if (com.cliente_id) return com.cliente_id;
+  if (com.post_id) {
+    const post = posts.find((p) => p.id === com.post_id);
+    const card = post ? cards.find((c) => c.id === post.card_id) : undefined;
+    return card?.cliente_id;
+  }
+  return undefined;
+}
+
+// gera o resumo "ultimo_comentario" do cliente (mais recente entre diretos + de posts)
+function computeUltimoComentario(
+  cliente_id: string,
+  comentarios: Comentario[],
+  posts: Post[],
+  cards: Card[],
+  responsaveis: Responsavel[]
+): string {
+  const relacionados = comentarios.filter((c) => resolveClienteId(c, posts, cards) === cliente_id);
+  if (relacionados.length === 0) return "";
+  const ultimo = relacionados.reduce((a, b) => (a.created_at > b.created_at ? a : b));
+  const autor = responsaveis.find((r) => r.id === ultimo.usuario_id)?.nome ?? "Usuário";
+  const trecho = ultimo.comentario_texto.slice(0, 60);
+  const data = new Date(ultimo.created_at).toLocaleDateString("pt-BR");
+  return `${autor}: ${trecho} — ${data}`;
+}
 
 // ===================== Seeds =====================
 const seedResponsaveis: Responsavel[] = [
@@ -422,12 +457,8 @@ export const useCRM = create<State>()(
 
       addComentario: (c) => {
         const com: Comentario = { ...c, id: uid(), created_at: today() };
-        const { responsaveis } = get();
-        const autor = responsaveis.find((r) => r.id === c.usuario_id)?.nome ?? "Usuário";
-        const trecho = c.comentario_texto.slice(0, 60);
-        const data = new Date().toLocaleDateString("pt-BR");
-        const resumo = `${autor}: ${trecho} — ${data}`;
         set((s) => {
+          const comentarios = [...s.comentarios, com];
           let cliente_id = c.cliente_id;
           if (!cliente_id && c.post_id) {
             const post = s.posts.find((p) => p.id === c.post_id);
@@ -435,11 +466,45 @@ export const useCRM = create<State>()(
             cliente_id = card?.cliente_id;
           }
           const clientes = cliente_id
-            ? s.clientes.map((cl) => (cl.id === cliente_id ? { ...cl, ultimo_comentario: resumo } : cl))
+            ? s.clientes.map((cl) =>
+                cl.id === cliente_id
+                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id!, comentarios, s.posts, s.cards, s.responsaveis) }
+                  : cl
+              )
             : s.clientes;
-          return { comentarios: [...s.comentarios, com], clientes };
+          return { comentarios, clientes };
         });
       },
+
+      updateComentario: (id, patch) =>
+        set((s) => {
+          const comentarios = s.comentarios.map((c) => (c.id === id ? { ...c, ...patch } : c));
+          const alvo = s.comentarios.find((c) => c.id === id);
+          const cliente_id = resolveClienteId(alvo, s.posts, s.cards);
+          const clientes = cliente_id
+            ? s.clientes.map((cl) =>
+                cl.id === cliente_id
+                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id, comentarios, s.posts, s.cards, s.responsaveis) }
+                  : cl
+              )
+            : s.clientes;
+          return { comentarios, clientes };
+        }),
+
+      deleteComentario: (id) =>
+        set((s) => {
+          const alvo = s.comentarios.find((c) => c.id === id);
+          const comentarios = s.comentarios.filter((c) => c.id !== id);
+          const cliente_id = resolveClienteId(alvo, s.posts, s.cards);
+          const clientes = cliente_id
+            ? s.clientes.map((cl) =>
+                cl.id === cliente_id
+                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id, comentarios, s.posts, s.cards, s.responsaveis) }
+                  : cl
+              )
+            : s.clientes;
+          return { comentarios, clientes };
+        }),
 
       resolverAlerta: (id) =>
         set((s) => ({ alertas: s.alertas.map((a) => (a.id === id ? { ...a, status: "Resolvido" } : a)) })),
