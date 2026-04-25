@@ -2,7 +2,17 @@ import { useCRM, ColumnConfig, DropdownOption } from "@/store/crm";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X, Settings, Zap, AlertCircle, Clock, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X, Settings, Zap, AlertCircle, Clock, ChevronsUpDown, Pencil } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Link } from "react-router-dom";
 import { AvatarStack } from "@/components/AvatarStack";
@@ -210,6 +220,200 @@ function NovoClienteDialog() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EditarClienteDialog({
+  cliente,
+  open,
+  onOpenChange,
+}: {
+  cliente: any;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { updateCliente, nichos, statusOptions } = useCRM();
+  const calcMeses = (ini?: string, fim?: string) => {
+    if (!ini || !fim) return 3;
+    const a = new Date(ini);
+    const b = new Date(fim);
+    const m = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+    return Math.max(1, m);
+  };
+  const calcFim = (inicioISO: string, meses: number) => {
+    const d = new Date(inicioISO);
+    d.setMonth(d.getMonth() + meses);
+    return d.toISOString().slice(0, 10);
+  };
+  const [form, setForm] = useState({
+    nome_cliente: cliente?.nome_cliente ?? "",
+    nicho: cliente?.nicho ?? "",
+    status_cliente: cliente?.status_cliente ?? "Ativo",
+    data_inicio_contrato: cliente?.data_inicio_contrato ?? "",
+    duracao_meses: calcMeses(cliente?.data_inicio_contrato, cliente?.data_fim_contrato),
+    data_fim_contrato: cliente?.data_fim_contrato ?? "",
+    responsaveis: cliente?.responsaveis ?? [],
+    observacoes: cliente?.observacoes ?? "",
+  });
+
+  const setInicio = (v: string) =>
+    setForm((f) => ({ ...f, data_inicio_contrato: v, data_fim_contrato: calcFim(v, f.duracao_meses) }));
+  const setMeses = (m: number) =>
+    setForm((f) => ({ ...f, duracao_meses: m, data_fim_contrato: calcFim(f.data_inicio_contrato, m) }));
+
+  const submit = async () => {
+    if (!form.nome_cliente.trim()) {
+      toast.error("Informe o nome do cliente");
+      return;
+    }
+    try {
+      const { duracao_meses, ...patch } = form;
+      await updateCliente(cliente.id, patch);
+      toast.success("Cliente atualizado");
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Editar Cliente</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Nome do Cliente</Label>
+            <Input value={form.nome_cliente} onChange={(e) => setForm({ ...form, nome_cliente: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Nicho</Label>
+              <Select value={form.nicho} onValueChange={(v) => setForm({ ...form, nicho: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {nichos.map((n) => <SelectItem key={n.label} value={n.label}>{n.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={form.status_cliente} onValueChange={(v) => setForm({ ...form, status_cliente: v as any })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Responsáveis</Label>
+            <ResponsaveisPicker value={form.responsaveis} onChange={(v) => setForm({ ...form, responsaveis: v })} />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label>Data Início</Label>
+              <Input type="date" value={form.data_inicio_contrato} onChange={(e) => setInicio(e.target.value)} />
+            </div>
+            <div>
+              <Label>Duração</Label>
+              <Select value={String(form.duracao_meses)} onValueChange={(v) => setMeses(Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 9, 12].map((m) => (
+                    <SelectItem key={m} value={String(m)}>{m} {m === 1 ? "mês" : "meses"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data Fim</Label>
+              <Input type="date" value={form.data_fim_contrato} onChange={(e) => setForm({ ...form, data_fim_contrato: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <Label>Observações</Label>
+            <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={submit}>Salvar Alterações</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AcoesCliente({ cliente }: { cliente: any }) {
+  const { updateCliente, deleteCliente } = useCRM();
+  const { isAdmin, canWrite } = useAuth();
+  const [editOpen, setEditOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+
+  // satisfies linter: updateCliente é usado no dialog filho
+  void updateCliente;
+
+  const handleDelete = async () => {
+    try {
+      await deleteCliente(cliente.id);
+      toast.success("Cliente excluído");
+      setDelOpen(false);
+    } catch (e: any) {
+      toast.error(`Erro ao excluir: ${e?.message ?? "tente novamente"}`);
+    }
+  };
+
+  if (!canWrite && !isAdmin) return null;
+
+  return (
+    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      {canWrite && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          title="Editar cliente"
+          onClick={() => setEditOpen(true)}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {isAdmin && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+          title="Excluir cliente"
+          onClick={() => setDelOpen(true)}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {editOpen && (
+        <EditarClienteDialog cliente={cliente} open={editOpen} onOpenChange={setEditOpen} />
+      )}
+      <AlertDialog open={delOpen} onOpenChange={setDelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{cliente.nome_cliente}</strong>? Todos os
+              cards, posts, contratos e alertas vinculados serão removidos. Esta ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
 
@@ -916,6 +1120,12 @@ export default function Clientes() {
                       {c.label}
                     </th>
                   ))}
+                  <th
+                    className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5 border-b sticky right-0 bg-muted/50 z-20"
+                    style={{ minWidth: 90, width: 90 }}
+                  >
+                    Ações
+                  </th>
                 </tr>
               </thead>
             )}
@@ -938,7 +1148,7 @@ export default function Clientes() {
                   <Fragment2 key={key}>
                     <tr className="bg-muted/60 hover:bg-muted/70 sticky">
                       <td
-                        colSpan={colunasVisiveis.length}
+                        colSpan={colunasVisiveis.length + 1}
                         className={cn("px-2 py-2 border-l-4", !colapsado && "border-b")}
                         style={{ borderLeftColor: cor }}
                       >
@@ -960,7 +1170,7 @@ export default function Clientes() {
                     {!colapsado && items.length === 0 && (
                       <tr>
                         <td
-                          colSpan={colunasVisiveis.length}
+                          colSpan={colunasVisiveis.length + 1}
                           className="px-4 py-3 border-b text-[11px] text-muted-foreground italic"
                         >
                           Nenhum cliente neste status
@@ -998,6 +1208,12 @@ export default function Clientes() {
                               )}
                             </td>
                           ))}
+                          <td
+                            className="px-2 py-1.5 border-b align-middle sticky right-0 bg-card"
+                            style={{ minWidth: 90, width: 90 }}
+                          >
+                            <AcoesCliente cliente={cliente} />
+                          </td>
                         </tr>
                       );
                     })}
@@ -1006,7 +1222,7 @@ export default function Clientes() {
               })}
 
               {filtradosFinal.length === 0 && (
-                <tr><td colSpan={colunasVisiveis.length} className="text-center py-10 text-muted-foreground text-xs">
+                <tr><td colSpan={colunasVisiveis.length + 1} className="text-center py-10 text-muted-foreground text-xs">
                   {apenasPendentes ? "Nenhum cliente com ações pendentes" : "Nenhum cliente encontrado"}
                 </td></tr>
               )}
