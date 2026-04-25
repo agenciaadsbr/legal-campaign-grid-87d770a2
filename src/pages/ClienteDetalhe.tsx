@@ -9,14 +9,28 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Colunas agora vêm dinamicamente de statusPostOptions (Configurações → Status de Posts)
 
 function CardItem({ card }: { card: CardT }) {
-  const { responsaveis, posts } = useCRM();
+  const { responsaveis, posts, updateCard } = useCRM();
+  const { canWrite } = useAuth();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
   const post = posts.find((p) => p.card_id === card.id);
   const resps = responsaveis.filter((r) => card.responsaveis.includes(r.id));
+  const isUrgent = !!card.is_urgent;
+
+  const toggleUrgent = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const next = !isUrgent;
+    updateCard(card.id, { is_urgent: next });
+    toast.success(next ? "Card marcado como urgente" : "Urgência removida");
+  };
+
   return (
     <Link to={post ? `posts/${post.id}` : "#"}>
       <div
@@ -24,13 +38,37 @@ function CardItem({ card }: { card: CardT }) {
         {...attributes}
         {...listeners}
         className={cn(
-          "bg-card border rounded-lg p-3 mb-2 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:shadow-sm transition-all",
+          "group relative bg-card border rounded-lg p-3 mb-2 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:shadow-sm transition-all",
+          isUrgent && "border-l-2 border-l-amber-500",
           isDragging && "opacity-40"
         )}
       >
         <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="text-sm font-medium leading-tight">{card.titulo_card}</div>
-          <StatusBadge status={card.status_card} />
+          <div className="text-sm font-medium leading-tight flex items-center gap-1.5 flex-1">
+            {isUrgent && <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />}
+            <span>{card.titulo_card}</span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {canWrite && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={toggleUrgent}
+                className={cn(
+                  "h-6 w-6 transition-opacity",
+                  isUrgent
+                    ? "text-amber-500 hover:text-amber-600 opacity-100"
+                    : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                )}
+                title={isUrgent ? "Remover urgência" : "Marcar como urgente"}
+              >
+                <Zap className={cn("h-3.5 w-3.5", isUrgent && "fill-current")} />
+              </Button>
+            )}
+            <StatusBadge status={card.status_card} />
+          </div>
         </div>
         <div className="flex items-center justify-between text-[11px] text-muted-foreground">
           <span>Mês {card.mes_referencia} · Sem {card.numero_semana}</span>
