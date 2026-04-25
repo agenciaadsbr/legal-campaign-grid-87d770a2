@@ -492,18 +492,21 @@ export type Database = {
           created_at: string
           id: string
           label: string
+          ordem: number
         }
         Insert: {
           cor?: string
           created_at?: string
           id?: string
           label: string
+          ordem?: number
         }
         Update: {
           cor?: string
           created_at?: string
           id?: string
           label?: string
+          ordem?: number
         }
         Relationships: []
       }
