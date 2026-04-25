@@ -18,7 +18,42 @@ export function StatusBadge({ status, className }: { status: StatusCard; classNa
   );
 }
 
-export function ColorBadge({ label, color, className }: { label: string; color: string; className?: string }) {
+// Calcula se branco ou preto contrasta melhor com a cor de fundo
+function bestTextColor(hex: string): string {
+  const m = hex.replace("#", "");
+  if (m.length !== 6) return "#fff";
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
+  // Luminância relativa simplificada
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.6 ? "#111827" : "#ffffff";
+}
+
+export function ColorBadge({
+  label,
+  color,
+  className,
+  variant = "soft",
+}: {
+  label: string;
+  color: string;
+  className?: string;
+  variant?: "soft" | "filled";
+}) {
+  if (variant === "filled") {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wide uppercase",
+          className,
+        )}
+        style={{ backgroundColor: color, color: bestTextColor(color) }}
+      >
+        {label}
+      </span>
+    );
+  }
   return (
     <span
       className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border", className)}

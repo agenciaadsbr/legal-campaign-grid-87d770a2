@@ -188,6 +188,7 @@ interface State {
   addStatusOption: (s: DropdownOption) => Promise<boolean>;
   updateStatusOption: (oldLabel: string, patch: Partial<DropdownOption>) => Promise<number>;
   deleteStatusOption: (label: string) => Promise<number>;
+  reorderStatusOptions: (labels: string[]) => Promise<void>;
 
   // internas
   _loadAll: () => Promise<void>;
@@ -387,7 +388,7 @@ export const useCRM = create<State>()((set, get) => ({
       supabase.from("contratos").select("*"),
       supabase.from("colunas_cliente").select("*").order("ordem"),
       supabase.from("modelos_colunas").select("*").order("created_at"),
-      supabase.from("status_options").select("*").order("created_at"),
+      supabase.from("status_options").select("*").order("ordem", { ascending: true }),
       supabase.from("nichos").select("*").order("label"),
       supabase.from("cards").select("*").order("posicao"),
       supabase.from("posts").select("*"),
@@ -736,10 +737,21 @@ export const useCRM = create<State>()((set, get) => ({
     const label = opt.label.trim();
     if (!label) return false;
     if (get().statusOptions.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
-    const { error } = await supabase.from("status_options").insert({ label, cor: opt.cor });
+    const proximaOrdem = get().statusOptions.length;
+    const { error } = await supabase.from("status_options").insert({ label, cor: opt.cor, ordem: proximaOrdem });
     if (error) return false;
     await get()._loadAll();
     return true;
+  },
+
+  reorderStatusOptions: async (labels) => {
+    // Atualiza a ordem de cada status conforme a nova sequência
+    await Promise.all(
+      labels.map((label, idx) =>
+        supabase.from("status_options").update({ ordem: idx }).eq("label", label),
+      ),
+    );
+    await get()._loadAll();
   },
 
   updateStatusOption: async (oldLabel, patch) => {

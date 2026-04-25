@@ -559,7 +559,7 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
     }
     case "status": {
       const opt = statusOptions.find((o) => o.label === valor);
-      return opt ? <ColorBadge label={opt.label} color={opt.cor} /> : <span className="text-muted-foreground text-xs">—</span>;
+      return opt ? <ColorBadge label={opt.label} color={opt.cor} variant="filled" /> : <span className="text-muted-foreground text-xs">—</span>;
     }
     case "data":
       return valor ? <span className="text-xs">{new Date(valor).toLocaleDateString("pt-BR")}</span> : <span className="text-muted-foreground text-xs">—</span>;
