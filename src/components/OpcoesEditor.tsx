@@ -65,7 +65,7 @@ export function toHex(color: string): string {
 }
 
 interface Props {
-  tipo: "status" | "nicho";
+  tipo: "status" | "nicho" | "status_post";
 }
 
 interface ItemProps {
@@ -208,7 +208,9 @@ export function OpcoesEditor({ tipo }: Props) {
   const {
     nichos,
     statusOptions,
+    statusPostOptions,
     clientes,
+    cards,
     addNicho,
     updateNicho,
     deleteNicho,
@@ -216,9 +218,15 @@ export function OpcoesEditor({ tipo }: Props) {
     updateStatusOption,
     deleteStatusOption,
     reorderStatusOptions,
+    addStatusPostOption,
+    updateStatusPostOption,
+    deleteStatusPostOption,
+    reorderStatusPostOptions,
   } = useCRM();
 
   const isStatus = tipo === "status";
+  const isStatusPost = tipo === "status_post";
+  const isColorful = isStatus || isStatusPost;
 
   const cfg = isStatus
     ? {
@@ -227,8 +235,20 @@ export function OpcoesEditor({ tipo }: Props) {
         onAdd: addStatusOption,
         onUpdate: updateStatusOption,
         onDelete: deleteStatusOption,
+        onReorder: reorderStatusOptions,
         rotuloSingular: "Status",
         placeholder: "Novo status",
+      }
+    : isStatusPost
+    ? {
+        itens: statusPostOptions,
+        contagemUso: (label: string) => cards.filter((c) => c.status_card === label).length,
+        onAdd: addStatusPostOption,
+        onUpdate: updateStatusPostOption,
+        onDelete: deleteStatusPostOption,
+        onReorder: reorderStatusPostOptions,
+        rotuloSingular: "Status de Post",
+        placeholder: "Novo status de post",
       }
     : {
         itens: nichos,
@@ -236,11 +256,12 @@ export function OpcoesEditor({ tipo }: Props) {
         onAdd: addNicho,
         onUpdate: updateNicho,
         onDelete: deleteNicho,
+        onReorder: async (_l: string[]) => {},
         rotuloSingular: "Nicho",
         placeholder: "Novo nicho",
       };
 
-  const { itens, contagemUso, onAdd, onUpdate, onDelete, rotuloSingular, placeholder } = cfg;
+  const { itens, contagemUso, onAdd, onUpdate, onDelete, onReorder, rotuloSingular, placeholder } = cfg;
 
   const [editando, setEditando] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
@@ -268,19 +289,19 @@ export function OpcoesEditor({ tipo }: Props) {
       toast.error("Nome não pode ficar vazio");
       return;
     }
-    const cor = isStatus ? editCor : "#9ca3af";
+    const cor = isColorful ? editCor : "#9ca3af";
     const r = await onUpdate(oldLabel, { label: novo, cor });
     if (r === -1) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
       return;
     }
     cancelarEdicao();
-    toast.success(r > 0 ? `${rotuloSingular} atualizado — ${r} cliente(s) afetado(s)` : `${rotuloSingular} atualizado`);
+    toast.success(r > 0 ? `${rotuloSingular} atualizado — ${r} item(ns) afetado(s)` : `${rotuloSingular} atualizado`);
   };
   const adicionar = async () => {
     const nome = novoLabel.trim();
     if (!nome) return;
-    const cor = isStatus ? novaCor : "#9ca3af";
+    const cor = isColorful ? novaCor : "#9ca3af";
     const ok = await onAdd({ label: nome, cor });
     if (!ok) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
@@ -292,15 +313,15 @@ export function OpcoesEditor({ tipo }: Props) {
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    if (!isStatus) return;
+    if (!isColorful) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = itens.findIndex((i) => i.label === active.id);
     const newIndex = itens.findIndex((i) => i.label === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
     const novaOrdem = arrayMove(itens, oldIndex, newIndex).map((i) => i.label);
-    await reorderStatusOptions(novaOrdem);
-    toast.success("Ordem dos status atualizada");
+    await onReorder(novaOrdem);
+    toast.success("Ordem atualizada");
   };
 
   const lista = (
@@ -309,8 +330,8 @@ export function OpcoesEditor({ tipo }: Props) {
         <ItemLinha
           key={it.label}
           item={it}
-          isStatus={isStatus}
-          draggable={isStatus}
+          isStatus={isColorful}
+          draggable={isColorful}
           editando={editando}
           editLabel={editLabel}
           editCor={editCor}
@@ -329,7 +350,7 @@ export function OpcoesEditor({ tipo }: Props) {
 
   return (
     <div className="space-y-3">
-      {isStatus ? (
+      {isColorful ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={itens.map((i) => i.label)} strategy={verticalListSortingStrategy}>
             {lista}
@@ -340,7 +361,7 @@ export function OpcoesEditor({ tipo }: Props) {
       )}
 
       <div className="flex gap-2 pt-1 border-t">
-        {isStatus && (
+        {isColorful && (
           <input
             type="color"
             value={novaCor}

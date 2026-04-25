@@ -10,7 +10,7 @@ import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useDraggable, use
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
-const COLUNAS: StatusCard[] = ["Criar", "Revisar", "Agendar", "Postado", "Renovação"];
+// Colunas agora vêm dinamicamente de statusPostOptions (Configurações → Status de Posts)
 
 function CardItem({ card }: { card: CardT }) {
   const { responsaveis, posts } = useCRM();
@@ -66,12 +66,14 @@ function Coluna({ status, cards }: { status: StatusCard; cards: CardT[] }) {
 
 function KanbanView() {
   const { clienteId } = useParams();
-  const { cards, moveCard, contratos } = useCRM();
+  const { cards, moveCard, contratos, statusPostOptions } = useCRM();
   const { canWrite } = useAuth();
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const colunas = useMemo(() => statusPostOptions.map((o) => o.label), [statusPostOptions]);
 
   const cardsCliente = useMemo(
     () => cards.filter((c) => c.cliente_id === clienteId).filter((c) => filtroMes === "all" || c.mes_referencia === Number(filtroMes)),
@@ -90,8 +92,8 @@ function KanbanView() {
     setActiveId(null);
     if (!canWrite) return;
     if (!e.over) return;
-    const novoStatus = e.over.id as StatusCard;
-    if (COLUNAS.includes(novoStatus)) moveCard(String(e.active.id), novoStatus);
+    const novoStatus = String(e.over.id);
+    if (colunas.includes(novoStatus)) moveCard(String(e.active.id), novoStatus as StatusCard);
   };
 
   return (
@@ -109,7 +111,7 @@ function KanbanView() {
       </div>
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex gap-3 overflow-x-auto scrollbar-thin pb-3">
-          {COLUNAS.map((s) => (
+          {colunas.map((s) => (
             <Coluna key={s} status={s} cards={cardsCliente.filter((c) => c.status_card === s)} />
           ))}
         </div>

@@ -608,6 +608,10 @@ function ConfiguracoesSheet() {
             <CardContent><OpcoesEditor tipo="status" /></CardContent>
           </Card>
           <Card>
+            <CardHeader className="py-3"><CardTitle className="text-sm">Status de Posts</CardTitle></CardHeader>
+            <CardContent><OpcoesEditor tipo="status_post" /></CardContent>
+          </Card>
+          <Card>
             <CardHeader className="py-3"><CardTitle className="text-sm">Nichos</CardTitle></CardHeader>
             <CardContent><OpcoesEditor tipo="nicho" /></CardContent>
           </Card>
