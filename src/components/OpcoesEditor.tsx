@@ -86,6 +86,8 @@ export function OpcoesEditor({ tipo }: Props) {
 
   const { itens, contagemUso, onAdd, onUpdate, onDelete, rotuloSingular, placeholder } = cfg;
 
+  const mostrarCor = tipo === "status";
+
   const [editando, setEditando] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editCor, setEditCor] = useState("#3b82f6");
@@ -107,7 +109,8 @@ export function OpcoesEditor({ tipo }: Props) {
       toast.error("Nome não pode ficar vazio");
       return;
     }
-    const r = onUpdate(oldLabel, { label: novo, cor: editCor });
+    const cor = mostrarCor ? editCor : "#9ca3af";
+    const r = onUpdate(oldLabel, { label: novo, cor });
     if (r === -1) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
       return;
@@ -118,7 +121,8 @@ export function OpcoesEditor({ tipo }: Props) {
   const adicionar = () => {
     const nome = novoLabel.trim();
     if (!nome) return;
-    const ok = onAdd({ label: nome, cor: novaCor });
+    const cor = mostrarCor ? novaCor : "#9ca3af";
+    const ok = onAdd({ label: nome, cor });
     if (!ok) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
       return;
@@ -136,13 +140,15 @@ export function OpcoesEditor({ tipo }: Props) {
           if (editando === it.label) {
             return (
               <div key={it.label} className="flex items-center gap-2 p-2 rounded-md border bg-card">
-                <input
-                  type="color"
-                  value={editCor}
-                  onChange={(e) => setEditCor(e.target.value)}
-                  className="h-8 w-10 rounded cursor-pointer border bg-transparent"
-                  aria-label="Cor"
-                />
+                {mostrarCor && (
+                  <input
+                    type="color"
+                    value={editCor}
+                    onChange={(e) => setEditCor(e.target.value)}
+                    className="h-8 w-10 rounded cursor-pointer border bg-transparent"
+                    aria-label="Cor"
+                  />
+                )}
                 <Input
                   value={editLabel}
                   onChange={(e) => setEditLabel(e.target.value)}
@@ -164,13 +170,17 @@ export function OpcoesEditor({ tipo }: Props) {
           }
           return (
             <div key={it.label} className="flex items-center gap-2 p-2 rounded-md border bg-card group">
-              <span
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs flex-1 border"
-                style={{ backgroundColor: `${it.cor}1f`, color: it.cor, borderColor: `${it.cor}4d` }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: it.cor }} />
-                {it.label}
-              </span>
+              {mostrarCor ? (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs flex-1 border"
+                  style={{ backgroundColor: `${it.cor}1f`, color: it.cor, borderColor: `${it.cor}4d` }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: it.cor }} />
+                  {it.label}
+                </span>
+              ) : (
+                <span className="text-sm flex-1">{it.label}</span>
+              )}
               {usoCount > 0 && <span className="text-[10px] text-muted-foreground">{usoCount} uso(s)</span>}
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => iniciarEdicao(it)} title="Editar">
                 <Pencil className="h-3.5 w-3.5" />
@@ -212,19 +222,21 @@ export function OpcoesEditor({ tipo }: Props) {
       </div>
 
       <div className="flex gap-2 pt-1 border-t">
-        <input
-          type="color"
-          value={novaCor}
-          onChange={(e) => setNovaCor(e.target.value)}
-          className="h-9 w-12 rounded cursor-pointer border bg-transparent"
-          aria-label="Cor do novo item"
-        />
+        {mostrarCor && (
+          <input
+            type="color"
+            value={novaCor}
+            onChange={(e) => setNovaCor(e.target.value)}
+            className="h-9 w-12 rounded cursor-pointer border bg-transparent"
+            aria-label="Cor do novo item"
+          />
+        )}
         <Input
           value={novoLabel}
           onChange={(e) => setNovoLabel(e.target.value)}
           placeholder={placeholder}
           onKeyDown={(e) => e.key === "Enter" && adicionar()}
-          className="h-9"
+          className="h-9 flex-1"
         />
         <Button onClick={adicionar} className="gap-1">
           <Plus className="h-4 w-4" /> Adicionar
