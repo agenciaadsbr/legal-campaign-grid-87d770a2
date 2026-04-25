@@ -321,6 +321,16 @@ function KanbanView() {
             <SelectItem value="semana">Somente esta semana</SelectItem>
           </SelectContent>
         </Select>
+
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por título..."
+            className="h-9 pl-8 text-sm"
+          />
+        </div>
       </div>
 
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
