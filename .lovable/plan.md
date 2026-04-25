@@ -1,42 +1,111 @@
-## Problema
-No diálogo "Histórico de Comentários":
-1. Texto longo aparece cortado / com tags HTML cruas (`<p>`, `<ul>`) visíveis, porque os comentários agora podem vir do `RichTextEditor` em HTML, mas o histórico ainda renderiza como texto puro.
-2. Edição inline e composer usam `<Textarea>` simples — sem formatação consistente com `PostDetalhe`.
+# Fase 1 — Schema inicial do banco no Supabase
 
-## Alterações em `src/components/HistoricoComentariosDialog.tsx`
+Migração SQL única. Sem alterações em código React nesta fase.
 
-### 1. Renderização (corrige o corte)
-- Substituir o `<div className="text-sm mt-1 whitespace-pre-wrap break-words">{com.comentario_texto}</div>` por `<RichTextView content={com.comentario_texto} />`.
-  - `RichTextView` já trata HTML (sanitização + prose) e texto puro legado (whitespace-pre-wrap), então comentários antigos continuam funcionando.
-- Garantir contenção de overflow no item:
-  - No wrapper externo do `ComentarioItem`, manter `flex gap-3` mas acrescentar `min-w-0` no `flex-1` (já existe) e `overflow-hidden` no container do texto para evitar estouro horizontal.
+## 1. Enums
 
-### 2. Editor inline (edição de comentário existente)
-- Substituir o `<Textarea>` da edição pelo `<RichTextEditor value={texto} onChange={setTexto} onEnterSubmit={salvar} minHeight="min-h-[60px]" />`.
-- Remover `onKeyDown` manual (Enter/Escape) — o `onEnterSubmit` cobre o envio; manter botões Salvar/Cancelar.
+```sql
+create type public.app_role as enum ('admin', 'editor', 'viewer');
+create type public.status_cliente as enum ('ativo', 'pausado', 'inativo');
+create type public.status_card as enum ('ideias','producao','aprovacao','agendado','publicado','arquivado');
+```
 
-### 3. Composer (novo comentário)
-- Substituir o `<Textarea>` pelo `<RichTextEditor value={novo} onChange={setNovo} onEnterSubmit={enviar} placeholder="Escreva um comentário..." minHeight="min-h-[44px]" className="border-0 shadow-none" />`.
-- Manter a barra de ações (anexar imagem, emoji desabilitado, etc.) e o botão Enviar.
-- Ajustar `enviar()` para não depender de `novo.trim()` direto (HTML pode ter `<p></p>`); usar:
-  ```ts
-  const isEmpty = !novo || novo === "<p></p>" || !novo.replace(/<[^>]+>/g, "").trim();
-  if ((isEmpty && !imagemUrl) || !clienteId) return;
-  ```
-- Mesmo critério no `disabled` do botão Enviar.
+## 2. Tabelas
 
-### 4. Layout do diálogo (centralização e largura)
-- `DialogContent`: manter `max-w-2xl p-0 gap-0`, adicionar `w-[95vw]` para responsividade.
-- `ScrollArea`: adicionar `w-full` e usar `px-3` para que o conteúdo respire e fique centralizado dentro do diálogo.
-- No `ComentarioItem`, envolver o bloco de conteúdo com `min-w-0 overflow-hidden` para que `break-words` do `RichTextView` funcione corretamente dentro do flexbox.
+### `responsaveis` (independente de auth.users nesta fase)
+- `id uuid pk default gen_random_uuid()`
+- `nome text not null`
+- `email text unique`
+- `avatar_url text`
+- `cor text` (hex/hsl pra UI)
+- `permissao app_role not null default 'editor'`
+- `created_at timestamptz default now()`
 
-## Resultado esperado
-- Comentários com formatação (negrito, listas, caixa alta) renderizam corretamente sem mostrar HTML cru.
-- Texto longo quebra linha corretamente, sem corte horizontal.
-- Edição e criação de comentários no histórico ganham o mesmo editor rico usado em `PostDetalhe`, garantindo consistência em todo o sistema.
-- Layout centralizado e responsivo.
+### `clientes`
+- `id uuid pk default gen_random_uuid()`
+- `nome text not null`
+- `nicho text`
+- `descricao text`
+- `logo_url text`
+- `status status_cliente not null default 'ativo'`
+- `responsaveis_ids uuid[] not null default '{}'`
+- `campos_personalizados jsonb default '{}'::jsonb`
+- `created_at timestamptz default now()`
+- `updated_at timestamptz default now()`
 
-## Arquivos afetados
-- `src/components/HistoricoComentariosDialog.tsx` (único arquivo)
+### `cards` (Kanban)
+- `id uuid pk default gen_random_uuid()`
+- `cliente_id uuid not null references public.clientes(id) on delete cascade`
+- `titulo text not null`
+- `descricao text`
+- `status status_card not null default 'ideias'`
+- `posicao int not null default 0`
+- `responsaveis_ids uuid[] not null default '{}'` (herdado do cliente via trigger)
+- `data_agendada timestamptz`
+- `created_at timestamptz default now()`
+- `updated_at timestamptz default now()`
 
-Sem novas dependências (TipTap e DOMPurify já instalados na etapa anterior).
+### `posts` (1:N com cards)
+- `id uuid pk default gen_random_uuid()`
+- `card_id uuid not null references public.cards(id) on delete cascade`
+- `titulo text`
+- `legenda text`
+- `formato text` (reels, carrossel, story, etc.)
+- `status status_card not null default 'ideias'` (sincronizado com card via trigger)
+- `anexos jsonb not null default '[]'::jsonb` (array de `{url, tipo, nome}`)
+- `comentarios jsonb not null default '[]'::jsonb`
+- `created_at timestamptz default now()`
+- `updated_at timestamptz default now()`
+
+### `user_roles` (preparado pra Auth na próxima fase)
+- `id uuid pk default gen_random_uuid()`
+- `user_id uuid not null` (referenciará auth.users quando Auth ativar)
+- `role app_role not null`
+- `unique (user_id, role)`
+
+## 3. Função `has_role` (SECURITY DEFINER)
+
+Padrão recomendado pelo Supabase, evita recursão em RLS.
+
+```sql
+create or replace function public.has_role(_user_id uuid, _role app_role)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (select 1 from public.user_roles where user_id = _user_id and role = _role)
+$$;
+```
+
+## 4. Triggers
+
+### `set_updated_at` (genérico para clientes/cards/posts)
+Atualiza `updated_at` em cada UPDATE.
+
+### `propagate_responsaveis_cliente`
+Quando `clientes.responsaveis_ids` muda, propaga para todos os `cards` daquele cliente (mesma lista).
+
+### `sync_post_status_with_card`
+Quando `cards.status` muda, atualiza `posts.status` de todos os posts vinculados.
+
+## 5. RLS — políticas provisórias permissivas
+
+RLS habilitado em todas as 5 tabelas. Política única por tabela:
+```sql
+create policy "allow_all_temp" on public.<tabela>
+  for all using (true) with check (true);
+```
+
+⚠️ **Será substituído na Fase 2 (Auth)** por políticas baseadas em `auth.uid()` e `has_role()`. Aviso explícito ao usuário no fim da execução.
+
+## 6. Sem seed
+Banco começa limpo, conforme combinado.
+
+## 7. O que NÃO está nesta fase (próximas)
+- Auth email/senha + página `/auth` + `<RequireAuth>`
+- Bucket Storage `anexos`
+- Refator do `useCRM` (Zustand → React Query + Supabase + Realtime)
+- RLS final baseado em roles
+- Ajustes Sidebar (usuário/sair) + Configurações (gerenciar roles)
+
+---
+
+Ao aprovar, executo a migração e em seguida confirmo que `src/integrations/supabase/types.ts` foi regenerado automaticamente com os novos tipos.
