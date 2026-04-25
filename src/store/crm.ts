@@ -607,6 +607,8 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.titulo_card !== undefined) dbPatch.titulo = patch.titulo_card;
     if (patch.status_card !== undefined) dbPatch.status = patch.status_card;
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
+    if ((patch as any).data_agendada !== undefined) dbPatch.data_agendada = (patch as any).data_agendada;
+    if ((patch as any).is_urgent !== undefined) dbPatch.is_urgent = (patch as any).is_urgent;
     await supabase.from("cards").update(dbPatch).eq("id", id);
     await get()._loadAll();
   },
