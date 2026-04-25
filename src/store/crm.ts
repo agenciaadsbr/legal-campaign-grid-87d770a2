@@ -242,10 +242,9 @@ const colunasPadrao: ColumnConfig[] = [
   { key: "responsaveis", label: "Responsáveis", tipo: "responsaveis", ordem: 1, oculta: false, fixada: false, largura: 110, fixa: true },
   { key: "ultimo_comentario", label: "Últimos Comentários", tipo: "texto", ordem: 2, oculta: false, fixada: false, largura: 260 },
   { key: "nicho", label: "Nicho", tipo: "dropdown", ordem: 3, oculta: false, fixada: false, largura: 130, opcoes: seedNichos },
-  { key: "status_cliente", label: "Status Cliente", tipo: "status", ordem: 4, oculta: false, fixada: false, largura: 140, fixa: true, opcoes: seedStatus },
-  { key: "periodo_contrato", label: "Período do Contrato", tipo: "texto", ordem: 5, oculta: false, fixada: false, largura: 150, fixa: true },
-  { key: "posts", label: "Posts", tipo: "texto", ordem: 6, oculta: false, fixada: false, largura: 130, fixa: true },
-  { key: "observacoes", label: "Observações", tipo: "texto", ordem: 7, oculta: false, fixada: false, largura: 200 },
+  { key: "periodo_contrato", label: "Período do Contrato", tipo: "texto", ordem: 4, oculta: false, fixada: false, largura: 150, fixa: true },
+  { key: "posts", label: "Posts", tipo: "texto", ordem: 5, oculta: false, fixada: false, largura: 130, fixa: true },
+  { key: "observacoes", label: "Observações", tipo: "texto", ordem: 6, oculta: false, fixada: false, largura: 200 },
 ];
 
 // gera 12 cards + 12 posts para um cliente
@@ -668,6 +667,6 @@ export const useCRM = create<State>()(
         return afetados;
       },
     }),
-    { name: "crm-juridico-v5" }
+    { name: "crm-juridico-v6" }
   )
 );
