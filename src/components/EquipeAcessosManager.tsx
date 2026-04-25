@@ -134,7 +134,14 @@ export function EquipeAcessosManager() {
   const copiarLinkAcesso = async (p: ProfileRow) => {
     const nome = p.nome?.trim() || "";
     const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
-    const link = `${window.location.origin}/auth`;
+    const PUBLISHED_URL = "https://legal-campaign-grid.lovable.app";
+    const origin = window.location.origin;
+    const isPreview =
+      origin.includes("id-preview--") ||
+      origin.includes("lovableproject.com") ||
+      origin.includes("lovable.dev");
+    const baseUrl = isPreview ? PUBLISHED_URL : origin;
+    const link = `${baseUrl}/auth`;
     const mensagem = `${saudacao} Seu acesso ao CRM da Ads BR:
 
 🔗 Link: ${link}
