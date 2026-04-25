@@ -783,9 +783,24 @@ export default function Clientes() {
     return map;
   }, [filtrados, statusOptions]);
 
+  const gruposPosts = useMemo(() => {
+    const map: Record<string, typeof clientes> = {};
+    statusPostOptions.forEach((s) => (map[s.label] = []));
+    const filtradosIds = new Set(filtrados.map((c) => c.id));
+    statusPostOptions.forEach((s) => {
+      const clientesIds = new Set(
+        cards.filter((card) => card.status_card === s.label && filtradosIds.has(card.cliente_id)).map((c) => c.cliente_id)
+      );
+      map[s.label] = filtrados.filter((c) => clientesIds.has(c.id));
+    });
+    return map;
+  }, [filtrados, statusPostOptions, cards]);
+
   const algumGrupoAberto = useMemo(
-    () => statusOptions.some((s) => (grupos[s.label]?.length ?? 0) > 0 && !grupoColapsado[s.label]),
-    [statusOptions, grupos, grupoColapsado]
+    () =>
+      statusOptions.some((s) => (grupos[s.label]?.length ?? 0) > 0 && !grupoColapsado[s.label]) ||
+      statusPostOptions.some((s) => (gruposPosts[s.label]?.length ?? 0) > 0 && !grupoColapsado[`post:${s.label}`]),
+    [statusOptions, statusPostOptions, grupos, gruposPosts, grupoColapsado]
   );
 
   return (
