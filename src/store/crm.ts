@@ -400,14 +400,15 @@ export const useCRM = create<State>()(
           ultimo_comentario: "",
           custom: {},
         };
-        const { cards, posts } = gerarCardsEPosts(id, data.responsaveis);
+        const meses = mesesEntre(data.data_inicio_contrato, data.data_fim_contrato);
+        const { cards, posts } = gerarCardsEPosts(id, data.responsaveis, meses);
         const contrato: Contrato = {
           id: uid(),
           cliente_id: id,
           status: "Ativo",
           data_inicio: data.data_inicio_contrato,
           data_fim: data.data_fim_contrato,
-          total_posts: 12,
+          total_posts: meses * 4,
           posts_concluidos: 0,
         };
         set((s) => ({
