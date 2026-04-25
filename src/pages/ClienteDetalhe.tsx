@@ -176,7 +176,7 @@ export default function ClienteDetalhe() {
           <div className="text-sm text-muted-foreground flex items-center gap-3 flex-wrap">
             <span>Nicho: <span className="text-foreground">{cliente.nicho}</span></span>
             <span>·</span>
-            <span>{postados}/{contrato?.total_posts ?? 12} postados</span>
+            <span>{postados}/{contrato?.total_posts ?? cardsCliente.length} postados</span>
             <span>·</span>
             <AvatarStack responsaveis={resps} size="sm" />
           </div>
