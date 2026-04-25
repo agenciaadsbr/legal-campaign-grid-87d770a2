@@ -519,7 +519,7 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
   switch (col.tipo) {
     case "responsaveis": {
       const ids: string[] = valor ?? [];
-      return <AvatarStack responsaveis={responsaveis.filter((r) => ids.includes(r.id))} size="xs" />;
+      return <CelulaResponsaveis clienteId={cliente.id} ids={ids} />;
     }
     case "dropdown": {
       const opt = (col.opcoes ?? nichos).find((o) => o.label === valor);
