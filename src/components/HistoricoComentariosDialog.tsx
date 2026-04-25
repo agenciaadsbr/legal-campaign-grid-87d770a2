@@ -45,11 +45,13 @@ function Avatar({ nome, cor }: { nome: string; cor: string }) {
 }
 
 function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string }) {
-  const { responsaveis, posts, cards, updateComentario, deleteComentario } = useCRM();
+  const { responsaveis, posts, cards, updateComentario, deleteComentario, authoresPorAuthId } = useCRM();
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(com.comentario_texto);
 
-  const autor = responsaveis.find((r) => r.id === com.usuario_id);
+  const autorMap = authoresPorAuthId[com.usuario_id];
+  const autor =
+    autorMap ?? responsaveis.find((r) => r.id === com.usuario_id) ?? null;
   const post = com.post_id ? posts.find((p) => p.id === com.post_id) : undefined;
   const card = post ? cards.find((c) => c.id === post.card_id) : undefined;
 

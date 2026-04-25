@@ -156,6 +156,8 @@ interface State {
   nichos: DropdownOption[];
   statusOptions: DropdownOption[];
   statusPostOptions: DropdownOption[];
+  /** Mapa auth.uid → autor exibível (nome, cor, avatar). Resolvido via profiles.responsavel_id → responsaveis */
+  authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }>;
   loading: boolean;
   loaded: boolean;
 
@@ -226,14 +228,23 @@ export function mesesEntre(inicioISO: string, fimISO: string): number {
 }
 
 // ===================== Mappers DB → App =====================
-function mapCliente(row: any, contratos: any[], comentarios: Comentario[], responsaveis: Responsavel[]): Cliente {
+function mapCliente(
+  row: any,
+  contratos: any[],
+  comentarios: Comentario[],
+  responsaveis: Responsavel[],
+  authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {},
+): Cliente {
   const contrato = contratos.find((c) => c.cliente_id === row.id);
   const comsCliente = comentarios.filter((c) => c.cliente_id === row.id);
   let ultimo = "";
   if (comsCliente.length > 0) {
     const u = comsCliente.reduce((a, b) => (a.created_at > b.created_at ? a : b));
-    const autor = responsaveis.find((r) => r.id === u.usuario_id)?.nome ?? "Usuário";
-    const trecho = u.comentario_texto.slice(0, 60);
+    const autor =
+      authoresPorAuthId[u.usuario_id]?.nome ??
+      responsaveis.find((r) => r.id === u.usuario_id)?.nome ??
+      "Usuário";
+    const trecho = u.comentario_texto.replace(/<[^>]+>/g, "").slice(0, 60);
     const data = new Date(u.created_at).toLocaleDateString("pt-BR");
     ultimo = `${autor}: ${trecho} — ${data}`;
   }
@@ -390,6 +401,7 @@ export const useCRM = create<State>()((set, get) => ({
   nichos: [],
   statusOptions: [],
   statusPostOptions: [],
+  authoresPorAuthId: {},
   loading: false,
   loaded: false,
 
@@ -409,6 +421,7 @@ export const useCRM = create<State>()((set, get) => ({
       alertasRes,
       customFieldsRes,
       statusPostRes,
+      profilesRes,
     ] = await Promise.all([
       supabase.from("responsaveis").select("*").order("nome"),
       supabase.from("clientes").select("*").order("created_at", { ascending: false }),
@@ -423,13 +436,26 @@ export const useCRM = create<State>()((set, get) => ({
       supabase.from("alertas").select("*").order("created_at", { ascending: false }),
       supabase.from("custom_fields").select("*").order("ordem"),
       supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
+      supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
     ]);
 
     const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
     const contratos = (contratosRes.data ?? []).map(mapContrato);
     const comentarios = (comentariosRes.data ?? []).map(mapComentario);
+
+    // Mapa auth.uid → autor exibível (resolvido via profiles → responsaveis)
+    const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
+    for (const p of profilesRes.data ?? []) {
+      const resp = p.responsavel_id ? responsaveis.find((r) => r.id === p.responsavel_id) : undefined;
+      authoresPorAuthId[p.id] = {
+        nome: resp?.nome ?? p.nome ?? p.email ?? "Usuário",
+        cor: resp?.cor ?? "#6366f1",
+        avatar_url: resp?.avatar_url ?? p.avatar_url ?? undefined,
+      };
+    }
+
     const clientes = (clientesRes.data ?? []).map((r) =>
-      mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis),
+      mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
     );
 
     set({
@@ -446,6 +472,7 @@ export const useCRM = create<State>()((set, get) => ({
       alertas: (alertasRes.data ?? []).map(mapAlerta),
       customFields: (customFieldsRes.data ?? []).map(mapCustomField),
       statusPostOptions: (statusPostRes.data ?? []).map(mapStatusOpt),
+      authoresPorAuthId,
       loading: false,
       loaded: true,
     });
@@ -654,13 +681,24 @@ export const useCRM = create<State>()((set, get) => ({
 
   // ============= Comentários =============
   addComentario: async (c) => {
-    await supabase.from("comentarios").insert({
+    // RLS exige auth.uid() = usuario_id, então usamos sempre o usuário autenticado
+    const { data: userData } = await supabase.auth.getUser();
+    const authUid = userData.user?.id;
+    if (!authUid) {
+      toast.error("Você precisa estar autenticado para comentar");
+      return;
+    }
+    const { error } = await supabase.from("comentarios").insert({
       post_id: c.post_id ?? null,
       cliente_id: c.cliente_id ?? null,
-      usuario_id: c.usuario_id,
+      usuario_id: authUid,
       comentario_texto: c.comentario_texto,
       imagem_url: c.imagem_url ?? null,
     });
+    if (error) {
+      toast.error(`Falha ao salvar comentário: ${error.message}`);
+      return;
+    }
     await get()._loadAll();
   },
 
