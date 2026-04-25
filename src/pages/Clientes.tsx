@@ -892,6 +892,58 @@ export default function Clientes() {
                   </Fragment2>
                 );
               })}
+
+              {statusPostOptions.length > 0 && (
+                <tr>
+                  <td colSpan={colunasVisiveis.length} className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground border-b">
+                    Status de Posts
+                  </td>
+                </tr>
+              )}
+              {statusPostOptions.map((status) => {
+                const items = gruposPosts[status.label] ?? [];
+                const key = `post:${status.label}`;
+                const colapsado = grupoColapsado[key];
+                return (
+                  <Fragment2 key={key}>
+                    <tr className="bg-muted/30 hover:bg-muted/40 sticky">
+                      <td colSpan={colunasVisiveis.length} className={cn("px-2 py-1", !colapsado && "border-b")}>
+                        <button
+                          onClick={() => setGrupoColapsado((g) => ({ ...g, [key]: !colapsado }))}
+                          className="flex items-center gap-1.5 text-xs font-medium"
+                        >
+                          {colapsado ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                          <ColorBadge label={status.label.toUpperCase()} color={status.cor} variant="filled" />
+                          <span className="text-muted-foreground text-[11px]">{items.length}</span>
+                        </button>
+                      </td>
+                    </tr>
+                    {!colapsado && items.map((cliente) => (
+                      <tr key={`${key}-${cliente.id}`} className="hover:bg-accent/30 transition-colors">
+                        {colunasVisiveis.map((col, i) => (
+                          <td
+                            key={col.key}
+                            className={cn(
+                              "px-2 py-1.5 border-b border-r align-middle",
+                              col.fixada && "sticky left-0 bg-card"
+                            )}
+                            style={{ minWidth: col.largura, width: col.largura }}
+                          >
+                            {i === 0 && col.key === "nome_cliente" ? (
+                              <Link to={`/clientes/${cliente.id}`} className="text-primary text-xs font-medium hover:underline truncate block">
+                                {cliente.nome_cliente}
+                              </Link>
+                            ) : (
+                              <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </Fragment2>
+                );
+              })}
+
               {filtrados.length === 0 && (
                 <tr><td colSpan={colunasVisiveis.length} className="text-center py-10 text-muted-foreground text-xs">Nenhum cliente encontrado</td></tr>
               )}
