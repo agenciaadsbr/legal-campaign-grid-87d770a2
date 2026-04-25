@@ -2,7 +2,7 @@ import { useCRM, ColumnConfig, DropdownOption } from "@/store/crm";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck } from "lucide-react";
+import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AvatarStack } from "@/components/AvatarStack";
 import { ColorBadge } from "@/components/StatusBadge";
