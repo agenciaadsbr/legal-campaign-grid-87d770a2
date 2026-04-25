@@ -857,6 +857,10 @@ export default function Clientes() {
             <Switch checked={apenasPendentes} onCheckedChange={setApenasPendentes} />
             <span>Apenas com ações pendentes</span>
           </label>
+          <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
+            <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
+            <span>Mostrar concluídos</span>
+          </label>
           <Select value={filtroStatusCliente} onValueChange={setFiltroStatusCliente}>
             <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Status do cliente" />
