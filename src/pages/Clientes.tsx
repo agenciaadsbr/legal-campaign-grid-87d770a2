@@ -1148,7 +1148,7 @@ export default function Clientes() {
                   <Fragment2 key={key}>
                     <tr className="bg-muted/60 hover:bg-muted/70 sticky">
                       <td
-                        colSpan={colunasVisiveis.length}
+                        colSpan={colunasVisiveis.length + 1}
                         className={cn("px-2 py-2 border-l-4", !colapsado && "border-b")}
                         style={{ borderLeftColor: cor }}
                       >
