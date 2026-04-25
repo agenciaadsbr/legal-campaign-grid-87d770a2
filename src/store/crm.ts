@@ -412,6 +412,7 @@ export const useCRM = create<State>()((set, get) => ({
       alertasRes,
       customFieldsRes,
       statusPostRes,
+      profilesRes,
     ] = await Promise.all([
       supabase.from("responsaveis").select("*").order("nome"),
       supabase.from("clientes").select("*").order("created_at", { ascending: false }),
@@ -426,13 +427,26 @@ export const useCRM = create<State>()((set, get) => ({
       supabase.from("alertas").select("*").order("created_at", { ascending: false }),
       supabase.from("custom_fields").select("*").order("ordem"),
       supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
+      supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
     ]);
 
     const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
     const contratos = (contratosRes.data ?? []).map(mapContrato);
     const comentarios = (comentariosRes.data ?? []).map(mapComentario);
+
+    // Mapa auth.uid → autor exibível (resolvido via profiles → responsaveis)
+    const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
+    for (const p of profilesRes.data ?? []) {
+      const resp = p.responsavel_id ? responsaveis.find((r) => r.id === p.responsavel_id) : undefined;
+      authoresPorAuthId[p.id] = {
+        nome: resp?.nome ?? p.nome ?? p.email ?? "Usuário",
+        cor: resp?.cor ?? "#6366f1",
+        avatar_url: resp?.avatar_url ?? p.avatar_url ?? undefined,
+      };
+    }
+
     const clientes = (clientesRes.data ?? []).map((r) =>
-      mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis),
+      mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
     );
 
     set({
@@ -449,6 +463,7 @@ export const useCRM = create<State>()((set, get) => ({
       alertas: (alertasRes.data ?? []).map(mapAlerta),
       customFields: (customFieldsRes.data ?? []).map(mapCustomField),
       statusPostOptions: (statusPostRes.data ?? []).map(mapStatusOpt),
+      authoresPorAuthId,
       loading: false,
       loaded: true,
     });
