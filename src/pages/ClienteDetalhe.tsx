@@ -65,7 +65,7 @@ function Coluna({ status, cards }: { status: StatusCard; cards: CardT[] }) {
 
 function KanbanView() {
   const { clienteId } = useParams();
-  const { cards, moveCard } = useCRM();
+  const { cards, moveCard, contratos } = useCRM();
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -75,6 +75,14 @@ function KanbanView() {
     () => cards.filter((c) => c.cliente_id === clienteId).filter((c) => filtroMes === "all" || c.mes_referencia === Number(filtroMes)),
     [cards, clienteId, filtroMes]
   );
+
+  const totalMeses = useMemo(() => {
+    const contrato = contratos.find((c) => c.cliente_id === clienteId);
+    if (contrato?.total_posts) return Math.max(1, Math.min(6, Math.round(contrato.total_posts / 4)));
+    const cardsDoCliente = cards.filter((c) => c.cliente_id === clienteId);
+    const max = cardsDoCliente.reduce((acc, c) => Math.max(acc, c.mes_referencia), 0);
+    return Math.max(1, Math.min(6, max || 3));
+  }, [contratos, cards, clienteId]);
 
   const onDragEnd = (e: DragEndEvent) => {
     setActiveId(null);
@@ -90,9 +98,9 @@ function KanbanView() {
           <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os meses</SelectItem>
-            <SelectItem value="1">Mês 1</SelectItem>
-            <SelectItem value="2">Mês 2</SelectItem>
-            <SelectItem value="3">Mês 3</SelectItem>
+            {Array.from({ length: totalMeses }, (_, i) => i + 1).map((m) => (
+              <SelectItem key={m} value={String(m)}>Mês {m}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
