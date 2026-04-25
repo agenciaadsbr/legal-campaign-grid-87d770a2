@@ -489,7 +489,6 @@ export const useCRM = create<State>()((set, get) => ({
 
   // ============= Responsáveis =============
   addResponsavel: (r) => {
-    // sync wrapper para preservar a assinatura anterior — dispara em background
     const tempId = crypto.randomUUID();
     set((s) => ({ responsaveis: [...s.responsaveis, { ...r, id: tempId }] }));
     supabase
@@ -498,12 +497,21 @@ export const useCRM = create<State>()((set, get) => ({
         nome: r.nome,
         cor: r.cor,
         permissao: r.permissao,
-        email: r.email,
+        email: r.email && r.email.trim() ? r.email.trim() : null,
         avatar_url: r.avatar_url ?? null,
       })
       .select()
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Erro ao salvar responsável:", error);
+          // remove o item otimista para refletir falha
+          set((s) => ({ responsaveis: s.responsaveis.filter((x) => x.id !== tempId) }));
+          import("sonner").then(({ toast }) =>
+            toast.error(`Não foi possível salvar: ${error.message}`)
+          );
+          return;
+        }
         if (data) {
           set((s) => ({
             responsaveis: s.responsaveis.map((x) => (x.id === tempId ? mapResponsavel(data) : x)),
