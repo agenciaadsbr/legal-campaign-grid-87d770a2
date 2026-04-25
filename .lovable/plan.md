@@ -1,26 +1,41 @@
-## Contratos flexíveis de 1 a 6 meses
+## Editor rico para "Atividade" nos cards
 
-### `src/store/crm.ts`
-- Alterar `gerarCardsEPosts(cliente_id, responsaveis, meses: number)` para gerar `meses * 4` cards (loop de mês 1..meses, 4 semanas cada).
-- O campo `mes_referencia` e `numero_semana` continuam preenchidos corretamente em cada card.
-- Em `addCliente`, calcular `meses` a partir de `data_inicio_contrato` e `data_fim_contrato` (clamp 1–6) e passar para `gerarCardsEPosts`.
-- Atualizar criação do contrato para usar `total_posts = meses * 4`.
-- Bump do `persist.name` para `crm-juridico-v7` para invalidar cache local e re-semear demo.
-- Atualizar seeds de demo para incluir clientes com 3 e 6 meses, demonstrando o comportamento.
+### Problema
+No `PostDetalhe.tsx`, o campo "Atividade" usa `<Textarea>` puro. Quando o usuário cria listas com `•` ou quebras de linha, a renderização fica desalinhada (bullets em uma linha, texto em outra), e não há suporte para negrito, itálico, caixa alta etc.
 
-### `src/pages/Clientes.tsx` (formulário Novo Cliente)
-- Adicionar select "Duração (meses)" de 1 a 6.
-- Auto-calcular `data_fim_contrato` somando a duração à `data_inicio_contrato` (mantendo edição manual permitida).
-- Exibir prévia: "Serão criados N cards" (N = meses × 4).
+### Dependências a instalar
+- `@tiptap/react`
+- `@tiptap/starter-kit` (já inclui Bold, Italic, Strike, BulletList, OrderedList, ListItem, History)
+- `@tiptap/extension-underline`
+- `dompurify` + `@types/dompurify`
 
-### `src/pages/ClienteDetalhe.tsx`
-- Substituir filtro fixo "Mês 1/2/3" por geração dinâmica de opções baseada em `contrato.total_posts / 4` (ou no maior `mes_referencia` dos cards do cliente).
-- Mantém filtro "Todos os meses".
+### Novos componentes
 
-### Refletir no restante do sistema
-- `Dashboard`, `Relatorios`, `Contratos`, `Alertas`: já consomem `cards`, `posts` e `contrato.total_posts` dinamicamente — apenas validar que não há `=== 12` ou `=== 3` hardcoded; substituir por `contrato.total_posts` quando houver.
-- `PostDetalhe`: nada a mudar (usa post individual).
+**`src/components/RichTextEditor.tsx`**
+- Componente controlado (`value: string`, `onChange: (html: string) => void`, `placeholder?: string`).
+- Toolbar com botões (ícones do `lucide-react`):
+  - **B** Bold, *I* Italic, U Underline, ~~S~~ Strike
+  - Lista com marcadores, lista numerada
+  - **AA** CAIXA ALTA (transforma a seleção em uppercase via `editor.chain().focus().command(({tr, state}) => { ... }).run()` ou substitui o texto selecionado)
+  - aa minúscula (opcional, mesma lógica)
+  - Desfazer / Refazer
+- Estilizado com tokens semânticos (`bg-card`, `border-border`, `text-foreground`); botão ativo usa `bg-accent`.
+- Área editável com classe `prose prose-sm dark:prose-invert max-w-none min-h-[80px] p-3` para listas/negrito renderizarem corretamente.
+
+**`src/components/RichTextView.tsx`**
+- Recebe `content: string`.
+- Detecta se é HTML (regex `/<[a-z][\s\S]*>/i`); se for, sanitiza com `DOMPurify.sanitize` e injeta via `dangerouslySetInnerHTML` dentro de um `div` com classe `prose prose-sm dark:prose-invert max-w-none`.
+- Se for texto puro (comentários antigos), renderiza com `whitespace-pre-wrap` preservando a compatibilidade.
+
+### Integração em `src/pages/PostDetalhe.tsx`
+- **Compositor de comentário** (textarea principal de "Atividade"): substituir `<Textarea>` por `<RichTextEditor>`.
+- **Bolhas de comentários existentes**: trocar render de texto puro por `<RichTextView content={c.texto} />`.
+- **Edição inline** de comentário: trocar `<Textarea>` por `<RichTextEditor>`.
+- O store (`crm.ts`) continua salvando `texto: string` — não exige migração; legados renderizam como texto puro.
+
+### Estilos
+- Garantir que `tailwindcss/typography` esteja disponível. Se não estiver, instalar `@tailwindcss/typography` e adicionar ao `plugins` do `tailwind.config.ts`. Caso contrário, definir estilos manuais (`[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold [&_em]:italic [&_u]:underline`) no wrapper do editor e do viewer — abordagem preferida para evitar nova dependência de plugin Tailwind.
 
 ### Preservado
-- Estrutura de status, responsáveis, comentários, campos personalizados.
-- Comportamento Kanban e agrupamento por status.
+- Estrutura de comentários, histórico, responsáveis, store.
+- Tema dark azul profundo (tokens semânticos em todos os controles novos).

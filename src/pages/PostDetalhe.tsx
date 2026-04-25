@@ -31,6 +31,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { RichTextView } from "@/components/RichTextView";
 
 const STATUS: StatusCard[] = ["Criar", "Revisar", "Agendar", "Postado", "Renovação"];
 
@@ -387,19 +389,14 @@ export default function PostDetalhe() {
                 </button>
               </div>
             )}
-            <Textarea
-              rows={1}
-              placeholder="Escreva um comentário..."
+            <RichTextEditor
               value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  enviar();
-                }
-              }}
-              className="border-0 focus-visible:ring-0 resize-none bg-transparent min-h-[36px] p-0 shadow-none"
+              onChange={setTexto}
+              placeholder="Escreva um comentário..."
+              onEnterSubmit={enviar}
+              minHeight="min-h-[44px]"
             />
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <input
@@ -516,19 +513,11 @@ function ComentarioBubble({
         </div>
         {editando ? (
           <div className="mt-1.5 space-y-2">
-            <Textarea
-              autoFocus
-              rows={2}
+            <RichTextEditor
               value={valor}
-              onChange={(e) => setValor(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setValor(comentario.comentario_texto);
-                  setEditando(false);
-                }
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) salvar();
-              }}
-              className="text-sm"
+              onChange={setValor}
+              placeholder="Editar comentário..."
+              minHeight="min-h-[60px]"
             />
             <div className="flex justify-end gap-1.5">
               <Button size="sm" variant="ghost" onClick={() => { setValor(comentario.comentario_texto); setEditando(false); }}>
@@ -542,7 +531,7 @@ function ComentarioBubble({
         ) : (
           <>
             {comentario.comentario_texto && (
-              <div className="text-sm whitespace-pre-wrap break-words mt-0.5">{comentario.comentario_texto}</div>
+              <RichTextView content={comentario.comentario_texto} className="mt-0.5" />
             )}
             {comentario.imagem_url && (
               <a href={comentario.imagem_url} target="_blank" rel="noreferrer">
