@@ -129,9 +129,31 @@ export function EquipeAcessosManager() {
     const isInList = !p.cargo || cargos.some((c) => c.label === p.cargo);
     setCargoModeEdit(p.cargo && !isInList ? "custom" : "select");
     setEditOpen(true);
+
+  const copiarLinkAcesso = async (p: ProfileRow) => {
+    const nome = p.nome?.trim() || "";
+    const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
+    const link = `${window.location.origin}/auth`;
+    const mensagem = `${saudacao} Seu acesso ao CRM da Ads BR:
+
+🔗 Link: ${link}
+📧 E-mail: ${p.email}
+
+Use a senha definida no momento do cadastro.
+Recomendamos trocar a senha no primeiro acesso.`;
+
+    try {
+      await navigator.clipboard.writeText(mensagem);
+      toast.success("Link de acesso copiado!", {
+        description: "Cole no WhatsApp ou e-mail do usuário.",
+      });
+    } catch {
+      toast.error("Não foi possível copiar", {
+        description: "Copie manualmente o link: " + link,
+      });
+    }
   };
 
-  const salvarEdicao = async () => {
     if (!editing) return;
     setEditSaving(true);
     const { error } = await supabase.functions.invoke("admin-update-user", {
