@@ -170,13 +170,17 @@ export function OpcoesEditor({ tipo }: Props) {
           }
           return (
             <div key={it.label} className="flex items-center gap-2 p-2 rounded-md border bg-card group">
-              <span
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs flex-1 border"
-                style={{ backgroundColor: `${it.cor}1f`, color: it.cor, borderColor: `${it.cor}4d` }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: it.cor }} />
-                {it.label}
-              </span>
+              {mostrarCor ? (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs flex-1 border"
+                  style={{ backgroundColor: `${it.cor}1f`, color: it.cor, borderColor: `${it.cor}4d` }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: it.cor }} />
+                  {it.label}
+                </span>
+              ) : (
+                <span className="text-sm flex-1">{it.label}</span>
+              )}
               {usoCount > 0 && <span className="text-[10px] text-muted-foreground">{usoCount} uso(s)</span>}
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => iniciarEdicao(it)} title="Editar">
                 <Pencil className="h-3.5 w-3.5" />
