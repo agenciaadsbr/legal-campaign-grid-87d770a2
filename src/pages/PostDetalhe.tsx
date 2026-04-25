@@ -166,7 +166,7 @@ export default function PostDetalhe() {
               />
             </div>
             <div>
-              <Label className="text-xs">Link do Meta</Label>
+              <Label className="text-xs">Link do Meta Business Suit</Label>
               <div className="flex gap-1.5">
                 <Input
                   placeholder="https://..."
