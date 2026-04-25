@@ -45,6 +45,7 @@ export interface Cliente {
   ultimo_comentario: string;
   created_at: string;
   custom: Record<string, any>;
+  primary_status?: string;
 }
 
 export interface Contrato {
@@ -241,6 +242,7 @@ function mapCliente(row: any, contratos: any[], comentarios: Comentario[], respo
     ultimo_comentario: ultimo,
     created_at: row.created_at,
     custom: row.campos_personalizados ?? {},
+    primary_status: row.primary_status ?? "Criar",
   };
 }
 

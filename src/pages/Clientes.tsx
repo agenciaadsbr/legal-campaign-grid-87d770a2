@@ -782,23 +782,24 @@ export default function Clientes() {
     [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]
   );
 
+  const PRIORIDADE_STATUS = ["Atrasado", "Revisar", "Criar", "Agendado", "Postado"] as const;
+
   const gruposPosts = useMemo(() => {
     const map: Record<string, typeof clientes> = {};
-    statusPostOptions.forEach((s) => (map[s.label] = []));
-    const filtradosIds = new Set(filtrados.map((c) => c.id));
-    statusPostOptions.forEach((s) => {
-      const clientesIds = new Set(
-        cards.filter((card) => card.status_card === s.label && filtradosIds.has(card.cliente_id)).map((c) => c.cliente_id)
-      );
-      map[s.label] = filtrados.filter((c) => clientesIds.has(c.id));
+    PRIORIDADE_STATUS.forEach((s) => (map[s] = []));
+    filtrados.forEach((c) => {
+      const ps = (c.primary_status as string) || "Criar";
+      if (!map[ps]) map[ps] = [];
+      map[ps].push(c);
     });
     return map;
-  }, [filtrados, statusPostOptions, cards]);
+  }, [filtrados]);
 
   const algumGrupoAberto = useMemo(
-    () => statusPostOptions.some((s) => (gruposPosts[s.label]?.length ?? 0) > 0 && !grupoColapsado[`post:${s.label}`]),
-    [statusPostOptions, gruposPosts, grupoColapsado]
+    () => PRIORIDADE_STATUS.some((s) => (gruposPosts[s]?.length ?? 0) > 0 && !grupoColapsado[`post:${s}`]),
+    [gruposPosts, grupoColapsado]
   );
+
 
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
@@ -863,27 +864,30 @@ export default function Clientes() {
               </thead>
             )}
             <tbody>
-              {statusPostOptions.map((status) => {
-                const items = gruposPosts[status.label] ?? [];
-                const key = `post:${status.label}`;
+              {PRIORIDADE_STATUS.map((statusLabel) => {
+                const statusOpt = statusPostOptions.find((s) => s.label === statusLabel);
+                const cor = statusOpt?.cor ?? "#9ca3af";
+                const items = gruposPosts[statusLabel] ?? [];
+                const key = `post:${statusLabel}`;
                 const colapsado = grupoColapsado[key];
+                if (items.length === 0) return null;
                 return (
                   <Fragment2 key={key}>
                     <tr className="bg-muted/60 hover:bg-muted/70 sticky">
                       <td
                         colSpan={colunasVisiveis.length}
                         className={cn("px-2 py-2 border-l-4", !colapsado && "border-b")}
-                        style={{ borderLeftColor: status.cor }}
+                        style={{ borderLeftColor: cor }}
                       >
                         <button
                           onClick={() => setGrupoColapsado((g) => ({ ...g, [key]: !colapsado }))}
                           className="flex items-center gap-2 text-sm font-semibold w-full"
                         >
                           {colapsado ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          <ColorBadge label={status.label.toUpperCase()} color={status.cor} variant="filled" />
+                          <ColorBadge label={statusLabel.toUpperCase()} color={cor} variant="filled" />
                           <span
                             className="ml-1 inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 rounded-full text-[11px] font-bold tabular-nums"
-                            style={{ backgroundColor: `${status.cor}26`, color: status.cor }}
+                            style={{ backgroundColor: `${cor}26`, color: cor }}
                           >
                             {items.length}
                           </span>
@@ -891,7 +895,6 @@ export default function Clientes() {
                       </td>
                     </tr>
                     {!colapsado && items.map((cliente) => {
-                      const statusOpt = statusOptions.find((s) => s.label === cliente.status_cliente);
                       return (
                         <tr key={`${key}-${cliente.id}`} className="hover:bg-accent/30 transition-colors">
                           {colunasVisiveis.map((col, i) => (
@@ -911,15 +914,6 @@ export default function Clientes() {
                                   >
                                     {cliente.nome_cliente}
                                   </Link>
-                                  {statusOpt && (
-                                    <span
-                                      className="shrink-0 inline-flex items-center h-4 px-1.5 rounded text-[9px] font-semibold uppercase tracking-wide"
-                                      style={{ backgroundColor: `${statusOpt.cor}22`, color: statusOpt.cor }}
-                                      title={`Status do cliente: ${statusOpt.label}`}
-                                    >
-                                      {statusOpt.label}
-                                    </span>
-                                  )}
                                 </div>
                               ) : (
                                 <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />

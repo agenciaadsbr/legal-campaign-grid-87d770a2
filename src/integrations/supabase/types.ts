@@ -126,6 +126,7 @@ export type Database = {
           logo_url: string | null
           nicho: string | null
           nome: string
+          primary_status: string
           responsaveis_ids: string[]
           status: string
           updated_at: string
@@ -138,6 +139,7 @@ export type Database = {
           logo_url?: string | null
           nicho?: string | null
           nome: string
+          primary_status?: string
           responsaveis_ids?: string[]
           status?: string
           updated_at?: string
@@ -150,6 +152,7 @@ export type Database = {
           logo_url?: string | null
           nicho?: string | null
           nome?: string
+          primary_status?: string
           responsaveis_ids?: string[]
           status?: string
           updated_at?: string
@@ -572,6 +575,10 @@ export type Database = {
         Returns: boolean
       }
       marcar_cards_atrasados: { Args: never; Returns: undefined }
+      update_client_primary_status: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
