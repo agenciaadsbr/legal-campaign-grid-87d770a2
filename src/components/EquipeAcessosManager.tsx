@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { UserPlus, Loader2, ShieldAlert, Pencil, Search } from "lucide-react";
+import { UserPlus, Loader2, ShieldAlert, Pencil, Search, Link2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 interface ProfileRow {
@@ -128,6 +129,30 @@ export function EquipeAcessosManager() {
     const isInList = !p.cargo || cargos.some((c) => c.label === p.cargo);
     setCargoModeEdit(p.cargo && !isInList ? "custom" : "select");
     setEditOpen(true);
+  };
+
+  const copiarLinkAcesso = async (p: ProfileRow) => {
+    const nome = p.nome?.trim() || "";
+    const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
+    const link = `${window.location.origin}/auth`;
+    const mensagem = `${saudacao} Seu acesso ao CRM da Ads BR:
+
+🔗 Link: ${link}
+📧 E-mail: ${p.email}
+
+Use a senha definida no momento do cadastro.
+Recomendamos trocar a senha no primeiro acesso.`;
+
+    try {
+      await navigator.clipboard.writeText(mensagem);
+      toast.success("Link de acesso copiado!", {
+        description: "Cole no WhatsApp ou e-mail do usuário.",
+      });
+    } catch {
+      toast.error("Não foi possível copiar", {
+        description: "Copie manualmente o link: " + link,
+      });
+    }
   };
 
   const salvarEdicao = async () => {
@@ -307,7 +332,7 @@ export function EquipeAcessosManager() {
                   <TableHead>Papel</TableHead>
                   <TableHead>Vínculo</TableHead>
                   <TableHead className="w-[110px]">Ativo</TableHead>
-                  <TableHead className="w-[60px]"></TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -341,9 +366,26 @@ export function EquipeAcessosManager() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => abrirEdicao(p)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <TooltipProvider delayDuration={200}>
+                          <div className="flex items-center gap-0.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copiarLinkAcesso(p)}>
+                                  <Link2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copiar link de acesso</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => abrirEdicao(p)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar usuário</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   );
