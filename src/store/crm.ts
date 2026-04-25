@@ -1,12 +1,21 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // ===================== Tipos =====================
-export type StatusCliente = "Ativo" | "Pausado" | "Próximo da renovação" | "Finalizado";
-export type StatusCard = "Criar" | "Revisar" | "Agendar" | "Postado" | "Renovação";
+export type StatusCliente = string; // dinâmico via tabela status_options
+export type StatusCard = "ideias" | "Criar" | "Revisar" | "Agendar" | "Postado" | "Renovação" | string;
 export type TipoAlerta = "Renovacao" | "Posts_Pendentes" | "Contrato_Finalizando";
 export type Permissao = "admin" | "editor" | "viewer";
-export type ColumnTipo = "texto" | "numero" | "data" | "dropdown" | "responsaveis" | "link" | "status" | "etiqueta";
+export type ColumnTipo =
+  | "texto"
+  | "numero"
+  | "data"
+  | "dropdown"
+  | "responsaveis"
+  | "link"
+  | "status"
+  | "etiqueta";
 
 export interface Responsavel {
   id: string;
@@ -105,7 +114,7 @@ export interface ColumnConfig {
   fixada: boolean;
   largura: number;
   cor?: string;
-  fixa?: boolean; // não pode ser removida
+  fixa?: boolean;
   opcoes?: { label: string; cor: string }[];
 }
 
@@ -122,6 +131,7 @@ export interface ModeloColunas {
 }
 
 interface State {
+  // dados
   responsaveis: Responsavel[];
   clientes: Cliente[];
   contratos: Contrato[];
@@ -134,131 +144,56 @@ interface State {
   modelosColunas: ModeloColunas[];
   nichos: DropdownOption[];
   statusOptions: DropdownOption[];
+  loading: boolean;
+  loaded: boolean;
 
-  // ações
-  addCliente: (data: Omit<Cliente, "id" | "created_at" | "ultimo_comentario" | "custom">) => string;
-  updateCliente: (id: string, patch: Partial<Cliente>) => void;
-  deleteCliente: (id: string) => void;
+  // ações cliente
+  addCliente: (
+    data: Omit<Cliente, "id" | "created_at" | "ultimo_comentario" | "custom">,
+  ) => Promise<string>;
+  updateCliente: (id: string, patch: Partial<Cliente>) => Promise<void>;
+  deleteCliente: (id: string) => Promise<void>;
 
   addResponsavel: (r: Omit<Responsavel, "id">) => string;
-  updateResponsavel: (id: string, patch: Partial<Responsavel>) => void;
-  deleteResponsavel: (id: string) => void;
+  updateResponsavel: (id: string, patch: Partial<Responsavel>) => Promise<void>;
+  deleteResponsavel: (id: string) => Promise<void>;
 
-  moveCard: (cardId: string, novoStatus: StatusCard) => void;
-  updateCard: (id: string, patch: Partial<Card>) => void;
-  updatePost: (id: string, patch: Partial<Post>) => void;
+  moveCard: (cardId: string, novoStatus: StatusCard) => Promise<void>;
+  updateCard: (id: string, patch: Partial<Card>) => Promise<void>;
+  updatePost: (id: string, patch: Partial<Post>) => Promise<void>;
 
-  addComentario: (c: Omit<Comentario, "id" | "created_at">) => void;
-  updateComentario: (id: string, patch: Partial<Pick<Comentario, "comentario_texto" | "imagem_url">>) => void;
-  deleteComentario: (id: string) => void;
+  addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
+  updateComentario: (
+    id: string,
+    patch: Partial<Pick<Comentario, "comentario_texto" | "imagem_url">>,
+  ) => Promise<void>;
+  deleteComentario: (id: string) => Promise<void>;
 
-  resolverAlerta: (id: string) => void;
+  resolverAlerta: (id: string) => Promise<void>;
 
-  addColumn: (col: Omit<ColumnConfig, "ordem">) => void;
-  updateColumn: (key: string, patch: Partial<ColumnConfig>) => void;
-  deleteColumn: (key: string) => void;
-  reorderColumns: (keys: string[]) => void;
-  saveModeloColunas: (nome: string) => void;
-  applyModeloColunas: (id: string) => void;
-  deleteModeloColunas: (id: string) => void;
+  addColumn: (col: Omit<ColumnConfig, "ordem">) => Promise<void>;
+  updateColumn: (key: string, patch: Partial<ColumnConfig>) => Promise<void>;
+  deleteColumn: (key: string) => Promise<void>;
+  reorderColumns: (keys: string[]) => Promise<void>;
+  saveModeloColunas: (nome: string) => Promise<void>;
+  applyModeloColunas: (id: string) => Promise<void>;
+  deleteModeloColunas: (id: string) => Promise<void>;
 
-  addCustomField: (f: Omit<CustomField, "id" | "ordem">) => void;
-  deleteCustomField: (id: string) => void;
+  addCustomField: (f: Omit<CustomField, "id" | "ordem">) => Promise<void>;
+  deleteCustomField: (id: string) => Promise<void>;
 
-  addNicho: (n: DropdownOption) => boolean;
-  updateNicho: (oldLabel: string, patch: Partial<DropdownOption>) => number;
-  deleteNicho: (label: string) => number;
-  addStatusOption: (s: DropdownOption) => boolean;
-  updateStatusOption: (oldLabel: string, patch: Partial<DropdownOption>) => number;
-  deleteStatusOption: (label: string) => number;
+  addNicho: (n: DropdownOption) => Promise<boolean>;
+  updateNicho: (oldLabel: string, patch: Partial<DropdownOption>) => Promise<number>;
+  deleteNicho: (label: string) => Promise<number>;
+  addStatusOption: (s: DropdownOption) => Promise<boolean>;
+  updateStatusOption: (oldLabel: string, patch: Partial<DropdownOption>) => Promise<number>;
+  deleteStatusOption: (label: string) => Promise<number>;
+
+  // internas
+  _loadAll: () => Promise<void>;
 }
 
-const uid = () => crypto.randomUUID();
 const today = () => new Date().toISOString();
-const addMonths = (date: Date, m: number) => {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + m);
-  return d;
-};
-
-// resolve qual cliente um comentário pertence (direto ou via post→card)
-function resolveClienteId(
-  com: Comentario | undefined,
-  posts: Post[],
-  cards: Card[]
-): string | undefined {
-  if (!com) return undefined;
-  if (com.cliente_id) return com.cliente_id;
-  if (com.post_id) {
-    const post = posts.find((p) => p.id === com.post_id);
-    const card = post ? cards.find((c) => c.id === post.card_id) : undefined;
-    return card?.cliente_id;
-  }
-  return undefined;
-}
-
-// gera o resumo "ultimo_comentario" do cliente (mais recente entre diretos + de posts)
-function computeUltimoComentario(
-  cliente_id: string,
-  comentarios: Comentario[],
-  posts: Post[],
-  cards: Card[],
-  responsaveis: Responsavel[]
-): string {
-  const relacionados = comentarios.filter((c) => resolveClienteId(c, posts, cards) === cliente_id);
-  if (relacionados.length === 0) return "";
-  const ultimo = relacionados.reduce((a, b) => (a.created_at > b.created_at ? a : b));
-  const autor = responsaveis.find((r) => r.id === ultimo.usuario_id)?.nome ?? "Usuário";
-  const trecho = ultimo.comentario_texto.slice(0, 60);
-  const data = new Date(ultimo.created_at).toLocaleDateString("pt-BR");
-  return `${autor}: ${trecho} — ${data}`;
-}
-
-// ===================== Seeds (apenas estrutura visual) =====================
-// Sem dados mockados de negócio. Tudo vazio até o usuário criar.
-
-const colunasPadrao: ColumnConfig[] = [
-  { key: "nome_cliente", label: "Nome do Cliente", tipo: "texto", ordem: 0, oculta: false, fixada: true, largura: 200, fixa: true },
-  { key: "responsaveis", label: "Responsáveis", tipo: "responsaveis", ordem: 1, oculta: false, fixada: false, largura: 110, fixa: true },
-  { key: "ultimo_comentario", label: "Últimos Comentários", tipo: "texto", ordem: 2, oculta: false, fixada: false, largura: 260 },
-  { key: "nicho", label: "Nicho", tipo: "dropdown", ordem: 3, oculta: false, fixada: false, largura: 130, opcoes: [] },
-  { key: "periodo_contrato", label: "Período do Contrato", tipo: "texto", ordem: 4, oculta: false, fixada: false, largura: 150, fixa: true },
-  { key: "posts", label: "Posts", tipo: "texto", ordem: 5, oculta: false, fixada: false, largura: 130, fixa: true },
-  { key: "observacoes", label: "Observações", tipo: "texto", ordem: 6, oculta: false, fixada: false, largura: 200 },
-];
-
-// gera (meses * 4) cards + posts para um cliente — 1 card por semana, 4 semanas por mês
-function gerarCardsEPosts(cliente_id: string, responsaveis: string[], meses: number) {
-  const cards: Card[] = [];
-  const posts: Post[] = [];
-  const m = Math.max(1, Math.min(6, Math.round(meses || 3)));
-  for (let mes = 1; mes <= m; mes++) {
-    for (let semana = 1; semana <= 4; semana++) {
-      const cardId = uid();
-      cards.push({
-        id: cardId,
-        cliente_id,
-        titulo_card: `Post Mês ${mes} - Semana ${semana}`,
-        mes_referencia: mes,
-        numero_semana: semana,
-        status_card: "Criar",
-        responsaveis,
-        created_at: today(),
-      });
-      posts.push({
-        id: uid(),
-        card_id: cardId,
-        titulo_post: `Post Mês ${mes} - Semana ${semana}`,
-        descricao: "",
-        legenda: "",
-        anexos: [],
-        status: "Criar",
-        created_at: today(),
-      });
-    }
-  }
-  return { cards, posts };
-}
 
 // calcula meses entre duas datas ISO (clamp 1–6)
 export function mesesEntre(inicioISO: string, fimISO: string): number {
@@ -269,314 +204,631 @@ export function mesesEntre(inicioISO: string, fimISO: string): number {
   return Math.max(1, Math.min(6, meses || 1));
 }
 
+// ===================== Mappers DB → App =====================
+function mapCliente(row: any, contratos: any[], comentarios: Comentario[], responsaveis: Responsavel[]): Cliente {
+  const contrato = contratos.find((c) => c.cliente_id === row.id);
+  const comsCliente = comentarios.filter((c) => c.cliente_id === row.id);
+  let ultimo = "";
+  if (comsCliente.length > 0) {
+    const u = comsCliente.reduce((a, b) => (a.created_at > b.created_at ? a : b));
+    const autor = responsaveis.find((r) => r.id === u.usuario_id)?.nome ?? "Usuário";
+    const trecho = u.comentario_texto.slice(0, 60);
+    const data = new Date(u.created_at).toLocaleDateString("pt-BR");
+    ultimo = `${autor}: ${trecho} — ${data}`;
+  }
+  return {
+    id: row.id,
+    nome_cliente: row.nome ?? "",
+    nicho: row.nicho ?? "",
+    status_cliente: row.status ?? "Ativo",
+    data_inicio_contrato: contrato?.data_inicio ?? "",
+    data_fim_contrato: contrato?.data_fim ?? "",
+    responsaveis: row.responsaveis_ids ?? [],
+    observacoes: row.descricao ?? "",
+    ultimo_comentario: ultimo,
+    created_at: row.created_at,
+    custom: row.campos_personalizados ?? {},
+  };
+}
+
+function mapContrato(row: any): Contrato {
+  return {
+    id: row.id,
+    cliente_id: row.cliente_id,
+    status: row.status,
+    data_inicio: row.data_inicio,
+    data_fim: row.data_fim,
+    total_posts: row.total_posts ?? 0,
+    posts_concluidos: row.posts_concluidos ?? 0,
+  };
+}
+
+function mapResponsavel(row: any): Responsavel {
+  return {
+    id: row.id,
+    nome: row.nome,
+    avatar_url: row.avatar_url ?? undefined,
+    cor: row.cor ?? "#6366f1",
+    permissao: row.permissao ?? "editor",
+    email: row.email ?? "",
+  };
+}
+
+function mapColuna(row: any): ColumnConfig {
+  return {
+    key: row.key,
+    label: row.label,
+    tipo: row.tipo,
+    ordem: row.ordem,
+    oculta: row.oculta,
+    fixada: row.fixada,
+    largura: row.largura ?? 150,
+    cor: row.cor ?? undefined,
+    fixa: row.fixa,
+    opcoes: row.opcoes ?? [],
+  };
+}
+
+function mapModelo(row: any): ModeloColunas {
+  return {
+    id: row.id,
+    nome: row.nome,
+    colunas: (row.colunas ?? []) as ColumnConfig[],
+    created_at: row.created_at,
+  };
+}
+
+function mapStatusOpt(row: any): DropdownOption {
+  return { label: row.label, cor: row.cor };
+}
+
+function mapNicho(row: any): DropdownOption {
+  return { label: row.label, cor: row.cor };
+}
+
+function mapCard(row: any): Card {
+  return {
+    id: row.id,
+    cliente_id: row.cliente_id,
+    titulo_card: row.titulo,
+    mes_referencia: 0,
+    numero_semana: 0,
+    status_card: row.status,
+    responsaveis: row.responsaveis_ids ?? [],
+    created_at: row.created_at,
+  };
+}
+
+function mapPost(row: any): Post {
+  return {
+    id: row.id,
+    card_id: row.card_id,
+    titulo_post: row.titulo ?? "",
+    descricao: "",
+    legenda: row.legenda ?? "",
+    anexos: row.anexos ?? [],
+    status: row.status,
+    created_at: row.created_at,
+  };
+}
+
+function mapComentario(row: any): Comentario {
+  return {
+    id: row.id,
+    post_id: row.post_id ?? undefined,
+    cliente_id: row.cliente_id ?? undefined,
+    usuario_id: row.usuario_id,
+    comentario_texto: row.comentario_texto,
+    imagem_url: row.imagem_url ?? undefined,
+    created_at: row.created_at,
+  };
+}
+
+function mapAlerta(row: any): Alerta {
+  return {
+    id: row.id,
+    cliente_id: row.cliente_id,
+    tipo_alerta: row.tipo_alerta,
+    data_alerta: row.data_alerta,
+    status: row.status,
+    mensagem: row.mensagem,
+    created_at: row.created_at,
+  };
+}
+
+function mapCustomField(row: any): CustomField {
+  return {
+    id: row.id,
+    escopo: row.escopo,
+    nome: row.nome,
+    tipo: row.tipo,
+    opcoes: row.opcoes ?? [],
+    ordem: row.ordem,
+  };
+}
+
 // ===================== Store =====================
-export const useCRM = create<State>()(
-  persist(
-    (set, get) => ({
-      responsaveis: [],
-      clientes: [],
-      contratos: [],
-      cards: [],
-      posts: [],
-      comentarios: [],
-      alertas: [],
-      customFields: [],
-      colunasCliente: colunasPadrao,
-      modelosColunas: [],
-      nichos: [],
-      statusOptions: [],
+let realtimeStarted = false;
 
+export const useCRM = create<State>()((set, get) => ({
+  responsaveis: [],
+  clientes: [],
+  contratos: [],
+  cards: [],
+  posts: [],
+  comentarios: [],
+  alertas: [],
+  customFields: [],
+  colunasCliente: [],
+  modelosColunas: [],
+  nichos: [],
+  statusOptions: [],
+  loading: false,
+  loaded: false,
 
-      addCliente: (data) => {
-        const id = uid();
-        const cliente: Cliente = {
-          ...data,
-          id,
-          created_at: today(),
-          ultimo_comentario: "",
-          custom: {},
-        };
-        const meses = mesesEntre(data.data_inicio_contrato, data.data_fim_contrato);
-        const { cards, posts } = gerarCardsEPosts(id, data.responsaveis, meses);
-        const contrato: Contrato = {
-          id: uid(),
-          cliente_id: id,
-          status: "Ativo",
-          data_inicio: data.data_inicio_contrato,
-          data_fim: data.data_fim_contrato,
-          total_posts: meses * 4,
-          posts_concluidos: 0,
-        };
-        set((s) => ({
-          clientes: [cliente, ...s.clientes],
-          contratos: [contrato, ...s.contratos],
-          cards: [...s.cards, ...cards],
-          posts: [...s.posts, ...posts],
-        }));
-        return id;
-      },
-      updateCliente: (id, patch) =>
-        set((s) => {
-          const clientes = s.clientes.map((c) => (c.id === id ? { ...c, ...patch } : c));
-          // Quando os responsáveis do cliente mudam, propaga para todos os cards e posts dele
-          if (patch.responsaveis) {
-            const novos = patch.responsaveis;
-            const cards = s.cards.map((c) => (c.cliente_id === id ? { ...c, responsaveis: novos } : c));
-            const cardIds = new Set(cards.filter((c) => c.cliente_id === id).map((c) => c.id));
-            const posts = s.posts.map((p) => (cardIds.has(p.card_id) ? { ...p, responsaveis: novos } : p));
-            return { clientes, cards, posts };
-          }
-          return { clientes };
-        }),
-      deleteCliente: (id) =>
-        set((s) => ({
-          clientes: s.clientes.filter((c) => c.id !== id),
-          contratos: s.contratos.filter((c) => c.cliente_id !== id),
-          cards: s.cards.filter((c) => c.cliente_id !== id),
-          posts: s.posts.filter((p) => {
-            const card = s.cards.find((c) => c.id === p.card_id);
-            return card?.cliente_id !== id;
-          }),
-          alertas: s.alertas.filter((a) => a.cliente_id !== id),
-        })),
+  _loadAll: async () => {
+    set({ loading: true });
+    const [
+      responsaveisRes,
+      clientesRes,
+      contratosRes,
+      colunasRes,
+      modelosRes,
+      statusRes,
+      nichosRes,
+      cardsRes,
+      postsRes,
+      comentariosRes,
+      alertasRes,
+      customFieldsRes,
+    ] = await Promise.all([
+      supabase.from("responsaveis").select("*").order("nome"),
+      supabase.from("clientes").select("*").order("created_at", { ascending: false }),
+      supabase.from("contratos").select("*"),
+      supabase.from("colunas_cliente").select("*").order("ordem"),
+      supabase.from("modelos_colunas").select("*").order("created_at"),
+      supabase.from("status_options").select("*").order("created_at"),
+      supabase.from("nichos").select("*").order("label"),
+      supabase.from("cards").select("*").order("posicao"),
+      supabase.from("posts").select("*"),
+      supabase.from("comentarios").select("*").order("created_at"),
+      supabase.from("alertas").select("*").order("created_at", { ascending: false }),
+      supabase.from("custom_fields").select("*").order("ordem"),
+    ]);
 
-      addResponsavel: (r) => {
-        const id = uid();
-        set((s) => ({ responsaveis: [...s.responsaveis, { ...r, id }] }));
-        return id;
-      },
-      updateResponsavel: (id, patch) =>
-        set((s) => ({ responsaveis: s.responsaveis.map((r) => (r.id === id ? { ...r, ...patch } : r)) })),
-      deleteResponsavel: (id) =>
-        set((s) => ({ responsaveis: s.responsaveis.filter((r) => r.id !== id) })),
+    const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
+    const contratos = (contratosRes.data ?? []).map(mapContrato);
+    const comentarios = (comentariosRes.data ?? []).map(mapComentario);
+    const clientes = (clientesRes.data ?? []).map((r) =>
+      mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis),
+    );
 
-      moveCard: (cardId, novoStatus) =>
-        set((s) => {
-          const cards = s.cards.map((c) => (c.id === cardId ? { ...c, status_card: novoStatus } : c));
-          const posts = s.posts.map((p) => (p.card_id === cardId ? { ...p, status: novoStatus } : p));
-          // recalcula posts_concluidos
-          const card = cards.find((c) => c.id === cardId);
-          let contratos = s.contratos;
-          let clientes = s.clientes;
-          let alertas = s.alertas;
-          if (card) {
-            const cardsCliente = cards.filter((c) => c.cliente_id === card.cliente_id);
-            const concluidos = cardsCliente.filter((c) => c.status_card === "Postado").length;
-            const contratoCliente = contratos.find((c) => c.cliente_id === card.cliente_id);
-            const totalPosts = contratoCliente?.total_posts ?? cardsCliente.length;
-            contratos = contratos.map((c) =>
-              c.cliente_id === card.cliente_id ? { ...c, posts_concluidos: concluidos } : c
-            );
-            if (totalPosts > 0 && concluidos === totalPosts) {
-              clientes = clientes.map((c) =>
-                c.id === card.cliente_id ? { ...c, status_cliente: "Próximo da renovação" } : c
-              );
-              const cliente = clientes.find((c) => c.id === card.cliente_id);
-              if (cliente && !alertas.some((a) => a.cliente_id === cliente.id && a.tipo_alerta === "Contrato_Finalizando" && a.status === "Pendente")) {
-                alertas = [
-                  {
-                    id: uid(),
-                    cliente_id: cliente.id,
-                    tipo_alerta: "Contrato_Finalizando",
-                    data_alerta: today().slice(0, 10),
-                    status: "Pendente",
-                    mensagem: `${totalPosts} posts concluídos para ${cliente.nome_cliente}`,
-                    created_at: today(),
-                  },
-                  ...alertas,
-                ];
-              }
-            }
-          }
-          return { cards, posts, contratos, clientes, alertas };
-        }),
+    set({
+      responsaveis,
+      clientes,
+      contratos,
+      colunasCliente: (colunasRes.data ?? []).map(mapColuna),
+      modelosColunas: (modelosRes.data ?? []).map(mapModelo),
+      statusOptions: (statusRes.data ?? []).map(mapStatusOpt),
+      nichos: (nichosRes.data ?? []).map(mapNicho),
+      cards: (cardsRes.data ?? []).map(mapCard),
+      posts: (postsRes.data ?? []).map(mapPost),
+      comentarios,
+      alertas: (alertasRes.data ?? []).map(mapAlerta),
+      customFields: (customFieldsRes.data ?? []).map(mapCustomField),
+      loading: false,
+      loaded: true,
+    });
+  },
 
-      updateCard: (id, patch) =>
-        set((s) => ({ cards: s.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
+  // ============= Clientes =============
+  addCliente: async (data) => {
+    const { data: inserted, error } = await supabase
+      .from("clientes")
+      .insert({
+        nome: data.nome_cliente,
+        nicho: data.nicho || null,
+        status: (data.status_cliente as any) || "Ativo",
+        responsaveis_ids: data.responsaveis ?? [],
+        descricao: data.observacoes ?? "",
+        campos_personalizados: {},
+      })
+      .select()
+      .single();
+    if (error || !inserted) throw error ?? new Error("Falha ao criar cliente");
 
-      updatePost: (id, patch) =>
-        set((s) => ({ posts: s.posts.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
+    if (data.data_inicio_contrato && data.data_fim_contrato) {
+      const meses = mesesEntre(data.data_inicio_contrato, data.data_fim_contrato);
+      await supabase.from("contratos").insert({
+        cliente_id: inserted.id,
+        status: "Ativo",
+        data_inicio: data.data_inicio_contrato,
+        data_fim: data.data_fim_contrato,
+        total_posts: meses * 4,
+        posts_concluidos: 0,
+      });
+    }
+    await get()._loadAll();
+    return inserted.id;
+  },
 
-      addComentario: (c) => {
-        const com: Comentario = { ...c, id: uid(), created_at: today() };
-        set((s) => {
-          const comentarios = [...s.comentarios, com];
-          let cliente_id = c.cliente_id;
-          if (!cliente_id && c.post_id) {
-            const post = s.posts.find((p) => p.id === c.post_id);
-            const card = post ? s.cards.find((cc) => cc.id === post.card_id) : undefined;
-            cliente_id = card?.cliente_id;
-          }
-          const clientes = cliente_id
-            ? s.clientes.map((cl) =>
-                cl.id === cliente_id
-                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id!, comentarios, s.posts, s.cards, s.responsaveis) }
-                  : cl
-              )
-            : s.clientes;
-          return { comentarios, clientes };
-        });
-      },
+  updateCliente: async (id, patch) => {
+    const dbPatch: any = {};
+    if (patch.nome_cliente !== undefined) dbPatch.nome = patch.nome_cliente;
+    if (patch.nicho !== undefined) dbPatch.nicho = patch.nicho || null;
+    if (patch.status_cliente !== undefined) dbPatch.status = patch.status_cliente;
+    if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
+    if (patch.observacoes !== undefined) dbPatch.descricao = patch.observacoes;
+    if (patch.custom !== undefined) dbPatch.campos_personalizados = patch.custom;
+    if (Object.keys(dbPatch).length > 0) {
+      await supabase.from("clientes").update(dbPatch).eq("id", id);
+    }
+    if (patch.data_inicio_contrato !== undefined || patch.data_fim_contrato !== undefined) {
+      const cur = get().contratos.find((c) => c.cliente_id === id);
+      const inicio = patch.data_inicio_contrato ?? cur?.data_inicio;
+      const fim = patch.data_fim_contrato ?? cur?.data_fim;
+      if (cur && inicio && fim) {
+        await supabase.from("contratos").update({ data_inicio: inicio, data_fim: fim }).eq("id", cur.id);
+      }
+    }
+    await get()._loadAll();
+  },
 
-      updateComentario: (id, patch) =>
-        set((s) => {
-          const comentarios = s.comentarios.map((c) => (c.id === id ? { ...c, ...patch } : c));
-          const alvo = s.comentarios.find((c) => c.id === id);
-          const cliente_id = resolveClienteId(alvo, s.posts, s.cards);
-          const clientes = cliente_id
-            ? s.clientes.map((cl) =>
-                cl.id === cliente_id
-                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id, comentarios, s.posts, s.cards, s.responsaveis) }
-                  : cl
-              )
-            : s.clientes;
-          return { comentarios, clientes };
-        }),
+  deleteCliente: async (id) => {
+    await supabase.from("contratos").delete().eq("cliente_id", id);
+    await supabase.from("alertas").delete().eq("cliente_id", id);
+    const cardsCli = get().cards.filter((c) => c.cliente_id === id).map((c) => c.id);
+    if (cardsCli.length > 0) {
+      await supabase.from("posts").delete().in("card_id", cardsCli);
+      await supabase.from("cards").delete().eq("cliente_id", id);
+    }
+    await supabase.from("clientes").delete().eq("id", id);
+    await get()._loadAll();
+  },
 
-      deleteComentario: (id) =>
-        set((s) => {
-          const alvo = s.comentarios.find((c) => c.id === id);
-          const comentarios = s.comentarios.filter((c) => c.id !== id);
-          const cliente_id = resolveClienteId(alvo, s.posts, s.cards);
-          const clientes = cliente_id
-            ? s.clientes.map((cl) =>
-                cl.id === cliente_id
-                  ? { ...cl, ultimo_comentario: computeUltimoComentario(cliente_id, comentarios, s.posts, s.cards, s.responsaveis) }
-                  : cl
-              )
-            : s.clientes;
-          return { comentarios, clientes };
-        }),
-
-      resolverAlerta: (id) =>
-        set((s) => ({ alertas: s.alertas.map((a) => (a.id === id ? { ...a, status: "Resolvido" } : a)) })),
-
-      addColumn: (col) =>
-        set((s) => ({ colunasCliente: [...s.colunasCliente, { ...col, ordem: s.colunasCliente.length }] })),
-      updateColumn: (key, patch) =>
-        set((s) => ({ colunasCliente: s.colunasCliente.map((c) => (c.key === key ? { ...c, ...patch } : c)) })),
-      deleteColumn: (key) =>
-        set((s) => ({ colunasCliente: s.colunasCliente.filter((c) => c.key !== key || c.fixa) })),
-      reorderColumns: (keys) =>
-        set((s) => ({
-          colunasCliente: keys
-            .map((k, i) => {
-              const c = s.colunasCliente.find((x) => x.key === k);
-              return c ? { ...c, ordem: i } : null;
-            })
-            .filter(Boolean) as ColumnConfig[],
-        })),
-
-      saveModeloColunas: (nome) =>
-        set((s) => ({
-          modelosColunas: [
-            ...s.modelosColunas,
-            { id: uid(), nome, colunas: s.colunasCliente.map((c) => ({ ...c })), created_at: today() },
-          ],
-        })),
-      applyModeloColunas: (id) =>
-        set((s) => {
-          const m = s.modelosColunas.find((x) => x.id === id);
-          if (!m) return s;
-          return { colunasCliente: m.colunas.map((c) => ({ ...c })) };
-        }),
-      deleteModeloColunas: (id) =>
-        set((s) => ({ modelosColunas: s.modelosColunas.filter((m) => m.id !== id) })),
-
-      addCustomField: (f) =>
-        set((s) => ({ customFields: [...s.customFields, { ...f, id: uid(), ordem: s.customFields.length }] })),
-      deleteCustomField: (id) =>
-        set((s) => ({ customFields: s.customFields.filter((f) => f.id !== id) })),
-
-      addNicho: (n) => {
-        const label = n.label.trim();
-        if (!label) return false;
-        const { nichos } = get();
-        if (nichos.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
-        set((s) => ({ nichos: [...s.nichos, { ...n, label }] }));
-        return true;
-      },
-      updateNicho: (oldLabel, patch) => {
-        const { nichos, clientes } = get();
-        const novoLabel = patch.label?.trim();
-        if (novoLabel !== undefined && !novoLabel) return -1;
-        if (
-          novoLabel &&
-          novoLabel.toLowerCase() !== oldLabel.toLowerCase() &&
-          nichos.some((x) => x.label.toLowerCase() === novoLabel.toLowerCase())
-        ) {
-          return -1;
+  // ============= Responsáveis =============
+  addResponsavel: (r) => {
+    // sync wrapper para preservar a assinatura anterior — dispara em background
+    const tempId = crypto.randomUUID();
+    set((s) => ({ responsaveis: [...s.responsaveis, { ...r, id: tempId }] }));
+    supabase
+      .from("responsaveis")
+      .insert({
+        nome: r.nome,
+        cor: r.cor,
+        permissao: r.permissao,
+        email: r.email,
+        avatar_url: r.avatar_url ?? null,
+      })
+      .select()
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          set((s) => ({
+            responsaveis: s.responsaveis.map((x) => (x.id === tempId ? mapResponsavel(data) : x)),
+          }));
         }
-        const afetados = novoLabel && novoLabel !== oldLabel
-          ? clientes.filter((c) => c.nicho === oldLabel).length
-          : 0;
-        set((s) => ({
-          nichos: s.nichos.map((n) =>
-            n.label === oldLabel ? { ...n, ...patch, label: novoLabel ?? n.label } : n
-          ),
-          clientes: novoLabel && novoLabel !== oldLabel
-            ? s.clientes.map((c) => (c.nicho === oldLabel ? { ...c, nicho: novoLabel } : c))
-            : s.clientes,
-        }));
-        return afetados;
-      },
-      deleteNicho: (label) => {
-        const { clientes } = get();
-        const afetados = clientes.filter((c) => c.nicho === label).length;
-        set((s) => ({
-          nichos: s.nichos.filter((n) => n.label !== label),
-          clientes: s.clientes.map((c) => (c.nicho === label ? { ...c, nicho: "" } : c)),
-        }));
-        return afetados;
-      },
+      });
+    return tempId;
+  },
 
-      addStatusOption: (opt) => {
-        const label = opt.label.trim();
-        if (!label) return false;
-        const { statusOptions } = get();
-        if (statusOptions.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
-        set((s) => ({ statusOptions: [...s.statusOptions, { ...opt, label }] }));
-        return true;
-      },
-      updateStatusOption: (oldLabel, patch) => {
-        const { statusOptions, clientes } = get();
-        const novoLabel = patch.label?.trim();
-        if (novoLabel !== undefined && !novoLabel) return -1;
-        if (
-          novoLabel &&
-          novoLabel.toLowerCase() !== oldLabel.toLowerCase() &&
-          statusOptions.some((x) => x.label.toLowerCase() === novoLabel.toLowerCase())
-        ) {
-          return -1;
-        }
-        const afetados = novoLabel && novoLabel !== oldLabel
-          ? clientes.filter((c) => c.status_cliente === oldLabel).length
-          : 0;
-        set((s) => ({
-          statusOptions: s.statusOptions.map((o) =>
-            o.label === oldLabel ? { ...o, ...patch, label: novoLabel ?? o.label } : o
-          ),
-          clientes: novoLabel && novoLabel !== oldLabel
-            ? s.clientes.map((c) =>
-                c.status_cliente === oldLabel ? { ...c, status_cliente: novoLabel as StatusCliente } : c
-              )
-            : s.clientes,
-        }));
-        return afetados;
-      },
-      deleteStatusOption: (label) => {
-        const { clientes, statusOptions } = get();
-        const afetados = clientes.filter((c) => c.status_cliente === label).length;
-        const fallback = statusOptions.find((s) => s.label !== label)?.label ?? "Pausado";
-        set((s) => ({
-          statusOptions: s.statusOptions.filter((o) => o.label !== label),
-          clientes: s.clientes.map((c) =>
-            c.status_cliente === label ? { ...c, status_cliente: fallback as StatusCliente } : c
-          ),
-        }));
-        return afetados;
-      },
-    }),
-    { name: "crm-juridico-v8" }
-  )
-);
+  updateResponsavel: async (id, patch) => {
+    const dbPatch: any = {};
+    if (patch.nome !== undefined) dbPatch.nome = patch.nome;
+    if (patch.cor !== undefined) dbPatch.cor = patch.cor;
+    if (patch.permissao !== undefined) dbPatch.permissao = patch.permissao;
+    if (patch.email !== undefined) dbPatch.email = patch.email;
+    if (patch.avatar_url !== undefined) dbPatch.avatar_url = patch.avatar_url;
+    await supabase.from("responsaveis").update(dbPatch).eq("id", id);
+    await get()._loadAll();
+  },
+
+  deleteResponsavel: async (id) => {
+    await supabase.from("responsaveis").delete().eq("id", id);
+    await get()._loadAll();
+  },
+
+  // ============= Cards / Posts =============
+  moveCard: async (cardId, novoStatus) => {
+    await supabase.from("cards").update({ status: novoStatus as any }).eq("id", cardId);
+    await get()._loadAll();
+  },
+
+  updateCard: async (id, patch) => {
+    const dbPatch: any = {};
+    if (patch.titulo_card !== undefined) dbPatch.titulo = patch.titulo_card;
+    if (patch.status_card !== undefined) dbPatch.status = patch.status_card;
+    if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
+    await supabase.from("cards").update(dbPatch).eq("id", id);
+    await get()._loadAll();
+  },
+
+  updatePost: async (id, patch) => {
+    const dbPatch: any = {};
+    if (patch.titulo_post !== undefined) dbPatch.titulo = patch.titulo_post;
+    if (patch.legenda !== undefined) dbPatch.legenda = patch.legenda;
+    if (patch.status !== undefined) dbPatch.status = patch.status;
+    if (patch.anexos !== undefined) dbPatch.anexos = patch.anexos;
+    await supabase.from("posts").update(dbPatch).eq("id", id);
+    await get()._loadAll();
+  },
+
+  // ============= Comentários =============
+  addComentario: async (c) => {
+    await supabase.from("comentarios").insert({
+      post_id: c.post_id ?? null,
+      cliente_id: c.cliente_id ?? null,
+      usuario_id: c.usuario_id,
+      comentario_texto: c.comentario_texto,
+      imagem_url: c.imagem_url ?? null,
+    });
+    await get()._loadAll();
+  },
+
+  updateComentario: async (id, patch) => {
+    await supabase.from("comentarios").update(patch).eq("id", id);
+    await get()._loadAll();
+  },
+
+  deleteComentario: async (id) => {
+    await supabase.from("comentarios").delete().eq("id", id);
+    await get()._loadAll();
+  },
+
+  // ============= Alertas =============
+  resolverAlerta: async (id) => {
+    await supabase.from("alertas").update({ status: "Resolvido" as any }).eq("id", id);
+    await get()._loadAll();
+  },
+
+  // ============= Colunas =============
+  addColumn: async (col) => {
+    const ordem = get().colunasCliente.length;
+    await supabase.from("colunas_cliente").insert({
+      key: col.key,
+      label: col.label,
+      tipo: col.tipo as any,
+      ordem,
+      oculta: col.oculta,
+      fixada: col.fixada,
+      largura: col.largura,
+      cor: col.cor ?? null,
+      fixa: col.fixa ?? false,
+      opcoes: (col.opcoes ?? []) as any,
+    });
+    await get()._loadAll();
+  },
+
+  updateColumn: async (key, patch) => {
+    const dbPatch: any = {};
+    if (patch.label !== undefined) dbPatch.label = patch.label;
+    if (patch.tipo !== undefined) dbPatch.tipo = patch.tipo;
+    if (patch.ordem !== undefined) dbPatch.ordem = patch.ordem;
+    if (patch.oculta !== undefined) dbPatch.oculta = patch.oculta;
+    if (patch.fixada !== undefined) dbPatch.fixada = patch.fixada;
+    if (patch.largura !== undefined) dbPatch.largura = patch.largura;
+    if (patch.cor !== undefined) dbPatch.cor = patch.cor;
+    if (patch.opcoes !== undefined) dbPatch.opcoes = patch.opcoes;
+    await supabase.from("colunas_cliente").update(dbPatch).eq("key", key);
+    await get()._loadAll();
+  },
+
+  deleteColumn: async (key) => {
+    const c = get().colunasCliente.find((x) => x.key === key);
+    if (c?.fixa) return;
+    await supabase.from("colunas_cliente").delete().eq("key", key);
+    await get()._loadAll();
+  },
+
+  reorderColumns: async (keys) => {
+    await Promise.all(
+      keys.map((k, i) => supabase.from("colunas_cliente").update({ ordem: i }).eq("key", k)),
+    );
+    await get()._loadAll();
+  },
+
+  saveModeloColunas: async (nome) => {
+    await supabase.from("modelos_colunas").insert({
+      nome,
+      colunas: get().colunasCliente as any,
+    });
+    await get()._loadAll();
+  },
+
+  applyModeloColunas: async (id) => {
+    const m = get().modelosColunas.find((x) => x.id === id);
+    if (!m) return;
+    // limpa as não-fixas, recria a partir do modelo, preservando as fixas
+    const fixas = get().colunasCliente.filter((c) => c.fixa);
+    const fixasKeys = new Set(fixas.map((c) => c.key));
+    const novas = m.colunas.filter((c) => !fixasKeys.has(c.key));
+
+    await supabase.from("colunas_cliente").delete().eq("fixa", false);
+    if (novas.length > 0) {
+      await supabase.from("colunas_cliente").insert(
+        novas.map((c, i) => ({
+          key: c.key,
+          label: c.label,
+          tipo: c.tipo as any,
+          ordem: fixas.length + i,
+          oculta: c.oculta,
+          fixada: c.fixada,
+          largura: c.largura,
+          cor: c.cor ?? null,
+          fixa: false,
+          opcoes: (c.opcoes ?? []) as any,
+        })),
+      );
+    }
+    await get()._loadAll();
+  },
+
+  deleteModeloColunas: async (id) => {
+    await supabase.from("modelos_colunas").delete().eq("id", id);
+    await get()._loadAll();
+  },
+
+  // ============= Custom Fields =============
+  addCustomField: async (f) => {
+    const ordem = get().customFields.length;
+    await supabase.from("custom_fields").insert({
+      escopo: f.escopo as any,
+      nome: f.nome,
+      tipo: f.tipo as any,
+      opcoes: (f.opcoes ?? []) as any,
+      ordem,
+    });
+    await get()._loadAll();
+  },
+
+  deleteCustomField: async (id) => {
+    await supabase.from("custom_fields").delete().eq("id", id);
+    await get()._loadAll();
+  },
+
+  // ============= Nichos =============
+  addNicho: async (n) => {
+    const label = n.label.trim();
+    if (!label) return false;
+    if (get().nichos.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
+    const { error } = await supabase.from("nichos").insert({ label, cor: n.cor });
+    if (error) return false;
+    await get()._loadAll();
+    return true;
+  },
+
+  updateNicho: async (oldLabel, patch) => {
+    const novoLabel = patch.label?.trim();
+    if (novoLabel !== undefined && !novoLabel) return -1;
+    if (
+      novoLabel &&
+      novoLabel.toLowerCase() !== oldLabel.toLowerCase() &&
+      get().nichos.some((x) => x.label.toLowerCase() === novoLabel.toLowerCase())
+    ) {
+      return -1;
+    }
+    const afetados = novoLabel && novoLabel !== oldLabel
+      ? get().clientes.filter((c) => c.nicho === oldLabel).length
+      : 0;
+
+    const dbPatch: any = {};
+    if (novoLabel !== undefined) dbPatch.label = novoLabel;
+    if (patch.cor !== undefined) dbPatch.cor = patch.cor;
+    await supabase.from("nichos").update(dbPatch).eq("label", oldLabel);
+
+    if (novoLabel && novoLabel !== oldLabel) {
+      await supabase.from("clientes").update({ nicho: novoLabel }).eq("nicho", oldLabel);
+    }
+    await get()._loadAll();
+    return afetados;
+  },
+
+  deleteNicho: async (label) => {
+    const afetados = get().clientes.filter((c) => c.nicho === label).length;
+    await supabase.from("clientes").update({ nicho: null }).eq("nicho", label);
+    await supabase.from("nichos").delete().eq("label", label);
+    await get()._loadAll();
+    return afetados;
+  },
+
+  // ============= Status Options =============
+  addStatusOption: async (opt) => {
+    const label = opt.label.trim();
+    if (!label) return false;
+    if (get().statusOptions.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
+    const { error } = await supabase.from("status_options").insert({ label, cor: opt.cor });
+    if (error) return false;
+    await get()._loadAll();
+    return true;
+  },
+
+  updateStatusOption: async (oldLabel, patch) => {
+    const novoLabel = patch.label?.trim();
+    if (novoLabel !== undefined && !novoLabel) return -1;
+    if (
+      novoLabel &&
+      novoLabel.toLowerCase() !== oldLabel.toLowerCase() &&
+      get().statusOptions.some((x) => x.label.toLowerCase() === novoLabel.toLowerCase())
+    ) {
+      return -1;
+    }
+    const afetados = novoLabel && novoLabel !== oldLabel
+      ? get().clientes.filter((c) => c.status_cliente === oldLabel).length
+      : 0;
+
+    const dbPatch: any = {};
+    if (novoLabel !== undefined) dbPatch.label = novoLabel;
+    if (patch.cor !== undefined) dbPatch.cor = patch.cor;
+    await supabase.from("status_options").update(dbPatch).eq("label", oldLabel);
+
+    if (novoLabel && novoLabel !== oldLabel) {
+      await supabase.from("clientes").update({ status: novoLabel as any }).eq("status", oldLabel as any);
+    }
+    await get()._loadAll();
+    return afetados;
+  },
+
+  deleteStatusOption: async (label) => {
+    const afetados = get().clientes.filter((c) => c.status_cliente === label).length;
+    const fallback = get().statusOptions.find((s) => s.label !== label)?.label;
+    if (fallback) {
+      await supabase.from("clientes").update({ status: fallback as any }).eq("status", label as any);
+    }
+    await supabase.from("status_options").delete().eq("label", label);
+    await get()._loadAll();
+    return afetados;
+  },
+}));
+
+// ===================== Bootstrap (uma vez por app) =====================
+function startRealtime() {
+  if (realtimeStarted) return;
+  realtimeStarted = true;
+  const reload = () => useCRM.getState()._loadAll();
+  const tables = [
+    "clientes",
+    "contratos",
+    "cards",
+    "posts",
+    "comentarios",
+    "alertas",
+    "colunas_cliente",
+    "status_options",
+    "nichos",
+    "responsaveis",
+    "custom_fields",
+    "modelos_colunas",
+  ];
+  const channel = supabase.channel("crm-realtime");
+  tables.forEach((t) => {
+    channel.on("postgres_changes", { event: "*", schema: "public", table: t }, () => {
+      reload();
+    });
+  });
+  channel.subscribe();
+}
+
+/**
+ * Hook a ser usado uma vez no app raiz para carregar dados e iniciar Realtime.
+ * Idempotente — chamar em qualquer lugar é seguro.
+ */
+export function useCRMBootstrap() {
+  useEffect(() => {
+    const s = useCRM.getState();
+    if (!s.loaded && !s.loading) {
+      s._loadAll();
+    }
+    startRealtime();
+  }, []);
+}
+
+// limpa lixo do localStorage de versões anteriores
+if (typeof window !== "undefined") {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("crm-juridico"))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* noop */
+  }
+}
