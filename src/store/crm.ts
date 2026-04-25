@@ -45,6 +45,7 @@ export interface Cliente {
   ultimo_comentario: string;
   created_at: string;
   custom: Record<string, any>;
+  primary_status?: string;
 }
 
 export interface Contrato {
