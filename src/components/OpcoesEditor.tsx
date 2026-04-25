@@ -86,6 +86,8 @@ export function OpcoesEditor({ tipo }: Props) {
 
   const { itens, contagemUso, onAdd, onUpdate, onDelete, rotuloSingular, placeholder } = cfg;
 
+  const mostrarCor = tipo === "status";
+
   const [editando, setEditando] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editCor, setEditCor] = useState("#3b82f6");
@@ -107,7 +109,8 @@ export function OpcoesEditor({ tipo }: Props) {
       toast.error("Nome não pode ficar vazio");
       return;
     }
-    const r = onUpdate(oldLabel, { label: novo, cor: editCor });
+    const cor = mostrarCor ? editCor : "#9ca3af";
+    const r = onUpdate(oldLabel, { label: novo, cor });
     if (r === -1) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
       return;
@@ -118,7 +121,8 @@ export function OpcoesEditor({ tipo }: Props) {
   const adicionar = () => {
     const nome = novoLabel.trim();
     if (!nome) return;
-    const ok = onAdd({ label: nome, cor: novaCor });
+    const cor = mostrarCor ? novaCor : "#9ca3af";
+    const ok = onAdd({ label: nome, cor });
     if (!ok) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
       return;
