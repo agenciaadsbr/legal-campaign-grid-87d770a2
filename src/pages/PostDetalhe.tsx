@@ -136,14 +136,15 @@ export default function PostDetalhe() {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">Post do Mês</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">Título da tarefa</div>
               <Input
-                value={post.titulo_post}
-                onChange={(e) => updatePost(post.id, { titulo_post: e.target.value })}
+                value={card.titulo_card}
+                onChange={(e) => updateCard(card.id, { titulo_card: e.target.value })}
+                placeholder="Ex: Criar arte carrossel sobre aposentadoria rural"
                 className="text-xl font-bold border-0 px-0 focus-visible:ring-0 h-auto"
               />
               <div className="text-xs text-muted-foreground mt-1">
-                Mês {card.mes_referencia} · Semana {card.numero_semana}
+                Post Mês {card.mes_referencia} · Semana {card.numero_semana}
               </div>
             </div>
             <div className="flex items-center gap-2">
