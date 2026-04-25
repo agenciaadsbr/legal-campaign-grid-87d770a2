@@ -1,131 +1,113 @@
+# 🔄 Reestruturação do fluxo operacional — Planejamento → Postado
 
-# ✅ Grupo "CONCLUÍDOS" no painel de Clientes — sem novo status, sem migration
+## ⚠️ Diagnóstico do estado atual
 
-## 📋 Verificação do guia vs. estado atual
+Hoje o sistema já tem boa parte da base, mas precisa ser ajustado:
 
-| Item do guia | Decisão |
-|---|---|
-| Não criar novo status `REVISADO` no banco | ✅ |
-| Não alterar Kanban / fluxo de posts | ✅ |
-| Manter lógica REVISAR/CRIAR | ✅ |
-| VIEW `clients_panel_view` no Postgres | ❌ **dispensável** — a derivação roda em memória no front e mantém realtime imediato (já temos `cards` + `clientes` assinados na store). Criar VIEW exigiria migration, RPC e quebraria a reatividade que já funciona. |
-| Trocar tabela `posts` + coluna `due_date` | ❌ **não aplicável** — projeto usa `cards.data_agendada` e `cards.status` (`Postado`/`Atrasado`/`Revisar`/`Criar`). Já cobre o conceito. |
-| Toggle "mostrar concluídos" + grupo cinza no fim | ✅ **a implementar** |
-
-> Mantenho o padrão atual (derivação no front via `useMemo`) — é mais simples, instantâneo via realtime, e zero retrabalho.
+- **Status existentes hoje** (`status_post_options`): `Criar`, `Revisar`, `Agendado`, `Postado`, `Atrasado` — **falta apenas `Planejamento`**.
+- **57 cards no banco** (56 em "Criar" + 4 outros). Precisamos decidir o que fazer com os existentes.
+- **Geração automática** (`addCliente` em `src/store/crm.ts` linhas 482-509) já cria N×4 cards + posts, mas usa o **primeiro** status da lista (hoje "Criar"). Será trocado para "Planejamento".
+- **Kanban dinâmico** (`src/pages/ClienteDetalhe.tsx`) já lê colunas de `statusPostOptions` — basta adicionar Planejamento e o Kanban se atualiza sozinho.
+- **Atrasado** já tem função SQL (`marcar_cards_atrasados`), mas roda só sob demanda — vamos agendar via cron ou disparar no carregamento.
+- **Dashboard atual** (`src/pages/Dashboard.tsx`) usa status hardcoded antigos (`Agendar`, `Postado`, `Renovação`) — precisa ser refeito para o novo fluxo.
 
 ---
 
-## 🧠 Conceito de "concluído" (frontend)
+## ❗ Decisão importante sobre o que NÃO faz parte deste plano
 
-Cliente é **CONCLUÍDO** quando, considerando todos os seus cards:
+O guia original pede **muita coisa** (modal de ativação, novos campos `data_prevista`/`data_ativacao`/`prazo_final`/`data_postagem`/`data_conclusao`/`mes`/`semana`/`prioridade`/`observacoes`/`links`, histórico de movimentações, alertas extras, dashboard completo de produtividade, filtros multi-dimensão).
 
-- `cards.length > 0` (cliente tem trabalho cadastrado), **e**
-- todos os cards têm `status_card === "Postado"`
+Para entregar com qualidade sem quebrar o que já funciona, este plano cobre o **núcleo operacional** (itens 1-8, 10, 16) em **uma única entrega**. Os itens **9 (dashboard completo), 12 (histórico de movimentações) e 13 (alertas avançados)** ficam como **fase 2** após você validar o fluxo.
 
-Equivalente: **`pendentes === 0`** onde `pendentes = cards não-Postados`.
-
-Cliente sem nenhum card → continua em **CRIAR** (default atual), não em concluído (evita poluir).
+Se quiser tudo de uma vez, me avise — mas o risco de bug é maior.
 
 ---
 
-## 🛠️ Mudanças (1 arquivo)
+## 📦 FASE 1 — Núcleo do novo fluxo (esta entrega)
 
-### `src/pages/Clientes.tsx`
+### 1. Banco de dados (migration)
 
-**1. Novo estado de toggle** (próximo a `apenasPendentes`, ~linha 787):
-
-```tsx
-const [mostrarConcluidos, setMostrarConcluidos] = useState(false);
+**a) Adicionar status "Planejamento"** em `status_post_options` como ordem 0 (primeiro):
+```sql
+UPDATE public.status_post_options SET ordem = ordem + 1;
+INSERT INTO public.status_post_options (label, cor, ordem)
+VALUES ('Planejamento', '#9ca3af', 0);
 ```
 
-**2. Pré-cálculo de pendências por cliente** (novo `useMemo`, antes de `gruposPosts`):
-
-```tsx
-const pendentesPorCliente = useMemo(() => {
-  const map: Record<string, { total: number; pendentes: number }> = {};
-  cards.forEach((card) => {
-    if (!map[card.cliente_id]) map[card.cliente_id] = { total: 0, pendentes: 0 };
-    map[card.cliente_id].total += 1;
-    if (card.status_card !== "Postado") map[card.cliente_id].pendentes += 1;
-  });
-  return map;
-}, [cards]);
+**b) Trigger automática para marcar atrasados** (substitui chamada manual da função existente):
+```sql
+-- Trigger BEFORE INSERT/UPDATE em cards: se data_agendada < now() E status IN ('Criar','Revisar','Agendado') → status='Atrasado'
+CREATE OR REPLACE FUNCTION public.auto_marcar_atrasado() RETURNS trigger ...
+CREATE TRIGGER cards_auto_atrasado BEFORE INSERT OR UPDATE OF data_agendada, status ON public.cards ...
 ```
+Mais um cron via `pg_cron` (se disponível) que roda `marcar_cards_atrasados()` a cada hora — caso contrário, dispararemos no `_loadAll()` do front.
 
-**3. Atualizar `GRUPOS` e `gruposPosts`** (~linhas 786, 817):
+**c) Decisão sobre os 56 cards existentes em "Criar":** vou perguntar via toast/console se quer migrá-los para "Planejamento" — **por padrão deixaremos como estão** (já foram "ativados" implicitamente). Cards novos nascem em Planejamento.
 
-```tsx
-const GRUPOS = ["Revisar", "Criar", "Concluidos"] as const;
+### 2. Store (`src/store/crm.ts`)
 
-const gruposPosts = useMemo(() => {
-  const map: Record<string, typeof clientes> = { Revisar: [], Criar: [], Concluidos: [] };
-  filtradosFinal.forEach((c) => {
-    const stats = pendentesPorCliente[c.id];
-    const concluido = stats && stats.total > 0 && stats.pendentes === 0;
-    if (concluido) {
-      if (mostrarConcluidos) map.Concluidos.push(c);
-      // se toggle off → cliente concluído some do painel
-      return;
-    }
-    const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
-    map[ps].push(c);
-  });
-  return map;
-}, [filtradosFinal, pendentesPorCliente, mostrarConcluidos]);
-```
+- `addCliente`: trocar `statusInicial = get().statusPostOptions[0]?.label ?? "Criar"` por `"Planejamento"` fixo (com fallback para o primeiro disponível).
+- Novo método `iniciarTarefa(cardId, { responsaveis, data_agendada })` que valida status atual = "Planejamento" e move para "Criar" + grava `data_agendada`.
+- `moveCard`: bloquear arrasto direto de **Planejamento → Criar** sem passar pelo modal (lança erro / flag para o Kanban abrir o modal).
+- Disparar `marcar_cards_atrasados` RPC no início do `_loadAll`.
 
-> Importante: quando `mostrarConcluidos === false`, clientes concluídos são **ocultados** (comportamento que o usuário pediu — "painel limpo por padrão"). Isso muda o comportamento atual ligeiramente: hoje eles aparecem em CRIAR. O guia explicitamente quer esse filtro. Ok e desejado.
+### 3. Kanban (`src/pages/ClienteDetalhe.tsx`)
 
-**4. Renderização do header do grupo** (`tbody` ~linha 898) — atualizar a cor default para incluir Concluidos:
+- Colunas seguem dinâmicas (já lê de `statusPostOptions`), então "Planejamento" aparece automaticamente como primeira coluna após a migration.
+- **Contador por coluna** já existe (`{cards.length}`) — apenas garantir destaque visual em "Atrasado" (badge vermelho pulsante).
+- **Botão ▶ Iniciar Tarefa** dentro do `CardItem` quando `status_card === "Planejamento"` — abre modal com responsáveis (multi-select) + prazo (data) + observação opcional.
+- **Drag & drop:** se origem = Planejamento e destino = Criar (ou qualquer coluna que não Planejamento), abrir o mesmo modal de ativação antes de confirmar a movimentação.
 
-```tsx
-const cor = statusOpt?.cor ?? (
-  statusLabel === "Revisar" ? "#f59e0b" :
-  statusLabel === "Criar"   ? "#3b82f6" :
-  "#9ca3af"  // Concluidos: cinza neutro
-);
-const labelExibido = statusLabel === "Concluidos" ? "Concluídos" : statusLabel;
-// usar labelExibido no <ColorBadge label={labelExibido.toUpperCase()} ... />
-```
+### 4. Filtros novos no Kanban
 
-A ordem do `GRUPOS` (Revisar → Criar → Concluidos) já garante que CONCLUÍDOS aparece por último.
+Adicionar barra de filtros acima das colunas:
+- Responsável (multi)
+- Status (multi — útil para esconder Postados)
+- "Somente atrasados" (toggle)
+- "Somente hoje" (toggle, baseado em `data_agendada`)
+- "Somente esta semana" (toggle)
 
-**5. Toggle na barra superior** (~linha 839, ao lado de "Apenas com ações pendentes"):
+Filtro de mês já existe e fica.
 
-```tsx
-<label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
-  <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
-  <span>Mostrar concluídos</span>
-</label>
-```
+### 5. Cores dos status
 
-**6. Esconder chip de tarefas para concluídos**: como concluídos não têm pendentes (`total === 0` em `tarefasPorCliente`), o `<TarefasInline>` já não renderiza. Nada a fazer.
+Atualizar via migration:
+- Planejamento = `#9ca3af` (cinza)
+- Criar = `#3b82f6` (azul) — hoje está `#005cfa`, ajustar
+- Revisar = `#f59e0b` (amarelo) — hoje `#e6ab0a`, ajustar
+- Agendado = `#a855f7` (roxo) — hoje `#3b82f6` azul, **trocar**
+- Postado = `#10b981` (verde) ✅ já correto
+- Atrasado = `#ef4444` (vermelho) ✅ já correto
+
+### 6. Painel "CRIAR" da página `/clientes`
+
+A página `Clientes.tsx` agrupa hoje em REVISAR/CRIAR/CONCLUÍDOS via `primary_status`. A função SQL `update_client_primary_status` precisa ser ajustada para considerar **Planejamento ≠ tarefa ativa** — clientes só com cards em Planejamento entram em **CONCLUÍDOS** (pendentes operacionais = 0).
+
+Atualizar o cálculo `pendentesPorCliente` (em `Clientes.tsx`) para **ignorar cards em "Planejamento"** ao contar pendências.
 
 ---
 
-## 🚫 O que NÃO mudo
+## 📦 FASE 2 — Adições (NÃO inclusas nesta entrega, perguntarei depois)
 
-- Banco: zero migration, zero VIEW, zero RPC
-- Kanban (`ClienteDetalhe.tsx`): inalterado
-- `cards.status` / `posts.status`: inalterados
-- Função `update_client_primary_status`: inalterada (concluído é derivação puramente visual no front)
-- Realtime: já funciona, propaga mudança de `status_card → Postado` instantaneamente
-
----
-
-## 🧪 Casos de teste
-
-| Cenário | Resultado esperado |
-|---|---|
-| Cliente com todos cards `Postado` + toggle OFF | Não aparece |
-| Cliente com todos cards `Postado` + toggle ON | Aparece em **CONCLUÍDOS** (cinza, último grupo) |
-| Cliente com 1 card `Revisar` + 9 `Postado` | Aparece em **REVISAR** com chip de tarefas |
-| Cliente sem nenhum card | Aparece em **CRIAR** (não concluído) |
-| Marcar último card pendente como `Postado` | Realtime → cliente sai dos grupos ativos imediatamente |
+- Dashboard operacional completo (tarefas hoje/atrasadas/revisar/agendadas hoje/produtividade por responsável).
+- Tabela `card_historico` com gatilhos para registrar todas movimentações + viewer dentro do card.
+- Alertas automáticos avançados (revisão parada > 2 dias, card sem responsável).
+- Campos extras no post (prioridade, observações livres, vínculo Meister/Meta separados).
 
 ---
 
-## 📂 Arquivos afetados
+## 🗂️ Arquivos editados
 
-- `src/pages/Clientes.tsx` (único)
+- **Migration nova** (adicionar Planejamento, ajustar cores, trigger atrasado, ajustar `update_client_primary_status`).
+- `src/store/crm.ts` — `addCliente` usa Planejamento, novo `iniciarTarefa`, dispara `marcar_cards_atrasados` no boot.
+- `src/pages/ClienteDetalhe.tsx` — botão "Iniciar tarefa", modal de ativação, filtros novos, intercepta drag de Planejamento.
+- `src/pages/Clientes.tsx` — ignora cards em Planejamento ao contar pendentes.
+- **Novo:** `src/components/IniciarTarefaDialog.tsx` — modal reutilizável.
+
+---
+
+## ❓ 3 perguntas antes de eu codar
+
+1. **Cards existentes em "Criar" (56):** mover todos para "Planejamento" ou deixar como já estão? (recomendo deixar)
+2. **Cron de atrasados:** pode usar `pg_cron` (extensão Supabase) ou prefere disparar só no front a cada `_loadAll`?
+3. **Confirma adiar Fase 2** (dashboard completo + histórico + alertas avançados) para depois de validar o fluxo, ou quer tudo agora?
