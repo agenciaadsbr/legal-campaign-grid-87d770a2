@@ -389,6 +389,7 @@ export const useCRM = create<State>()((set, get) => ({
       comentariosRes,
       alertasRes,
       customFieldsRes,
+      statusPostRes,
     ] = await Promise.all([
       supabase.from("responsaveis").select("*").order("nome"),
       supabase.from("clientes").select("*").order("created_at", { ascending: false }),
@@ -402,6 +403,7 @@ export const useCRM = create<State>()((set, get) => ({
       supabase.from("comentarios").select("*").order("created_at"),
       supabase.from("alertas").select("*").order("created_at", { ascending: false }),
       supabase.from("custom_fields").select("*").order("ordem"),
+      supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
     ]);
 
     const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
