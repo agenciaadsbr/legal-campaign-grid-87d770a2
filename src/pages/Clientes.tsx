@@ -782,23 +782,24 @@ export default function Clientes() {
     [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]
   );
 
+  const PRIORIDADE_STATUS = ["Atrasado", "Revisar", "Criar", "Agendado", "Postado"] as const;
+
   const gruposPosts = useMemo(() => {
     const map: Record<string, typeof clientes> = {};
-    statusPostOptions.forEach((s) => (map[s.label] = []));
-    const filtradosIds = new Set(filtrados.map((c) => c.id));
-    statusPostOptions.forEach((s) => {
-      const clientesIds = new Set(
-        cards.filter((card) => card.status_card === s.label && filtradosIds.has(card.cliente_id)).map((c) => c.cliente_id)
-      );
-      map[s.label] = filtrados.filter((c) => clientesIds.has(c.id));
+    PRIORIDADE_STATUS.forEach((s) => (map[s] = []));
+    filtrados.forEach((c) => {
+      const ps = (c.primary_status as string) || "Criar";
+      if (!map[ps]) map[ps] = [];
+      map[ps].push(c);
     });
     return map;
-  }, [filtrados, statusPostOptions, cards]);
+  }, [filtrados]);
 
   const algumGrupoAberto = useMemo(
-    () => statusPostOptions.some((s) => (gruposPosts[s.label]?.length ?? 0) > 0 && !grupoColapsado[`post:${s.label}`]),
-    [statusPostOptions, gruposPosts, grupoColapsado]
+    () => PRIORIDADE_STATUS.some((s) => (gruposPosts[s]?.length ?? 0) > 0 && !grupoColapsado[`post:${s}`]),
+    [gruposPosts, grupoColapsado]
   );
+
 
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
