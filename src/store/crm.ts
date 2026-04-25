@@ -172,6 +172,10 @@ interface State {
   moveCard: (cardId: string, novoStatus: StatusCard) => Promise<void>;
   updateCard: (id: string, patch: Partial<Card>) => Promise<void>;
   updatePost: (id: string, patch: Partial<Post>) => Promise<void>;
+  iniciarTarefa: (
+    cardId: string,
+    payload: { responsaveis: string[]; data_agendada?: string | null },
+  ) => Promise<void>;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
   updateComentario: (
@@ -479,7 +483,7 @@ export const useCRM = create<State>()((set, get) => ({
     }
 
     // Gera automaticamente meses × 4 cards (um por semana) + posts correspondentes
-    const statusInicial = get().statusPostOptions[0]?.label ?? "Criar";
+    const statusInicial = get().statusPostOptions.find((o) => o.label === "Planejamento")?.label ?? "Planejamento";
     const cardsPayload = [] as any[];
     for (let m = 1; m <= meses; m++) {
       for (let s = 1; s <= 4; s++) {
@@ -620,6 +624,26 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.status !== undefined) dbPatch.status = patch.status;
     if (patch.anexos !== undefined) dbPatch.anexos = patch.anexos;
     await supabase.from("posts").update(dbPatch).eq("id", id);
+    await get()._loadAll();
+  },
+
+  iniciarTarefa: async (cardId, { responsaveis, data_agendada }) => {
+    const card = get().cards.find((c) => c.id === cardId);
+    if (!card) {
+      toast.error("Card não encontrado");
+      return;
+    }
+    const dbPatch: any = {
+      status: "Criar",
+      responsaveis_ids: responsaveis,
+    };
+    if (data_agendada !== undefined) dbPatch.data_agendada = data_agendada;
+    const { error } = await supabase.from("cards").update(dbPatch).eq("id", cardId);
+    if (error) {
+      toast.error(`Falha ao iniciar tarefa: ${error.message}`);
+      return;
+    }
+    toast.success("Tarefa iniciada");
     await get()._loadAll();
   },
 
