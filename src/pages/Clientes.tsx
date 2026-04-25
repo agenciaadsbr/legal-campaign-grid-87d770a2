@@ -2,11 +2,14 @@ import { useCRM, ColumnConfig, DropdownOption } from "@/store/crm";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X } from "lucide-react";
+import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AvatarStack } from "@/components/AvatarStack";
 import { ColorBadge } from "@/components/StatusBadge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { OpcoesEditor } from "@/components/OpcoesEditor";
+import { ResponsaveisEditor } from "@/components/ResponsaveisEditor";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -538,6 +541,40 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
   }
 }
 
+function ConfiguracoesSheet() {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1.5 h-8" title="Configurações">
+          <Settings className="h-3.5 w-3.5" />
+          <span className="text-xs">Configurações</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="sm:max-w-xl w-full overflow-y-auto p-4">
+        <SheetHeader className="mb-3">
+          <SheetTitle className="flex items-center gap-2 text-base">
+            <Settings className="h-4 w-4" /> Configurações
+          </SheetTitle>
+        </SheetHeader>
+        <div className="space-y-3">
+          <Card>
+            <CardHeader className="py-3"><CardTitle className="text-sm">Status do Cliente</CardTitle></CardHeader>
+            <CardContent><OpcoesEditor tipo="status" /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="py-3"><CardTitle className="text-sm">Nichos</CardTitle></CardHeader>
+            <CardContent><OpcoesEditor tipo="nicho" /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="py-3"><CardTitle className="text-sm">Responsáveis</CardTitle></CardHeader>
+            <CardContent><ResponsaveisEditor /></CardContent>
+          </Card>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function FiltrosTopo({
   filtroResponsaveis,
   setFiltroResponsaveis,
@@ -697,6 +734,7 @@ export default function Clientes() {
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-8 w-56 text-sm" />
           </div>
+          <ConfiguracoesSheet />
           <GerenciarColunas />
           <NovoClienteDialog />
         </div>
