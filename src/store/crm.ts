@@ -145,6 +145,7 @@ interface State {
   deleteResponsavel: (id: string) => void;
 
   moveCard: (cardId: string, novoStatus: StatusCard) => void;
+  updateCard: (id: string, patch: Partial<Card>) => void;
   updatePost: (id: string, patch: Partial<Post>) => void;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => void;
@@ -469,6 +470,9 @@ export const useCRM = create<State>()(
           }
           return { cards, posts, contratos, clientes, alertas };
         }),
+
+      updateCard: (id, patch) =>
+        set((s) => ({ cards: s.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
 
       updatePost: (id, patch) =>
         set((s) => ({ posts: s.posts.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
