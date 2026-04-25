@@ -1208,6 +1208,12 @@ export default function Clientes() {
                               )}
                             </td>
                           ))}
+                          <td
+                            className="px-2 py-1.5 border-b align-middle sticky right-0 bg-card"
+                            style={{ minWidth: 90, width: 90 }}
+                          >
+                            <AcoesCliente cliente={cliente} />
+                          </td>
                         </tr>
                       );
                     })}
@@ -1216,7 +1222,7 @@ export default function Clientes() {
               })}
 
               {filtradosFinal.length === 0 && (
-                <tr><td colSpan={colunasVisiveis.length} className="text-center py-10 text-muted-foreground text-xs">
+                <tr><td colSpan={colunasVisiveis.length + 1} className="text-center py-10 text-muted-foreground text-xs">
                   {apenasPendentes ? "Nenhum cliente com ações pendentes" : "Nenhum cliente encontrado"}
                 </td></tr>
               )}
