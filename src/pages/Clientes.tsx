@@ -783,33 +783,63 @@ export default function Clientes() {
     [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]
   );
 
-  const PRIORIDADE_STATUS = ["Atrasado", "Revisar", "Criar", "Agendado", "Postado"] as const;
+  const GRUPOS = ["Revisar", "Criar"] as const;
+  const [apenasPendentes, setApenasPendentes] = useState(false);
+
+  // Classifica cards por prioridade (atrasado / urgente / hoje)
+  type Prioridade = "atrasado" | "urgente" | "hoje";
+  const tarefasPorCliente = useMemo(() => {
+    const hojeStart = new Date(); hojeStart.setHours(0, 0, 0, 0);
+    const amanhaStart = new Date(hojeStart); amanhaStart.setDate(amanhaStart.getDate() + 1);
+    const map: Record<string, { atrasado: typeof cards; urgente: typeof cards; hoje: typeof cards }> = {};
+    cards.forEach((card) => {
+      if (card.status_card === "Postado") return;
+      const due = card.data_agendada ? new Date(card.data_agendada) : null;
+      let prio: Prioridade | null = null;
+      if (card.status_card === "Atrasado" || (due && due < hojeStart)) prio = "atrasado";
+      else if (card.is_urgent) prio = "urgente";
+      else if (due && due >= hojeStart && due < amanhaStart) prio = "hoje";
+      if (!prio) return;
+      if (!map[card.cliente_id]) map[card.cliente_id] = { atrasado: [], urgente: [], hoje: [] };
+      map[card.cliente_id][prio].push(card);
+    });
+    return map;
+  }, [cards]);
+
+  const filtradosFinal = useMemo(() => {
+    if (!apenasPendentes) return filtrados;
+    return filtrados.filter((c) => {
+      const t = tarefasPorCliente[c.id];
+      return t && (t.atrasado.length + t.urgente.length + t.hoje.length) > 0;
+    });
+  }, [filtrados, apenasPendentes, tarefasPorCliente]);
 
   const gruposPosts = useMemo(() => {
-    const map: Record<string, typeof clientes> = {};
-    PRIORIDADE_STATUS.forEach((s) => (map[s] = []));
-    filtrados.forEach((c) => {
-      const ps = (c.primary_status as string) || "Criar";
-      if (!map[ps]) map[ps] = [];
+    const map: Record<string, typeof clientes> = { Revisar: [], Criar: [] };
+    filtradosFinal.forEach((c) => {
+      const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
       map[ps].push(c);
     });
     return map;
-  }, [filtrados]);
+  }, [filtradosFinal]);
 
   const algumGrupoAberto = useMemo(
-    () => PRIORIDADE_STATUS.some((s) => (gruposPosts[s]?.length ?? 0) > 0 && !grupoColapsado[`post:${s}`]),
+    () => GRUPOS.some((s) => (gruposPosts[s]?.length ?? 0) > 0 && !grupoColapsado[`post:${s}`]),
     [gruposPosts, grupoColapsado]
   );
-
 
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold leading-tight">Clientes</h1>
-          <p className="text-xs text-muted-foreground">{clientes.length} clientes • Agrupados por status de posts</p>
+          <p className="text-xs text-muted-foreground">{clientes.length} clientes • Revisar / Criar</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
+            <Switch checked={apenasPendentes} onCheckedChange={setApenasPendentes} />
+            <span>Apenas com ações pendentes</span>
+          </label>
           <Select value={filtroStatusCliente} onValueChange={setFiltroStatusCliente}>
             <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Status do cliente" />
@@ -865,9 +895,9 @@ export default function Clientes() {
               </thead>
             )}
             <tbody>
-              {PRIORIDADE_STATUS.map((statusLabel) => {
+              {GRUPOS.map((statusLabel) => {
                 const statusOpt = statusPostOptions.find((s) => s.label === statusLabel);
-                const cor = statusOpt?.cor ?? "#9ca3af";
+                const cor = statusOpt?.cor ?? (statusLabel === "Revisar" ? "#f59e0b" : "#3b82f6");
                 const items = gruposPosts[statusLabel] ?? [];
                 const key = `post:${statusLabel}`;
                 const colapsado = grupoColapsado[key];
@@ -896,6 +926,8 @@ export default function Clientes() {
                       </td>
                     </tr>
                     {!colapsado && items.map((cliente) => {
+                      const tarefas = tarefasPorCliente[cliente.id] ?? { atrasado: [], urgente: [], hoje: [] };
+                      const total = tarefas.atrasado.length + tarefas.urgente.length + tarefas.hoje.length;
                       return (
                         <tr key={`${key}-${cliente.id}`} className="hover:bg-accent/30 transition-colors">
                           {colunasVisiveis.map((col, i) => (
@@ -915,6 +947,9 @@ export default function Clientes() {
                                   >
                                     {cliente.nome_cliente}
                                   </Link>
+                                  {total > 0 && (
+                                    <TarefasInline tarefas={tarefas} clienteId={cliente.id} />
+                                  )}
                                 </div>
                               ) : (
                                 <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />
@@ -928,8 +963,10 @@ export default function Clientes() {
                 );
               })}
 
-              {filtrados.length === 0 && (
-                <tr><td colSpan={colunasVisiveis.length} className="text-center py-10 text-muted-foreground text-xs">Nenhum cliente encontrado</td></tr>
+              {filtradosFinal.length === 0 && (
+                <tr><td colSpan={colunasVisiveis.length} className="text-center py-10 text-muted-foreground text-xs">
+                  {apenasPendentes ? "Nenhum cliente com ações pendentes" : "Nenhum cliente encontrado"}
+                </td></tr>
               )}
             </tbody>
           </table>
@@ -941,6 +978,90 @@ export default function Clientes() {
         open={!!historicoClienteId}
         onOpenChange={(v) => !v && setHistoricoClienteId(null)}
       />
+    </div>
+  );
+}
+
+function TarefasInline({
+  tarefas,
+  clienteId,
+}: {
+  tarefas: { atrasado: any[]; urgente: any[]; hoje: any[] };
+  clienteId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const total = tarefas.atrasado.length + tarefas.urgente.length + tarefas.hoje.length;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-accent border border-transparent hover:border-border transition-colors"
+          aria-label={`${total} tarefas pendentes`}
+        >
+          {tarefas.atrasado.length > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-destructive">
+              <AlertCircle className="h-3 w-3" /> {tarefas.atrasado.length}
+            </span>
+          )}
+          {tarefas.urgente.length > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-orange-500">
+              <Zap className="h-3 w-3" /> {tarefas.urgente.length}
+            </span>
+          )}
+          {tarefas.hoje.length > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-yellow-600">
+              <Clock className="h-3 w-3" /> {tarefas.hoje.length}
+            </span>
+          )}
+          <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-2" align="start">
+        <ListaTarefasGrupo titulo="Atrasadas" cor="text-destructive" Icon={AlertCircle} items={tarefas.atrasado} clienteId={clienteId} />
+        <ListaTarefasGrupo titulo="Urgentes" cor="text-orange-500" Icon={Zap} items={tarefas.urgente} clienteId={clienteId} />
+        <ListaTarefasGrupo titulo="Hoje" cor="text-yellow-600" Icon={Clock} items={tarefas.hoje} clienteId={clienteId} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ListaTarefasGrupo({
+  titulo,
+  cor,
+  Icon,
+  items,
+  clienteId,
+}: {
+  titulo: string;
+  cor: string;
+  Icon: any;
+  items: any[];
+  clienteId: string;
+}) {
+  if (items.length === 0) return null;
+  const visiveis = items.slice(0, 5);
+  const restante = items.length - visiveis.length;
+  return (
+    <div className="mb-2 last:mb-0">
+      <div className={cn("flex items-center gap-1 text-[11px] font-semibold mb-1", cor)}>
+        <Icon className="h-3 w-3" /> {titulo} ({items.length})
+      </div>
+      <div className="space-y-0.5">
+        {visiveis.map((c) => (
+          <Link
+            key={c.id}
+            to={`/clientes/${clienteId}`}
+            className="block px-2 py-1 rounded-md text-[11px] hover:bg-accent truncate"
+          >
+            • {c.titulo_card || `Card ${c.numero_semana}`}
+          </Link>
+        ))}
+        {restante > 0 && (
+          <div className="px-2 py-0.5 text-[10px] text-muted-foreground">+{restante} tarefa{restante > 1 ? "s" : ""}</div>
+        )}
+      </div>
     </div>
   );
 }
