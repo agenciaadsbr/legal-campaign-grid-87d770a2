@@ -62,6 +62,7 @@ export interface Card {
   id: string;
   cliente_id: string;
   titulo_card: string;
+  descricao?: string | null;
   mes_referencia: number;
   numero_semana: number;
   status_card: StatusCard;
