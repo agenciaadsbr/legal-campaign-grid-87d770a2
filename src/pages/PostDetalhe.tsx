@@ -31,6 +31,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { RichTextView } from "@/components/RichTextView";
 
 const STATUS: StatusCard[] = ["Criar", "Revisar", "Agendar", "Postado", "Renovação"];
 
