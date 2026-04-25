@@ -539,13 +539,11 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
         )}
         title="Abrir histórico de comentários"
       >
-        {tem ? (
+        {tem && (
           <MessageSquare className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary" />
-        ) : (
-          <MessageSquarePlus className="h-3 w-3 shrink-0 group-hover:text-primary" />
         )}
         <span className="text-xs truncate flex-1">
-          {tem ? valor : "Adicionar comentário"}
+          {tem ? valor : ""}
         </span>
       </button>
     );
