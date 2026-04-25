@@ -294,12 +294,13 @@ function mapNicho(row: any): DropdownOption {
 }
 
 function mapCard(row: any): Card {
+  const pos = row.posicao ?? 0;
   return {
     id: row.id,
     cliente_id: row.cliente_id,
     titulo_card: row.titulo,
-    mes_referencia: 0,
-    numero_semana: 0,
+    mes_referencia: Math.floor(pos / 4) + 1,
+    numero_semana: (pos % 4) + 1,
     status_card: row.status,
     responsaveis: row.responsaveis_ids ?? [],
     created_at: row.created_at,
@@ -451,8 +452,9 @@ export const useCRM = create<State>()((set, get) => ({
       throw error ?? new Error("Falha ao criar cliente");
     }
 
+    let meses = 3;
     if (data.data_inicio_contrato && data.data_fim_contrato) {
-      const meses = mesesEntre(data.data_inicio_contrato, data.data_fim_contrato);
+      meses = mesesEntre(data.data_inicio_contrato, data.data_fim_contrato);
       const { error: cErr } = await supabase.from("contratos").insert({
         cliente_id: inserted.id,
         status: "Ativo",
@@ -463,6 +465,37 @@ export const useCRM = create<State>()((set, get) => ({
       });
       if (cErr) toast.error(`Cliente criado, mas o contrato falhou: ${cErr.message}`);
     }
+
+    // Gera automaticamente meses × 4 cards (um por semana) + posts correspondentes
+    const statusInicial = get().statusPostOptions[0]?.label ?? "Criar";
+    const cardsPayload = [] as any[];
+    for (let m = 1; m <= meses; m++) {
+      for (let s = 1; s <= 4; s++) {
+        cardsPayload.push({
+          cliente_id: inserted.id,
+          titulo: `Post Mês ${m} - Semana ${s}`,
+          status: statusInicial,
+          posicao: (m - 1) * 4 + (s - 1),
+          responsaveis_ids: data.responsaveis ?? [],
+        });
+      }
+    }
+    const { data: cardsInseridos, error: cardsErr } = await supabase
+      .from("cards")
+      .insert(cardsPayload)
+      .select();
+    if (cardsErr) {
+      toast.error(`Cliente criado, mas os cards falharam: ${cardsErr.message}`);
+    } else if (cardsInseridos && cardsInseridos.length > 0) {
+      const postsPayload = cardsInseridos.map((c: any) => ({
+        card_id: c.id,
+        titulo: c.titulo,
+        status: c.status,
+      }));
+      const { error: postsErr } = await supabase.from("posts").insert(postsPayload);
+      if (postsErr) toast.error(`Cards criados, mas os posts falharam: ${postsErr.message}`);
+    }
+
     await get()._loadAll();
     return inserted.id;
   },
