@@ -214,34 +214,14 @@ function computeUltimoComentario(
   return `${autor}: ${trecho} — ${data}`;
 }
 
-// ===================== Seeds =====================
-const seedResponsaveis: Responsavel[] = [
-  { id: "r1", nome: "Ana Costa", cor: "#6366f1", permissao: "admin", email: "ana@crm.com" },
-  { id: "r2", nome: "Bruno Lima", cor: "#ec4899", permissao: "editor", email: "bruno@crm.com" },
-  { id: "r3", nome: "Carla Souza", cor: "#10b981", permissao: "editor", email: "carla@crm.com" },
-  { id: "r4", nome: "Diego Alves", cor: "#f59e0b", permissao: "viewer", email: "diego@crm.com" },
-];
-
-const seedNichos: DropdownOption[] = [
-  { label: "Trabalhista", cor: "#3b82f6" },
-  { label: "Tributário", cor: "#10b981" },
-  { label: "Família", cor: "#ec4899" },
-  { label: "Empresarial", cor: "#f59e0b" },
-  { label: "Criminal", cor: "#ef4444" },
-];
-
-const seedStatus: DropdownOption[] = [
-  { label: "Ativo", cor: "#10b981" },
-  { label: "Pausado", cor: "#94a3b8" },
-  { label: "Próximo da renovação", cor: "#f59e0b" },
-  { label: "Finalizado", cor: "#ef4444" },
-];
+// ===================== Seeds (apenas estrutura visual) =====================
+// Sem dados mockados de negócio. Tudo vazio até o usuário criar.
 
 const colunasPadrao: ColumnConfig[] = [
   { key: "nome_cliente", label: "Nome do Cliente", tipo: "texto", ordem: 0, oculta: false, fixada: true, largura: 200, fixa: true },
   { key: "responsaveis", label: "Responsáveis", tipo: "responsaveis", ordem: 1, oculta: false, fixada: false, largura: 110, fixa: true },
   { key: "ultimo_comentario", label: "Últimos Comentários", tipo: "texto", ordem: 2, oculta: false, fixada: false, largura: 260 },
-  { key: "nicho", label: "Nicho", tipo: "dropdown", ordem: 3, oculta: false, fixada: false, largura: 130, opcoes: seedNichos },
+  { key: "nicho", label: "Nicho", tipo: "dropdown", ordem: 3, oculta: false, fixada: false, largura: 130, opcoes: [] },
   { key: "periodo_contrato", label: "Período do Contrato", tipo: "texto", ordem: 4, oculta: false, fixada: false, largura: 150, fixa: true },
   { key: "posts", label: "Posts", tipo: "texto", ordem: 5, oculta: false, fixada: false, largura: 130, fixa: true },
   { key: "observacoes", label: "Observações", tipo: "texto", ordem: 6, oculta: false, fixada: false, largura: 200 },
@@ -289,107 +269,23 @@ export function mesesEntre(inicioISO: string, fimISO: string): number {
   return Math.max(1, Math.min(6, meses || 1));
 }
 
-function seedClientes() {
-  const clientes: Cliente[] = [];
-  const contratos: Contrato[] = [];
-  const cardsAll: Card[] = [];
-  const postsAll: Post[] = [];
-
-  const exemplos = [
-    { nome: "Dr. José Almeida", nicho: "Trabalhista", resp: ["r1", "r2"], meses: 3 },
-    { nome: "Silva & Associados", nicho: "Empresarial", resp: ["r2"], meses: 6 },
-    { nome: "Mariana Ferreira Adv.", nicho: "Família", resp: ["r3", "r1"], meses: 3 },
-    { nome: "Escritório Tributus", nicho: "Tributário", resp: ["r1"], meses: 6 },
-    { nome: "Defesa Total", nicho: "Criminal", resp: ["r4", "r2"], meses: 3 },
-  ];
-
-  exemplos.forEach((e, i) => {
-    const id = uid();
-    const inicio = addMonths(new Date(), -i);
-    const fim = addMonths(inicio, e.meses);
-    const totalPosts = e.meses * 4;
-    clientes.push({
-      id,
-      nome_cliente: e.nome,
-      nicho: e.nicho,
-      status_cliente: i === 4 ? "Próximo da renovação" : "Ativo",
-      data_inicio_contrato: inicio.toISOString().slice(0, 10),
-      data_fim_contrato: fim.toISOString().slice(0, 10),
-      responsaveis: e.resp,
-      observacoes: "",
-      ultimo_comentario: i === 0 ? "Ana Costa: aprovado, pode agendar — hoje" : "",
-      created_at: today(),
-      custom: {},
-    });
-    contratos.push({
-      id: uid(),
-      cliente_id: id,
-      status: "Ativo",
-      data_inicio: inicio.toISOString().slice(0, 10),
-      data_fim: fim.toISOString().slice(0, 10),
-      total_posts: totalPosts,
-      posts_concluidos: i === 0 ? 5 : i === 4 ? totalPosts : 2,
-    });
-    const { cards, posts } = gerarCardsEPosts(id, e.resp, e.meses);
-    // distribui status para parecer real
-    cards.forEach((c, idx) => {
-      const post = posts[idx];
-      if (i === 4) {
-        c.status_card = "Postado"; post.status = "Postado";
-      } else if (idx < 2) {
-        c.status_card = "Postado"; post.status = "Postado";
-      } else if (idx < 4) {
-        c.status_card = "Agendar"; post.status = "Agendar";
-      } else if (idx < 6) {
-        c.status_card = "Revisar"; post.status = "Revisar";
-      }
-    });
-    cardsAll.push(...cards);
-    postsAll.push(...posts);
-  });
-
-  const alertas: Alerta[] = [
-    {
-      id: uid(),
-      cliente_id: clientes[4].id,
-      tipo_alerta: "Renovacao",
-      data_alerta: today().slice(0, 10),
-      status: "Pendente",
-      mensagem: `Contrato de ${clientes[4].nome_cliente} termina em 7 dias`,
-      created_at: today(),
-    },
-    {
-      id: uid(),
-      cliente_id: clientes[4].id,
-      tipo_alerta: "Contrato_Finalizando",
-      data_alerta: today().slice(0, 10),
-      status: "Pendente",
-      mensagem: `${clientes[4].nome_cliente}: posts concluídos`,
-      created_at: today(),
-    },
-  ];
-
-  return { clientes, contratos, cardsAll, postsAll, alertas };
-}
-
-const seed = seedClientes();
-
 // ===================== Store =====================
 export const useCRM = create<State>()(
   persist(
     (set, get) => ({
-      responsaveis: seedResponsaveis,
-      clientes: seed.clientes,
-      contratos: seed.contratos,
-      cards: seed.cardsAll,
-      posts: seed.postsAll,
+      responsaveis: [],
+      clientes: [],
+      contratos: [],
+      cards: [],
+      posts: [],
       comentarios: [],
-      alertas: seed.alertas,
+      alertas: [],
       customFields: [],
       colunasCliente: colunasPadrao,
       modelosColunas: [],
-      nichos: seedNichos,
-      statusOptions: seedStatus,
+      nichos: [],
+      statusOptions: [],
+
 
       addCliente: (data) => {
         const id = uid();
