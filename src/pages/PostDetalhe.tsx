@@ -130,6 +130,7 @@ export default function PostDetalhe() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-3 animate-fade-in">
       {/* Post do Mês — seção unificada */}
+      <fieldset disabled={!canWrite} className="contents">
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
@@ -357,6 +358,7 @@ export default function PostDetalhe() {
           </div>
         </CardContent>
       </Card>
+      </fieldset>
 
       {/* Atividade */}
       <Card>
