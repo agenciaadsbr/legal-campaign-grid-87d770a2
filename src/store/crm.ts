@@ -654,13 +654,24 @@ export const useCRM = create<State>()((set, get) => ({
 
   // ============= Comentários =============
   addComentario: async (c) => {
-    await supabase.from("comentarios").insert({
+    // RLS exige auth.uid() = usuario_id, então usamos sempre o usuário autenticado
+    const { data: userData } = await supabase.auth.getUser();
+    const authUid = userData.user?.id;
+    if (!authUid) {
+      toast.error("Você precisa estar autenticado para comentar");
+      return;
+    }
+    const { error } = await supabase.from("comentarios").insert({
       post_id: c.post_id ?? null,
       cliente_id: c.cliente_id ?? null,
-      usuario_id: c.usuario_id,
+      usuario_id: authUid,
       comentario_texto: c.comentario_texto,
       imagem_url: c.imagem_url ?? null,
     });
+    if (error) {
+      toast.error(`Falha ao salvar comentário: ${error.message}`);
+      return;
+    }
     await get()._loadAll();
   },
 
