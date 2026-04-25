@@ -792,7 +792,7 @@ export default function Clientes() {
     cards.forEach((card) => {
       if (!map[card.cliente_id]) map[card.cliente_id] = { total: 0, pendentes: 0 };
       map[card.cliente_id].total += 1;
-      if (card.status_card !== "Postado") map[card.cliente_id].pendentes += 1;
+      if (card.status_card !== "Postado" && card.status_card !== "Planejamento") map[card.cliente_id].pendentes += 1;
     });
     return map;
   }, [cards]);
@@ -804,7 +804,7 @@ export default function Clientes() {
     const amanhaStart = new Date(hojeStart); amanhaStart.setDate(amanhaStart.getDate() + 1);
     const map: Record<string, { atrasado: typeof cards; urgente: typeof cards; hoje: typeof cards }> = {};
     cards.forEach((card) => {
-      if (card.status_card === "Postado") return;
+      if (card.status_card === "Postado" || card.status_card === "Planejamento") return;
       const due = card.data_agendada ? new Date(card.data_agendada) : null;
       let prio: Prioridade | null = null;
       if (card.status_card === "Atrasado" || (due && due < hojeStart)) prio = "atrasado";
