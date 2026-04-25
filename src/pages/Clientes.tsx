@@ -700,6 +700,7 @@ export default function Clientes() {
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-8 w-56 text-sm" />
           </div>
+          <ConfiguracoesSheet />
           <GerenciarColunas />
           <NovoClienteDialog />
         </div>
