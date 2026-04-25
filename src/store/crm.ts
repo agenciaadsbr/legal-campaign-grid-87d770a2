@@ -392,6 +392,7 @@ export const useCRM = create<State>()((set, get) => ({
   nichos: [],
   statusOptions: [],
   statusPostOptions: [],
+  authoresPorAuthId: {},
   loading: false,
   loaded: false,
 
