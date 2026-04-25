@@ -552,9 +552,13 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
       return <CelulaResponsaveis clienteId={cliente.id} ids={ids} />;
     }
     case "dropdown": {
-      const opt = (col.opcoes ?? nichos).find((o) => o.label === valor);
+      const fonte = col.opcoes && col.opcoes.length > 0 ? col.opcoes : (col.key === "nicho" ? nichos : []);
+      const opt = fonte.find((o) => o.label === valor);
+      if (col.key === "nicho") {
+        if (!valor) return <span className="text-muted-foreground text-xs">—</span>;
+        return opt ? <ColorBadge label={opt.label} color={opt.cor} /> : <span className="text-xs">{String(valor)}</span>;
+      }
       if (!opt) return <span className="text-muted-foreground text-xs">—</span>;
-      if (col.key === "nicho") return <span className="text-xs">{opt.label}</span>;
       return <ColorBadge label={opt.label} color={opt.cor} />;
     }
     case "status": {
