@@ -222,19 +222,21 @@ export function OpcoesEditor({ tipo }: Props) {
       </div>
 
       <div className="flex gap-2 pt-1 border-t">
-        <input
-          type="color"
-          value={novaCor}
-          onChange={(e) => setNovaCor(e.target.value)}
-          className="h-9 w-12 rounded cursor-pointer border bg-transparent"
-          aria-label="Cor do novo item"
-        />
+        {mostrarCor && (
+          <input
+            type="color"
+            value={novaCor}
+            onChange={(e) => setNovaCor(e.target.value)}
+            className="h-9 w-12 rounded cursor-pointer border bg-transparent"
+            aria-label="Cor do novo item"
+          />
+        )}
         <Input
           value={novoLabel}
           onChange={(e) => setNovoLabel(e.target.value)}
           placeholder={placeholder}
           onKeyDown={(e) => e.key === "Enter" && adicionar()}
-          className="h-9"
+          className="h-9 flex-1"
         />
         <Button onClick={adicionar} className="gap-1">
           <Plus className="h-4 w-4" /> Adicionar
