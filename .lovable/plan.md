@@ -1,152 +1,138 @@
 
-# Status Principal por Cliente (sem duplicação)
+# 🎯 Painel de Clientes Inteligente — Simples + Automático
 
-Hoje em `src/pages/Clientes.tsx` (linhas 785-796) o `gruposPosts` insere o **mesmo cliente em vários grupos** — um por status de card existente. É a causa da duplicação. Vamos calcular um **status principal único** por cliente baseado em prioridade e renderizá-lo apenas em um grupo, mantendo os contadores na linha.
-
-Regras de nomenclatura: o sistema usa labels em PT capitalizado (`Atrasado`, `Revisar`, `Criar`, `Agendado`, `Postado`) — vou manter essas chaves (não migrar para minúsculo).
+Reduzir o painel a **2 grupos de ação** (REVISAR / CRIAR) e mostrar as **tarefas prioritárias** (atrasadas, hoje, urgentes) de cada cliente direto na linha — sem criar abas novas, sem fluxo paralelo.
 
 ---
 
-## 1. Banco de dados (migração)
+## 🧱 1. Banco de Dados (migration)
 
-Adicionar coluna persistida em `clientes` + função + triggers para manter sincronizado.
+### 1.1 Adicionar campo de urgência em `cards`
+```sql
+ALTER TABLE public.cards
+  ADD COLUMN IF NOT EXISTS is_urgent boolean NOT NULL DEFAULT false;
+```
+
+### 1.2 Reescrever `update_client_primary_status` — só 2 estados de ação
+
+A regra agora ignora `Agendado` e `Postado` (não são ação). Também desconsidera cards finalizados (`Postado`) ao olhar atrasos.
 
 ```sql
--- 1. Coluna
-ALTER TABLE public.clientes
-  ADD COLUMN primary_status text NOT NULL DEFAULT 'Criar';
-
--- 2. Função de cálculo
 CREATE OR REPLACE FUNCTION public.update_client_primary_status(p_client_id uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
-DECLARE
-  v_status text;
+DECLARE v_status text;
 BEGIN
+  IF p_client_id IS NULL THEN RETURN; END IF;
   SELECT CASE
-    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id AND status = 'Atrasado') THEN 'Atrasado'
-    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id AND status = 'Revisar')  THEN 'Revisar'
-    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id AND status = 'Criar')    THEN 'Criar'
-    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id AND status = 'Agendado') THEN 'Agendado'
-    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id) THEN 'Postado'
+    WHEN EXISTS (
+      SELECT 1 FROM public.cards
+      WHERE cliente_id = p_client_id AND status = 'Revisar'
+    ) THEN 'Revisar'
     ELSE 'Criar'
   END INTO v_status;
-
   UPDATE public.clientes SET primary_status = v_status WHERE id = p_client_id;
 END;
 $$;
-
--- 3. Trigger function
-CREATE OR REPLACE FUNCTION public.trigger_update_client_primary_status()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = public
-AS $$
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    PERFORM public.update_client_primary_status(OLD.cliente_id);
-    RETURN OLD;
-  ELSE
-    PERFORM public.update_client_primary_status(NEW.cliente_id);
-    IF TG_OP = 'UPDATE' AND OLD.cliente_id IS DISTINCT FROM NEW.cliente_id THEN
-      PERFORM public.update_client_primary_status(OLD.cliente_id);
-    END IF;
-    RETURN NEW;
-  END IF;
-END;
-$$;
-
--- 4. Triggers em cards
-CREATE TRIGGER cards_primary_status_ins
-  AFTER INSERT ON public.cards
-  FOR EACH ROW EXECUTE FUNCTION public.trigger_update_client_primary_status();
-
-CREATE TRIGGER cards_primary_status_upd
-  AFTER UPDATE OF status, cliente_id ON public.cards
-  FOR EACH ROW EXECUTE FUNCTION public.trigger_update_client_primary_status();
-
-CREATE TRIGGER cards_primary_status_del
-  AFTER DELETE ON public.cards
-  FOR EACH ROW EXECUTE FUNCTION public.trigger_update_client_primary_status();
-
--- 5. Backfill inicial
-DO $$
-DECLARE r record;
-BEGIN
-  FOR r IN SELECT id FROM public.clientes LOOP
-    PERFORM public.update_client_primary_status(r.id);
-  END LOOP;
-END $$;
 ```
 
----
+Rebackfill de todos os clientes via `DO $$` loop após a mudança.
 
-## 2. `src/store/crm.ts`
-
-- Acrescentar `primary_status?: string` ao tipo `Cliente`.
-- No mapper de cliente (onde `clientes` são lidos do Supabase), incluir `primary_status: row.primary_status ?? "Criar"`.
-- Nenhuma escrita manual: o trigger cuida. (No `addCliente`, após criar os 4×N cards, o trigger já vai setar `Criar`.)
+> Trigger existente em `cards` (insert/update/delete) **continua válida** — só muda a função interna.
 
 ---
 
-## 3. `src/pages/Clientes.tsx` — re-agrupamento por `primary_status`
+## ⚙️ 2. Lógica de tarefas prioritárias (frontend)
 
-**Substituir o `gruposPosts` atual (linhas 785-796)** por agrupamento único:
+Para cada cliente, derivar em runtime a partir de `cards`:
 
 ```ts
-const PRIORIDADE = ["Atrasado", "Revisar", "Criar", "Agendado", "Postado"] as const;
+const PRIORIDADES = ["Postado"]; // ignorar
+function classificarCard(card) {
+  if (card.status === "Postado") return null;
+  const due = card.data_agendada ? new Date(card.data_agendada) : null;
+  const hojeStart = new Date(); hojeStart.setHours(0,0,0,0);
+  const amanhaStart = new Date(hojeStart); amanhaStart.setDate(amanhaStart.getDate()+1);
 
-const gruposPosts = useMemo(() => {
-  const map: Record<string, typeof clientes> = {};
-  PRIORIDADE.forEach((s) => (map[s] = []));
-  filtrados.forEach((c) => {
-    const ps = (c as any).primary_status ?? "Criar";
-    if (!map[ps]) map[ps] = [];
-    map[ps].push(c);
-  });
-  return map;
-}, [filtrados]);
+  if (card.status === "Atrasado" || (due && due < hojeStart)) return "atrasado";
+  if (card.is_urgent) return "urgente";
+  if (due && due >= hojeStart && due < amanhaStart) return "hoje";
+  return null; // não aparece
+}
 ```
 
-Substituir o `statusPostOptions.map(...)` da renderização (linha 866) por iteração sobre `PRIORIDADE`, buscando cor/label em `statusPostOptions` por `label`. Cada cliente agora aparece **uma única vez** no grupo do seu `primary_status`.
-
-### Contadores na linha do cliente
-Na célula `posts` (já existente), além de `X/Y posts` e `⚠ N atrasados`, adicionar uma linha compacta de contadores por status (apenas os > 0):
-
-```tsx
-const counts = PRIORIDADE.reduce((acc, s) => {
-  acc[s] = cardsCliente.filter(k => k.status_card === s).length;
-  return acc;
-}, {} as Record<string, number>);
-
-// Render: pílulas pequenas coloridas — Criar:3 · Revisar:1 · Agendado:4 · Atrasado:2
-```
-
-### Realtime
-Em `useCRM` já existem subscriptions a `cards` e `clientes`. Após a migração, qualquer UPDATE em `cards.status` dispara trigger → UPDATE em `clientes.primary_status` → realtime do `clientes` re-popula o store. Verificar se a subscription de `clientes` está ativa; se não estiver, adicionar canal Postgres realtime para `public.clientes` UPDATE.
-
-### Remover badge "ATIVO" rosa
-Localizar e remover o badge inline ao lado do nome (linha ~894 que usa `statusOptions.find(... cliente.status_cliente)`). O filtro de Status do Cliente no topo permanece — apenas o badge visual é removido.
+Contadores por cliente: `atrasadas`, `urgentes`, `hoje`.
 
 ---
 
-## 4. Arquivos tocados
+## 👁️ 3. UI no painel `src/pages/Clientes.tsx`
+
+### 3.1 Substituir os 5 grupos atuais (`Atrasado/Revisar/Criar/Agendado/Postado`) por **2 grupos**:
+
+```ts
+const GRUPOS = ["Revisar", "Criar"] as const;
+```
+
+Cabeçalho do grupo mantém o `ColorBadge` atual (cores do `status_post_options`).
+
+### 3.2 Coluna "Nome do cliente" — adicionar disclosure inline
+
+Ao lado do nome:
+- Se cliente tem ≥1 tarefa prioritária → mostra **chips compactos**:
+  - `🔴 2` (atrasadas) · `⚡ 1` (urgentes) · `🟡 1` (hoje)
+- Botão `▶/⌄` abre um `Popover` com a lista (máx 5, "+N tarefas" se exceder):
+  ```
+  🔴 Atrasadas (2)
+    • Revisar post — Semana 2  →  /clientes/:id
+    • Criar post — Semana 3
+  ⚡ Urgentes (1)
+    • Agendar post
+  🟡 Hoje (1)
+    • Criar post
+  ```
+- Cada item linka para o cliente (mantém comportamento atual de abrir Kanban).
+
+### 3.3 Filtro "Mostrar apenas com ações pendentes" (toggle no topo)
+
+Quando ativo, esconde clientes que não têm `atrasadas + urgentes + hoje > 0`. Padrão: **desligado** (mantém todos visíveis para não quebrar fluxo atual).
+
+### 3.4 Marcar card como urgente
+
+No `PostDetalhe.tsx` / Kanban, adicionar **toggle ⚡ Urgente** no card (atualiza `cards.is_urgent`). Ícone discreto ⚡ aparece no card quando `true`.
+
+> Escopo deste plano: apenas adicionar o toggle dentro do dialog de edição do card já existente em `PostDetalhe`. Não muda layout do Kanban.
+
+---
+
+## 🔄 4. Atualização automática
+
+- **Realtime já ativo** em `cards` via store (`useCRM`). Mudanças em `status`, `data_agendada`, `is_urgent` re-renderizam contadores automaticamente.
+- `primary_status` é atualizado pelo trigger SQL → reagrupa cliente entre Revisar/Criar sem refetch manual.
+
+---
+
+## 🚫 5. O que NÃO será feito (proteção contra escopo)
+
+- ❌ Nova aba "Minhas Tarefas"
+- ❌ Sistema paralelo de tarefas
+- ❌ Drag & drop adicional
+- ❌ Mudança no Kanban / fluxo de cliques
+- ❌ Mexer em outros painéis (Alertas, Dashboard, Contratos)
+
+---
+
+## 📝 Arquivos afetados
 
 | Arquivo | Mudança |
 |---|---|
-| migração SQL | nova coluna + função + 3 triggers + backfill |
-| `src/store/crm.ts` | tipo `Cliente.primary_status` + mapper |
-| `src/pages/Clientes.tsx` | `gruposPosts` por `primary_status` (sem duplicar), contadores inline, remover badge ATIVO |
+| `supabase/migrations/<novo>.sql` | Adiciona `cards.is_urgent`; reescreve `update_client_primary_status`; rebackfill |
+| `src/store/crm.ts` | Tipo `Card` ganha `is_urgent`; mapper inclui o campo |
+| `src/pages/Clientes.tsx` | `GRUPOS = ["Revisar","Criar"]`; chips de tarefas + Popover na linha; filtro "apenas pendentes" |
+| `src/pages/PostDetalhe.tsx` | Toggle ⚡ Urgente |
 
-## 5. Testes manuais (correspondem aos testes pedidos)
+## ✅ Resultado
 
-1. Cliente com `Criar`+`Revisar` → grupo **Revisar**.
-2. Cliente com `Atrasado`+`Revisar` → grupo **Atrasado**.
-3. Cliente só `Agendado` → grupo **Agendado**.
-4. Cliente só `Postado` → grupo **Postado**.
-5. Cliente sem cards → grupo **Criar** (fallback no SQL).
-
-Pronto para implementar.
+- Cliente aparece **uma vez só** em Revisar **ou** Criar
+- Vê tarefas críticas **sem abrir o Kanban**
+- Painel atualiza **sozinho** quando datas/status mudam
+- Zero complexidade nova — apenas inteligência sobre o que já existe
