@@ -1,63 +1,45 @@
-
 # Problema raiz
 
-A página `/clientes` (e todo o app) lê de um **store Zustand em localStorage**, não do Supabase. Por isso:
-- O cliente cadastrado não aparece para ninguém além do navegador onde foi criado.
-- As colunas criadas em "Gerenciar Colunas" também ficam só no localStorage.
-- Os grupos de status na tabela (`statusOptions`) estão vazios → mesmo que o cliente esteja no estado local, ele não tem onde "cair" na tabela agrupada.
-- `addCliente` ainda gera cards/posts mockados automaticamente (contradiz "só dados reais").
+A coluna `clientes.status` é um **enum Postgres restrito** (`'ativo' | 'pausado' | 'inativo'`), mas o sistema agora usa status dinâmicos da tabela `status_options` com labels livres ("Ativo", "Próximo da renovação", etc.). Toda tentativa de criar cliente falha no banco com:
+
+> `invalid input value for enum status_cliente: "Ativo"`
+
+Por isso a tabela `clientes` está **vazia** e nenhum cliente cadastrado aparece. Os logs do Postgres confirmam o erro nos últimos minutos.
+
+Além disso:
+- `status_options` está poluída com status de **cards** ("CRIAR", "REVISAR", "AGENDADO", "POSTADO", "ATRASADO") misturados com os de cliente.
+- O `addCliente` não trata erros de forma visível — ele faz `throw`, mas o usuário não vê toast claro.
 
 # Solução
 
-Refatorar `src/store/crm.ts` para virar um **client-side cache sincronizado com o Supabase** via `@tanstack/react-query` + Realtime, mantendo a mesma API pública (`useCRM()` retornando `clientes`, `colunasCliente`, `addCliente`, `updateCliente`, etc.) para não quebrar as 13 páginas/componentes que o consomem.
+## 1. Migração SQL — converter `clientes.status` de enum para `text`
 
-## 1. Novo `src/store/crm.ts` (orquestrador Supabase)
+```sql
+ALTER TABLE public.clientes ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.clientes ALTER COLUMN status TYPE text USING status::text;
+ALTER TABLE public.clientes ALTER COLUMN status SET DEFAULT 'Ativo';
 
-- Trocar o Zustand+persist por um hook `useCRM()` que internamente usa **React Query** (`useQuery` + `useMutation`) contra as tabelas Supabase:
-  - `clientes`, `colunas_cliente`, `modelos_colunas`, `nichos`, `status_options`, `responsaveis`, `cards`, `posts`, `contratos`, `comentarios`, `alertas`, `custom_fields`.
-- Mapeamento de campos (store ↔ DB):
-  - `nome_cliente` ↔ `clientes.nome`
-  - `status_cliente` ↔ `clientes.status`
-  - `responsaveis` (array) ↔ `clientes.responsaveis_ids`
-  - `observacoes` ↔ `clientes.descricao`
-  - `data_inicio_contrato` / `data_fim_contrato` ↔ derivado da tabela `contratos` (lido junto via segunda query) ou movido para um campo simples.
-  - `custom` ↔ `clientes.campos_personalizados`
-  - `ultimo_comentario` → calculado em runtime a partir de `comentarios` (não persistir).
-- Mutações (`addCliente`, `updateCliente`, `addColumn`, etc.) viram `useMutation` que faz `supabase.from(...).insert/update/delete` e invalida o cache.
-- **Remover `gerarCardsEPosts`** de `addCliente` — só cria o registro do cliente + contrato. Cards/posts passam a ser criados manualmente pelo usuário (ou opcionalmente, via botão "Gerar cronograma" futuro).
-- Manter o tipo `ColumnConfig` e `DropdownOption` exportados para que páginas existentes continuem compilando.
+-- Limpeza: remover status de card que vazaram para status_options
+DELETE FROM public.status_options 
+WHERE label IN ('CRIAR','REVISAR','AGENDADO','POSTADO','ATRASADO');
 
-## 2. Realtime (atualização em tempo real entre usuários)
-
-Em `useCRM`, adicionar `useEffect` que assina:
+WITH r AS (SELECT id, ROW_NUMBER() OVER (ORDER BY ordem) - 1 AS rn FROM public.status_options)
+UPDATE public.status_options s SET ordem = r.rn FROM r WHERE s.id = r.id;
 ```
-supabase.channel('crm').on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => qc.invalidateQueries(['clientes']))
-```
-Repetir para `colunas_cliente`, `cards`, `posts`, `status_options`, `nichos`, `responsaveis`. Assim, qualquer cliente cadastrado por qualquer usuário aparece imediatamente em todas as sessões.
 
-## 3. Seed inicial das colunas e status (uma única vez)
+> O enum `status_cliente` continua existindo, mas a coluna não usa mais — assim aceita qualquer label criado em "Configurações do painel".
 
-A tabela `colunas_cliente` está vazia. Criar **migração SQL** que faz `INSERT ... ON CONFLICT DO NOTHING` das 7 colunas padrão (`nome_cliente`, `responsaveis`, `ultimo_comentario`, `nicho`, `periodo_contrato`, `posts`, `observacoes`) e dos 4 status iniciais em `status_options` (`Ativo`, `Pausado`, `Próximo da renovação`, `Finalizado`) — só se as tabelas estiverem vazias. Sem isso, mesmo conectando ao Supabase, a tabela renderiza sem colunas e sem grupos.
+## 2. Ajustar `src/store/crm.ts`
 
-## 4. Ajustes em `src/pages/Clientes.tsx`
+- `addCliente`: garantir fallback `"Ativo"` para status vazio, e exibir `toast.error(error.message)` antes de relançar — para que erros futuros sejam visíveis.
+- `updateCliente`: mesma proteção de feedback.
 
-- Trocar `currentUserId = responsaveis[0]?.id` por `useAuth().user?.id` (com fallback para o `profile.responsavel_id` se existir) — assim o filtro "Minhas tarefas" funciona com o usuário logado de verdade.
-- Adicionar estado de `loading` (skeleton enquanto a query inicial roda).
-- Mensagem vazia mais clara quando não há `statusOptions` cadastrados ("Crie um status em Configurações para agrupar clientes").
+## 3. Resiliência no UI
 
-## 5. Limpeza do localStorage antigo
+Em `src/pages/Clientes.tsx`, envolver a chamada de `addCliente` no submit do dialog "+ Novo Cliente" em try/catch com `toast.error`, para feedback imediato.
 
-No bootstrap do app (`src/main.tsx` ou `App.tsx`), remover qualquer chave `crm-juridico-*` do localStorage para evitar conflito com versões anteriores em cache no navegador do usuário.
+# Resultado esperado
 
-## 6. Páginas dependentes — verificação
-
-Após a refatoração, validar que continuam funcionando sem mudanças (a API do hook é preservada):
-- `Dashboard.tsx`, `Contratos.tsx`, `Alertas.tsx`, `Relatorios.tsx`, `ClienteDetalhe.tsx`, `PostDetalhe.tsx`
-- `ConfiguracoesSheet`, `GerenciarColunas`, `ResponsaveisEditor`, `OpcoesEditor`, `CamposPersonalizadosEditor`, `HistoricoComentariosDialog`, `AppLayout`
-
-## Resultado esperado
-
-- Cliente cadastrado em "+ Novo Cliente" aparece imediatamente na tabela e em todo o sistema (Dashboard, Contratos, Relatórios), para todos os usuários.
-- Colunas criadas em "Gerenciar Colunas" persistem no banco e aparecem para todos.
-- Sem dados mockados — só o que o usuário cria.
-- Multi-usuário real, com sincronização ao vivo via Supabase Realtime.
+- Criação de cliente funciona imediatamente; o registro aparece para todos os usuários via Realtime já configurado.
+- Status de cliente aceita qualquer label dinâmico criado em "Configurações do painel → Status do Cliente".
+- A tabela `status_options` fica limpa, contendo só status reais de cliente.
