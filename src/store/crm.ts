@@ -426,6 +426,7 @@ export const useCRM = create<State>()((set, get) => ({
       comentarios,
       alertas: (alertasRes.data ?? []).map(mapAlerta),
       customFields: (customFieldsRes.data ?? []).map(mapCustomField),
+      statusPostOptions: (statusPostRes.data ?? []).map(mapStatusOpt),
       loading: false,
       loaded: true,
     });
