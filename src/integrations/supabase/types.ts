@@ -99,6 +99,24 @@ export type Database = {
           },
         ]
       }
+      cargos: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           campos_personalizados: Json
@@ -393,30 +411,39 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ativo: boolean
           avatar_url: string | null
+          cargo: string | null
           created_at: string
           email: string
           id: string
           nome: string | null
           responsavel_id: string | null
+          telefone: string | null
           updated_at: string
         }
         Insert: {
+          ativo?: boolean
           avatar_url?: string | null
+          cargo?: string | null
           created_at?: string
           email: string
           id: string
           nome?: string | null
           responsavel_id?: string | null
+          telefone?: string | null
           updated_at?: string
         }
         Update: {
+          ativo?: boolean
           avatar_url?: string | null
+          cargo?: string | null
           created_at?: string
           email?: string
           id?: string
           nome?: string | null
           responsavel_id?: string | null
+          telefone?: string | null
           updated_at?: string
         }
         Relationships: [

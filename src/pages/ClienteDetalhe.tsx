@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const COLUNAS: StatusCard[] = ["Criar", "Revisar", "Agendar", "Postado", "Renovação"];
 
@@ -66,6 +67,7 @@ function Coluna({ status, cards }: { status: StatusCard; cards: CardT[] }) {
 function KanbanView() {
   const { clienteId } = useParams();
   const { cards, moveCard, contratos } = useCRM();
+  const { canWrite } = useAuth();
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -86,6 +88,7 @@ function KanbanView() {
 
   const onDragEnd = (e: DragEndEvent) => {
     setActiveId(null);
+    if (!canWrite) return;
     if (!e.over) return;
     const novoStatus = e.over.id as StatusCard;
     if (COLUNAS.includes(novoStatus)) moveCard(String(e.active.id), novoStatus);
