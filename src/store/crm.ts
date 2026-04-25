@@ -66,6 +66,8 @@ export interface Card {
   numero_semana: number;
   status_card: StatusCard;
   responsaveis: string[];
+  data_agendada?: string | null;
+  is_urgent?: boolean;
   created_at: string;
 }
 
@@ -311,6 +313,8 @@ function mapCard(row: any): Card {
     numero_semana: (pos % 4) + 1,
     status_card: row.status,
     responsaveis: row.responsaveis_ids ?? [],
+    data_agendada: row.data_agendada ?? null,
+    is_urgent: row.is_urgent ?? false,
     created_at: row.created_at,
   };
 }
@@ -603,6 +607,8 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.titulo_card !== undefined) dbPatch.titulo = patch.titulo_card;
     if (patch.status_card !== undefined) dbPatch.status = patch.status_card;
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
+    if ((patch as any).data_agendada !== undefined) dbPatch.data_agendada = (patch as any).data_agendada;
+    if ((patch as any).is_urgent !== undefined) dbPatch.is_urgent = (patch as any).is_urgent;
     await supabase.from("cards").update(dbPatch).eq("id", id);
     await get()._loadAll();
   },

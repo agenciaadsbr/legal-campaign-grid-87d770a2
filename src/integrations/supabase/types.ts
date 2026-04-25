@@ -59,6 +59,7 @@ export type Database = {
           data_agendada: string | null
           descricao: string | null
           id: string
+          is_urgent: boolean
           posicao: number
           responsaveis_ids: string[]
           status: string
@@ -71,6 +72,7 @@ export type Database = {
           data_agendada?: string | null
           descricao?: string | null
           id?: string
+          is_urgent?: boolean
           posicao?: number
           responsaveis_ids?: string[]
           status?: string
@@ -83,6 +85,7 @@ export type Database = {
           data_agendada?: string | null
           descricao?: string | null
           id?: string
+          is_urgent?: boolean
           posicao?: number
           responsaveis_ids?: string[]
           status?: string
