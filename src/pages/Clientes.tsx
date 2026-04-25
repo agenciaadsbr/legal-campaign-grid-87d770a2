@@ -571,21 +571,38 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
 }
 
 function ConfiguracoesSheet() {
+  const [open, setOpen] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const _loadAll = useCRM((s) => s._loadAll);
+
+  const handleSalvar = async () => {
+    setSalvando(true);
+    try {
+      await _loadAll();
+      toast.success("Configurações salvas com sucesso");
+      setOpen(false);
+    } catch (e) {
+      toast.error("Erro ao salvar configurações");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button size="sm" variant="outline" className="gap-1.5 h-8" title="Configurações do painel">
           <Settings className="h-3.5 w-3.5" />
           <span className="text-xs">Configurações do painel</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="sm:max-w-xl w-full overflow-y-auto p-4">
+      <SheetContent side="right" className="sm:max-w-xl w-full overflow-y-auto p-4 flex flex-col">
         <SheetHeader className="mb-3">
           <SheetTitle className="flex items-center gap-2 text-base">
             <Settings className="h-4 w-4" /> Configurações do painel
           </SheetTitle>
         </SheetHeader>
-        <div className="space-y-3">
+        <div className="space-y-3 flex-1">
           <Card>
             <CardHeader className="py-3"><CardTitle className="text-sm">Status do Cliente</CardTitle></CardHeader>
             <CardContent><OpcoesEditor tipo="status" /></CardContent>
@@ -603,10 +620,23 @@ function ConfiguracoesSheet() {
             <CardContent><CamposPersonalizadosEditor /></CardContent>
           </Card>
         </div>
+        <div className="sticky bottom-0 -mx-4 px-4 pt-3 pb-1 bg-background border-t flex items-center justify-between gap-2 mt-3">
+          <p className="text-[11px] text-muted-foreground">Cada item já é salvo automaticamente no banco ao adicionar/editar.</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={salvando}>
+              Fechar
+            </Button>
+            <Button size="sm" onClick={handleSalvar} disabled={salvando} className="gap-1.5">
+              <Save className="h-3.5 w-3.5" />
+              {salvando ? "Salvando..." : "Salvar configurações"}
+            </Button>
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );
 }
+
 
 function FiltrosTopo({
   filtroResponsaveis,
