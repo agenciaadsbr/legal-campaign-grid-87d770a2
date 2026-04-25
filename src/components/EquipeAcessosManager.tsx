@@ -290,7 +290,9 @@ Recomendamos trocar a senha no primeiro acesso.`;
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] text-muted-foreground">
-                  Admin: acesso total. Editor: pode criar/editar. Viewer: apenas visualizar.
+                  <strong>Admin:</strong> acesso total, incluindo configurações estruturais (campos, colunas, status, equipe) e exclusões.<br />
+                  <strong>Editor:</strong> pode criar e editar conteúdo (clientes, posts, contratos), mas não pode excluir nem alterar configurações do sistema.<br />
+                  <strong>Viewer:</strong> apenas visualiza.
                 </p>
               </div>
             </div>
