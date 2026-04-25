@@ -1,11 +1,14 @@
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, FileText, Bell, BarChart3, Scale } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Bell, BarChart3, Scale, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
@@ -19,6 +22,16 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, roles, signOut } = useAuth();
+  const initial = (user?.email ?? "?").charAt(0).toUpperCase();
+  const roleLabel = roles[0] ?? "—";
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Sessão encerrada");
+    navigate("/auth", { replace: true });
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -68,14 +81,33 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border px-3 py-3">
         {!collapsed ? (
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">A</div>
-            <div className="leading-tight overflow-hidden">
-              <div className="text-xs font-medium text-sidebar-foreground truncate">admin@crm.com</div>
-              <div className="text-[10px] text-sidebar-foreground/60">Sem autenticação</div>
+            <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary shrink-0">
+              {initial}
             </div>
+            <div className="leading-tight overflow-hidden flex-1">
+              <div className="text-xs font-medium text-sidebar-foreground truncate">
+                {user?.email ?? "—"}
+              </div>
+              <div className="text-[10px] text-sidebar-foreground/60 capitalize">{roleLabel}</div>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              onClick={handleSignOut}
+              title="Sair"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         ) : (
-          <div className="h-7 w-7 mx-auto rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">A</div>
+          <button
+            onClick={handleSignOut}
+            title="Sair"
+            className="h-7 w-7 mx-auto rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary hover:bg-primary/30 transition-colors"
+          >
+            {initial}
+          </button>
         )}
       </SidebarFooter>
     </Sidebar>
