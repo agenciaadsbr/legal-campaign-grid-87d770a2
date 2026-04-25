@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      alertas: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          data_alerta: string
+          id: string
+          mensagem: string
+          status: Database["public"]["Enums"]["status_alerta"]
+          tipo_alerta: Database["public"]["Enums"]["tipo_alerta"]
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          data_alerta?: string
+          id?: string
+          mensagem: string
+          status?: Database["public"]["Enums"]["status_alerta"]
+          tipo_alerta: Database["public"]["Enums"]["tipo_alerta"]
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          data_alerta?: string
+          id?: string
+          mensagem?: string
+          status?: Database["public"]["Enums"]["status_alerta"]
+          tipo_alerta?: Database["public"]["Enums"]["tipo_alerta"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cards: {
         Row: {
           cliente_id: string
@@ -100,6 +138,212 @@ export type Database = {
         }
         Relationships: []
       }
+      colunas_cliente: {
+        Row: {
+          cor: string | null
+          created_at: string
+          fixa: boolean
+          fixada: boolean
+          id: string
+          key: string
+          label: string
+          largura: number
+          oculta: boolean
+          opcoes: Json
+          ordem: number
+          tipo: Database["public"]["Enums"]["tipo_coluna"]
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          fixa?: boolean
+          fixada?: boolean
+          id?: string
+          key: string
+          label: string
+          largura?: number
+          oculta?: boolean
+          opcoes?: Json
+          ordem?: number
+          tipo?: Database["public"]["Enums"]["tipo_coluna"]
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          fixa?: boolean
+          fixada?: boolean
+          id?: string
+          key?: string
+          label?: string
+          largura?: number
+          oculta?: boolean
+          opcoes?: Json
+          ordem?: number
+          tipo?: Database["public"]["Enums"]["tipo_coluna"]
+        }
+        Relationships: []
+      }
+      comentarios: {
+        Row: {
+          cliente_id: string | null
+          comentario_texto: string
+          created_at: string
+          id: string
+          imagem_url: string | null
+          post_id: string | null
+          usuario_id: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          comentario_texto: string
+          created_at?: string
+          id?: string
+          imagem_url?: string | null
+          post_id?: string | null
+          usuario_id: string
+        }
+        Update: {
+          cliente_id?: string | null
+          comentario_texto?: string
+          created_at?: string
+          id?: string
+          imagem_url?: string | null
+          post_id?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comentarios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comentarios_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contratos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          posts_concluidos: number
+          status: Database["public"]["Enums"]["status_contrato"]
+          total_posts: number
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          id?: string
+          posts_concluidos?: number
+          status?: Database["public"]["Enums"]["status_contrato"]
+          total_posts?: number
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          posts_concluidos?: number
+          status?: Database["public"]["Enums"]["status_contrato"]
+          total_posts?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_fields: {
+        Row: {
+          created_at: string
+          escopo: Database["public"]["Enums"]["escopo_custom_field"]
+          id: string
+          nome: string
+          opcoes: Json
+          ordem: number
+          tipo: Database["public"]["Enums"]["tipo_custom_field"]
+        }
+        Insert: {
+          created_at?: string
+          escopo: Database["public"]["Enums"]["escopo_custom_field"]
+          id?: string
+          nome: string
+          opcoes?: Json
+          ordem?: number
+          tipo: Database["public"]["Enums"]["tipo_custom_field"]
+        }
+        Update: {
+          created_at?: string
+          escopo?: Database["public"]["Enums"]["escopo_custom_field"]
+          id?: string
+          nome?: string
+          opcoes?: Json
+          ordem?: number
+          tipo?: Database["public"]["Enums"]["tipo_custom_field"]
+        }
+        Relationships: []
+      }
+      modelos_colunas: {
+        Row: {
+          colunas: Json
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          colunas?: Json
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          colunas?: Json
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      nichos: {
+        Row: {
+          cor: string
+          created_at: string
+          id: string
+          label: string
+        }
+        Insert: {
+          cor?: string
+          created_at?: string
+          id?: string
+          label: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           anexos: Json
@@ -177,6 +421,27 @@ export type Database = {
         }
         Relationships: []
       }
+      status_options: {
+        Row: {
+          cor: string
+          created_at: string
+          id: string
+          label: string
+        }
+        Insert: {
+          cor?: string
+          created_at?: string
+          id?: string
+          label: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -213,6 +478,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
+      escopo_custom_field: "cliente" | "post"
+      status_alerta: "Pendente" | "Resolvido"
       status_card:
         | "ideias"
         | "producao"
@@ -221,6 +488,24 @@ export type Database = {
         | "publicado"
         | "arquivado"
       status_cliente: "ativo" | "pausado" | "inativo"
+      status_contrato: "Ativo" | "Renovacao" | "Finalizado"
+      tipo_alerta: "Renovacao" | "Posts_Pendentes" | "Contrato_Finalizando"
+      tipo_coluna:
+        | "texto"
+        | "numero"
+        | "data"
+        | "dropdown"
+        | "responsaveis"
+        | "link"
+        | "status"
+        | "etiqueta"
+      tipo_custom_field:
+        | "texto"
+        | "numero"
+        | "data"
+        | "dropdown"
+        | "link"
+        | "lista_suspensa"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -349,6 +634,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "editor", "viewer"],
+      escopo_custom_field: ["cliente", "post"],
+      status_alerta: ["Pendente", "Resolvido"],
       status_card: [
         "ideias",
         "producao",
@@ -358,6 +645,26 @@ export const Constants = {
         "arquivado",
       ],
       status_cliente: ["ativo", "pausado", "inativo"],
+      status_contrato: ["Ativo", "Renovacao", "Finalizado"],
+      tipo_alerta: ["Renovacao", "Posts_Pendentes", "Contrato_Finalizando"],
+      tipo_coluna: [
+        "texto",
+        "numero",
+        "data",
+        "dropdown",
+        "responsaveis",
+        "link",
+        "status",
+        "etiqueta",
+      ],
+      tipo_custom_field: [
+        "texto",
+        "numero",
+        "data",
+        "dropdown",
+        "link",
+        "lista_suspensa",
+      ],
     },
   },
 } as const
