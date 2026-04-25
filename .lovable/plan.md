@@ -1,54 +1,33 @@
-# Reestruturação do "Post Detalhe" + sincronização com "Últimos Comentários"
+## Refatorar "Histórico de Comentários" (acessado via "Últimos Comentários")
 
-## 1. Store (`src/store/crm.ts`)
-- Adicionar campo `link_meister?: string` na interface `Post`.
-- Bump da chave de persistência: `crm-juridico-v4` → `crm-juridico-v5` para garantir migração suave.
-- A lógica `addComentario` / `updateComentario` / `deleteComentario` já recalcula `ultimo_comentario` do cliente via `computeUltimoComentario`. **Manter como está** — basta usar do PostDetalhe para o sync automático na coluna "Últimos Comentários" funcionar.
+### Objetivo
+Quando o usuário clicar em "Últimos Comentários" na coluna da tabela de Clientes, o dialog que abrir deve ter a interface completa de "Atividade" (estilo Discord), idêntica à usada em `PostDetalhe.tsx`, com TODAS as funcionalidades.
 
-## 2. Persistência de imagens (anexos + comentários)
-Hoje os arquivos são salvos como `URL.createObjectURL(f)` (blob temporário que quebra ao recarregar).
-- Substituir por **dataURL (base64)** via `FileReader.readAsDataURL` em:
-  - `PostDetalhe.tsx` → `addAnexo` (anexos do post)
-  - `PostDetalhe.tsx` → `onPickImg` (preview do comentário)
-- Assim as imagens persistem no localStorage do Zustand e ficam visíveis após reload.
+### Arquivo: `src/components/HistoricoComentariosDialog.tsx`
 
-## 3. UI — `src/pages/PostDetalhe.tsx` (refatoração do bloco em vermelho)
-Seguindo a referência enviada (estilo Discord/chat moderno):
+**Composer (caixa de novo comentário)**:
+- Layout `rounded-xl` com borda sutil, fundo `bg-background`
+- Textarea transparente (`border-0 focus-visible:ring-0`), placeholder "Escreva um comentário..."
+- Toolbar inferior com ícones: `Plus` (anexar), `ImageIcon`, `Smile`, `AtSign` à esquerda
+- Botão "Enviar" com ícone `Send` à direita
+- Tecla **Enter** envia; **Shift+Enter** quebra linha (atualizar lógica atual que usa Ctrl+Enter)
+- Texto auxiliar "Enter para enviar • Shift+Enter para nova linha"
 
-### Cabeçalho do post
-- Manter título editável + select de status.
-- Adicionar **novo input "Link do Meister"** (clicável quando preenchido) ao lado de "Link do Meta", em grid de 2 colunas dentro da seção de links.
+**Anexos de imagem**:
+- Input file oculto acionado pelos botões `Plus`/`ImageIcon`
+- Conversão para **base64 (dataURL)** para persistir após reload (mesmo padrão do PostDetalhe)
+- Preview em grid de thumbnails (60x60) acima do textarea, cada um com botão `X` para remover antes de enviar
+- Ao enviar, salvar no campo `imagem_url` do comentário
 
-### Card "Anexos"
-- Trocar lista textual por **grid de thumbnails 80x80** (rounded, border).
-- Cada thumb com botão `X` (hover) para remover.
-- Botão "Adicionar anexo" com ícone `Paperclip` no canto superior direito.
-- Se o anexo for imagem (mime/url), exibe preview; caso contrário, ícone genérico + nome.
+**Lista de comentários**:
+- Manter visual atual (avatar + nome + data + badge "Direto"/"Post: ...")
+- Manter edição inline e exclusão com `AlertDialog`
+- Garantir que `imagem_url` seja exibida com preview clicável (abre em nova aba)
+- Ordenar do mais recente para o mais antigo (já está)
 
-### Card "Legenda"
-- Textarea expandida + **contador de caracteres** no rodapé direito.
-- Indicador "✓ Salvo" sutil (debounce 500ms via `setTimeout`).
+**Sincronização**:
+- `addComentario`, `updateComentario`, `deleteComentario` do store já chamam `computeUltimoComentario`
+- Garantir que comentários adicionados aqui apareçam imediatamente na coluna "Últimos Comentários" da tabela de Clientes (já funciona via Zustand reactive store)
 
-### Card "Atividade" (chat)
-- Lista de comentários com:
-  - Avatar colorido do autor (já existe).
-  - Bubble com nome + timestamp + texto + imagem (se houver).
-  - Hover mostra ações (editar/excluir) → usa `updateComentario` / `deleteComentario`.
-- **Composer redesenhado** (estilo Discord):
-  - Container `rounded-xl border` com fundo `bg-muted/30`.
-  - Botão `+` à esquerda → abre input file (imagem).
-  - Textarea sem borda, auto-resize, placeholder "Mensagem...".
-  - Preview da imagem anexada inline acima do textarea, com botão X.
-  - Botão `Send` à direita (ícone roxo/primary), Enter = enviar, Shift+Enter = quebra.
-- Ao enviar `addComentario({ post_id, ... })`, a store já propaga `ultimo_comentario` para o cliente — a coluna "Últimos Comentários" da tabela `/clientes` atualiza automaticamente em tempo real (Zustand reatividade).
-
-## 4. Sincronização garantida
-- Cada `addComentario` / `updateComentario` / `deleteComentario` chama `computeUltimoComentario` → atualiza `clientes[].ultimo_comentario`.
-- A `Clientes.tsx` já lê `ultimo_comentario` do cliente via `useCRM()` → re-renderiza automaticamente.
-- Imagens em base64 ficam no `localStorage` (persist), portanto sobrevivem ao reload.
-
-## Arquivos editados
-- `src/store/crm.ts` — adicionar `link_meister`, bump versão.
-- `src/pages/PostDetalhe.tsx` — refatoração completa do layout + persistência base64.
-
-Nenhuma quebra de dados existentes (campo opcional, lógica de comentários inalterada).
+### Sem alterações em outros arquivos
+O store `src/store/crm.ts` já suporta `imagem_url` em `Comentario` e já recomputa `ultimo_comentario` automaticamente. Nenhuma mudança de schema necessária.
