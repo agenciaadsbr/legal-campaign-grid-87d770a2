@@ -34,6 +34,26 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
   const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
   const tituloVisivel = isPlaceholderTitulo && isPlanejamento ? "Definir título da tarefa" : card.titulo_card;
 
+  const [editingTitulo, setEditingTitulo] = useState(false);
+  const [tituloDraft, setTituloDraft] = useState(isPlaceholderTitulo ? "" : card.titulo_card);
+
+  const startEdit = (e: React.MouseEvent) => {
+    if (!canWrite) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setTituloDraft(isPlaceholderTitulo ? "" : card.titulo_card);
+    setEditingTitulo(true);
+  };
+
+  const commitTitulo = () => {
+    const novo = tituloDraft.trim();
+    setEditingTitulo(false);
+    if (!novo) return;
+    if (novo === card.titulo_card) return;
+    updateCard(card.id, { titulo: novo });
+    toast.success("Título atualizado");
+  };
+
   // Análise de prazo
   const due = card.data_agendada ? new Date(card.data_agendada) : null;
   let prazoState: "none" | "future" | "today" | "overdue" = "none";
