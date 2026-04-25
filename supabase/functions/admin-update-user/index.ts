@@ -98,8 +98,7 @@ Deno.serve(async (req) => {
       const ban_duration = body.ativo ? "none" : "876000h"; // ~100 anos
       const { error: bErr } = await adminClient.auth.admin.updateUserById(
         body.user_id,
-        // @ts-expect-error: ban_duration é aceito mas não está nos tipos
-        { ban_duration },
+        { ban_duration } as { ban_duration: string },
       );
       if (bErr) return json({ error: bErr.message }, 400);
     }
