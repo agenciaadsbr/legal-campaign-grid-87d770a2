@@ -409,7 +409,18 @@ export const useCRM = create<State>()(
         return id;
       },
       updateCliente: (id, patch) =>
-        set((s) => ({ clientes: s.clientes.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
+        set((s) => {
+          const clientes = s.clientes.map((c) => (c.id === id ? { ...c, ...patch } : c));
+          // Quando os responsáveis do cliente mudam, propaga para todos os cards e posts dele
+          if (patch.responsaveis) {
+            const novos = patch.responsaveis;
+            const cards = s.cards.map((c) => (c.cliente_id === id ? { ...c, responsaveis: novos } : c));
+            const cardIds = new Set(cards.filter((c) => c.cliente_id === id).map((c) => c.id));
+            const posts = s.posts.map((p) => (cardIds.has(p.card_id) ? { ...p, responsaveis: novos } : p));
+            return { clientes, cards, posts };
+          }
+          return { clientes };
+        }),
       deleteCliente: (id) =>
         set((s) => ({
           clientes: s.clientes.filter((c) => c.id !== id),
