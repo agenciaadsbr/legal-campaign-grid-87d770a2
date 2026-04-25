@@ -577,6 +577,6 @@ export const useCRM = create<State>()(
         return afetados;
       },
     }),
-    { name: "crm-juridico-v7" }
+    { name: "crm-juridico-v8" }
   )
 );
