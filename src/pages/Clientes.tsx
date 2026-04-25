@@ -917,8 +917,13 @@ export default function Clientes() {
             )}
             <tbody>
               {GRUPOS.map((statusLabel) => {
-                const statusOpt = statusPostOptions.find((s) => s.label === statusLabel);
-                const cor = statusOpt?.cor ?? (statusLabel === "Revisar" ? "#f59e0b" : "#3b82f6");
+                const statusOpt = statusLabel === "Concluidos" ? undefined : statusPostOptions.find((s) => s.label === statusLabel);
+                const cor = statusOpt?.cor ?? (
+                  statusLabel === "Revisar" ? "#f59e0b" :
+                  statusLabel === "Criar" ? "#3b82f6" :
+                  "#9ca3af"
+                );
+                const labelExibido = statusLabel === "Concluidos" ? "Concluídos" : statusLabel;
                 const items = gruposPosts[statusLabel] ?? [];
                 const key = `post:${statusLabel}`;
                 const colapsado = grupoColapsado[key];
@@ -936,7 +941,7 @@ export default function Clientes() {
                           className="flex items-center gap-2 text-sm font-semibold w-full"
                         >
                           {colapsado ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          <ColorBadge label={statusLabel.toUpperCase()} color={cor} variant="filled" />
+                          <ColorBadge label={labelExibido.toUpperCase()} color={cor} variant="filled" />
                           <span
                             className="ml-1 inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 rounded-full text-[11px] font-bold tabular-nums"
                             style={{ backgroundColor: `${cor}26`, color: cor }}
