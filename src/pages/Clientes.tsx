@@ -780,7 +780,7 @@ export default function Clientes() {
                 return (
                   <Fragment2 key={status.label}>
                     <tr className="bg-muted/30 hover:bg-muted/40 sticky">
-                      <td colSpan={colunasVisiveis.length} className="px-2 py-1 border-b">
+                      <td colSpan={colunasVisiveis.length} className={cn("px-2 py-1", !colapsado && "border-b")}>
                         <button
                           onClick={() => setGrupoColapsado((g) => ({ ...g, [status.label]: !colapsado }))}
                           className="flex items-center gap-1.5 text-xs font-medium"
