@@ -1170,7 +1170,7 @@ export default function Clientes() {
                     {!colapsado && items.length === 0 && (
                       <tr>
                         <td
-                          colSpan={colunasVisiveis.length}
+                          colSpan={colunasVisiveis.length + 1}
                           className="px-4 py-3 border-b text-[11px] text-muted-foreground italic"
                         >
                           Nenhum cliente neste status
