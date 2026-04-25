@@ -66,6 +66,8 @@ export interface Card {
   numero_semana: number;
   status_card: StatusCard;
   responsaveis: string[];
+  data_agendada?: string | null;
+  is_urgent?: boolean;
   created_at: string;
 }
 
