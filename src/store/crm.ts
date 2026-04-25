@@ -466,10 +466,12 @@ export const useCRM = create<State>()(
           if (card) {
             const cardsCliente = cards.filter((c) => c.cliente_id === card.cliente_id);
             const concluidos = cardsCliente.filter((c) => c.status_card === "Postado").length;
+            const contratoCliente = contratos.find((c) => c.cliente_id === card.cliente_id);
+            const totalPosts = contratoCliente?.total_posts ?? cardsCliente.length;
             contratos = contratos.map((c) =>
               c.cliente_id === card.cliente_id ? { ...c, posts_concluidos: concluidos } : c
             );
-            if (concluidos === 12) {
+            if (totalPosts > 0 && concluidos === totalPosts) {
               clientes = clientes.map((c) =>
                 c.id === card.cliente_id ? { ...c, status_cliente: "Próximo da renovação" } : c
               );
@@ -482,7 +484,7 @@ export const useCRM = create<State>()(
                     tipo_alerta: "Contrato_Finalizando",
                     data_alerta: today().slice(0, 10),
                     status: "Pendente",
-                    mensagem: `12 posts concluídos para ${cliente.nome_cliente}`,
+                    mensagem: `${totalPosts} posts concluídos para ${cliente.nome_cliente}`,
                     created_at: today(),
                   },
                   ...alertas,
