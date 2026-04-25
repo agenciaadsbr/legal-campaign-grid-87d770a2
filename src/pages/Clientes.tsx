@@ -421,11 +421,11 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
     return (
       <div className="flex flex-col gap-0 text-xs leading-tight">
         <div className="flex items-center gap-1">
-          <span className="text-[9px] uppercase tracking-wide text-muted-foreground w-7">Início</span>
+          <span className="text-[9px] uppercase tracking-wide text-muted-foreground w-6">Início</span>
           <span>{ini ? new Date(ini).toLocaleDateString("pt-BR") : "—"}</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[9px] uppercase tracking-wide text-muted-foreground w-7">Fim</span>
+          <span className="text-[9px] uppercase tracking-wide text-muted-foreground w-6">Fim</span>
           <span>{fim ? new Date(fim).toLocaleDateString("pt-BR") : "—"}</span>
         </div>
       </div>
@@ -530,7 +530,7 @@ export default function Clientes() {
                   <th
                     key={c.key}
                     className={cn(
-                      "text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-3 py-1.5 border-b border-r",
+                      "text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5 border-b border-r",
                       c.fixada && "sticky left-0 bg-muted/50 z-20"
                     )}
                     style={{ minWidth: c.largura, width: c.largura }}
@@ -547,7 +547,7 @@ export default function Clientes() {
                 return (
                   <Fragment2 key={status.label}>
                     <tr className="bg-muted/30 hover:bg-muted/40 sticky">
-                      <td colSpan={colunasVisiveis.length} className="px-3 py-1 border-b">
+                      <td colSpan={colunasVisiveis.length} className="px-2 py-1 border-b">
                         <button
                           onClick={() => setGrupoColapsado((g) => ({ ...g, [status.label]: !colapsado }))}
                           className="flex items-center gap-1.5 text-xs font-medium"
@@ -564,7 +564,7 @@ export default function Clientes() {
                           <td
                             key={col.key}
                             className={cn(
-                              "px-3 py-1.5 border-b border-r align-middle",
+                              "px-2 py-1.5 border-b border-r align-middle",
                               col.fixada && "sticky left-0 bg-card"
                             )}
                             style={{ minWidth: col.largura, width: col.largura }}
