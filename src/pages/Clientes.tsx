@@ -826,13 +826,19 @@ export default function Clientes() {
   }, [filtrados, apenasPendentes, tarefasPorCliente]);
 
   const gruposPosts = useMemo(() => {
-    const map: Record<string, typeof clientes> = { Revisar: [], Criar: [] };
+    const map: Record<string, typeof clientes> = { Revisar: [], Criar: [], Concluidos: [] };
     filtradosFinal.forEach((c) => {
+      const stats = pendentesPorCliente[c.id];
+      const concluido = !!stats && stats.total > 0 && stats.pendentes === 0;
+      if (concluido) {
+        if (mostrarConcluidos) map.Concluidos.push(c);
+        return;
+      }
       const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
       map[ps].push(c);
     });
     return map;
-  }, [filtradosFinal]);
+  }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos]);
 
   const algumGrupoAberto = useMemo(
     () => GRUPOS.some((s) => (gruposPosts[s]?.length ?? 0) > 0 && !grupoColapsado[`post:${s}`]),
