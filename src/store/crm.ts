@@ -314,6 +314,7 @@ function mapCard(row: any): Card {
     id: row.id,
     cliente_id: row.cliente_id,
     titulo_card: row.titulo,
+    descricao: row.descricao ?? "",
     mes_referencia: Math.floor(pos / 4) + 1,
     numero_semana: (pos % 4) + 1,
     status_card: row.status,
