@@ -366,9 +366,26 @@ Recomendamos trocar a senha no primeiro acesso.`;
                         />
                       </TableCell>
                       <TableCell>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => abrirEdicao(p)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <TooltipProvider delayDuration={200}>
+                          <div className="flex items-center gap-0.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copiarLinkAcesso(p)}>
+                                  <Link2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copiar link de acesso</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => abrirEdicao(p)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar usuário</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   );
