@@ -541,6 +541,40 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
   }
 }
 
+function ConfiguracoesSheet() {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1.5 h-8" title="Configurações">
+          <Settings className="h-3.5 w-3.5" />
+          <span className="text-xs">Configurações</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="sm:max-w-xl w-full overflow-y-auto p-4">
+        <SheetHeader className="mb-3">
+          <SheetTitle className="flex items-center gap-2 text-base">
+            <Settings className="h-4 w-4" /> Configurações
+          </SheetTitle>
+        </SheetHeader>
+        <div className="space-y-3">
+          <Card>
+            <CardHeader className="py-3"><CardTitle className="text-sm">Status do Cliente</CardTitle></CardHeader>
+            <CardContent><OpcoesEditor tipo="status" /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="py-3"><CardTitle className="text-sm">Nichos</CardTitle></CardHeader>
+            <CardContent><OpcoesEditor tipo="nicho" /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="py-3"><CardTitle className="text-sm">Responsáveis</CardTitle></CardHeader>
+            <CardContent><ResponsaveisEditor /></CardContent>
+          </Card>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function FiltrosTopo({
   filtroResponsaveis,
   setFiltroResponsaveis,
