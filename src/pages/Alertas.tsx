@@ -1,21 +1,113 @@
-import { useCRM, TipoAlerta } from "@/store/crm";
+import { useCRM, TipoAlerta, Alerta } from "@/store/crm";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ColorBadge } from "@/components/StatusBadge";
 import { Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const tipoCor: Record<TipoAlerta, string> = {
   Renovacao: "#a855f7",
   Posts_Pendentes: "#f59e0b",
   Contrato_Finalizando: "#ef4444",
+  Cliente_Pausado: "#9ca3af",
+  Sem_Posts_Ativos: "#f59e0b",
+  Posts_Atrasados: "#ef4444",
 };
 
+type AlertaItem = Alerta & { _derivado?: boolean };
+
+function useAlertasDerivados(): AlertaItem[] {
+  const { clientes, cards } = useCRM();
+  return useMemo(() => {
+    const out: AlertaItem[] = [];
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const mk = (tipo: TipoAlerta, cliente_id: string, mensagem: string): AlertaItem => ({
+      id: `derivado:${tipo}:${cliente_id}`,
+      cliente_id,
+      tipo_alerta: tipo,
+      data_alerta: new Date().toISOString().slice(0, 10),
+      mensagem,
+      status: "Pendente",
+      created_at: new Date().toISOString(),
+      _derivado: true,
+    });
+    clientes.forEach((c) => {
+      if (c.data_fim_contrato) {
+        const fim = new Date(c.data_fim_contrato);
+        const dias = Math.ceil((fim.getTime() - hoje.getTime()) / 86400000);
+        if (dias >= 0 && dias <= 7) out.push(mk("Renovacao", c.id, `Renovação em ${dias} dia(s)`));
+      }
+      if (c.status_cliente === "Pausado") {
+        out.push(mk("Cliente_Pausado", c.id, "Cliente em pausa"));
+      }
+      const meusCards = cards.filter((k) => k.cliente_id === c.id);
+      const ativos = meusCards.filter((k) => k.status_card !== "Postado" && k.status_card !== "Atrasado");
+      if (meusCards.length > 0 && ativos.length === 0 && c.status_cliente !== "Finalizado") {
+        out.push(mk("Sem_Posts_Ativos", c.id, "Sem posts em andamento"));
+      }
+      const atrasados = meusCards.filter((k) => k.status_card === "Atrasado");
+      if (atrasados.length > 0) {
+        out.push(mk("Posts_Atrasados", c.id, `${atrasados.length} post(s) atrasado(s)`));
+      }
+    });
+    return out;
+  }, [clientes, cards]);
+}
+
 function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
-  const { alertas, clientes, resolverAlerta } = useCRM();
+  const { alertas, clientes, resolverAlerta, _loadAll } = useCRM();
   const { canWrite } = useAuth();
-  const items = alertas.filter((a) => a.status === status);
+  const derivados = useAlertasDerivados();
+  const [resolvendo, setResolvendo] = useState<string | null>(null);
+
+  // Chave de "resolvido" para alertas derivados: usamos linhas em `alertas`
+  // com status=Resolvido cujo `mensagem` corresponde ao do derivado.
+  const resolvidosKeys = useMemo(() => {
+    const set = new Set<string>();
+    alertas.filter((a) => a.status === "Resolvido").forEach((a) => set.add(`${a.cliente_id}|${a.tipo_alerta}|${a.mensagem}`));
+    return set;
+  }, [alertas]);
+
+  const items: AlertaItem[] = useMemo(() => {
+    if (status === "Pendente") {
+      const persistidos = alertas.filter((a) => a.status === "Pendente");
+      const derivadosVisiveis = derivados.filter(
+        (d) => !resolvidosKeys.has(`${d.cliente_id}|${d.tipo_alerta}|${d.mensagem}`),
+      );
+      return [...persistidos, ...derivadosVisiveis];
+    }
+    return alertas.filter((a) => a.status === "Resolvido");
+  }, [status, alertas, derivados, resolvidosKeys]);
+
+  const onResolver = async (a: AlertaItem) => {
+    setResolvendo(a.id);
+    try {
+      if (a._derivado) {
+        const { error } = await supabase.from("alertas").insert({
+          cliente_id: a.cliente_id,
+          tipo_alerta: a.tipo_alerta as any,
+          mensagem: a.mensagem,
+          status: "Resolvido" as any,
+          data_alerta: a.data_alerta,
+        });
+        if (error) throw error;
+        await _loadAll();
+        toast.success("Alerta resolvido");
+      } else {
+        await resolverAlerta(a.id);
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao resolver alerta");
+    } finally {
+      setResolvendo(null);
+    }
+  };
+
   return (
     <div className="border rounded-lg bg-card overflow-hidden">
       <table className="w-full text-sm">
@@ -36,13 +128,13 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
             const cli = clientes.find((c) => c.id === a.cliente_id);
             return (
               <tr key={a.id} className="border-t hover:bg-accent/30">
-                <td className="px-4 py-2.5"><ColorBadge label={a.tipo_alerta.replace("_", " ")} color={tipoCor[a.tipo_alerta]} /></td>
+                <td className="px-4 py-2.5"><ColorBadge label={a.tipo_alerta.replace(/_/g, " ")} color={tipoCor[a.tipo_alerta]} /></td>
                 <td className="px-4 py-2.5"><Link to={`/clientes/${a.cliente_id}`} className="text-primary hover:underline">{cli?.nome_cliente}</Link></td>
                 <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.data_alerta).toLocaleDateString("pt-BR")}</td>
                 <td className="px-4 py-2.5">{a.mensagem}</td>
                 <td className="px-4 py-2.5 text-right">
                   {status === "Pendente" && canWrite && (
-                    <Button size="sm" variant="outline" onClick={() => resolverAlerta(a.id)}>
+                    <Button size="sm" variant="outline" disabled={resolvendo === a.id} onClick={() => onResolver(a)}>
                       <Check className="h-3.5 w-3.5 mr-1" /> Resolver
                     </Button>
                   )}
@@ -61,7 +153,7 @@ export default function Alertas() {
     <div className="p-6 space-y-4 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold">Alertas</h1>
-        <p className="text-sm text-muted-foreground">Renovações, posts pendentes e contratos finalizando</p>
+        <p className="text-sm text-muted-foreground">Renovações, clientes pausados, posts atrasados e contratos finalizando</p>
       </div>
       <Tabs defaultValue="pendentes">
         <TabsList>

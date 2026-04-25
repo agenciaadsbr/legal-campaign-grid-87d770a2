@@ -6,7 +6,13 @@ import { toast } from "sonner";
 // ===================== Tipos =====================
 export type StatusCliente = string; // dinâmico via tabela status_options
 export type StatusCard = "ideias" | "Criar" | "Revisar" | "Agendar" | "Postado" | "Renovação" | string;
-export type TipoAlerta = "Renovacao" | "Posts_Pendentes" | "Contrato_Finalizando";
+export type TipoAlerta =
+  | "Renovacao"
+  | "Posts_Pendentes"
+  | "Contrato_Finalizando"
+  | "Cliente_Pausado"
+  | "Sem_Posts_Ativos"
+  | "Posts_Atrasados";
 export type Permissao = "admin" | "editor" | "viewer";
 export type ColumnTipo =
   | "texto"
