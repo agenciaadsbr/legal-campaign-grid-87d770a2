@@ -1,8 +1,9 @@
 import { useCRM, Comentario } from "@/store/crm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { RichTextView } from "@/components/RichTextView";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -29,6 +30,9 @@ const fileToDataUrl = (f: File) =>
     r.readAsDataURL(f);
   });
 
+const isHtmlEmpty = (html: string) =>
+  !html || html === "<p></p>" || !html.replace(/<[^>]+>/g, "").trim();
+
 function Avatar({ nome, cor }: { nome: string; cor: string }) {
   return (
     <div
@@ -50,11 +54,11 @@ function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string
   const card = post ? cards.find((c) => c.id === post.card_id) : undefined;
 
   const salvar = () => {
-    if (!texto.trim()) {
+    if (isHtmlEmpty(texto)) {
       toast.error("Comentário não pode ficar vazio");
       return;
     }
-    updateComentario(com.id, { comentario_texto: texto.trim() });
+    updateComentario(com.id, { comentario_texto: texto });
     setEditando(false);
     toast.success("Comentário atualizado");
   };
@@ -67,7 +71,7 @@ function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string
   return (
     <div className="group flex gap-3 p-3 rounded-md hover:bg-muted/40 transition-colors">
       <Avatar nome={autor?.nome ?? "U"} cor={autor?.cor ?? "hsl(var(--muted-foreground))"} />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium">{autor?.nome ?? "Usuário"}</span>
           <span className="text-[11px] text-muted-foreground">
@@ -90,16 +94,11 @@ function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string
 
         {editando ? (
           <div className="mt-2 space-y-2">
-            <Textarea
-              autoFocus
+            <RichTextEditor
               value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") cancelar();
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) salvar();
-              }}
-              rows={3}
-              className="text-sm"
+              onChange={setTexto}
+              onEnterSubmit={salvar}
+              minHeight="min-h-[60px]"
             />
             <div className="flex justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={cancelar}>
@@ -113,7 +112,9 @@ function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string
         ) : (
           <>
             {com.comentario_texto && (
-              <div className="text-sm mt-1 whitespace-pre-wrap break-words">{com.comentario_texto}</div>
+              <div className="mt-1 break-words">
+                <RichTextView content={com.comentario_texto} />
+              </div>
             )}
             {com.imagem_url && (
               <a href={com.imagem_url} target="_blank" rel="noreferrer">
@@ -191,11 +192,11 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
   };
 
   const enviar = () => {
-    if ((!novo.trim() && !imagemUrl) || !clienteId) return;
+    if ((isHtmlEmpty(novo) && !imagemUrl) || !clienteId) return;
     addComentario({
       cliente_id: clienteId,
       usuario_id: responsaveis[0]?.id ?? "user",
-      comentario_texto: novo.trim(),
+      comentario_texto: isHtmlEmpty(novo) ? "" : novo,
       imagem_url: imagemUrl ?? undefined,
     });
     setNovo("");
@@ -207,7 +208,7 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 gap-0">
+      <DialogContent className="max-w-2xl w-[95vw] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 py-4 border-b">
           <DialogTitle className="text-base">
             Histórico de Comentários — <span className="text-primary">{cliente.nome_cliente}</span>
@@ -217,7 +218,7 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
           </p>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[55vh] px-2 py-2">
+        <ScrollArea className="max-h-[55vh] w-full px-3 py-2">
           {itens.length === 0 ? (
             <div className="text-center py-12 text-sm text-muted-foreground flex flex-col items-center gap-2">
               <MessageSquarePlus className="h-8 w-8 opacity-40" />
@@ -247,18 +248,12 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
                 </button>
               </div>
             )}
-            <Textarea
-              rows={1}
-              placeholder="Escreva um comentário..."
+            <RichTextEditor
               value={novo}
-              onChange={(e) => setNovo(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  enviar();
-                }
-              }}
-              className="border-0 focus-visible:ring-0 resize-none bg-transparent min-h-[36px] p-0 shadow-none"
+              onChange={setNovo}
+              onEnterSubmit={enviar}
+              placeholder="Escreva um comentário..."
+              minHeight="min-h-[44px]"
             />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 text-muted-foreground">
@@ -298,7 +293,7 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
                 <span className="text-[10px] text-muted-foreground hidden sm:inline">
                   Enter envia · Shift+Enter quebra
                 </span>
-                <Button size="sm" onClick={enviar} disabled={!novo.trim() && !imagemUrl}>
+                <Button size="sm" onClick={enviar} disabled={isHtmlEmpty(novo) && !imagemUrl}>
                   <Send className="h-3.5 w-3.5 mr-1" /> Enviar
                 </Button>
               </div>

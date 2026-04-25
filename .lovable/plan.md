@@ -1,41 +1,42 @@
-## Editor rico para "Atividade" nos cards
+## Problema
+No diálogo "Histórico de Comentários":
+1. Texto longo aparece cortado / com tags HTML cruas (`<p>`, `<ul>`) visíveis, porque os comentários agora podem vir do `RichTextEditor` em HTML, mas o histórico ainda renderiza como texto puro.
+2. Edição inline e composer usam `<Textarea>` simples — sem formatação consistente com `PostDetalhe`.
 
-### Problema
-No `PostDetalhe.tsx`, o campo "Atividade" usa `<Textarea>` puro. Quando o usuário cria listas com `•` ou quebras de linha, a renderização fica desalinhada (bullets em uma linha, texto em outra), e não há suporte para negrito, itálico, caixa alta etc.
+## Alterações em `src/components/HistoricoComentariosDialog.tsx`
 
-### Dependências a instalar
-- `@tiptap/react`
-- `@tiptap/starter-kit` (já inclui Bold, Italic, Strike, BulletList, OrderedList, ListItem, History)
-- `@tiptap/extension-underline`
-- `dompurify` + `@types/dompurify`
+### 1. Renderização (corrige o corte)
+- Substituir o `<div className="text-sm mt-1 whitespace-pre-wrap break-words">{com.comentario_texto}</div>` por `<RichTextView content={com.comentario_texto} />`.
+  - `RichTextView` já trata HTML (sanitização + prose) e texto puro legado (whitespace-pre-wrap), então comentários antigos continuam funcionando.
+- Garantir contenção de overflow no item:
+  - No wrapper externo do `ComentarioItem`, manter `flex gap-3` mas acrescentar `min-w-0` no `flex-1` (já existe) e `overflow-hidden` no container do texto para evitar estouro horizontal.
 
-### Novos componentes
+### 2. Editor inline (edição de comentário existente)
+- Substituir o `<Textarea>` da edição pelo `<RichTextEditor value={texto} onChange={setTexto} onEnterSubmit={salvar} minHeight="min-h-[60px]" />`.
+- Remover `onKeyDown` manual (Enter/Escape) — o `onEnterSubmit` cobre o envio; manter botões Salvar/Cancelar.
 
-**`src/components/RichTextEditor.tsx`**
-- Componente controlado (`value: string`, `onChange: (html: string) => void`, `placeholder?: string`).
-- Toolbar com botões (ícones do `lucide-react`):
-  - **B** Bold, *I* Italic, U Underline, ~~S~~ Strike
-  - Lista com marcadores, lista numerada
-  - **AA** CAIXA ALTA (transforma a seleção em uppercase via `editor.chain().focus().command(({tr, state}) => { ... }).run()` ou substitui o texto selecionado)
-  - aa minúscula (opcional, mesma lógica)
-  - Desfazer / Refazer
-- Estilizado com tokens semânticos (`bg-card`, `border-border`, `text-foreground`); botão ativo usa `bg-accent`.
-- Área editável com classe `prose prose-sm dark:prose-invert max-w-none min-h-[80px] p-3` para listas/negrito renderizarem corretamente.
+### 3. Composer (novo comentário)
+- Substituir o `<Textarea>` pelo `<RichTextEditor value={novo} onChange={setNovo} onEnterSubmit={enviar} placeholder="Escreva um comentário..." minHeight="min-h-[44px]" className="border-0 shadow-none" />`.
+- Manter a barra de ações (anexar imagem, emoji desabilitado, etc.) e o botão Enviar.
+- Ajustar `enviar()` para não depender de `novo.trim()` direto (HTML pode ter `<p></p>`); usar:
+  ```ts
+  const isEmpty = !novo || novo === "<p></p>" || !novo.replace(/<[^>]+>/g, "").trim();
+  if ((isEmpty && !imagemUrl) || !clienteId) return;
+  ```
+- Mesmo critério no `disabled` do botão Enviar.
 
-**`src/components/RichTextView.tsx`**
-- Recebe `content: string`.
-- Detecta se é HTML (regex `/<[a-z][\s\S]*>/i`); se for, sanitiza com `DOMPurify.sanitize` e injeta via `dangerouslySetInnerHTML` dentro de um `div` com classe `prose prose-sm dark:prose-invert max-w-none`.
-- Se for texto puro (comentários antigos), renderiza com `whitespace-pre-wrap` preservando a compatibilidade.
+### 4. Layout do diálogo (centralização e largura)
+- `DialogContent`: manter `max-w-2xl p-0 gap-0`, adicionar `w-[95vw]` para responsividade.
+- `ScrollArea`: adicionar `w-full` e usar `px-3` para que o conteúdo respire e fique centralizado dentro do diálogo.
+- No `ComentarioItem`, envolver o bloco de conteúdo com `min-w-0 overflow-hidden` para que `break-words` do `RichTextView` funcione corretamente dentro do flexbox.
 
-### Integração em `src/pages/PostDetalhe.tsx`
-- **Compositor de comentário** (textarea principal de "Atividade"): substituir `<Textarea>` por `<RichTextEditor>`.
-- **Bolhas de comentários existentes**: trocar render de texto puro por `<RichTextView content={c.texto} />`.
-- **Edição inline** de comentário: trocar `<Textarea>` por `<RichTextEditor>`.
-- O store (`crm.ts`) continua salvando `texto: string` — não exige migração; legados renderizam como texto puro.
+## Resultado esperado
+- Comentários com formatação (negrito, listas, caixa alta) renderizam corretamente sem mostrar HTML cru.
+- Texto longo quebra linha corretamente, sem corte horizontal.
+- Edição e criação de comentários no histórico ganham o mesmo editor rico usado em `PostDetalhe`, garantindo consistência em todo o sistema.
+- Layout centralizado e responsivo.
 
-### Estilos
-- Garantir que `tailwindcss/typography` esteja disponível. Se não estiver, instalar `@tailwindcss/typography` e adicionar ao `plugins` do `tailwind.config.ts`. Caso contrário, definir estilos manuais (`[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold [&_em]:italic [&_u]:underline`) no wrapper do editor e do viewer — abordagem preferida para evitar nova dependência de plugin Tailwind.
+## Arquivos afetados
+- `src/components/HistoricoComentariosDialog.tsx` (único arquivo)
 
-### Preservado
-- Estrutura de comentários, histórico, responsáveis, store.
-- Tema dark azul profundo (tokens semânticos em todos os controles novos).
+Sem novas dependências (TipTap e DOMPurify já instalados na etapa anterior).
