@@ -863,96 +863,72 @@ export default function Clientes() {
               </thead>
             )}
             <tbody>
-              {statusOptions.map((status) => {
-                const items = grupos[status.label] ?? [];
-                const colapsado = grupoColapsado[status.label];
-                return (
-                  <Fragment2 key={status.label}>
-                    <tr className="bg-muted/30 hover:bg-muted/40 sticky">
-                      <td colSpan={colunasVisiveis.length} className={cn("px-2 py-1", !colapsado && "border-b")}>
-                        <button
-                          onClick={() => setGrupoColapsado((g) => ({ ...g, [status.label]: !colapsado }))}
-                          className="flex items-center gap-1.5 text-xs font-medium"
-                        >
-                          {colapsado ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                          <ColorBadge label={status.label.toUpperCase()} color={status.cor} variant="filled" />
-                          <span className="text-muted-foreground text-[11px]">{items.length}</span>
-                        </button>
-                      </td>
-                    </tr>
-                    {!colapsado && items.map((cliente) => (
-                      <tr key={cliente.id} className="hover:bg-accent/30 transition-colors">
-                        {colunasVisiveis.map((col, i) => (
-                          <td
-                            key={col.key}
-                            className={cn(
-                              "px-2 py-1.5 border-b border-r align-middle",
-                              col.fixada && "sticky left-0 bg-card"
-                            )}
-                            style={{ minWidth: col.largura, width: col.largura }}
-                          >
-                            {i === 0 && col.key === "nome_cliente" ? (
-                              <Link to={`/clientes/${cliente.id}`} className="text-primary text-xs font-medium hover:underline truncate block">
-                                {cliente.nome_cliente}
-                              </Link>
-                            ) : (
-                              <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </Fragment2>
-                );
-              })}
-
-              {statusPostOptions.length > 0 && (
-                <tr>
-                  <td colSpan={colunasVisiveis.length} className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground border-b">
-                    Status de Posts
-                  </td>
-                </tr>
-              )}
               {statusPostOptions.map((status) => {
                 const items = gruposPosts[status.label] ?? [];
                 const key = `post:${status.label}`;
                 const colapsado = grupoColapsado[key];
                 return (
                   <Fragment2 key={key}>
-                    <tr className="bg-muted/30 hover:bg-muted/40 sticky">
-                      <td colSpan={colunasVisiveis.length} className={cn("px-2 py-1", !colapsado && "border-b")}>
+                    <tr className="bg-muted/60 hover:bg-muted/70 sticky">
+                      <td
+                        colSpan={colunasVisiveis.length}
+                        className={cn("px-2 py-2 border-l-4", !colapsado && "border-b")}
+                        style={{ borderLeftColor: status.cor }}
+                      >
                         <button
                           onClick={() => setGrupoColapsado((g) => ({ ...g, [key]: !colapsado }))}
-                          className="flex items-center gap-1.5 text-xs font-medium"
+                          className="flex items-center gap-2 text-sm font-semibold w-full"
                         >
-                          {colapsado ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                          {colapsado ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           <ColorBadge label={status.label.toUpperCase()} color={status.cor} variant="filled" />
-                          <span className="text-muted-foreground text-[11px]">{items.length}</span>
+                          <span
+                            className="ml-1 inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 rounded-full text-[11px] font-bold tabular-nums"
+                            style={{ backgroundColor: `${status.cor}26`, color: status.cor }}
+                          >
+                            {items.length}
+                          </span>
                         </button>
                       </td>
                     </tr>
-                    {!colapsado && items.map((cliente) => (
-                      <tr key={`${key}-${cliente.id}`} className="hover:bg-accent/30 transition-colors">
-                        {colunasVisiveis.map((col, i) => (
-                          <td
-                            key={col.key}
-                            className={cn(
-                              "px-2 py-1.5 border-b border-r align-middle",
-                              col.fixada && "sticky left-0 bg-card"
-                            )}
-                            style={{ minWidth: col.largura, width: col.largura }}
-                          >
-                            {i === 0 && col.key === "nome_cliente" ? (
-                              <Link to={`/clientes/${cliente.id}`} className="text-primary text-xs font-medium hover:underline truncate block">
-                                {cliente.nome_cliente}
-                              </Link>
-                            ) : (
-                              <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
+                    {!colapsado && items.map((cliente) => {
+                      const statusOpt = statusOptions.find((s) => s.label === cliente.status_cliente);
+                      return (
+                        <tr key={`${key}-${cliente.id}`} className="hover:bg-accent/30 transition-colors">
+                          {colunasVisiveis.map((col, i) => (
+                            <td
+                              key={col.key}
+                              className={cn(
+                                "px-2 py-1.5 border-b border-r align-middle",
+                                col.fixada && "sticky left-0 bg-card"
+                              )}
+                              style={{ minWidth: col.largura, width: col.largura }}
+                            >
+                              {i === 0 && col.key === "nome_cliente" ? (
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <Link
+                                    to={`/clientes/${cliente.id}`}
+                                    className="text-primary text-xs font-medium hover:underline truncate"
+                                  >
+                                    {cliente.nome_cliente}
+                                  </Link>
+                                  {statusOpt && (
+                                    <span
+                                      className="shrink-0 inline-flex items-center h-4 px-1.5 rounded text-[9px] font-semibold uppercase tracking-wide"
+                                      style={{ backgroundColor: `${statusOpt.cor}22`, color: statusOpt.cor }}
+                                      title={`Status do cliente: ${statusOpt.label}`}
+                                    >
+                                      {statusOpt.label}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
                   </Fragment2>
                 );
               })}
