@@ -364,7 +364,7 @@ function seedClientes() {
       tipo_alerta: "Contrato_Finalizando",
       data_alerta: today().slice(0, 10),
       status: "Pendente",
-      mensagem: `12 posts concluídos para ${clientes[4].nome_cliente}`,
+      mensagem: `${clientes[4].nome_cliente}: posts concluídos`,
       created_at: today(),
     },
   ];
