@@ -1,149 +1,152 @@
 
-# Reestruturação do Painel "Clientes"
+# Status Principal por Cliente (sem duplicação)
 
-Objetivo: tornar o painel mais operacional — Status de Posts vira a hierarquia principal; Status do Cliente vira metadado (badge + filtro). Alertas absorvem as situações que hoje "poluem" a tabela.
+Hoje em `src/pages/Clientes.tsx` (linhas 785-796) o `gruposPosts` insere o **mesmo cliente em vários grupos** — um por status de card existente. É a causa da duplicação. Vamos calcular um **status principal único** por cliente baseado em prioridade e renderizá-lo apenas em um grupo, mantendo os contadores na linha.
 
----
-
-## 1. `src/pages/Clientes.tsx` — refatorar tabela e topo
-
-### 1.1 Remover agrupamento por Status do Cliente
-- Eliminar o bloco `statusOptions.map((status) => ...)` (linhas ~857-898) que renderiza as seções **Ativo / Pausado / Próx. renovação / Finalizado**.
-- Remover o `useMemo grupos` (linhas ~780-788) e simplificar `algumGrupoAberto` para considerar apenas `gruposPosts`.
-
-### 1.2 Status de Posts vira a seção principal
-- Manter os grupos dinâmicos vindos de `statusPostOptions` (Criar, Revisar, Agendado, Postado, Atrasado).
-- Remover o subtítulo "Status de Posts" (linhas ~900-906) já que agora é o único agrupamento — não precisa de label divisor.
-- Aumentar contraste do header de cada grupo:
-  - Trocar `bg-muted/30` por `bg-muted/60` + `border-l-4` colorida com `style={{ borderLeftColor: status.cor }}`.
-  - Aumentar fonte do badge (`text-sm` em vez de `text-xs`) e do contador, exibindo-o em formato destacado: `<span className="ml-2 inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-primary/10 text-primary text-[11px] font-bold tabular-nums">{items.length}</span>`.
-  - Padding `py-2` em vez de `py-1`.
-
-### 1.3 Adicionar filtro por Status do Cliente no topo
-- Novo estado `const [filtroStatusCliente, setFiltroStatusCliente] = useState<string>("todos");`
-- Adicionar componente `<Select>` no bloco de `FiltrosTopo` (ou ao lado dele dentro do header), populado a partir de `statusOptions` + opção "Todos".
-- Aplicar no `filtrados` useMemo: `.filter((c) => filtroStatusCliente === "todos" || c.status_cliente === filtroStatusCliente)`.
-
-### 1.4 Status do Cliente como badge ao lado do nome
-- Na célula da coluna `nome_cliente` (linhas ~885-888), envolver em flex e adicionar badge pequeno após o link:
-  ```tsx
-  <div className="flex items-center gap-1.5 min-w-0">
-    <Link to={`/clientes/${cliente.id}`} className="text-primary text-xs font-medium hover:underline truncate">
-      {cliente.nome_cliente}
-    </Link>
-    {(() => {
-      const opt = statusOptions.find(s => s.label === cliente.status_cliente);
-      return opt ? (
-        <span
-          className="shrink-0 inline-flex items-center h-4 px-1.5 rounded text-[9px] font-semibold uppercase tracking-wide"
-          style={{ backgroundColor: `${opt.cor}22`, color: opt.cor }}
-          title={`Status do cliente: ${opt.label}`}
-        >
-          {opt.label}
-        </span>
-      ) : null;
-    })()}
-  </div>
-  ```
-
-### 1.5 Resumo de posts por cliente (na linha do cliente)
-- Hoje a coluna `posts` já mostra `X/Y postados`. Vamos enriquecer dentro de `CelulaValor` (case `col.key === "posts"`):
-  - Calcular `atrasados = cardsCliente.filter(c => c.status_card === "Atrasado").length`.
-  - Render:
-    ```tsx
-    <div className="flex flex-col leading-tight tabular-nums">
-      <span className="text-xs font-medium">{postados}/{total} posts</span>
-      {atrasados > 0 && (
-        <span className="text-[11px] text-destructive font-semibold flex items-center gap-1">
-          ⚠ {atrasados} atrasado{atrasados>1?"s":""}
-        </span>
-      )}
-    </div>
-    ```
-- Não criar coluna nova — apenas melhorar a célula existente. Caso a coluna `posts` esteja oculta, a info ainda fica visível via grupo "Atrasado".
-
-### 1.6 Hierarquia visual (ajustes finos)
-- Linhas dos clientes ganham `font-medium` no nome e `text-muted-foreground` levemente mais discreto nas demais colunas (manter atual — já está bom).
-- Header do grupo de Status de Posts vira o ponto focal (item 1.2).
+Regras de nomenclatura: o sistema usa labels em PT capitalizado (`Atrasado`, `Revisar`, `Criar`, `Agendado`, `Postado`) — vou manter essas chaves (não migrar para minúsculo).
 
 ---
 
-## 2. `src/pages/Alertas.tsx` + `src/store/crm.ts` — novas regras de alerta
+## 1. Banco de dados (migração)
 
-### 2.1 Ampliar `TipoAlerta`
-- Em `src/store/crm.ts` (linha 9), expandir a union:
-  ```ts
-  export type TipoAlerta =
-    | "Renovacao"           // ≤ 7 dias para data_fim_contrato
-    | "Posts_Pendentes"     // legado já existente
-    | "Contrato_Finalizando"// legado
-    | "Cliente_Pausado"     // novo
-    | "Sem_Posts_Ativos"    // novo: 0 cards com status ≠ Postado/Atrasado
-    | "Posts_Atrasados";    // novo: cliente tem ≥1 card "Atrasado"
-  ```
-- Atualizar mapa de cor em `src/pages/Alertas.tsx` (`tipoCor`) com novas chaves (cinza para Pausado, vermelho para Posts_Atrasados, âmbar para Sem_Posts).
+Adicionar coluna persistida em `clientes` + função + triggers para manter sincronizado.
 
-### 2.2 Geração derivada (client-side, sem migração)
-- Em `Alertas.tsx`, **derivar alertas em tempo real** a partir do estado do CRM em vez de depender exclusivamente da tabela `alertas`:
-  ```ts
-  const alertasDerivados = useMemo(() => {
-    const out: Alerta[] = [];
-    const hoje = new Date();
-    clientes.forEach((c) => {
-      // 1. Renovação ≤ 7 dias
-      if (c.data_fim_contrato) {
-        const fim = new Date(c.data_fim_contrato);
-        const dias = (fim.getTime() - hoje.getTime()) / 86400000;
-        if (dias >= 0 && dias <= 7) push("Renovacao", c, `Renovação em ${Math.ceil(dias)} dia(s)`);
-      }
-      // 2. Pausado
-      if (c.status_cliente === "Pausado") push("Cliente_Pausado", c, "Cliente em pausa");
-      // 3. Sem posts ativos
-      const ativos = cards.filter(k => k.cliente_id === c.id && k.status_card !== "Postado");
-      if (ativos.length === 0) push("Sem_Posts_Ativos", c, "Sem posts em andamento");
-      // 4. Posts atrasados
-      const atrasados = cards.filter(k => k.cliente_id === c.id && k.status_card === "Atrasado");
-      if (atrasados.length > 0) push("Posts_Atrasados", c, `${atrasados.length} post(s) atrasado(s)`);
-    });
-    return out;
-  }, [clientes, cards]);
-  ```
-- Combinar `alertasDerivados` com `alertas` persistidos (resolvidos vão para a aba histórico via tabela real). Para resolver um alerta derivado, criar entrada em `alertas` com status `Resolvido` (reaproveita `resolverAlerta` existente / usar `addAlerta` se necessário).
-- **Sem mudança de schema** nessa primeira iteração — alertas derivados são efêmeros e recomputados; persistimos apenas quando o usuário clica "Resolver" (insert direto via `supabase.from('alertas').insert({...})`).
+```sql
+-- 1. Coluna
+ALTER TABLE public.clientes
+  ADD COLUMN primary_status text NOT NULL DEFAULT 'Criar';
 
-### 2.3 (Opcional, fora do MVP) Cron para snapshot
-- Não incluído nesta etapa para manter a entrega focada. Os alertas vão funcionar puramente pelo cálculo client-side em cima de `clientes` + `cards`.
+-- 2. Função de cálculo
+CREATE OR REPLACE FUNCTION public.update_client_primary_status(p_client_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_status text;
+BEGIN
+  SELECT CASE
+    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id AND status = 'Atrasado') THEN 'Atrasado'
+    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id AND status = 'Revisar')  THEN 'Revisar'
+    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id AND status = 'Criar')    THEN 'Criar'
+    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id AND status = 'Agendado') THEN 'Agendado'
+    WHEN EXISTS (SELECT 1 FROM cards WHERE cliente_id = p_client_id) THEN 'Postado'
+    ELSE 'Criar'
+  END INTO v_status;
+
+  UPDATE public.clientes SET primary_status = v_status WHERE id = p_client_id;
+END;
+$$;
+
+-- 3. Trigger function
+CREATE OR REPLACE FUNCTION public.trigger_update_client_primary_status()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM public.update_client_primary_status(OLD.cliente_id);
+    RETURN OLD;
+  ELSE
+    PERFORM public.update_client_primary_status(NEW.cliente_id);
+    IF TG_OP = 'UPDATE' AND OLD.cliente_id IS DISTINCT FROM NEW.cliente_id THEN
+      PERFORM public.update_client_primary_status(OLD.cliente_id);
+    END IF;
+    RETURN NEW;
+  END IF;
+END;
+$$;
+
+-- 4. Triggers em cards
+CREATE TRIGGER cards_primary_status_ins
+  AFTER INSERT ON public.cards
+  FOR EACH ROW EXECUTE FUNCTION public.trigger_update_client_primary_status();
+
+CREATE TRIGGER cards_primary_status_upd
+  AFTER UPDATE OF status, cliente_id ON public.cards
+  FOR EACH ROW EXECUTE FUNCTION public.trigger_update_client_primary_status();
+
+CREATE TRIGGER cards_primary_status_del
+  AFTER DELETE ON public.cards
+  FOR EACH ROW EXECUTE FUNCTION public.trigger_update_client_primary_status();
+
+-- 5. Backfill inicial
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT id FROM public.clientes LOOP
+    PERFORM public.update_client_primary_status(r.id);
+  END LOOP;
+END $$;
+```
 
 ---
 
-## 3. Arquivos tocados (resumo)
+## 2. `src/store/crm.ts`
 
-| Arquivo | Mudanças |
+- Acrescentar `primary_status?: string` ao tipo `Cliente`.
+- No mapper de cliente (onde `clientes` são lidos do Supabase), incluir `primary_status: row.primary_status ?? "Criar"`.
+- Nenhuma escrita manual: o trigger cuida. (No `addCliente`, após criar os 4×N cards, o trigger já vai setar `Criar`.)
+
+---
+
+## 3. `src/pages/Clientes.tsx` — re-agrupamento por `primary_status`
+
+**Substituir o `gruposPosts` atual (linhas 785-796)** por agrupamento único:
+
+```ts
+const PRIORIDADE = ["Atrasado", "Revisar", "Criar", "Agendado", "Postado"] as const;
+
+const gruposPosts = useMemo(() => {
+  const map: Record<string, typeof clientes> = {};
+  PRIORIDADE.forEach((s) => (map[s] = []));
+  filtrados.forEach((c) => {
+    const ps = (c as any).primary_status ?? "Criar";
+    if (!map[ps]) map[ps] = [];
+    map[ps].push(c);
+  });
+  return map;
+}, [filtrados]);
+```
+
+Substituir o `statusPostOptions.map(...)` da renderização (linha 866) por iteração sobre `PRIORIDADE`, buscando cor/label em `statusPostOptions` por `label`. Cada cliente agora aparece **uma única vez** no grupo do seu `primary_status`.
+
+### Contadores na linha do cliente
+Na célula `posts` (já existente), além de `X/Y posts` e `⚠ N atrasados`, adicionar uma linha compacta de contadores por status (apenas os > 0):
+
+```tsx
+const counts = PRIORIDADE.reduce((acc, s) => {
+  acc[s] = cardsCliente.filter(k => k.status_card === s).length;
+  return acc;
+}, {} as Record<string, number>);
+
+// Render: pílulas pequenas coloridas — Criar:3 · Revisar:1 · Agendado:4 · Atrasado:2
+```
+
+### Realtime
+Em `useCRM` já existem subscriptions a `cards` e `clientes`. Após a migração, qualquer UPDATE em `cards.status` dispara trigger → UPDATE em `clientes.primary_status` → realtime do `clientes` re-popula o store. Verificar se a subscription de `clientes` está ativa; se não estiver, adicionar canal Postgres realtime para `public.clientes` UPDATE.
+
+### Remover badge "ATIVO" rosa
+Localizar e remover o badge inline ao lado do nome (linha ~894 que usa `statusOptions.find(... cliente.status_cliente)`). O filtro de Status do Cliente no topo permanece — apenas o badge visual é removido.
+
+---
+
+## 4. Arquivos tocados
+
+| Arquivo | Mudança |
 |---|---|
-| `src/pages/Clientes.tsx` | Remover grupos por status do cliente; promover Status de Posts; novo filtro topo; badge de status ao lado do nome; resumo de atrasados na célula `posts`. |
-| `src/pages/Alertas.tsx` | Adicionar derivação de 4 regras; expandir `tipoCor`; permitir resolver alertas derivados (insert em `alertas`). |
-| `src/store/crm.ts` | Expandir `TipoAlerta` com 3 novos valores. |
+| migração SQL | nova coluna + função + 3 triggers + backfill |
+| `src/store/crm.ts` | tipo `Cliente.primary_status` + mapper |
+| `src/pages/Clientes.tsx` | `gruposPosts` por `primary_status` (sem duplicar), contadores inline, remover badge ATIVO |
 
-Nenhuma migração de banco é necessária — todas as colunas já existem (`status_cliente`, `data_fim_contrato`, `cards.status`).
+## 5. Testes manuais (correspondem aos testes pedidos)
 
----
+1. Cliente com `Criar`+`Revisar` → grupo **Revisar**.
+2. Cliente com `Atrasado`+`Revisar` → grupo **Atrasado**.
+3. Cliente só `Agendado` → grupo **Agendado**.
+4. Cliente só `Postado` → grupo **Postado**.
+5. Cliente sem cards → grupo **Criar** (fallback no SQL).
 
-## 4. Resultado visual esperado
-
-```
-┌──────────────────────────────────────────────────────────┐
-│ Clientes                  [Status: Todos ▾] [Filtros] [+]│
-├──────────────────────────────────────────────────────────┤
-│ ▼ █ CRIAR  ⓷                                             │
-│   Cliente A  [ATIVO]   ...   2/12 posts                  │
-│   Cliente B  [PAUSADO] ...   0/8 posts ⚠ 1 atrasado      │
-│ ▼ █ REVISAR ⓵                                             │
-│   Cliente C  [ATIVO]   ...   5/12 posts                  │
-│ ▶ █ AGENDADO ⓸                                            │
-│ ▶ █ POSTADO  ⓻                                            │
-│ ▼ █ ATRASADO ⓶                                            │
-│   ...                                                    │
-└──────────────────────────────────────────────────────────┘
-```
-
-Pronto para implementar assim que aprovado.
+Pronto para implementar.
