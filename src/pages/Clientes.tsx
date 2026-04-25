@@ -1120,6 +1120,12 @@ export default function Clientes() {
                       {c.label}
                     </th>
                   ))}
+                  <th
+                    className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5 border-b sticky right-0 bg-muted/50 z-20"
+                    style={{ minWidth: 90, width: 90 }}
+                  >
+                    Ações
+                  </th>
                 </tr>
               </thead>
             )}
