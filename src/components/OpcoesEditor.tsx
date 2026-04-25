@@ -289,19 +289,19 @@ export function OpcoesEditor({ tipo }: Props) {
       toast.error("Nome não pode ficar vazio");
       return;
     }
-    const cor = isStatus ? editCor : "#9ca3af";
+    const cor = isColorful ? editCor : "#9ca3af";
     const r = await onUpdate(oldLabel, { label: novo, cor });
     if (r === -1) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
       return;
     }
     cancelarEdicao();
-    toast.success(r > 0 ? `${rotuloSingular} atualizado — ${r} cliente(s) afetado(s)` : `${rotuloSingular} atualizado`);
+    toast.success(r > 0 ? `${rotuloSingular} atualizado — ${r} item(ns) afetado(s)` : `${rotuloSingular} atualizado`);
   };
   const adicionar = async () => {
     const nome = novoLabel.trim();
     if (!nome) return;
-    const cor = isStatus ? novaCor : "#9ca3af";
+    const cor = isColorful ? novaCor : "#9ca3af";
     const ok = await onAdd({ label: nome, cor });
     if (!ok) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
@@ -313,15 +313,15 @@ export function OpcoesEditor({ tipo }: Props) {
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    if (!isStatus) return;
+    if (!isColorful) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = itens.findIndex((i) => i.label === active.id);
     const newIndex = itens.findIndex((i) => i.label === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
     const novaOrdem = arrayMove(itens, oldIndex, newIndex).map((i) => i.label);
-    await reorderStatusOptions(novaOrdem);
-    toast.success("Ordem dos status atualizada");
+    await onReorder(novaOrdem);
+    toast.success("Ordem atualizada");
   };
 
   const lista = (
@@ -330,8 +330,8 @@ export function OpcoesEditor({ tipo }: Props) {
         <ItemLinha
           key={it.label}
           item={it}
-          isStatus={isStatus}
-          draggable={isStatus}
+          isStatus={isColorful}
+          draggable={isColorful}
           editando={editando}
           editLabel={editLabel}
           editCor={editCor}
@@ -350,7 +350,7 @@ export function OpcoesEditor({ tipo }: Props) {
 
   return (
     <div className="space-y-3">
-      {isStatus ? (
+      {isColorful ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={itens.map((i) => i.label)} strategy={verticalListSortingStrategy}>
             {lista}
@@ -361,7 +361,7 @@ export function OpcoesEditor({ tipo }: Props) {
       )}
 
       <div className="flex gap-2 pt-1 border-t">
-        {isStatus && (
+        {isColorful && (
           <input
             type="color"
             value={novaCor}
