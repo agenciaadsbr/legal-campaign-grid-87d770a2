@@ -136,14 +136,15 @@ export default function PostDetalhe() {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">Post do Mês</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">Título da tarefa</div>
               <Input
-                value={post.titulo_post}
-                onChange={(e) => updatePost(post.id, { titulo_post: e.target.value })}
+                value={card.titulo_card}
+                onChange={(e) => updateCard(card.id, { titulo_card: e.target.value })}
+                placeholder="Ex: Criar arte carrossel sobre aposentadoria rural"
                 className="text-xl font-bold border-0 px-0 focus-visible:ring-0 h-auto"
               />
               <div className="text-xs text-muted-foreground mt-1">
-                Mês {card.mes_referencia} · Semana {card.numero_semana}
+                Post Mês {card.mes_referencia} · Semana {card.numero_semana}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -351,6 +352,21 @@ export default function PostDetalhe() {
                 <span className="text-[9px] mt-0.5">Anexar</span>
               </button>
             </div>
+          </div>
+
+          {/* Atividade / Briefing interno */}
+          <div className="border-t pt-4">
+            <Label className="text-xs">Atividade / Briefing</Label>
+            <Textarea
+              rows={4}
+              placeholder="Detalhes internos: cores do cliente, CTA no último slide, tom formal, referências..."
+              value={card.descricao ?? ""}
+              onChange={(e) => updateCard(card.id, { descricao: e.target.value } as any)}
+              className="mt-1.5"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Visível apenas dentro deste card. O título principal acima é o que aparece no Kanban.
+            </p>
           </div>
 
           {/* Legenda */}

@@ -6,15 +6,18 @@ import { StatusBadge, ColorBadge } from "@/components/StatusBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { IniciarTarefaDialog } from "@/components/IniciarTarefaDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // Colunas vêm dinamicamente de statusPostOptions
 
@@ -26,7 +29,30 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
   const resps = responsaveis.filter((r) => card.responsaveis.includes(r.id));
   const isUrgent = !!card.is_urgent;
   const isPlanejamento = card.status_card === "Planejamento";
-  const isAtrasado = card.status_card === "Atrasado";
+  const isAtrasadoStatus = card.status_card === "Atrasado";
+
+  const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
+  const tituloVisivel = isPlaceholderTitulo && isPlanejamento ? "Definir título da tarefa" : card.titulo_card;
+
+  // Análise de prazo
+  const due = card.data_agendada ? new Date(card.data_agendada) : null;
+  let prazoState: "none" | "future" | "today" | "overdue" = "none";
+  let prazoLabel = "Definir prazo";
+  if (due) {
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+    if (due < hoje) prazoState = "overdue";
+    else if (due >= hoje && due < amanha) prazoState = "today";
+    else prazoState = "future";
+    prazoLabel = format(due, "dd MMM yyyy", { locale: ptBR });
+  }
+  const prazoColor =
+    prazoState === "overdue"
+      ? "text-destructive"
+      : prazoState === "today"
+      ? "text-amber-500"
+      : "text-muted-foreground";
+  const PrazoIcon = prazoState === "overdue" ? CalendarX : Calendar;
 
   const toggleUrgent = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -50,14 +76,23 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
       className={cn(
         "group relative bg-card border rounded-lg p-3 mb-2 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:shadow-sm transition-all",
         isUrgent && "border-l-2 border-l-amber-500",
-        isAtrasado && "border-l-2 border-l-red-500",
+        isAtrasadoStatus && "border-l-2 border-l-red-500",
         isDragging && "opacity-40",
       )}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="text-sm font-medium leading-tight flex items-center gap-1.5 flex-1">
-          {isUrgent && <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />}
-          <span>{card.titulo_card}</span>
+      {/* Linha 1: título + ações no canto */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-1.5 flex-1 min-w-0">
+          {isUrgent && <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />}
+          <span
+            title={card.titulo_card}
+            className={cn(
+              "text-sm font-medium leading-tight line-clamp-2 break-words",
+              isPlaceholderTitulo && isPlanejamento && "text-muted-foreground italic",
+            )}
+          >
+            {tituloVisivel}
+          </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {canWrite && !isPlanejamento && (
@@ -78,14 +113,25 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
               <Zap className={cn("h-3.5 w-3.5", isUrgent && "fill-current")} />
             </Button>
           )}
-          <StatusBadge status={card.status_card} />
         </div>
       </div>
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>Mês {card.mes_referencia} · Sem {card.numero_semana}</span>
+
+      {/* Linha 2: referência do post */}
+      <div className="text-[10px] text-muted-foreground mt-0.5">
+        Post Mês {card.mes_referencia} · Semana {card.numero_semana}
+      </div>
+
+      {/* Linha 3: prazo + avatares */}
+      <div className="flex items-center justify-between mt-2 gap-2">
+        <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
+          <PrazoIcon className="h-3 w-3" />
+          <span className={cn(prazoState === "overdue" && "font-semibold")}>{prazoLabel}</span>
+        </div>
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
-      {isPlanejamento && canWrite && (
+
+      {/* Linha 4: botão ou status */}
+      {isPlanejamento && canWrite ? (
         <Button
           type="button"
           size="sm"
@@ -96,6 +142,10 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
         >
           <Play className="h-3 w-3" /> Iniciar tarefa
         </Button>
+      ) : (
+        <div className="mt-2 flex justify-end">
+          <StatusBadge status={card.status_card} />
+        </div>
       )}
     </div>
   );
@@ -143,6 +193,7 @@ function KanbanView() {
 
   const [filtroResps, setFiltroResps] = useState<string[]>([]);
   const [filtroSomente, setFiltroSomente] = useState<"todos" | "atrasados" | "hoje" | "semana">("todos");
+  const [busca, setBusca] = useState("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -152,10 +203,12 @@ function KanbanView() {
     const hojeStart = new Date(); hojeStart.setHours(0, 0, 0, 0);
     const amanhaStart = new Date(hojeStart); amanhaStart.setDate(amanhaStart.getDate() + 1);
     const semanaFim = new Date(hojeStart); semanaFim.setDate(semanaFim.getDate() + 7);
+    const q = busca.trim().toLowerCase();
     return cards
       .filter((c) => c.cliente_id === clienteId)
       .filter((c) => filtroMes === "all" || c.mes_referencia === Number(filtroMes))
       .filter((c) => filtroResps.length === 0 || c.responsaveis.some((r) => filtroResps.includes(r)))
+      .filter((c) => !q || c.titulo_card.toLowerCase().includes(q) || (c.descricao ?? "").toLowerCase().includes(q))
       .filter((c) => {
         if (filtroSomente === "todos") return true;
         if (filtroSomente === "atrasados") return c.status_card === "Atrasado";
@@ -165,7 +218,7 @@ function KanbanView() {
         if (filtroSomente === "semana") return due >= hojeStart && due < semanaFim;
         return true;
       });
-  }, [cards, clienteId, filtroMes, filtroResps, filtroSomente]);
+  }, [cards, clienteId, filtroMes, filtroResps, filtroSomente, busca]);
 
   const totalMeses = useMemo(() => {
     const contrato = contratos.find((c) => c.cliente_id === clienteId);
@@ -268,6 +321,16 @@ function KanbanView() {
             <SelectItem value="semana">Somente esta semana</SelectItem>
           </SelectContent>
         </Select>
+
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por título..."
+            className="h-9 pl-8 text-sm"
+          />
+        </div>
       </div>
 
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>

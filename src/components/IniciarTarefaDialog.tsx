@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCRM } from "@/store/crm";
 import { cn } from "@/lib/utils";
 import { Play } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -15,20 +16,25 @@ interface Props {
   cardId: string | null;
 }
 
+// Detecta título genérico (placeholder gerado automaticamente)
+const isPlaceholderTitle = (t: string) => /^Post Mês \d+ - Semana \d+$/i.test(t.trim());
+
 export function IniciarTarefaDialog({ open, onOpenChange, cardId }: Props) {
   const { cards, responsaveis, iniciarTarefa } = useCRM();
   const card = cards.find((c) => c.id === cardId);
 
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
   const [selResp, setSelResp] = useState<string[]>([]);
   const [prazo, setPrazo] = useState("");
-  const [obs, setObs] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open && card) {
+      setTitulo(isPlaceholderTitle(card.titulo_card) ? "" : card.titulo_card);
+      setDescricao(card.descricao ?? "");
       setSelResp(card.responsaveis ?? []);
       setPrazo(card.data_agendada ? card.data_agendada.slice(0, 10) : "");
-      setObs("");
     }
   }, [open, card]);
 
@@ -38,10 +44,16 @@ export function IniciarTarefaDialog({ open, onOpenChange, cardId }: Props) {
 
   const confirmar = async () => {
     if (!cardId) return;
+    if (!titulo.trim()) {
+      toast.error("Defina um título para a tarefa");
+      return;
+    }
     setSaving(true);
     await iniciarTarefa(cardId, {
       responsaveis: selResp,
       data_agendada: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
+      titulo: titulo.trim(),
+      descricao: descricao.trim() || null,
     });
     setSaving(false);
     onOpenChange(false);
@@ -49,20 +61,45 @@ export function IniciarTarefaDialog({ open, onOpenChange, cardId }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-4 w-4 text-primary" /> Iniciar tarefa
           </DialogTitle>
           <DialogDescription>
-            {card ? card.titulo_card : "Ative este card para começar a trabalhar nele."}
+            {card ? `Referência: Post Mês ${card.mes_referencia} · Semana ${card.numero_semana}` : "Ative este card para começar a trabalhar nele."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
+            <Label className="text-xs">
+              Título da tarefa <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Ex: Criar arte carrossel sobre aposentadoria rural"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs">Briefing / atividade (opcional)</Label>
+            <Textarea
+              rows={4}
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Detalhes internos: cores do cliente, CTA no último slide, tom formal, referências..."
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Esta informação fica visível apenas dentro do card.
+            </p>
+          </div>
+
+          <div>
             <Label className="text-xs">Responsáveis</Label>
-            <div className="mt-1.5 max-h-48 overflow-auto border rounded-md p-2 space-y-0.5">
+            <div className="mt-1.5 max-h-40 overflow-auto border rounded-md p-2 space-y-0.5">
               {responsaveis.map((r) => {
                 const checked = selResp.includes(r.id);
                 return (
@@ -97,16 +134,6 @@ export function IniciarTarefaDialog({ open, onOpenChange, cardId }: Props) {
           <div>
             <Label className="text-xs">Prazo de criação</Label>
             <Input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
-          </div>
-
-          <div>
-            <Label className="text-xs">Observação (opcional)</Label>
-            <Textarea
-              rows={3}
-              value={obs}
-              onChange={(e) => setObs(e.target.value)}
-              placeholder="Algum detalhe importante para a equipe..."
-            />
           </div>
         </div>
 

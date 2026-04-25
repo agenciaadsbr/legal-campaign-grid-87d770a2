@@ -62,6 +62,7 @@ export interface Card {
   id: string;
   cliente_id: string;
   titulo_card: string;
+  descricao?: string | null;
   mes_referencia: number;
   numero_semana: number;
   status_card: StatusCard;
@@ -174,7 +175,7 @@ interface State {
   updatePost: (id: string, patch: Partial<Post>) => Promise<void>;
   iniciarTarefa: (
     cardId: string,
-    payload: { responsaveis: string[]; data_agendada?: string | null },
+    payload: { responsaveis: string[]; data_agendada?: string | null; titulo?: string; descricao?: string | null },
   ) => Promise<void>;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
@@ -313,6 +314,7 @@ function mapCard(row: any): Card {
     id: row.id,
     cliente_id: row.cliente_id,
     titulo_card: row.titulo,
+    descricao: row.descricao ?? "",
     mes_referencia: Math.floor(pos / 4) + 1,
     numero_semana: (pos % 4) + 1,
     status_card: row.status,
@@ -609,6 +611,7 @@ export const useCRM = create<State>()((set, get) => ({
   updateCard: async (id, patch) => {
     const dbPatch: any = {};
     if (patch.titulo_card !== undefined) dbPatch.titulo = patch.titulo_card;
+    if ((patch as any).descricao !== undefined) dbPatch.descricao = (patch as any).descricao;
     if (patch.status_card !== undefined) dbPatch.status = patch.status_card;
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
     if ((patch as any).data_agendada !== undefined) dbPatch.data_agendada = (patch as any).data_agendada;
@@ -627,7 +630,7 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
   },
 
-  iniciarTarefa: async (cardId, { responsaveis, data_agendada }) => {
+  iniciarTarefa: async (cardId, { responsaveis, data_agendada, titulo, descricao }) => {
     const card = get().cards.find((c) => c.id === cardId);
     if (!card) {
       toast.error("Card não encontrado");
@@ -638,6 +641,8 @@ export const useCRM = create<State>()((set, get) => ({
       responsaveis_ids: responsaveis,
     };
     if (data_agendada !== undefined) dbPatch.data_agendada = data_agendada;
+    if (titulo !== undefined && titulo.trim()) dbPatch.titulo = titulo.trim();
+    if (descricao !== undefined) dbPatch.descricao = descricao;
     const { error } = await supabase.from("cards").update(dbPatch).eq("id", cardId);
     if (error) {
       toast.error(`Falha ao iniciar tarefa: ${error.message}`);

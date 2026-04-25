@@ -1,113 +1,80 @@
-# 🔄 Reestruturação do fluxo operacional — Planejamento → Postado
 
-## ⚠️ Diagnóstico do estado atual
+# Cards do Kanban: título real + prazo visível + atividade interna
 
-Hoje o sistema já tem boa parte da base, mas precisa ser ajustado:
+## Objetivo
+Tornar os cards do Kanban autoexplicativos: bater o olho e entender **o que fazer**, **quando** e **quem** — sem precisar abrir. A complementação detalhada (briefing/atividade) fica no card interno.
 
-- **Status existentes hoje** (`status_post_options`): `Criar`, `Revisar`, `Agendado`, `Postado`, `Atrasado` — **falta apenas `Planejamento`**.
-- **57 cards no banco** (56 em "Criar" + 4 outros). Precisamos decidir o que fazer com os existentes.
-- **Geração automática** (`addCliente` em `src/store/crm.ts` linhas 482-509) já cria N×4 cards + posts, mas usa o **primeiro** status da lista (hoje "Criar"). Será trocado para "Planejamento".
-- **Kanban dinâmico** (`src/pages/ClienteDetalhe.tsx`) já lê colunas de `statusPostOptions` — basta adicionar Planejamento e o Kanban se atualiza sozinho.
-- **Atrasado** já tem função SQL (`marcar_cards_atrasados`), mas roda só sob demanda — vamos agendar via cron ou disparar no carregamento.
-- **Dashboard atual** (`src/pages/Dashboard.tsx`) usa status hardcoded antigos (`Agendar`, `Postado`, `Renovação`) — precisa ser refeito para o novo fluxo.
+## Decisões de modelagem
 
----
+Vou **reaproveitar campos existentes** ao invés de criar novos, para manter compatibilidade com os 56+ cards já cadastrados:
 
-## ❗ Decisão importante sobre o que NÃO faz parte deste plano
+| Conceito do briefing | Onde mora hoje | Decisão |
+|---|---|---|
+| `titulo_tarefa` (título principal visível) | `cards.titulo` (texto livre, atualmente "Post Mês X - Semana Y") | **Reaproveitar.** Vira o título da tarefa. |
+| `referencia_post` (Mês X - Semana Y) | `cards.posicao` (já calcula mês/semana) | **Derivar via `mapCard`** — não precisa coluna nova. |
+| `descricao_atividade` (briefing interno) | `cards.descricao` (já existe, nullable, não usada) | **Reaproveitar.** |
+| `prazo_final` | `cards.data_agendada` (timestamp) | **Reaproveitar.** Já é o prazo. |
+| `responsavel_id` / `status` | `cards.responsaveis_ids` / `cards.status` | Já existem. |
 
-O guia original pede **muita coisa** (modal de ativação, novos campos `data_prevista`/`data_ativacao`/`prazo_final`/`data_postagem`/`data_conclusao`/`mes`/`semana`/`prioridade`/`observacoes`/`links`, histórico de movimentações, alertas extras, dashboard completo de produtividade, filtros multi-dimensão).
+→ **Sem migração de schema.** Apenas uma migração de **dados** opcional para garantir que cards antigos tenham um título legível (que já têm: "Post Mês 1 - Semana 2").
 
-Para entregar com qualidade sem quebrar o que já funciona, este plano cobre o **núcleo operacional** (itens 1-8, 10, 16) em **uma única entrega**. Os itens **9 (dashboard completo), 12 (histórico de movimentações) e 13 (alertas avançados)** ficam como **fase 2** após você validar o fluxo.
+## Mudanças
 
-Se quiser tudo de uma vez, me avise — mas o risco de bug é maior.
+### 1. `src/store/crm.ts` — expor descrição no tipo `Card`
+- Adicionar `descricao?: string | null` na interface `Card`.
+- `mapCard`: incluir `descricao: row.descricao ?? ""`.
+- `updateCard`: aceitar e gravar `descricao` (campo `descricao` na tabela `cards`).
 
----
+### 2. `src/store/crm.ts` — geração de cards novos
+- Em `addCliente`, manter `titulo: \`Post Mês ${m} - Semana ${s}\`` como **placeholder editável** (vira referência genérica até o usuário renomear na ativação).
 
-## 📦 FASE 1 — Núcleo do novo fluxo (esta entrega)
+### 3. `src/components/IniciarTarefaDialog.tsx` — capturar título + briefing
+Adicionar dois campos no topo do modal:
+- **Título da tarefa** (input, obrigatório) — pré-preenchido com o título atual; se ainda for o placeholder "Post Mês X - Semana Y", vem vazio com placeholder sugerindo "Ex: Criar arte carrossel sobre aposentadoria rural".
+- **Briefing / atividade** (textarea, opcional) — substitui o atual campo "Observação". Salvo em `cards.descricao`.
 
-### 1. Banco de dados (migration)
+Ao confirmar `iniciarTarefa`, persistir também `titulo` e `descricao` (estender a assinatura do método em `crm.ts`).
 
-**a) Adicionar status "Planejamento"** em `status_post_options` como ordem 0 (primeiro):
-```sql
-UPDATE public.status_post_options SET ordem = ordem + 1;
-INSERT INTO public.status_post_options (label, cor, ordem)
-VALUES ('Planejamento', '#9ca3af', 0);
+### 4. `src/pages/ClienteDetalhe.tsx` — `CardItem` com novo layout
+Estrutura visual nova (mantendo tokens semânticos do design system, sem cores hex):
+
+```
+┌─────────────────────────────────────────┐
+│ ⚡ Criar arte carrossel aposentadoria   │ ← titulo_card (font-medium, 2 linhas max, line-clamp-2)
+│ Post Mês 1 · Semana 2                   │ ← referência (text-[10px] text-muted-foreground)
+├─────────────────────────────────────────┤
+│ 📅 24 Abr 2026          (B)(M)          │ ← prazo + AvatarStack
+│ [▶ Iniciar tarefa] | [STATUS BADGE]     │ ← botão se Planejamento, badge caso contrário
+└─────────────────────────────────────────┘
 ```
 
-**b) Trigger automática para marcar atrasados** (substitui chamada manual da função existente):
-```sql
--- Trigger BEFORE INSERT/UPDATE em cards: se data_agendada < now() E status IN ('Criar','Revisar','Agendado') → status='Atrasado'
-CREATE OR REPLACE FUNCTION public.auto_marcar_atrasado() RETURNS trigger ...
-CREATE TRIGGER cards_auto_atrasado BEFORE INSERT OR UPDATE OF data_agendada, status ON public.cards ...
-```
-Mais um cron via `pg_cron` (se disponível) que roda `marcar_cards_atrasados()` a cada hora — caso contrário, dispararemos no `_loadAll()` do front.
+Detalhes:
+- **Título**: `line-clamp-2`, com `title={card.titulo_card}` para tooltip nativo no hover.
+- **Referência**: linha pequena logo abaixo do título.
+- **Prazo** (`data_agendada`):
+  - Sem prazo → texto "Definir prazo" em `text-muted-foreground`.
+  - Vencido → `text-destructive` + ícone `CalendarX`.
+  - Vence hoje → `text-amber-500` (token do design existente).
+  - Futuro → `text-muted-foreground` + ícone `Calendar`.
+  - Formato: `dd MMM yyyy` (date-fns, locale pt-BR já usado no projeto).
+- **Botão "Iniciar tarefa"** continua só em Planejamento; o `StatusBadge` aparece nos demais.
+- Manter ícone de urgência ⚡ inline com o título.
 
-**c) Decisão sobre os 56 cards existentes em "Criar":** vou perguntar via toast/console se quer migrá-los para "Planejamento" — **por padrão deixaremos como estão** (já foram "ativados" implicitamente). Cards novos nascem em Planejamento.
+### 5. `src/pages/PostDetalhe.tsx` — card interno
+- **Topo**: já mostra `titulo_post` editável → trocar para editar `card.titulo_card` (fonte da verdade) + linha menor mostrando "Post Mês X · Semana Y" como referência readonly.
+- **Nova seção "Atividade / Briefing"** acima da Legenda: textarea ligada a `card.descricao`, com placeholder "Detalhes internos: cores, CTA, tom, referências…". Auto-save via `updateCard({ descricao })` (mesmo padrão de debounce já usado pela legenda).
+- **Importante**: trigger `sync_post_status_with_card` no banco já mantém `posts.status` em sincronia. O título do post (`posts.titulo`) deixa de ser editado diretamente — vira espelho do `cards.titulo`. Não precisa migração; apenas remover o input duplicado.
 
-### 2. Store (`src/store/crm.ts`)
+### 6. Filtros / busca (`ClienteDetalhe.tsx`)
+- Adicionar **input de busca por título** no topo do Kanban (filtra `card.titulo_card.toLowerCase().includes(q)`). Os filtros existentes (responsáveis, mês, hoje/semana/atrasados) continuam.
 
-- `addCliente`: trocar `statusInicial = get().statusPostOptions[0]?.label ?? "Criar"` por `"Planejamento"` fixo (com fallback para o primeiro disponível).
-- Novo método `iniciarTarefa(cardId, { responsaveis, data_agendada })` que valida status atual = "Planejamento" e move para "Criar" + grava `data_agendada`.
-- `moveCard`: bloquear arrasto direto de **Planejamento → Criar** sem passar pelo modal (lança erro / flag para o Kanban abrir o modal).
-- Disparar `marcar_cards_atrasados` RPC no início do `_loadAll`.
+### 7. Migração de dados (opcional, sem schema change)
+Cards antigos já têm título "Post Mês X - Semana Y" — funcionam como placeholder válido. **Nenhuma migração SQL necessária.** O usuário renomeia ao ativar.
 
-### 3. Kanban (`src/pages/ClienteDetalhe.tsx`)
+## Fora do escopo (Fase 2)
+- Histórico estruturado de movimentações (hoje os comentários cobrem parcialmente).
+- Notificações automáticas baseadas no novo título.
+- Relatórios filtrando por título.
 
-- Colunas seguem dinâmicas (já lê de `statusPostOptions`), então "Planejamento" aparece automaticamente como primeira coluna após a migration.
-- **Contador por coluna** já existe (`{cards.length}`) — apenas garantir destaque visual em "Atrasado" (badge vermelho pulsante).
-- **Botão ▶ Iniciar Tarefa** dentro do `CardItem` quando `status_card === "Planejamento"` — abre modal com responsáveis (multi-select) + prazo (data) + observação opcional.
-- **Drag & drop:** se origem = Planejamento e destino = Criar (ou qualquer coluna que não Planejamento), abrir o mesmo modal de ativação antes de confirmar a movimentação.
-
-### 4. Filtros novos no Kanban
-
-Adicionar barra de filtros acima das colunas:
-- Responsável (multi)
-- Status (multi — útil para esconder Postados)
-- "Somente atrasados" (toggle)
-- "Somente hoje" (toggle, baseado em `data_agendada`)
-- "Somente esta semana" (toggle)
-
-Filtro de mês já existe e fica.
-
-### 5. Cores dos status
-
-Atualizar via migration:
-- Planejamento = `#9ca3af` (cinza)
-- Criar = `#3b82f6` (azul) — hoje está `#005cfa`, ajustar
-- Revisar = `#f59e0b` (amarelo) — hoje `#e6ab0a`, ajustar
-- Agendado = `#a855f7` (roxo) — hoje `#3b82f6` azul, **trocar**
-- Postado = `#10b981` (verde) ✅ já correto
-- Atrasado = `#ef4444` (vermelho) ✅ já correto
-
-### 6. Painel "CRIAR" da página `/clientes`
-
-A página `Clientes.tsx` agrupa hoje em REVISAR/CRIAR/CONCLUÍDOS via `primary_status`. A função SQL `update_client_primary_status` precisa ser ajustada para considerar **Planejamento ≠ tarefa ativa** — clientes só com cards em Planejamento entram em **CONCLUÍDOS** (pendentes operacionais = 0).
-
-Atualizar o cálculo `pendentesPorCliente` (em `Clientes.tsx`) para **ignorar cards em "Planejamento"** ao contar pendências.
-
----
-
-## 📦 FASE 2 — Adições (NÃO inclusas nesta entrega, perguntarei depois)
-
-- Dashboard operacional completo (tarefas hoje/atrasadas/revisar/agendadas hoje/produtividade por responsável).
-- Tabela `card_historico` com gatilhos para registrar todas movimentações + viewer dentro do card.
-- Alertas automáticos avançados (revisão parada > 2 dias, card sem responsável).
-- Campos extras no post (prioridade, observações livres, vínculo Meister/Meta separados).
-
----
-
-## 🗂️ Arquivos editados
-
-- **Migration nova** (adicionar Planejamento, ajustar cores, trigger atrasado, ajustar `update_client_primary_status`).
-- `src/store/crm.ts` — `addCliente` usa Planejamento, novo `iniciarTarefa`, dispara `marcar_cards_atrasados` no boot.
-- `src/pages/ClienteDetalhe.tsx` — botão "Iniciar tarefa", modal de ativação, filtros novos, intercepta drag de Planejamento.
-- `src/pages/Clientes.tsx` — ignora cards em Planejamento ao contar pendentes.
-- **Novo:** `src/components/IniciarTarefaDialog.tsx` — modal reutilizável.
-
----
-
-## ❓ 3 perguntas antes de eu codar
-
-1. **Cards existentes em "Criar" (56):** mover todos para "Planejamento" ou deixar como já estão? (recomendo deixar)
-2. **Cron de atrasados:** pode usar `pg_cron` (extensão Supabase) ou prefere disparar só no front a cada `_loadAll`?
-3. **Confirma adiar Fase 2** (dashboard completo + histórico + alertas avançados) para depois de validar o fluxo, ou quer tudo agora?
+## Perguntas (se houver dúvida)
+Nenhuma — todos os campos do briefing mapeiam em colunas existentes. Se você preferir colunas dedicadas (`titulo_tarefa`, `descricao_atividade`) ao invés de reaproveitar `titulo`/`descricao`, me avise antes de aprovar e eu adiciono a migração.
