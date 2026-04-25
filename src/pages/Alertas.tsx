@@ -4,6 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ColorBadge } from "@/components/StatusBadge";
 import { Check } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const tipoCor: Record<TipoAlerta, string> = {
   Renovacao: "#a855f7",
@@ -13,6 +14,7 @@ const tipoCor: Record<TipoAlerta, string> = {
 
 function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
   const { alertas, clientes, resolverAlerta } = useCRM();
+  const { canWrite } = useAuth();
   const items = alertas.filter((a) => a.status === status);
   return (
     <div className="border rounded-lg bg-card overflow-hidden">
@@ -39,7 +41,7 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
                 <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.data_alerta).toLocaleDateString("pt-BR")}</td>
                 <td className="px-4 py-2.5">{a.mensagem}</td>
                 <td className="px-4 py-2.5 text-right">
-                  {status === "Pendente" && (
+                  {status === "Pendente" && canWrite && (
                     <Button size="sm" variant="outline" onClick={() => resolverAlerta(a.id)}>
                       <Check className="h-3.5 w-3.5 mr-1" /> Resolver
                     </Button>

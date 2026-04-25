@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { HistoricoComentariosDialog } from "@/components/HistoricoComentariosDialog";
 import { MessageSquare, MessageSquarePlus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   DndContext,
   closestCenter,
@@ -714,6 +715,7 @@ function FiltrosTopo({
 
 export default function Clientes() {
   const { clientes, colunasCliente, statusOptions, responsaveis } = useCRM();
+  const { canWrite } = useAuth();
   const [busca, setBusca] = useState("");
   const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
@@ -776,9 +778,9 @@ export default function Clientes() {
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-8 w-56 text-sm" />
           </div>
-          <ConfiguracoesSheet />
+          {canWrite && <ConfiguracoesSheet />}
           <GerenciarColunas />
-          <NovoClienteDialog />
+          {canWrite && <NovoClienteDialog />}
         </div>
       </div>
 
