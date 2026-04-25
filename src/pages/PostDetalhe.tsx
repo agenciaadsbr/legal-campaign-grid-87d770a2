@@ -25,6 +25,7 @@ import {
   Check,
   FileText,
   CheckCircle2,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -145,12 +146,33 @@ export default function PostDetalhe() {
                 Mês {card.mes_referencia} · Semana {card.numero_semana}
               </div>
             </div>
-            <Select value={post.status} onValueChange={(v) => updatePost(post.id, { status: v as StatusCard })}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {statusPostOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={card.is_urgent ? "default" : "outline"}
+                size="sm"
+                disabled={!canWrite}
+                onClick={() => {
+                  const next = !card.is_urgent;
+                  updateCard(card.id, { is_urgent: next });
+                  toast.success(next ? "Card marcado como urgente" : "Urgência removida");
+                }}
+                className={cn(
+                  "gap-1.5",
+                  card.is_urgent && "bg-amber-500 hover:bg-amber-500/90 text-white border-amber-500"
+                )}
+                title={card.is_urgent ? "Remover urgência" : "Marcar como urgente"}
+              >
+                <Zap className={cn("h-4 w-4", card.is_urgent && "fill-current")} />
+                Urgente
+              </Button>
+              <Select value={post.status} onValueChange={(v) => updatePost(post.id, { status: v as StatusCard })}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {statusPostOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
