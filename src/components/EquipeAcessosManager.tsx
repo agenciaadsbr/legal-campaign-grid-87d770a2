@@ -129,6 +129,7 @@ export function EquipeAcessosManager() {
     const isInList = !p.cargo || cargos.some((c) => c.label === p.cargo);
     setCargoModeEdit(p.cargo && !isInList ? "custom" : "select");
     setEditOpen(true);
+  };
 
   const copiarLinkAcesso = async (p: ProfileRow) => {
     const nome = p.nome?.trim() || "";
