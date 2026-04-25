@@ -829,8 +829,9 @@ export default function Clientes() {
     const map: Record<string, typeof clientes> = { Revisar: [], Criar: [], Concluidos: [] };
     filtradosFinal.forEach((c) => {
       const stats = pendentesPorCliente[c.id];
-      // Concluído = não há nenhum card pendente (inclui clientes sem cards e clientes com 100% Postados)
-      const concluido = !stats || stats.pendentes === 0;
+      // Concluído = tem cards e todos estão postados (sem pendentes).
+      // Cliente sem nenhum card NÃO é concluído — vai para "Criar" para ficar visível.
+      const concluido = !!stats && stats.total > 0 && stats.pendentes === 0;
       if (concluido) {
         if (mostrarConcluidos) map.Concluidos.push(c);
         return;
@@ -842,8 +843,10 @@ export default function Clientes() {
   }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos]);
 
   const algumGrupoAberto = useMemo(
-    () => GRUPOS.some((s) => (gruposPosts[s]?.length ?? 0) > 0 && !grupoColapsado[`post:${s}`]),
-    [gruposPosts, grupoColapsado]
+    // Revisar e Criar são fixos (sempre renderizam). Concluídos só aparece com toggle.
+    () => !grupoColapsado["post:Revisar"] || !grupoColapsado["post:Criar"] ||
+          (mostrarConcluidos && (gruposPosts.Concluidos?.length ?? 0) > 0 && !grupoColapsado["post:Concluidos"]),
+    [gruposPosts, grupoColapsado, mostrarConcluidos]
   );
 
   return (
@@ -928,7 +931,9 @@ export default function Clientes() {
                 const items = gruposPosts[statusLabel] ?? [];
                 const key = `post:${statusLabel}`;
                 const colapsado = grupoColapsado[key];
-                if (items.length === 0) return null;
+                // Concluídos: só aparece se toggle ativo E houver itens.
+                // Revisar / Criar: sempre fixos (mesmo vazios).
+                if (statusLabel === "Concluidos" && items.length === 0) return null;
                 return (
                   <Fragment2 key={key}>
                     <tr className="bg-muted/60 hover:bg-muted/70 sticky">
