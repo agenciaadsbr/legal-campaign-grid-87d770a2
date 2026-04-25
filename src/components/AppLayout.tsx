@@ -4,7 +4,7 @@ import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Bell, Moon, Sun } from "lucide-react";
 import { useTheme } from "./theme-provider";
-import { useCRM } from "@/store/crm";
+import { useCRM, useCRMBootstrap } from "@/store/crm";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Fragment, useMemo } from "react";
@@ -35,6 +35,7 @@ function useBreadcrumbs() {
 }
 
 export function AppLayout() {
+  useCRMBootstrap();
   const { theme, toggle } = useTheme();
   const alertasPendentes = useCRM((s) => s.alertas.filter((a) => a.status === "Pendente").length);
   const crumbs = useBreadcrumbs();
