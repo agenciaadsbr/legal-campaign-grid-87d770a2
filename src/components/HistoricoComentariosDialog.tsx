@@ -7,9 +7,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Send, MessageSquarePlus, X, Check } from "lucide-react";
-import { useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
+import {
+  Pencil, Trash2, Send, MessageSquarePlus, X, Check,
+  Plus, Image as ImageIcon, Smile, AtSign,
+} from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
@@ -18,6 +20,14 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }
+
+const fileToDataUrl = (f: File) =>
+  new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(f);
+  });
 
 function Avatar({ nome, cor }: { nome: string; cor: string }) {
   return (
@@ -102,9 +112,13 @@ function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string
           </div>
         ) : (
           <>
-            <div className="text-sm mt-1 whitespace-pre-wrap break-words">{com.comentario_texto}</div>
+            {com.comentario_texto && (
+              <div className="text-sm mt-1 whitespace-pre-wrap break-words">{com.comentario_texto}</div>
+            )}
             {com.imagem_url && (
-              <img src={com.imagem_url} alt="anexo" className="mt-2 max-h-48 rounded border" />
+              <a href={com.imagem_url} target="_blank" rel="noreferrer">
+                <img src={com.imagem_url} alt="anexo" className="mt-2 max-h-48 rounded border" />
+              </a>
             )}
           </>
         )}
@@ -152,6 +166,8 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
   const { clientes, comentarios, posts, cards, responsaveis, addComentario } = useCRM();
   const cliente = clientes.find((c) => c.id === clienteId);
   const [novo, setNovo] = useState("");
+  const [imagemUrl, setImagemUrl] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const itens = useMemo(() => {
     if (!clienteId) return [];
@@ -162,14 +178,28 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
   }, [clienteId, comentarios, posts, cards]);
 
+  const onPickImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      const dataUrl = await fileToDataUrl(f);
+      setImagemUrl(dataUrl);
+    } catch {
+      toast.error("Falha ao carregar imagem");
+    }
+    e.target.value = "";
+  };
+
   const enviar = () => {
-    if (!novo.trim() || !clienteId) return;
+    if ((!novo.trim() && !imagemUrl) || !clienteId) return;
     addComentario({
       cliente_id: clienteId,
       usuario_id: responsaveis[0]?.id ?? "user",
       comentario_texto: novo.trim(),
+      imagem_url: imagemUrl ?? undefined,
     });
     setNovo("");
+    setImagemUrl(null);
     toast.success("Comentário adicionado");
   };
 
@@ -202,23 +232,76 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
           )}
         </ScrollArea>
 
+        {/* Composer estilo "Atividade" */}
         <div className="border-t p-3 bg-muted/20">
-          <div className="rounded-md border bg-background p-2 space-y-2">
+          <div className="rounded-xl border bg-background px-3 py-2 space-y-2">
+            {imagemUrl && (
+              <div className="relative inline-block">
+                <img src={imagemUrl} className="max-h-32 rounded border" alt="preview" />
+                <button
+                  onClick={() => setImagemUrl(null)}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                  title="Remover"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
             <Textarea
+              rows={1}
               placeholder="Escreva um comentário..."
               value={novo}
               onChange={(e) => setNovo(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) enviar();
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  enviar();
+                }
               }}
-              rows={2}
-              className={cn("border-0 focus-visible:ring-0 resize-none p-1 min-h-[40px]")}
+              className="border-0 focus-visible:ring-0 resize-none bg-transparent min-h-[36px] p-0 shadow-none"
             />
             <div className="flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground">Ctrl+Enter para enviar</span>
-              <Button size="sm" onClick={enviar} disabled={!novo.trim()}>
-                <Send className="h-3.5 w-3.5 mr-1" /> Adicionar comentário
-              </Button>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onPickImg}
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => fileRef.current?.click()}
+                  title="Anexar imagem"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => fileRef.current?.click()}
+                  title="Imagem"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7" title="Emoji" disabled>
+                  <Smile className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7" title="Mencionar" disabled>
+                  <AtSign className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                  Enter envia · Shift+Enter quebra
+                </span>
+                <Button size="sm" onClick={enviar} disabled={!novo.trim() && !imagemUrl}>
+                  <Send className="h-3.5 w-3.5 mr-1" /> Enviar
+                </Button>
+              </div>
             </div>
           </div>
         </div>
