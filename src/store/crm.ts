@@ -812,6 +812,66 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
     return afetados;
   },
+
+  // ============= Status Posts =============
+  addStatusPostOption: async (opt) => {
+    const label = opt.label.trim();
+    if (!label) return false;
+    if (get().statusPostOptions.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
+    const proximaOrdem = get().statusPostOptions.length;
+    const { error } = await supabase.from("status_post_options").insert({ label, cor: opt.cor, ordem: proximaOrdem });
+    if (error) return false;
+    await get()._loadAll();
+    return true;
+  },
+
+  reorderStatusPostOptions: async (labels) => {
+    await Promise.all(
+      labels.map((label, idx) =>
+        supabase.from("status_post_options").update({ ordem: idx }).eq("label", label),
+      ),
+    );
+    await get()._loadAll();
+  },
+
+  updateStatusPostOption: async (oldLabel, patch) => {
+    const novoLabel = patch.label?.trim();
+    if (novoLabel !== undefined && !novoLabel) return -1;
+    if (
+      novoLabel &&
+      novoLabel.toLowerCase() !== oldLabel.toLowerCase() &&
+      get().statusPostOptions.some((x) => x.label.toLowerCase() === novoLabel.toLowerCase())
+    ) {
+      return -1;
+    }
+    const afetados = novoLabel && novoLabel !== oldLabel
+      ? get().cards.filter((c) => c.status_card === oldLabel).length
+      : 0;
+
+    const dbPatch: any = {};
+    if (novoLabel !== undefined) dbPatch.label = novoLabel;
+    if (patch.cor !== undefined) dbPatch.cor = patch.cor;
+    await supabase.from("status_post_options").update(dbPatch).eq("label", oldLabel);
+
+    if (novoLabel && novoLabel !== oldLabel) {
+      await supabase.from("cards").update({ status: novoLabel as any }).eq("status", oldLabel as any);
+      await supabase.from("posts").update({ status: novoLabel as any }).eq("status", oldLabel as any);
+    }
+    await get()._loadAll();
+    return afetados;
+  },
+
+  deleteStatusPostOption: async (label) => {
+    const afetados = get().cards.filter((c) => c.status_card === label).length;
+    const fallback = get().statusPostOptions.find((s) => s.label !== label)?.label;
+    if (fallback) {
+      await supabase.from("cards").update({ status: fallback as any }).eq("status", label as any);
+      await supabase.from("posts").update({ status: fallback as any }).eq("status", label as any);
+    }
+    await supabase.from("status_post_options").delete().eq("label", label);
+    await get()._loadAll();
+    return afetados;
+  },
 }));
 
 // ===================== Bootstrap (uma vez por app) =====================
@@ -828,6 +888,7 @@ function startRealtime() {
     "alertas",
     "colunas_cliente",
     "status_options",
+    "status_post_options",
     "nichos",
     "responsaveis",
     "custom_fields",
