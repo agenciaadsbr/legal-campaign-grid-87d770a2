@@ -630,7 +630,7 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
   },
 
-  iniciarTarefa: async (cardId, { responsaveis, data_agendada }) => {
+  iniciarTarefa: async (cardId, { responsaveis, data_agendada, titulo, descricao }) => {
     const card = get().cards.find((c) => c.id === cardId);
     if (!card) {
       toast.error("Card não encontrado");
@@ -641,6 +641,8 @@ export const useCRM = create<State>()((set, get) => ({
       responsaveis_ids: responsaveis,
     };
     if (data_agendada !== undefined) dbPatch.data_agendada = data_agendada;
+    if (titulo !== undefined && titulo.trim()) dbPatch.titulo = titulo.trim();
+    if (descricao !== undefined) dbPatch.descricao = descricao;
     const { error } = await supabase.from("cards").update(dbPatch).eq("id", cardId);
     if (error) {
       toast.error(`Falha ao iniciar tarefa: ${error.message}`);
