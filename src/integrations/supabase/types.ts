@@ -61,7 +61,7 @@ export type Database = {
           id: string
           posicao: number
           responsaveis_ids: string[]
-          status: Database["public"]["Enums"]["status_card"]
+          status: string
           titulo: string
           updated_at: string
         }
@@ -73,7 +73,7 @@ export type Database = {
           id?: string
           posicao?: number
           responsaveis_ids?: string[]
-          status?: Database["public"]["Enums"]["status_card"]
+          status?: string
           titulo: string
           updated_at?: string
         }
@@ -85,7 +85,7 @@ export type Database = {
           id?: string
           posicao?: number
           responsaveis_ids?: string[]
-          status?: Database["public"]["Enums"]["status_card"]
+          status?: string
           titulo?: string
           updated_at?: string
         }
@@ -371,7 +371,7 @@ export type Database = {
           formato: string | null
           id: string
           legenda: string | null
-          status: Database["public"]["Enums"]["status_card"]
+          status: string
           titulo: string | null
           updated_at: string
         }
@@ -383,7 +383,7 @@ export type Database = {
           formato?: string | null
           id?: string
           legenda?: string | null
-          status?: Database["public"]["Enums"]["status_card"]
+          status?: string
           titulo?: string | null
           updated_at?: string
         }
@@ -395,7 +395,7 @@ export type Database = {
           formato?: string | null
           id?: string
           legenda?: string | null
-          status?: Database["public"]["Enums"]["status_card"]
+          status?: string
           titulo?: string | null
           updated_at?: string
         }
@@ -510,6 +510,33 @@ export type Database = {
         }
         Relationships: []
       }
+      status_post_options: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          id: string
+          label: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          label: string
+          ordem?: number
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          label?: string
+          ordem?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -544,6 +571,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      marcar_cards_atrasados: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
