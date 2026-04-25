@@ -416,6 +416,8 @@ function AcoesCliente({ cliente }: { cliente: any }) {
     </div>
   );
 }
+
+function SortableColunaRow({
   c,
   onUpdate,
   onDelete,
