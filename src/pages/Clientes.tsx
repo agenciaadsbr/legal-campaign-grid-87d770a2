@@ -9,6 +9,7 @@ import { ColorBadge } from "@/components/StatusBadge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { OpcoesEditor } from "@/components/OpcoesEditor";
 import { ResponsaveisEditor } from "@/components/ResponsaveisEditor";
+import { CamposPersonalizadosEditor } from "@/components/CamposPersonalizadosEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -568,6 +569,10 @@ function ConfiguracoesSheet() {
           <Card>
             <CardHeader className="py-3"><CardTitle className="text-sm">Responsáveis</CardTitle></CardHeader>
             <CardContent><ResponsaveisEditor /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="py-3"><CardTitle className="text-sm">Campos Personalizados</CardTitle></CardHeader>
+            <CardContent><CamposPersonalizadosEditor /></CardContent>
           </Card>
         </div>
       </SheetContent>
