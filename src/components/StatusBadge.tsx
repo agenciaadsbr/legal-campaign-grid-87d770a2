@@ -1,7 +1,7 @@
-import { StatusCard } from "@/store/crm";
+import { StatusCard, useCRM } from "@/store/crm";
 import { cn } from "@/lib/utils";
 
-const statusMap: Record<StatusCard, { bg: string; label: string }> = {
+const statusMap: Record<string, { bg: string; label: string }> = {
   Criar: { bg: "bg-status-criar/15 text-status-criar border-status-criar/30", label: "Criar" },
   Revisar: { bg: "bg-status-revisar/15 text-status-revisar border-status-revisar/30", label: "Revisar" },
   Agendar: { bg: "bg-status-agendar/15 text-status-agendar border-status-agendar/30", label: "Agendar" },
@@ -10,7 +10,19 @@ const statusMap: Record<StatusCard, { bg: string; label: string }> = {
 };
 
 export function StatusBadge({ status, className }: { status: StatusCard; className?: string }) {
-  const s = statusMap[status];
+  const statusPostOptions = useCRM((s) => s.statusPostOptions);
+  const dyn = statusPostOptions.find((o) => o.label === status);
+  if (dyn) {
+    return <ColorBadge label={dyn.label} color={dyn.cor} className={className} />;
+  }
+  const s = statusMap[status as string];
+  if (!s) {
+    return (
+      <span className={cn("inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border bg-muted text-muted-foreground border-border", className)}>
+        {String(status)}
+      </span>
+    );
+  }
   return (
     <span className={cn("inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border", s.bg, className)}>
       {s.label}
