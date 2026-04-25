@@ -819,9 +819,17 @@ function startRealtime() {
     "custom_fields",
     "modelos_colunas",
   ];
+  // Remove canal anterior (HMR) para evitar erro "callbacks after subscribe()"
+  try {
+    supabase.getChannels()
+      .filter((c: any) => c.topic === "realtime:crm-realtime")
+      .forEach((c: any) => supabase.removeChannel(c));
+  } catch {
+    /* noop */
+  }
   const channel = supabase.channel("crm-realtime");
   tables.forEach((t) => {
-    channel.on("postgres_changes", { event: "*", schema: "public", table: t }, () => {
+    channel.on("postgres_changes" as any, { event: "*", schema: "public", table: t }, () => {
       reload();
     });
   });
