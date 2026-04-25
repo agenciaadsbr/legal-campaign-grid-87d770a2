@@ -783,8 +783,19 @@ export default function Clientes() {
     [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]
   );
 
-  const GRUPOS = ["Revisar", "Criar"] as const;
+  const GRUPOS = ["Revisar", "Criar", "Concluidos"] as const;
   const [apenasPendentes, setApenasPendentes] = useState(false);
+  const [mostrarConcluidos, setMostrarConcluidos] = useState(false);
+
+  const pendentesPorCliente = useMemo(() => {
+    const map: Record<string, { total: number; pendentes: number }> = {};
+    cards.forEach((card) => {
+      if (!map[card.cliente_id]) map[card.cliente_id] = { total: 0, pendentes: 0 };
+      map[card.cliente_id].total += 1;
+      if (card.status_card !== "Postado") map[card.cliente_id].pendentes += 1;
+    });
+    return map;
+  }, [cards]);
 
   // Classifica cards por prioridade (atrasado / urgente / hoje)
   type Prioridade = "atrasado" | "urgente" | "hoje";
