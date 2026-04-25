@@ -33,6 +33,7 @@ function useAlertasDerivados(): AlertaItem[] {
       data_alerta: new Date().toISOString().slice(0, 10),
       mensagem,
       status: "Pendente",
+      created_at: new Date().toISOString(),
       _derivado: true,
     });
     clientes.forEach((c) => {
