@@ -4,7 +4,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, FileText, Bell, Sliders, BarChart3, Scale } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Bell, BarChart3, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -12,7 +12,6 @@ const items = [
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Contratos", url: "/contratos", icon: FileText },
   { title: "Alertas", url: "/alertas", icon: Bell },
-  { title: "Campos Personalizados", url: "/campos-personalizados", icon: Sliders },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
 ];
 

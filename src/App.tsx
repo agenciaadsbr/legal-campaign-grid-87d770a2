@@ -12,7 +12,6 @@ import PostDetalhe from "./pages/PostDetalhe";
 import Contratos from "./pages/Contratos";
 import Alertas from "./pages/Alertas";
 
-import CamposPersonalizados from "./pages/CamposPersonalizados";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
@@ -34,8 +33,6 @@ const App = () => (
               <Route path="/clientes/:clienteId/posts/:postId" element={<PostDetalhe />} />
               <Route path="/contratos" element={<Contratos />} />
               <Route path="/alertas" element={<Alertas />} />
-              
-              <Route path="/campos-personalizados" element={<CamposPersonalizados />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
             </Route>
