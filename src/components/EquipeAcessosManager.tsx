@@ -332,7 +332,7 @@ Recomendamos trocar a senha no primeiro acesso.`;
                   <TableHead>Papel</TableHead>
                   <TableHead>Vínculo</TableHead>
                   <TableHead className="w-[110px]">Ativo</TableHead>
-                  <TableHead className="w-[60px]"></TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
