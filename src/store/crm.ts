@@ -228,14 +228,23 @@ export function mesesEntre(inicioISO: string, fimISO: string): number {
 }
 
 // ===================== Mappers DB → App =====================
-function mapCliente(row: any, contratos: any[], comentarios: Comentario[], responsaveis: Responsavel[]): Cliente {
+function mapCliente(
+  row: any,
+  contratos: any[],
+  comentarios: Comentario[],
+  responsaveis: Responsavel[],
+  authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {},
+): Cliente {
   const contrato = contratos.find((c) => c.cliente_id === row.id);
   const comsCliente = comentarios.filter((c) => c.cliente_id === row.id);
   let ultimo = "";
   if (comsCliente.length > 0) {
     const u = comsCliente.reduce((a, b) => (a.created_at > b.created_at ? a : b));
-    const autor = responsaveis.find((r) => r.id === u.usuario_id)?.nome ?? "Usuário";
-    const trecho = u.comentario_texto.slice(0, 60);
+    const autor =
+      authoresPorAuthId[u.usuario_id]?.nome ??
+      responsaveis.find((r) => r.id === u.usuario_id)?.nome ??
+      "Usuário";
+    const trecho = u.comentario_texto.replace(/<[^>]+>/g, "").slice(0, 60);
     const data = new Date(u.created_at).toLocaleDateString("pt-BR");
     ultimo = `${autor}: ${trecho} — ${data}`;
   }
