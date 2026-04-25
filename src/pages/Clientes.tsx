@@ -409,8 +409,8 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
     const agendados = cardsCliente.filter((c) => c.status_card === "Agendar").length;
     return (
       <div className="flex flex-col leading-tight tabular-nums">
-        <span className="text-sm font-medium">{postados}/{total} postados</span>
-        <span className="text-xs text-muted-foreground">{agendados} agendados</span>
+        <span className="text-xs font-medium">{postados}/{total} postados</span>
+        <span className="text-[11px] text-muted-foreground">{agendados} agendados</span>
       </div>
     );
   }
@@ -419,13 +419,13 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
     const ini = cliente.data_inicio_contrato;
     const fim = cliente.data_fim_contrato;
     return (
-      <div className="flex flex-col gap-0.5 text-sm leading-tight">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground w-8">Início</span>
+      <div className="flex flex-col gap-0 text-xs leading-tight">
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] uppercase tracking-wide text-muted-foreground w-7">Início</span>
           <span>{ini ? new Date(ini).toLocaleDateString("pt-BR") : "—"}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground w-8">Fim</span>
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] uppercase tracking-wide text-muted-foreground w-7">Fim</span>
           <span>{fim ? new Date(fim).toLocaleDateString("pt-BR") : "—"}</span>
         </div>
       </div>
@@ -439,17 +439,17 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
         type="button"
         onClick={(e) => { e.stopPropagation(); onAbrirHistorico?.(cliente.id); }}
         className={cn(
-          "w-full text-left flex items-center gap-2 px-2 py-1 -mx-2 -my-1 rounded hover:bg-accent group transition-colors",
+          "w-full text-left flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 -my-0.5 rounded hover:bg-accent group transition-colors",
           !tem && "text-muted-foreground"
         )}
         title="Abrir histórico de comentários"
       >
         {tem ? (
-          <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-primary" />
+          <MessageSquare className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary" />
         ) : (
-          <MessageSquarePlus className="h-3.5 w-3.5 shrink-0 group-hover:text-primary" />
+          <MessageSquarePlus className="h-3 w-3 shrink-0 group-hover:text-primary" />
         )}
-        <span className="text-sm truncate flex-1">
+        <span className="text-xs truncate flex-1">
           {tem ? valor : "Adicionar comentário"}
         </span>
       </button>
@@ -459,7 +459,7 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
   switch (col.tipo) {
     case "responsaveis": {
       const ids: string[] = valor ?? [];
-      return <AvatarStack responsaveis={responsaveis.filter((r) => ids.includes(r.id))} />;
+      return <AvatarStack responsaveis={responsaveis.filter((r) => ids.includes(r.id))} size="xs" />;
     }
     case "dropdown": {
       const opt = (col.opcoes ?? nichos).find((o) => o.label === valor);
@@ -470,11 +470,11 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
       return opt ? <ColorBadge label={opt.label} color={opt.cor} /> : <span className="text-muted-foreground text-xs">—</span>;
     }
     case "data":
-      return valor ? <span className="text-sm">{new Date(valor).toLocaleDateString("pt-BR")}</span> : <span className="text-muted-foreground text-xs">—</span>;
+      return valor ? <span className="text-xs">{new Date(valor).toLocaleDateString("pt-BR")}</span> : <span className="text-muted-foreground text-xs">—</span>;
     case "link":
-      return valor ? <a href={valor} className="text-primary text-sm underline" target="_blank">link</a> : <span className="text-muted-foreground text-xs">—</span>;
+      return valor ? <a href={valor} className="text-primary text-xs underline" target="_blank">link</a> : <span className="text-muted-foreground text-xs">—</span>;
     default:
-      return <span className="text-sm truncate block" title={valor}>{valor || <span className="text-muted-foreground">—</span>}</span>;
+      return <span className="text-xs truncate block" title={valor}>{valor || <span className="text-muted-foreground">—</span>}</span>;
   }
 }
 
@@ -505,16 +505,16 @@ export default function Clientes() {
   }, [filtrados, statusOptions]);
 
   return (
-    <div className="p-6 space-y-4 animate-fade-in">
+    <div className="px-5 py-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Clientes</h1>
-          <p className="text-sm text-muted-foreground">{clientes.length} clientes • Tabela dinâmica</p>
+          <h1 className="text-xl font-bold leading-tight">Clientes</h1>
+          <p className="text-xs text-muted-foreground">{clientes.length} clientes • Tabela dinâmica</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-9 w-64" />
+            <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-8 w-56 text-sm" />
           </div>
           <GerenciarColunas />
           <NovoClienteDialog />
@@ -522,15 +522,15 @@ export default function Clientes() {
       </div>
 
       <div className="border rounded-lg bg-card overflow-hidden">
-        <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-220px)]">
-          <table className="w-full text-sm border-collapse">
+        <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-160px)]">
+          <table className="w-full text-xs border-collapse">
             <thead className="sticky top-0 bg-muted/50 z-10">
               <tr>
                 {colunasVisiveis.map((c) => (
                   <th
                     key={c.key}
                     className={cn(
-                      "text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-2.5 border-b border-r",
+                      "text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-3 py-1.5 border-b border-r",
                       c.fixada && "sticky left-0 bg-muted/50 z-20"
                     )}
                     style={{ minWidth: c.largura, width: c.largura }}
@@ -547,14 +547,14 @@ export default function Clientes() {
                 return (
                   <Fragment2 key={status.label}>
                     <tr className="bg-muted/30 hover:bg-muted/40 sticky">
-                      <td colSpan={colunasVisiveis.length} className="px-3 py-2 border-b">
+                      <td colSpan={colunasVisiveis.length} className="px-3 py-1 border-b">
                         <button
                           onClick={() => setGrupoColapsado((g) => ({ ...g, [status.label]: !colapsado }))}
-                          className="flex items-center gap-2 text-sm font-medium"
+                          className="flex items-center gap-1.5 text-xs font-medium"
                         >
-                          {colapsado ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          {colapsado ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                           <ColorBadge label={status.label.toUpperCase()} color={status.cor} />
-                          <span className="text-muted-foreground text-xs">{items.length}</span>
+                          <span className="text-muted-foreground text-[11px]">{items.length}</span>
                         </button>
                       </td>
                     </tr>
@@ -564,13 +564,13 @@ export default function Clientes() {
                           <td
                             key={col.key}
                             className={cn(
-                              "px-3 py-2 border-b border-r align-middle",
+                              "px-3 py-1.5 border-b border-r align-middle",
                               col.fixada && "sticky left-0 bg-card"
                             )}
                             style={{ minWidth: col.largura, width: col.largura }}
                           >
                             {i === 0 && col.key === "nome_cliente" ? (
-                              <Link to={`/clientes/${cliente.id}`} className="text-primary font-medium hover:underline truncate block">
+                              <Link to={`/clientes/${cliente.id}`} className="text-primary text-xs font-medium hover:underline truncate block">
                                 {cliente.nome_cliente}
                               </Link>
                             ) : (
@@ -584,7 +584,7 @@ export default function Clientes() {
                 );
               })}
               {filtrados.length === 0 && (
-                <tr><td colSpan={colunasVisiveis.length} className="text-center py-12 text-muted-foreground text-sm">Nenhum cliente encontrado</td></tr>
+                <tr><td colSpan={colunasVisiveis.length} className="text-center py-10 text-muted-foreground text-xs">Nenhum cliente encontrado</td></tr>
               )}
             </tbody>
           </table>
