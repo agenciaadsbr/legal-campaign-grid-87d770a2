@@ -1,47 +1,41 @@
 ## Problema
 
-Na aba **Clientes**, o grupo **"Revisar"** está sumindo quando não há clientes nele. Isso acontece em `src/pages/Clientes.tsx` linha **931**:
+Na aba **Clientes**, o agrupamento atual só joga o cliente em **"Revisar"** quando `primary_status === "Revisar"` (linha 839 de `src/pages/Clientes.tsx`).
 
-```ts
-if (items.length === 0) return null;
-```
+Isso ignora dois casos críticos que precisam de atenção imediata:
+- Cliente com card **Atrasado** (status `Atrasado` ou `data_agendada` no passado).
+- Cliente com card **Urgente** (`is_urgent = true`).
 
-Esse `return null` esconde qualquer grupo vazio — incluindo "Revisar", "Criar" e "Concluídos".
+Hoje esses clientes caem em "Criar", então o usuário perde a visibilidade dos cards que mais importam.
 
-Além disso, hoje a classificação em `gruposPosts` (linhas 828-842) só considera o cliente como "Revisar" ou "Criar" se ele **tiver pelo menos um post pendente**. Clientes sem post pendente caem em "Concluídos" (que fica oculto se `mostrarConcluidos = false`) — então eles **somem da listagem**, contrariando a regra "todos os clientes devem ficar visíveis na aba Clientes".
+A boa notícia: o cálculo de atrasado/urgente já existe e está pronto em `tarefasPorCliente` (linhas 802-818) — só precisamos usá-lo na hora de classificar o grupo.
 
-## Correção (mínima, sem mexer em estrutura/layout)
+## Correção (mínima, só lógica de agrupamento)
 
-Em **`src/pages/Clientes.tsx`**:
+Em **`src/pages/Clientes.tsx`**, ajustar `gruposPosts` (linhas 828-843) para que um cliente entre em **"Revisar"** quando QUALQUER uma das condições abaixo for verdade:
 
-### 1. Sempre renderizar os grupos fixos (linhas 920-954)
+1. `primary_status === "Revisar"` (comportamento atual mantido).
+2. Tem pelo menos 1 card **atrasado** (`tarefasPorCliente[c.id].atrasado.length > 0`).
+3. Tem pelo menos 1 card **urgente** (`tarefasPorCliente[c.id].urgente.length > 0`).
 
-Remover o `if (items.length === 0) return null;` para os grupos **Revisar** e **Criar** — eles ficam sempre visíveis, mesmo vazios, com o contador `0` e um estado vazio discreto ("Nenhum cliente neste status").
-O grupo **Concluídos** continua respeitando a flag `mostrarConcluidos` (sem mudança nesse comportamento).
+Ordem de avaliação dentro do memo:
+- Se `concluido` → Concluídos (regra atual mantida, respeita `mostrarConcluidos`).
+- Senão, se atende qualquer condição acima → **Revisar**.
+- Senão → **Criar** (default, mantém todo cliente visível).
 
-### 2. Garantir que todo cliente apareça em algum grupo (linhas 828-842)
-
-Ajustar `gruposPosts` para que **nenhum cliente desapareça**:
-- Cliente com post pendente em status "Revisar" → grupo **Revisar**.
-- Cliente com post pendente em status "Criar" (ou demais status pendentes) → grupo **Criar**.
-- Cliente sem nenhum post pendente → grupo **Concluídos** (visível só com toggle, comportamento atual mantido).
-- Cliente **sem cards nenhum** → cai por padrão em **Criar** (em vez de Concluídos), para ficar visível imediatamente. _(Isso reflete melhor a referência do ClickUp: cliente novo aparece num grupo de trabalho, não em "Concluídos".)_
-
-### 3. Cabeçalho da página (linha 854)
-
-Atualizar o subtítulo para refletir que ambos os grupos ficam fixos:
-`{clientes.length} clientes • Revisar • Criar` (já está nesse espírito; só garantir que não some).
+Adicionar `tarefasPorCliente` nas dependências do `useMemo`.
 
 ## O que NÃO muda
 
-- Layout, cores, tokens, sidebar, colunas, filtros — tudo intacto.
-- Tabela `status_options` (status do cliente: Ativo / Pausado / etc.) — sem alteração.
-- Lógica de `primary_status` no banco — sem alteração.
-- Componentes `ColorBadge`, `StatusBadge`, `OpcoesEditor` — sem alteração.
-- Página `ClienteDetalhe`, kanban dos posts — sem alteração.
+- Layout, cores, tokens, sidebar, tabela, filtros — intactos.
+- Lógica de `tarefasPorCliente` (cálculo de atrasado/urgente/hoje) — sem alteração.
+- Função `update_client_primary_status` no banco — sem alteração.
+- Grupos fixos "Revisar" e "Criar" continuam sempre visíveis (correção anterior preservada).
+- Toggle de "Concluídos" — comportamento atual mantido.
+- Cabeçalho, contadores, estado vazio — sem mudança visual.
 
 ## Arquivo afetado
 
-- `src/pages/Clientes.tsx` (apenas o bloco de agrupamento + render dos grupos, ~20 linhas).
+- `src/pages/Clientes.tsx` — apenas o bloco `gruposPosts` (~5 linhas alteradas).
 
 Nenhuma migration, nenhum outro arquivo tocado.
