@@ -156,6 +156,8 @@ interface State {
   nichos: DropdownOption[];
   statusOptions: DropdownOption[];
   statusPostOptions: DropdownOption[];
+  /** Mapa auth.uid → autor exibível (nome, cor, avatar). Resolvido via profiles.responsavel_id → responsaveis */
+  authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }>;
   loading: boolean;
   loaded: boolean;
 
