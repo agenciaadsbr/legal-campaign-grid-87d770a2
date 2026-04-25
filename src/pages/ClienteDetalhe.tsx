@@ -193,6 +193,7 @@ function KanbanView() {
 
   const [filtroResps, setFiltroResps] = useState<string[]>([]);
   const [filtroSomente, setFiltroSomente] = useState<"todos" | "atrasados" | "hoje" | "semana">("todos");
+  const [busca, setBusca] = useState("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -202,10 +203,12 @@ function KanbanView() {
     const hojeStart = new Date(); hojeStart.setHours(0, 0, 0, 0);
     const amanhaStart = new Date(hojeStart); amanhaStart.setDate(amanhaStart.getDate() + 1);
     const semanaFim = new Date(hojeStart); semanaFim.setDate(semanaFim.getDate() + 7);
+    const q = busca.trim().toLowerCase();
     return cards
       .filter((c) => c.cliente_id === clienteId)
       .filter((c) => filtroMes === "all" || c.mes_referencia === Number(filtroMes))
       .filter((c) => filtroResps.length === 0 || c.responsaveis.some((r) => filtroResps.includes(r)))
+      .filter((c) => !q || c.titulo_card.toLowerCase().includes(q) || (c.descricao ?? "").toLowerCase().includes(q))
       .filter((c) => {
         if (filtroSomente === "todos") return true;
         if (filtroSomente === "atrasados") return c.status_card === "Atrasado";
@@ -215,7 +218,7 @@ function KanbanView() {
         if (filtroSomente === "semana") return due >= hojeStart && due < semanaFim;
         return true;
       });
-  }, [cards, clienteId, filtroMes, filtroResps, filtroSomente]);
+  }, [cards, clienteId, filtroMes, filtroResps, filtroSomente, busca]);
 
   const totalMeses = useMemo(() => {
     const contrato = contratos.find((c) => c.cliente_id === clienteId);
