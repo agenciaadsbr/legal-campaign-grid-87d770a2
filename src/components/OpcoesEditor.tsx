@@ -103,14 +103,14 @@ export function OpcoesEditor({ tipo }: Props) {
     setEditando(null);
     setEditLabel("");
   };
-  const salvarEdicao = (oldLabel: string) => {
+  const salvarEdicao = async (oldLabel: string) => {
     const novo = editLabel.trim();
     if (!novo) {
       toast.error("Nome não pode ficar vazio");
       return;
     }
     const cor = mostrarCor ? editCor : "#9ca3af";
-    const r = onUpdate(oldLabel, { label: novo, cor });
+    const r = await onUpdate(oldLabel, { label: novo, cor });
     if (r === -1) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
       return;
@@ -118,11 +118,11 @@ export function OpcoesEditor({ tipo }: Props) {
     cancelarEdicao();
     toast.success(r > 0 ? `${rotuloSingular} atualizado — ${r} cliente(s) afetado(s)` : `${rotuloSingular} atualizado`);
   };
-  const adicionar = () => {
+  const adicionar = async () => {
     const nome = novoLabel.trim();
     if (!nome) return;
     const cor = mostrarCor ? novaCor : "#9ca3af";
-    const ok = onAdd({ label: nome, cor });
+    const ok = await onAdd({ label: nome, cor });
     if (!ok) {
       toast.error(`Já existe um ${rotuloSingular} com esse nome`);
       return;
@@ -204,8 +204,8 @@ export function OpcoesEditor({ tipo }: Props) {
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={() => {
-                        const n = onDelete(it.label);
+                      onClick={async () => {
+                        const n = await onDelete(it.label);
                         toast.success(
                           n > 0 ? `${rotuloSingular} removido — ${n} cliente(s) afetado(s)` : `${rotuloSingular} removido`
                         );
