@@ -123,11 +123,12 @@ export default function PostDetalhe() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-3 animate-fade-in">
-      {/* Cabeçalho do post */}
+      {/* Post do Mês — seção unificada */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">Post do Mês</div>
               <Input
                 value={post.titulo_post}
                 onChange={(e) => updatePost(post.id, { titulo_post: e.target.value })}
@@ -145,93 +146,95 @@ export default function PostDetalhe() {
             </Select>
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">Data agendamento</Label>
-            <Input
-              type="date"
-              value={post.data_agendamento ?? ""}
-              onChange={(e) => updatePost(post.id, { data_agendamento: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Data postagem</Label>
-            <Input
-              type="date"
-              value={post.data_postagem ?? ""}
-              onChange={(e) => updatePost(post.id, { data_postagem: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Link do Meta</Label>
-            <div className="flex gap-1.5">
+        <CardContent className="space-y-5">
+          {/* Dados do post */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Data agendamento</Label>
               <Input
-                placeholder="https://..."
-                value={post.link_post ?? ""}
-                onChange={(e) => updatePost(post.id, { link_post: e.target.value })}
+                type="date"
+                value={post.data_agendamento ?? ""}
+                onChange={(e) => updatePost(post.id, { data_agendamento: e.target.value })}
               />
-              {post.link_post && (
-                <Button size="icon" variant="outline" asChild className="shrink-0">
-                  <a href={post.link_post} target="_blank" rel="noreferrer" title="Abrir Meta">
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </Button>
-              )}
             </div>
-          </div>
-          <div>
-            <Label className="text-xs">Link do Meister</Label>
-            <div className="flex gap-1.5">
+            <div>
+              <Label className="text-xs">Data postagem</Label>
               <Input
-                placeholder="https://meister..."
-                value={post.link_meister ?? ""}
-                onChange={(e) => updatePost(post.id, { link_meister: e.target.value })}
+                type="date"
+                value={post.data_postagem ?? ""}
+                onChange={(e) => updatePost(post.id, { data_postagem: e.target.value })}
               />
-              {post.link_meister && (
-                <Button size="icon" variant="outline" asChild className="shrink-0">
-                  <a href={post.link_meister} target="_blank" rel="noreferrer" title="Abrir Meister">
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </Button>
-              )}
+            </div>
+            <div>
+              <Label className="text-xs">Link do Meta</Label>
+              <div className="flex gap-1.5">
+                <Input
+                  placeholder="https://..."
+                  value={post.link_post ?? ""}
+                  onChange={(e) => updatePost(post.id, { link_post: e.target.value })}
+                />
+                {post.link_post && (
+                  <Button size="icon" variant="outline" asChild className="shrink-0">
+                    <a href={post.link_post} target="_blank" rel="noreferrer" title="Abrir Meta">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Link do Meister</Label>
+              <div className="flex gap-1.5">
+                <Input
+                  placeholder="https://meister..."
+                  value={post.link_meister ?? ""}
+                  onChange={(e) => updatePost(post.id, { link_meister: e.target.value })}
+                />
+                {post.link_meister && (
+                  <Button size="icon" variant="outline" asChild className="shrink-0">
+                    <a href={post.link_meister} target="_blank" rel="noreferrer" title="Abrir Meister">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">Responsáveis</Label>
+              <div className="mt-1">
+                <AvatarStack responsaveis={responsaveis.filter((r) => card.responsaveis.includes(r.id))} />
+              </div>
             </div>
           </div>
-          <div className="md:col-span-2">
-            <Label className="text-xs">Responsáveis</Label>
-            <div className="mt-1">
-              <AvatarStack responsaveis={responsaveis.filter((r) => card.responsaveis.includes(r.id))} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Anexos */}
-      <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Anexos</CardTitle>
-          <input
-            ref={anexoFileRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={addAnexo}
-          />
-          <Button size="sm" variant="outline" onClick={() => anexoFileRef.current?.click()}>
-            <Paperclip className="h-4 w-4 mr-1" /> Adicionar anexo
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {post.anexos.length === 0 ? (
-            <div className="flex flex-col items-center gap-1.5 py-6 text-muted-foreground">
-              <Paperclip className="h-6 w-6 opacity-40" />
-              <span className="text-sm">Nenhum anexo</span>
+          {/* Anexos */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-xs">Anexos</Label>
+              <input
+                ref={anexoFileRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={addAnexo}
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs text-primary hover:text-primary"
+                onClick={() => anexoFileRef.current?.click()}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar anexo
+              </Button>
             </div>
-          ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            <div className="flex flex-wrap gap-2">
               {post.anexos.map((a) => {
                 const img = isImageUrl(a.url, a.nome);
                 return (
-                  <div key={a.id} className="group relative border rounded-md overflow-hidden bg-muted/30 aspect-square">
+                  <div
+                    key={a.id}
+                    className="group relative h-[72px] w-[72px] border rounded-lg overflow-hidden bg-muted/30"
+                  >
                     {img ? (
                       <a href={a.url} target="_blank" rel="noreferrer" className="block w-full h-full">
                         <img src={a.url} alt={a.nome} className="w-full h-full object-cover" />
@@ -242,15 +245,16 @@ export default function PostDetalhe() {
                         target="_blank"
                         rel="noreferrer"
                         download={a.nome}
-                        className="flex flex-col items-center justify-center w-full h-full p-2 text-center hover:bg-accent"
+                        className="flex flex-col items-center justify-center w-full h-full p-1 text-center hover:bg-accent"
+                        title={a.nome}
                       >
-                        <FileText className="h-6 w-6 text-muted-foreground" />
-                        <span className="text-[10px] mt-1 truncate w-full">{a.nome}</span>
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-[9px] mt-0.5 truncate w-full leading-tight">{a.nome}</span>
                       </a>
                     )}
                     <button
-                      onClick={() => removerAnexo(a.id)}
-                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.preventDefault(); removerAnexo(a.id); }}
+                      className="absolute top-0.5 right-0.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Remover"
                     >
                       <X className="h-3 w-3" />
@@ -258,35 +262,41 @@ export default function PostDetalhe() {
                   </div>
                 );
               })}
+              <button
+                onClick={() => anexoFileRef.current?.click()}
+                className="flex flex-col items-center justify-center h-[72px] w-[72px] border border-dashed rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Adicionar anexo"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="text-[9px] mt-0.5">Anexar</span>
+              </button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
 
-      {/* Legenda */}
-      <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Legenda</CardTitle>
-          {showSaved && (
-            <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 animate-fade-in">
-              <CheckCircle2 className="h-3 w-3" /> Salvo
-            </span>
-          )}
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            rows={5}
-            placeholder="Escreva a legenda do post..."
-            value={post.legenda}
-            onChange={(e) => {
-              updatePost(post.id, { legenda: e.target.value });
-              setLegendaSavedAt(Date.now());
-            }}
-          />
-          <div className="flex justify-end mt-1">
-            <span className="text-[11px] text-muted-foreground tabular-nums">
-              {post.legenda.length} caracteres
-            </span>
+          {/* Legenda */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-xs">Legenda</Label>
+              {showSaved && (
+                <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 animate-fade-in">
+                  <CheckCircle2 className="h-3 w-3" /> Salvo
+                </span>
+              )}
+            </div>
+            <Textarea
+              rows={5}
+              placeholder="Escreva a legenda do post..."
+              value={post.legenda}
+              onChange={(e) => {
+                updatePost(post.id, { legenda: e.target.value });
+                setLegendaSavedAt(Date.now());
+              }}
+            />
+            <div className="flex justify-end mt-1">
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {post.legenda.length} caracteres
+              </span>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,33 +1,37 @@
-## Refatorar "Histórico de Comentários" (acessado via "Últimos Comentários")
+## Consolidar "Post do Mês" em uma única seção
 
 ### Objetivo
-Quando o usuário clicar em "Últimos Comentários" na coluna da tabela de Clientes, o dialog que abrir deve ter a interface completa de "Atividade" (estilo Discord), idêntica à usada em `PostDetalhe.tsx`, com TODAS as funcionalidades.
+Mesclar os cards **Cabeçalho/Dados**, **Anexos** e **Legenda** em um único `Card` "Post do Mês". O card de **Atividade** permanece separado abaixo. Anexos e legenda devem ser visualizados imediatamente após salvos no formato da imagem de referência.
 
-### Arquivo: `src/components/HistoricoComentariosDialog.tsx`
+### Arquivo: `src/pages/PostDetalhe.tsx`
 
-**Composer (caixa de novo comentário)**:
-- Layout `rounded-xl` com borda sutil, fundo `bg-background`
-- Textarea transparente (`border-0 focus-visible:ring-0`), placeholder "Escreva um comentário..."
-- Toolbar inferior com ícones: `Plus` (anexar), `ImageIcon`, `Smile`, `AtSign` à esquerda
-- Botão "Enviar" com ícone `Send` à direita
-- Tecla **Enter** envia; **Shift+Enter** quebra linha (atualizar lógica atual que usa Ctrl+Enter)
-- Texto auxiliar "Enter para enviar • Shift+Enter para nova linha"
+**1. Card único "Post do Mês"** (substitui os 3 cards atuais — linhas 127–292):
+- `CardHeader`: título editável (Input borderless) + meta info (Mês/Semana) à esquerda; `Select` de status à direita.
+- `CardContent` com 3 sub-blocos separados por divider sutil (`border-t pt-4`):
+  
+  **a) Dados do post** — grid 2 colunas:
+  - Data agendamento, Data postagem
+  - Link do Meta (com botão `ExternalLink`)
+  - Link do Meister (com botão `ExternalLink`)
+  - Responsáveis (col-span-2) com `AvatarStack`
+  
+  **b) Anexos** — sub-bloco com label "Anexos":
+  - Grid de thumbnails **72x72** (`h-[72px] w-[72px]`) com cantos arredondados (`rounded-lg`), conforme imagem de referência.
+  - Cada thumbnail: imagem `object-cover` ou ícone `FileText` + nome truncado para não-imagens.
+  - Hover mostra botão `X` no canto para remover.
+  - Após o último thumbnail, botão ghost **"+ Adicionar anexo"** (mesmo tamanho 72x72, borda tracejada `border-dashed`) que abre o file picker.
+  - Estado vazio: apenas o tile "+ Adicionar anexo" visível.
+  - Anexos salvos em **base64 (dataURL)** já implementado — persistem após reload e aparecem instantaneamente.
+  
+  **c) Legenda** — sub-bloco com label "Legenda" + indicador "✓ Salvo" alinhado à direita:
+  - Textarea (5 linhas), contador de caracteres no rodapé.
+  - Indicador "✓ Salvo" debounced (1.5s) já implementado, reaproveitado.
 
-**Anexos de imagem**:
-- Input file oculto acionado pelos botões `Plus`/`ImageIcon`
-- Conversão para **base64 (dataURL)** para persistir após reload (mesmo padrão do PostDetalhe)
-- Preview em grid de thumbnails (60x60) acima do textarea, cada um com botão `X` para remover antes de enviar
-- Ao enviar, salvar no campo `imagem_url` do comentário
+**2. Card "Atividade"** — mantém-se separado (linhas 294–377), sem alterações.
 
-**Lista de comentários**:
-- Manter visual atual (avatar + nome + data + badge "Direto"/"Post: ...")
-- Manter edição inline e exclusão com `AlertDialog`
-- Garantir que `imagem_url` seja exibida com preview clicável (abre em nova aba)
-- Ordenar do mais recente para o mais antigo (já está)
+**3. Sem alterações no store**: `Post.anexos`, `Post.legenda`, `Post.link_meister` já existem.
 
-**Sincronização**:
-- `addComentario`, `updateComentario`, `deleteComentario` do store já chamam `computeUltimoComentario`
-- Garantir que comentários adicionados aqui apareçam imediatamente na coluna "Últimos Comentários" da tabela de Clientes (já funciona via Zustand reactive store)
-
-### Sem alterações em outros arquivos
-O store `src/store/crm.ts` já suporta `imagem_url` em `Comentario` e já recomputa `ultimo_comentario` automaticamente. Nenhuma mudança de schema necessária.
+### Resultado
+- 2 cards no total (antes: 4): "Post do Mês" unificado + "Atividade".
+- Anexos e legenda visíveis imediatamente após salvar (já são reativos via Zustand).
+- Layout idêntico à imagem enviada: thumbnails compactos quadrados + tile "+ Adicionar anexo".
