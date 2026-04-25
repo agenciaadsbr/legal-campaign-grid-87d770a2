@@ -294,12 +294,13 @@ function mapNicho(row: any): DropdownOption {
 }
 
 function mapCard(row: any): Card {
+  const pos = row.posicao ?? 0;
   return {
     id: row.id,
     cliente_id: row.cliente_id,
     titulo_card: row.titulo,
-    mes_referencia: 0,
-    numero_semana: 0,
+    mes_referencia: Math.floor(pos / 4) + 1,
+    numero_semana: (pos % 4) + 1,
     status_card: row.status,
     responsaveis: row.responsaveis_ids ?? [],
     created_at: row.created_at,
