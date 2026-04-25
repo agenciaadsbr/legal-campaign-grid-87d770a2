@@ -479,7 +479,7 @@ export const useCRM = create<State>()((set, get) => ({
     }
 
     // Gera automaticamente meses × 4 cards (um por semana) + posts correspondentes
-    const statusInicial = get().statusPostOptions[0]?.label ?? "Criar";
+    const statusInicial = get().statusPostOptions.find((o) => o.label === "Planejamento")?.label ?? "Planejamento";
     const cardsPayload = [] as any[];
     for (let m = 1; m <= meses; m++) {
       for (let s = 1; s <= 4; s++) {
