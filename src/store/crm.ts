@@ -313,6 +313,8 @@ function mapCard(row: any): Card {
     numero_semana: (pos % 4) + 1,
     status_card: row.status,
     responsaveis: row.responsaveis_ids ?? [],
+    data_agendada: row.data_agendada ?? null,
+    is_urgent: row.is_urgent ?? false,
     created_at: row.created_at,
   };
 }
