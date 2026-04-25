@@ -957,6 +957,16 @@ export default function Clientes() {
                         </button>
                       </td>
                     </tr>
+                    {!colapsado && items.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={colunasVisiveis.length}
+                          className="px-4 py-3 border-b text-[11px] text-muted-foreground italic"
+                        >
+                          Nenhum cliente neste status
+                        </td>
+                      </tr>
+                    )}
                     {!colapsado && items.map((cliente) => {
                       const tarefas = tarefasPorCliente[cliente.id] ?? { atrasado: [], urgente: [], hoje: [] };
                       const total = tarefas.atrasado.length + tarefas.urgente.length + tarefas.hoje.length;
