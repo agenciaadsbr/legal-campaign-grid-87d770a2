@@ -35,7 +35,7 @@ import {
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichTextView } from "@/components/RichTextView";
 
-const STATUS: StatusCard[] = ["Criar", "Revisar", "Agendar", "Postado", "Renovação"];
+// Status agora vêm de statusPostOptions (Configurações → Status de Posts)
 
 const fileToDataUrl = (f: File) =>
   new Promise<string>((resolve, reject) => {
@@ -53,7 +53,7 @@ const isImageUrl = (url: string, nome?: string) => {
 
 export default function PostDetalhe() {
   const { postId } = useParams();
-  const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario } = useCRM();
+  const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario, statusPostOptions } = useCRM();
   const { canWrite } = useAuth();
   const post = posts.find((p) => p.id === postId);
   const card = post && cards.find((c) => c.id === post.card_id);
@@ -148,7 +148,7 @@ export default function PostDetalhe() {
             <Select value={post.status} onValueChange={(v) => updatePost(post.id, { status: v as StatusCard })}>
               <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {statusPostOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
