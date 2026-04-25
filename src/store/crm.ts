@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // ===================== Tipos =====================
 export type StatusCliente = string; // dinâmico via tabela status_options
@@ -429,18 +430,21 @@ export const useCRM = create<State>()((set, get) => ({
       .insert({
         nome: data.nome_cliente,
         nicho: data.nicho || null,
-        status: (data.status_cliente as any) || "Ativo",
+        status: (data.status_cliente || "Ativo") as any,
         responsaveis_ids: data.responsaveis ?? [],
         descricao: data.observacoes ?? "",
         campos_personalizados: {},
       })
       .select()
       .single();
-    if (error || !inserted) throw error ?? new Error("Falha ao criar cliente");
+    if (error || !inserted) {
+      toast.error(error?.message ?? "Falha ao criar cliente");
+      throw error ?? new Error("Falha ao criar cliente");
+    }
 
     if (data.data_inicio_contrato && data.data_fim_contrato) {
       const meses = mesesEntre(data.data_inicio_contrato, data.data_fim_contrato);
-      await supabase.from("contratos").insert({
+      const { error: cErr } = await supabase.from("contratos").insert({
         cliente_id: inserted.id,
         status: "Ativo",
         data_inicio: data.data_inicio_contrato,
@@ -448,6 +452,7 @@ export const useCRM = create<State>()((set, get) => ({
         total_posts: meses * 4,
         posts_concluidos: 0,
       });
+      if (cErr) toast.error(`Cliente criado, mas o contrato falhou: ${cErr.message}`);
     }
     await get()._loadAll();
     return inserted.id;

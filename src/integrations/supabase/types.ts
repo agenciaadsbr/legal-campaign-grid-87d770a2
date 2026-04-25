@@ -127,7 +127,7 @@ export type Database = {
           nicho: string | null
           nome: string
           responsaveis_ids: string[]
-          status: Database["public"]["Enums"]["status_cliente"]
+          status: string
           updated_at: string
         }
         Insert: {
@@ -139,7 +139,7 @@ export type Database = {
           nicho?: string | null
           nome: string
           responsaveis_ids?: string[]
-          status?: Database["public"]["Enums"]["status_cliente"]
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -151,7 +151,7 @@ export type Database = {
           nicho?: string | null
           nome?: string
           responsaveis_ids?: string[]
-          status?: Database["public"]["Enums"]["status_cliente"]
+          status?: string
           updated_at?: string
         }
         Relationships: []
