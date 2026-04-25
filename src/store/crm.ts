@@ -145,6 +145,7 @@ interface State {
   modelosColunas: ModeloColunas[];
   nichos: DropdownOption[];
   statusOptions: DropdownOption[];
+  statusPostOptions: DropdownOption[];
   loading: boolean;
   loaded: boolean;
 
@@ -190,6 +191,10 @@ interface State {
   updateStatusOption: (oldLabel: string, patch: Partial<DropdownOption>) => Promise<number>;
   deleteStatusOption: (label: string) => Promise<number>;
   reorderStatusOptions: (labels: string[]) => Promise<void>;
+  addStatusPostOption: (s: DropdownOption) => Promise<boolean>;
+  updateStatusPostOption: (oldLabel: string, patch: Partial<DropdownOption>) => Promise<number>;
+  deleteStatusPostOption: (label: string) => Promise<number>;
+  reorderStatusPostOptions: (labels: string[]) => Promise<void>;
 
   // internas
   _loadAll: () => Promise<void>;
@@ -365,6 +370,7 @@ export const useCRM = create<State>()((set, get) => ({
   modelosColunas: [],
   nichos: [],
   statusOptions: [],
+  statusPostOptions: [],
   loading: false,
   loaded: false,
 
