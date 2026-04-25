@@ -722,6 +722,11 @@ export default function Clientes() {
     return map;
   }, [filtrados, statusOptions]);
 
+  const algumGrupoAberto = useMemo(
+    () => statusOptions.some((s) => (grupos[s.label]?.length ?? 0) > 0 && !grupoColapsado[s.label]),
+    [statusOptions, grupos, grupoColapsado]
+  );
+
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between gap-4 flex-wrap">

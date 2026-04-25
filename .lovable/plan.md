@@ -1,10 +1,10 @@
-## Remover coluna "Status Cliente" da grade
+## Ocultar colunas quando grupos de status estão colapsados
 
-**`src/store/crm.ts`**:
-- Remover entrada `status_cliente` do array `colunasPadrao`.
-- Reindexar `ordem` das colunas seguintes (periodo_contrato → 4, posts → 5, etc.).
-- Incrementar versão do persist (ou usar migration) para invalidar localStorage antigo e recarregar `colunasPadrao` para usuários existentes.
+**`src/pages/Clientes.tsx`**:
+- Calcular `algumGrupoAberto = statusOptions.some(s => (grupos[s.label]?.length > 0) && !grupoColapsado[s.label])`.
+- Renderizar `<thead>` condicionalmente apenas quando `algumGrupoAberto === true`.
+- Ajustar `border-b` das linhas de cabeçalho de grupo para apenas quando o grupo estiver expandido, deixando o visual de "pílulas" limpo quando tudo está retraído (semelhante à imagem de referência).
 
 **Preservado**:
-- Agrupamento colapsável por status no `src/pages/Clientes.tsx` (continua usando `cliente.status_cliente` para categorizar).
-- Campo `status_cliente` continua disponível em "Novo Cliente", `ClienteDetalhe` e no painel ⚙ Configurações (Status do Cliente).
+- Lógica de agrupamento, filtros, busca e store `useCRM` permanecem inalterados.
+- Comportamento de expandir/colapsar individual por status continua igual.
