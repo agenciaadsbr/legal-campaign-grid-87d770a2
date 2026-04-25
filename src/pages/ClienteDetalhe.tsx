@@ -50,7 +50,7 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
     setEditingTitulo(false);
     if (!novo) return;
     if (novo === card.titulo_card) return;
-    updateCard(card.id, { titulo: novo });
+    updateCard(card.id, { titulo_card: novo });
     toast.success("Título atualizado");
   };
 
