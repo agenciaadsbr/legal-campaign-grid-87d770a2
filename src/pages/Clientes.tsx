@@ -758,9 +758,9 @@ export default function Clientes() {
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
   const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
   const [apenasMinhas, setApenasMinhas] = useState(false);
+  const [filtroStatusCliente, setFiltroStatusCliente] = useState<string>("todos");
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
-  // TODO: substituir por id do usuário autenticado quando houver auth.
   const currentUserId = responsaveis[0]?.id ?? null;
 
   const colunasVisiveis = useMemo(
@@ -777,19 +777,10 @@ export default function Clientes() {
             filtroResponsaveis.length === 0 ||
             c.responsaveis.some((r) => filtroResponsaveis.includes(r))
         )
-        .filter((c) => !apenasMinhas || (currentUserId !== null && c.responsaveis.includes(currentUserId))),
-    [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId]
+        .filter((c) => !apenasMinhas || (currentUserId !== null && c.responsaveis.includes(currentUserId)))
+        .filter((c) => filtroStatusCliente === "todos" || c.status_cliente === filtroStatusCliente),
+    [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]
   );
-
-  const grupos = useMemo(() => {
-    const map: Record<string, typeof clientes> = {};
-    statusOptions.forEach((s) => (map[s.label] = []));
-    filtrados.forEach((c) => {
-      if (!map[c.status_cliente]) map[c.status_cliente] = [];
-      map[c.status_cliente].push(c);
-    });
-    return map;
-  }, [filtrados, statusOptions]);
 
   const gruposPosts = useMemo(() => {
     const map: Record<string, typeof clientes> = {};
@@ -805,10 +796,8 @@ export default function Clientes() {
   }, [filtrados, statusPostOptions, cards]);
 
   const algumGrupoAberto = useMemo(
-    () =>
-      statusOptions.some((s) => (grupos[s.label]?.length ?? 0) > 0 && !grupoColapsado[s.label]) ||
-      statusPostOptions.some((s) => (gruposPosts[s.label]?.length ?? 0) > 0 && !grupoColapsado[`post:${s.label}`]),
-    [statusOptions, statusPostOptions, grupos, gruposPosts, grupoColapsado]
+    () => statusPostOptions.some((s) => (gruposPosts[s.label]?.length ?? 0) > 0 && !grupoColapsado[`post:${s.label}`]),
+    [statusPostOptions, gruposPosts, grupoColapsado]
   );
 
   return (
@@ -816,9 +805,25 @@ export default function Clientes() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold leading-tight">Clientes</h1>
-          <p className="text-xs text-muted-foreground">{clientes.length} clientes • Tabela dinâmica</p>
+          <p className="text-xs text-muted-foreground">{clientes.length} clientes • Agrupados por status de posts</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Select value={filtroStatusCliente} onValueChange={setFiltroStatusCliente}>
+            <SelectTrigger className="h-8 w-[180px] text-xs">
+              <SelectValue placeholder="Status do cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os status</SelectItem>
+              {statusOptions.map((s) => (
+                <SelectItem key={s.label} value={s.label}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.cor }} />
+                    {s.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <FiltrosTopo
             filtroResponsaveis={filtroResponsaveis}
             setFiltroResponsaveis={setFiltroResponsaveis}
