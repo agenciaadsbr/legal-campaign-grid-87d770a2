@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Paperclip,
   Send,
@@ -53,6 +54,7 @@ const isImageUrl = (url: string, nome?: string) => {
 export default function PostDetalhe() {
   const { postId } = useParams();
   const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario } = useCRM();
+  const { canWrite } = useAuth();
   const post = posts.find((p) => p.id === postId);
   const card = post && cards.find((c) => c.id === post.card_id);
 
