@@ -836,15 +836,11 @@ export default function Clientes() {
         if (mostrarConcluidos) map.Concluidos.push(c);
         return;
       }
-      // Revisar = primary_status "Revisar" OU tem card atrasado/urgente (precisam atenção imediata).
-      const t = tarefasPorCliente[c.id];
-      const temAtrasado = (t?.atrasado.length ?? 0) > 0;
-      const temUrgente = (t?.urgente.length ?? 0) > 0;
-      const ehRevisar = (c.primary_status as string) === "Revisar" || temAtrasado || temUrgente;
-      map[ehRevisar ? "Revisar" : "Criar"].push(c);
+      const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
+      map[ps].push(c);
     });
     return map;
-  }, [filtradosFinal, pendentesPorCliente, tarefasPorCliente, mostrarConcluidos]);
+  }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos]);
 
   const algumGrupoAberto = useMemo(
     // Revisar e Criar são fixos (sempre renderizam). Concluídos só aparece com toggle.
