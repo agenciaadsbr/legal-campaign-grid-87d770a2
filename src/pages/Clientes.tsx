@@ -98,23 +98,39 @@ function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v
 function NovoClienteDialog() {
   const { addCliente, nichos, statusOptions } = useCRM();
   const [open, setOpen] = useState(false);
+  const hojeISO = new Date().toISOString().slice(0, 10);
+  const calcFim = (inicioISO: string, meses: number) => {
+    const d = new Date(inicioISO);
+    d.setMonth(d.getMonth() + meses);
+    return d.toISOString().slice(0, 10);
+  };
   const [form, setForm] = useState({
     nome_cliente: "",
     nicho: nichos[0]?.label ?? "",
     status_cliente: "Ativo" as any,
-    data_inicio_contrato: new Date().toISOString().slice(0, 10),
-    data_fim_contrato: new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10),
+    data_inicio_contrato: hojeISO,
+    duracao_meses: 3,
+    data_fim_contrato: calcFim(hojeISO, 3),
     responsaveis: [] as string[],
     observacoes: "",
   });
+
+  const setInicio = (v: string) =>
+    setForm((f) => ({ ...f, data_inicio_contrato: v, data_fim_contrato: calcFim(v, f.duracao_meses) }));
+
+  const setMeses = (m: number) =>
+    setForm((f) => ({ ...f, duracao_meses: m, data_fim_contrato: calcFim(f.data_inicio_contrato, m) }));
+
+  const totalCards = form.duracao_meses * 4;
 
   const submit = () => {
     if (!form.nome_cliente.trim()) {
       toast.error("Informe o nome do cliente");
       return;
     }
-    addCliente(form);
-    toast.success("Cliente criado — 12 cards e contrato gerados automaticamente");
+    const { duracao_meses, ...payload } = form;
+    addCliente(payload);
+    toast.success(`Cliente criado — ${totalCards} cards e contrato gerados automaticamente`);
     setOpen(false);
     setForm({ ...form, nome_cliente: "", observacoes: "", responsaveis: [] });
   };
@@ -157,15 +173,29 @@ function NovoClienteDialog() {
             <Label>Responsáveis</Label>
             <ResponsaveisPicker value={form.responsaveis} onChange={(v) => setForm({ ...form, responsaveis: v })} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <Label>Data Início</Label>
-              <Input type="date" value={form.data_inicio_contrato} onChange={(e) => setForm({ ...form, data_inicio_contrato: e.target.value })} />
+              <Input type="date" value={form.data_inicio_contrato} onChange={(e) => setInicio(e.target.value)} />
+            </div>
+            <div>
+              <Label>Duração</Label>
+              <Select value={String(form.duracao_meses)} onValueChange={(v) => setMeses(Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6].map((m) => (
+                    <SelectItem key={m} value={String(m)}>{m} {m === 1 ? "mês" : "meses"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Data Fim</Label>
               <Input type="date" value={form.data_fim_contrato} onChange={(e) => setForm({ ...form, data_fim_contrato: e.target.value })} />
             </div>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Serão criados <span className="font-medium text-foreground">{totalCards} cards</span> ({form.duracao_meses} {form.duracao_meses === 1 ? "mês" : "meses"} × 4 semanas).
           </div>
           <div>
             <Label>Observações</Label>

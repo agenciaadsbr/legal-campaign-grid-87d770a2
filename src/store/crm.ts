@@ -247,11 +247,12 @@ const colunasPadrao: ColumnConfig[] = [
   { key: "observacoes", label: "Observações", tipo: "texto", ordem: 6, oculta: false, fixada: false, largura: 200 },
 ];
 
-// gera 12 cards + 12 posts para um cliente
-function gerarCardsEPosts(cliente_id: string, responsaveis: string[]) {
+// gera (meses * 4) cards + posts para um cliente — 1 card por semana, 4 semanas por mês
+function gerarCardsEPosts(cliente_id: string, responsaveis: string[], meses: number) {
   const cards: Card[] = [];
   const posts: Post[] = [];
-  for (let mes = 1; mes <= 3; mes++) {
+  const m = Math.max(1, Math.min(6, Math.round(meses || 3)));
+  for (let mes = 1; mes <= m; mes++) {
     for (let semana = 1; semana <= 4; semana++) {
       const cardId = uid();
       cards.push({
@@ -279,6 +280,15 @@ function gerarCardsEPosts(cliente_id: string, responsaveis: string[]) {
   return { cards, posts };
 }
 
+// calcula meses entre duas datas ISO (clamp 1–6)
+export function mesesEntre(inicioISO: string, fimISO: string): number {
+  const ini = new Date(inicioISO);
+  const fim = new Date(fimISO);
+  if (isNaN(ini.getTime()) || isNaN(fim.getTime())) return 3;
+  const meses = (fim.getFullYear() - ini.getFullYear()) * 12 + (fim.getMonth() - ini.getMonth());
+  return Math.max(1, Math.min(6, meses || 1));
+}
+
 function seedClientes() {
   const clientes: Cliente[] = [];
   const contratos: Contrato[] = [];
@@ -286,17 +296,18 @@ function seedClientes() {
   const postsAll: Post[] = [];
 
   const exemplos = [
-    { nome: "Dr. José Almeida", nicho: "Trabalhista", resp: ["r1", "r2"] },
-    { nome: "Silva & Associados", nicho: "Empresarial", resp: ["r2"] },
-    { nome: "Mariana Ferreira Adv.", nicho: "Família", resp: ["r3", "r1"] },
-    { nome: "Escritório Tributus", nicho: "Tributário", resp: ["r1"] },
-    { nome: "Defesa Total", nicho: "Criminal", resp: ["r4", "r2"] },
+    { nome: "Dr. José Almeida", nicho: "Trabalhista", resp: ["r1", "r2"], meses: 3 },
+    { nome: "Silva & Associados", nicho: "Empresarial", resp: ["r2"], meses: 6 },
+    { nome: "Mariana Ferreira Adv.", nicho: "Família", resp: ["r3", "r1"], meses: 3 },
+    { nome: "Escritório Tributus", nicho: "Tributário", resp: ["r1"], meses: 6 },
+    { nome: "Defesa Total", nicho: "Criminal", resp: ["r4", "r2"], meses: 3 },
   ];
 
   exemplos.forEach((e, i) => {
     const id = uid();
     const inicio = addMonths(new Date(), -i);
-    const fim = addMonths(inicio, 3);
+    const fim = addMonths(inicio, e.meses);
+    const totalPosts = e.meses * 4;
     clientes.push({
       id,
       nome_cliente: e.nome,
@@ -316,10 +327,10 @@ function seedClientes() {
       status: "Ativo",
       data_inicio: inicio.toISOString().slice(0, 10),
       data_fim: fim.toISOString().slice(0, 10),
-      total_posts: 12,
-      posts_concluidos: i === 0 ? 5 : i === 4 ? 12 : 2,
+      total_posts: totalPosts,
+      posts_concluidos: i === 0 ? 5 : i === 4 ? totalPosts : 2,
     });
-    const { cards, posts } = gerarCardsEPosts(id, e.resp);
+    const { cards, posts } = gerarCardsEPosts(id, e.resp, e.meses);
     // distribui status para parecer real
     cards.forEach((c, idx) => {
       const post = posts[idx];
@@ -353,7 +364,7 @@ function seedClientes() {
       tipo_alerta: "Contrato_Finalizando",
       data_alerta: today().slice(0, 10),
       status: "Pendente",
-      mensagem: `12 posts concluídos para ${clientes[4].nome_cliente}`,
+      mensagem: `${clientes[4].nome_cliente}: posts concluídos`,
       created_at: today(),
     },
   ];
@@ -389,14 +400,15 @@ export const useCRM = create<State>()(
           ultimo_comentario: "",
           custom: {},
         };
-        const { cards, posts } = gerarCardsEPosts(id, data.responsaveis);
+        const meses = mesesEntre(data.data_inicio_contrato, data.data_fim_contrato);
+        const { cards, posts } = gerarCardsEPosts(id, data.responsaveis, meses);
         const contrato: Contrato = {
           id: uid(),
           cliente_id: id,
           status: "Ativo",
           data_inicio: data.data_inicio_contrato,
           data_fim: data.data_fim_contrato,
-          total_posts: 12,
+          total_posts: meses * 4,
           posts_concluidos: 0,
         };
         set((s) => ({
@@ -454,10 +466,12 @@ export const useCRM = create<State>()(
           if (card) {
             const cardsCliente = cards.filter((c) => c.cliente_id === card.cliente_id);
             const concluidos = cardsCliente.filter((c) => c.status_card === "Postado").length;
+            const contratoCliente = contratos.find((c) => c.cliente_id === card.cliente_id);
+            const totalPosts = contratoCliente?.total_posts ?? cardsCliente.length;
             contratos = contratos.map((c) =>
               c.cliente_id === card.cliente_id ? { ...c, posts_concluidos: concluidos } : c
             );
-            if (concluidos === 12) {
+            if (totalPosts > 0 && concluidos === totalPosts) {
               clientes = clientes.map((c) =>
                 c.id === card.cliente_id ? { ...c, status_cliente: "Próximo da renovação" } : c
               );
@@ -470,7 +484,7 @@ export const useCRM = create<State>()(
                     tipo_alerta: "Contrato_Finalizando",
                     data_alerta: today().slice(0, 10),
                     status: "Pendente",
-                    mensagem: `12 posts concluídos para ${cliente.nome_cliente}`,
+                    mensagem: `${totalPosts} posts concluídos para ${cliente.nome_cliente}`,
                     created_at: today(),
                   },
                   ...alertas,
@@ -667,6 +681,6 @@ export const useCRM = create<State>()(
         return afetados;
       },
     }),
-    { name: "crm-juridico-v6" }
+    { name: "crm-juridico-v7" }
   )
 );
