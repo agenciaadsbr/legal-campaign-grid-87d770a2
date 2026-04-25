@@ -354,6 +354,21 @@ export default function PostDetalhe() {
             </div>
           </div>
 
+          {/* Atividade / Briefing interno */}
+          <div className="border-t pt-4">
+            <Label className="text-xs">Atividade / Briefing</Label>
+            <Textarea
+              rows={4}
+              placeholder="Detalhes internos: cores do cliente, CTA no último slide, tom formal, referências..."
+              value={card.descricao ?? ""}
+              onChange={(e) => updateCard(card.id, { descricao: e.target.value } as any)}
+              className="mt-1.5"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Visível apenas dentro deste card. O título principal acima é o que aparece no Kanban.
+            </p>
+          </div>
+
           {/* Legenda */}
           <div className="border-t pt-4">
             <div className="flex items-center justify-between mb-2">
