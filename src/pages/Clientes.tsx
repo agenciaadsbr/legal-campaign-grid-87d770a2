@@ -843,7 +843,7 @@ export default function Clientes() {
                           className="flex items-center gap-1.5 text-xs font-medium"
                         >
                           {colapsado ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                          <ColorBadge label={status.label.toUpperCase()} color={status.cor} />
+                          <ColorBadge label={status.label.toUpperCase()} color={status.cor} variant="filled" />
                           <span className="text-muted-foreground text-[11px]">{items.length}</span>
                         </button>
                       </td>
