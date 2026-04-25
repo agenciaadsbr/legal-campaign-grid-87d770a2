@@ -247,11 +247,12 @@ const colunasPadrao: ColumnConfig[] = [
   { key: "observacoes", label: "Observações", tipo: "texto", ordem: 6, oculta: false, fixada: false, largura: 200 },
 ];
 
-// gera 12 cards + 12 posts para um cliente
-function gerarCardsEPosts(cliente_id: string, responsaveis: string[]) {
+// gera (meses * 4) cards + posts para um cliente — 1 card por semana, 4 semanas por mês
+function gerarCardsEPosts(cliente_id: string, responsaveis: string[], meses: number) {
   const cards: Card[] = [];
   const posts: Post[] = [];
-  for (let mes = 1; mes <= 3; mes++) {
+  const m = Math.max(1, Math.min(6, Math.round(meses || 3)));
+  for (let mes = 1; mes <= m; mes++) {
     for (let semana = 1; semana <= 4; semana++) {
       const cardId = uid();
       cards.push({
@@ -277,6 +278,15 @@ function gerarCardsEPosts(cliente_id: string, responsaveis: string[]) {
     }
   }
   return { cards, posts };
+}
+
+// calcula meses entre duas datas ISO (clamp 1–6)
+export function mesesEntre(inicioISO: string, fimISO: string): number {
+  const ini = new Date(inicioISO);
+  const fim = new Date(fimISO);
+  if (isNaN(ini.getTime()) || isNaN(fim.getTime())) return 3;
+  const meses = (fim.getFullYear() - ini.getFullYear()) * 12 + (fim.getMonth() - ini.getMonth());
+  return Math.max(1, Math.min(6, meses || 1));
 }
 
 function seedClientes() {
