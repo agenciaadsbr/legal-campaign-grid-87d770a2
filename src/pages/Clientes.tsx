@@ -501,11 +501,15 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
     }
     const total = contrato?.total_posts ?? cardsCliente.length;
     const postados = cardsCliente.filter((c) => c.status_card === "Postado").length;
-    const agendados = cardsCliente.filter((c) => c.status_card === "Agendar").length;
+    const atrasados = cardsCliente.filter((c) => c.status_card === "Atrasado").length;
     return (
       <div className="flex flex-col leading-tight tabular-nums">
-        <span className="text-xs font-medium">{postados}/{total} postados</span>
-        <span className="text-[11px] text-muted-foreground">{agendados} agendados</span>
+        <span className="text-xs font-medium">{postados}/{total} posts</span>
+        {atrasados > 0 && (
+          <span className="text-[11px] text-destructive font-semibold">
+            ⚠ {atrasados} atrasado{atrasados > 1 ? "s" : ""}
+          </span>
+        )}
       </div>
     );
   }
