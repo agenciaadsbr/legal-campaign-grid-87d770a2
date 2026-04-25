@@ -864,27 +864,30 @@ export default function Clientes() {
               </thead>
             )}
             <tbody>
-              {statusPostOptions.map((status) => {
-                const items = gruposPosts[status.label] ?? [];
-                const key = `post:${status.label}`;
+              {PRIORIDADE_STATUS.map((statusLabel) => {
+                const statusOpt = statusPostOptions.find((s) => s.label === statusLabel);
+                const cor = statusOpt?.cor ?? "#9ca3af";
+                const items = gruposPosts[statusLabel] ?? [];
+                const key = `post:${statusLabel}`;
                 const colapsado = grupoColapsado[key];
+                if (items.length === 0) return null;
                 return (
                   <Fragment2 key={key}>
                     <tr className="bg-muted/60 hover:bg-muted/70 sticky">
                       <td
                         colSpan={colunasVisiveis.length}
                         className={cn("px-2 py-2 border-l-4", !colapsado && "border-b")}
-                        style={{ borderLeftColor: status.cor }}
+                        style={{ borderLeftColor: cor }}
                       >
                         <button
                           onClick={() => setGrupoColapsado((g) => ({ ...g, [key]: !colapsado }))}
                           className="flex items-center gap-2 text-sm font-semibold w-full"
                         >
                           {colapsado ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          <ColorBadge label={status.label.toUpperCase()} color={status.cor} variant="filled" />
+                          <ColorBadge label={statusLabel.toUpperCase()} color={cor} variant="filled" />
                           <span
                             className="ml-1 inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 rounded-full text-[11px] font-bold tabular-nums"
-                            style={{ backgroundColor: `${status.cor}26`, color: status.cor }}
+                            style={{ backgroundColor: `${cor}26`, color: cor }}
                           >
                             {items.length}
                           </span>
@@ -892,7 +895,6 @@ export default function Clientes() {
                       </td>
                     </tr>
                     {!colapsado && items.map((cliente) => {
-                      const statusOpt = statusOptions.find((s) => s.label === cliente.status_cliente);
                       return (
                         <tr key={`${key}-${cliente.id}`} className="hover:bg-accent/30 transition-colors">
                           {colunasVisiveis.map((col, i) => (
@@ -912,15 +914,6 @@ export default function Clientes() {
                                   >
                                     {cliente.nome_cliente}
                                   </Link>
-                                  {statusOpt && (
-                                    <span
-                                      className="shrink-0 inline-flex items-center h-4 px-1.5 rounded text-[9px] font-semibold uppercase tracking-wide"
-                                      style={{ backgroundColor: `${statusOpt.cor}22`, color: statusOpt.cor }}
-                                      title={`Status do cliente: ${statusOpt.label}`}
-                                    >
-                                      {statusOpt.label}
-                                    </span>
-                                  )}
                                 </div>
                               ) : (
                                 <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />
