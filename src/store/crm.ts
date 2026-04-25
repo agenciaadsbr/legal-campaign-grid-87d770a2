@@ -175,7 +175,7 @@ interface State {
   updatePost: (id: string, patch: Partial<Post>) => Promise<void>;
   iniciarTarefa: (
     cardId: string,
-    payload: { responsaveis: string[]; data_agendada?: string | null },
+    payload: { responsaveis: string[]; data_agendada?: string | null; titulo?: string; descricao?: string | null },
   ) => Promise<void>;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
