@@ -60,6 +60,7 @@ export interface Post {
   data_agendamento?: string;
   data_postagem?: string;
   link_post?: string;
+  link_meister?: string;
   status: StatusCard;
   legenda: string;
   anexos: { id: string; nome: string; url: string }[];
@@ -652,6 +653,6 @@ export const useCRM = create<State>()(
         return afetados;
       },
     }),
-    { name: "crm-juridico-v4" }
+    { name: "crm-juridico-v5" }
   )
 );
