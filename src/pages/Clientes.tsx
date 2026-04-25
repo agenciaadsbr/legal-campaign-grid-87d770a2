@@ -538,11 +538,117 @@ function CelulaValor({ col, cliente, onAbrirHistorico }: { col: ColumnConfig; cl
   }
 }
 
+function FiltrosTopo({
+  filtroResponsaveis,
+  setFiltroResponsaveis,
+  apenasMinhas,
+  setApenasMinhas,
+  currentUserId,
+}: {
+  filtroResponsaveis: string[];
+  setFiltroResponsaveis: (v: string[]) => void;
+  apenasMinhas: boolean;
+  setApenasMinhas: (v: boolean) => void;
+  currentUserId: string | null;
+}) {
+  const { responsaveis } = useCRM();
+  const currentUser = responsaveis.find((r) => r.id === currentUserId);
+  const toggle = (id: string) => {
+    setFiltroResponsaveis(
+      filtroResponsaveis.includes(id)
+        ? filtroResponsaveis.filter((v) => v !== id)
+        : [...filtroResponsaveis, id]
+    );
+  };
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
+            <Filter className="h-3.5 w-3.5" />
+            <span className="text-xs">Filtrar por responsável</span>
+            {filtroResponsaveis.length > 0 && (
+              <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+                {filtroResponsaveis.length}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-2" align="start">
+          <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis</div>
+          <div className="max-h-60 overflow-auto space-y-0.5">
+            {responsaveis.map((r) => {
+              const checked = filtroResponsaveis.includes(r.id);
+              return (
+                <button
+                  type="button"
+                  key={r.id}
+                  onClick={() => toggle(r.id)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                    checked && "bg-accent"
+                  )}
+                >
+                  <Checkbox checked={checked} />
+                  <div
+                    className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: r.cor }}
+                  >
+                    {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                  </div>
+                  <span className="truncate">{r.nome}</span>
+                </button>
+              );
+            })}
+            {responsaveis.length === 0 && (
+              <div className="text-xs text-muted-foreground px-2 py-3 text-center">Nenhum responsável cadastrado</div>
+            )}
+          </div>
+          {filtroResponsaveis.length > 0 && (
+            <div className="border-t mt-2 pt-2 flex justify-end">
+              <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => setFiltroResponsaveis([])}>
+                <X className="h-3 w-3" /> Limpar
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+
+      <Button
+        size="sm"
+        variant={apenasMinhas ? "default" : "outline"}
+        className="gap-1.5 h-8"
+        onClick={() => setApenasMinhas(!apenasMinhas)}
+        disabled={!currentUserId}
+        title={currentUserId ? "Mostrar apenas clientes onde sou responsável" : "Cadastre um responsável para usar este filtro"}
+      >
+        {currentUser ? (
+          <div
+            className="h-4 w-4 rounded-full text-white text-[8px] font-semibold flex items-center justify-center shrink-0"
+            style={{ backgroundColor: currentUser.cor }}
+          >
+            {currentUser.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+          </div>
+        ) : (
+          <CheckCircle2 className="h-3.5 w-3.5" />
+        )}
+        <span className="text-xs">Minhas tarefas</span>
+      </Button>
+    </div>
+  );
+}
+
 export default function Clientes() {
-  const { clientes, colunasCliente, statusOptions } = useCRM();
+  const { clientes, colunasCliente, statusOptions, responsaveis } = useCRM();
   const [busca, setBusca] = useState("");
   const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
+  const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
+  const [apenasMinhas, setApenasMinhas] = useState(false);
+
+  // Placeholder do usuário atual: primeiro responsável cadastrado.
+  // TODO: substituir por id do usuário autenticado quando houver auth.
+  const currentUserId = responsaveis[0]?.id ?? null;
 
   const colunasVisiveis = useMemo(
     () => [...colunasCliente].filter((c) => !c.oculta).sort((a, b) => a.ordem - b.ordem),
@@ -550,8 +656,16 @@ export default function Clientes() {
   );
 
   const filtrados = useMemo(
-    () => clientes.filter((c) => c.nome_cliente.toLowerCase().includes(busca.toLowerCase())),
-    [clientes, busca]
+    () =>
+      clientes
+        .filter((c) => c.nome_cliente.toLowerCase().includes(busca.toLowerCase()))
+        .filter(
+          (c) =>
+            filtroResponsaveis.length === 0 ||
+            c.responsaveis.some((r) => filtroResponsaveis.includes(r))
+        )
+        .filter((c) => !apenasMinhas || (currentUserId !== null && c.responsaveis.includes(currentUserId))),
+    [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId]
   );
 
   const grupos = useMemo(() => {
@@ -566,12 +680,19 @@ export default function Clientes() {
 
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold leading-tight">Clientes</h1>
           <p className="text-xs text-muted-foreground">{clientes.length} clientes • Tabela dinâmica</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <FiltrosTopo
+            filtroResponsaveis={filtroResponsaveis}
+            setFiltroResponsaveis={setFiltroResponsaveis}
+            apenasMinhas={apenasMinhas}
+            setApenasMinhas={setApenasMinhas}
+            currentUserId={currentUserId}
+          />
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-8 w-56 text-sm" />
