@@ -48,7 +48,7 @@ export function CamposPersonalizadosEditor() {
                       <SelectItem value="texto">Texto</SelectItem>
                       <SelectItem value="numero">Número</SelectItem>
                       <SelectItem value="data">Data</SelectItem>
-                      <SelectItem value="dropdown">Dropdown</SelectItem>
+                      <SelectItem value="dropdown">Lista suspensa</SelectItem>
                       <SelectItem value="link">Link</SelectItem>
                     </SelectContent>
                   </Select>
