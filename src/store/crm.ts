@@ -145,6 +145,7 @@ interface State {
   deleteResponsavel: (id: string) => void;
 
   moveCard: (cardId: string, novoStatus: StatusCard) => void;
+  updateCard: (id: string, patch: Partial<Card>) => void;
   updatePost: (id: string, patch: Partial<Post>) => void;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => void;
