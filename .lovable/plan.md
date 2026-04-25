@@ -1,36 +1,15 @@
-## Adicionar filtros no topo da página "Clientes"
+Implementar centralização da gestão dentro do botão ⚙ Configurações no topo da página /clientes:
 
-Conforme imagem de referência, adicionar dois filtros na barra superior da página `/clientes`.
+1. **Criar `src/components/OpcoesEditor.tsx`** — extrair `OpcoesEditor` (com helper `toHex`) de `src/pages/Configuracoes.tsx` para reutilização. Props: `titulo`, `tipo` ('status' | 'nicho').
 
-### Arquivo: `src/pages/Clientes.tsx`
+2. **Criar `src/components/ResponsaveisEditor.tsx`** — versão compacta de gestão de responsáveis (lista + form inline add/editar/remover), baseada em `src/pages/Responsaveis.tsx`, usando `useCRM().responsaveis` e métodos `addResponsavel/updateResponsavel/removeResponsavel`.
 
-**1. Novos estados locais:**
-- `filtroResponsaveis: string[]` — IDs dos responsáveis selecionados
-- `apenasMinhas: boolean` — toggle "Minhas tarefas"
-- `currentUserId` — primeiro responsável de `responsaveis` do store (placeholder até existir auth)
+3. **`src/pages/Clientes.tsx`** — adicionar na toolbar superior botão `[⚙ Configurações]` (variant outline, ícone `Settings`) abrindo um `Sheet` lateral direito (`sm:max-w-xl`). Dentro: três cards empilhados — Status do Cliente, Nichos, Responsáveis — usando os componentes extraídos.
 
-**2. Componente `FiltrosTopo`** (novo, no mesmo arquivo), renderizado na toolbar antes do botão "Colunas":
+4. **`src/pages/Configuracoes.tsx`** — remover cards de Status, Nichos e helpers locais. Manter apenas card "Aparência" (toggle modo escuro).
 
-- **Botão "Filtrar por responsável"**:
-  - `Popover` + `Button variant="outline"` com ícone `Filter` à esquerda.
-  - Badge contador quando há seleção ativa.
-  - Conteúdo do popover: lista de responsáveis com `Checkbox` (cor + nome).
-  - Rodapé: botão "Limpar" (ghost) que zera o array.
+5. **`src/pages/Responsaveis.tsx`** — deletar.
 
-- **Botão toggle "Minhas tarefas"**:
-  - `Button variant={apenasMinhas ? "default" : "outline"}` com ícone `CheckCircle2`.
-  - Texto "Minhas tarefas".
-  - Mostra mini-avatar do `currentUser` à esquerda (usando estilo do `AvatarStack`).
+6. **`src/components/AppSidebar.tsx`** — remover itens "Configurações" e "Responsáveis" do array `items`.
 
-**3. Lógica de filtragem** — atualizar o `useMemo` `filtrados`:
-```ts
-.filter(c => filtroResponsaveis.length === 0 || c.responsaveis.some(r => filtroResponsaveis.includes(r)))
-.filter(c => !apenasMinhas || (currentUserId && c.responsaveis.includes(currentUserId)))
-```
-
-**4. Layout da toolbar:**
-- Os filtros ficam agrupados à esquerda da toolbar superior (antes da busca), separados por `gap-2`.
-- Em telas menores, mantém wrap natural via `flex-wrap`.
-
-### Resultado
-Toolbar com: `[Filtrar por responsável ▾] [✓ Minhas tarefas]  ...  [Busca] [Colunas] [Novo Cliente]`, idêntica à imagem de referência. Filtros combinam-se com a busca já existente.
+7. **`src/App.tsx`** — remover rota e import de `/responsaveis`. Manter `/configuracoes` acessível por URL direta.
