@@ -783,8 +783,19 @@ export default function Clientes() {
     [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]
   );
 
-  const GRUPOS = ["Revisar", "Criar"] as const;
+  const GRUPOS = ["Revisar", "Criar", "Concluidos"] as const;
   const [apenasPendentes, setApenasPendentes] = useState(false);
+  const [mostrarConcluidos, setMostrarConcluidos] = useState(false);
+
+  const pendentesPorCliente = useMemo(() => {
+    const map: Record<string, { total: number; pendentes: number }> = {};
+    cards.forEach((card) => {
+      if (!map[card.cliente_id]) map[card.cliente_id] = { total: 0, pendentes: 0 };
+      map[card.cliente_id].total += 1;
+      if (card.status_card !== "Postado") map[card.cliente_id].pendentes += 1;
+    });
+    return map;
+  }, [cards]);
 
   // Classifica cards por prioridade (atrasado / urgente / hoje)
   type Prioridade = "atrasado" | "urgente" | "hoje";
@@ -815,13 +826,19 @@ export default function Clientes() {
   }, [filtrados, apenasPendentes, tarefasPorCliente]);
 
   const gruposPosts = useMemo(() => {
-    const map: Record<string, typeof clientes> = { Revisar: [], Criar: [] };
+    const map: Record<string, typeof clientes> = { Revisar: [], Criar: [], Concluidos: [] };
     filtradosFinal.forEach((c) => {
+      const stats = pendentesPorCliente[c.id];
+      const concluido = !!stats && stats.total > 0 && stats.pendentes === 0;
+      if (concluido) {
+        if (mostrarConcluidos) map.Concluidos.push(c);
+        return;
+      }
       const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
       map[ps].push(c);
     });
     return map;
-  }, [filtradosFinal]);
+  }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos]);
 
   const algumGrupoAberto = useMemo(
     () => GRUPOS.some((s) => (gruposPosts[s]?.length ?? 0) > 0 && !grupoColapsado[`post:${s}`]),
@@ -839,6 +856,10 @@ export default function Clientes() {
           <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
             <Switch checked={apenasPendentes} onCheckedChange={setApenasPendentes} />
             <span>Apenas com ações pendentes</span>
+          </label>
+          <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
+            <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
+            <span>Mostrar concluídos</span>
           </label>
           <Select value={filtroStatusCliente} onValueChange={setFiltroStatusCliente}>
             <SelectTrigger className="h-8 w-[180px] text-xs">
@@ -896,8 +917,13 @@ export default function Clientes() {
             )}
             <tbody>
               {GRUPOS.map((statusLabel) => {
-                const statusOpt = statusPostOptions.find((s) => s.label === statusLabel);
-                const cor = statusOpt?.cor ?? (statusLabel === "Revisar" ? "#f59e0b" : "#3b82f6");
+                const statusOpt = statusLabel === "Concluidos" ? undefined : statusPostOptions.find((s) => s.label === statusLabel);
+                const cor = statusOpt?.cor ?? (
+                  statusLabel === "Revisar" ? "#f59e0b" :
+                  statusLabel === "Criar" ? "#3b82f6" :
+                  "#9ca3af"
+                );
+                const labelExibido = statusLabel === "Concluidos" ? "Concluídos" : statusLabel;
                 const items = gruposPosts[statusLabel] ?? [];
                 const key = `post:${statusLabel}`;
                 const colapsado = grupoColapsado[key];
@@ -915,7 +941,7 @@ export default function Clientes() {
                           className="flex items-center gap-2 text-sm font-semibold w-full"
                         >
                           {colapsado ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          <ColorBadge label={statusLabel.toUpperCase()} color={cor} variant="filled" />
+                          <ColorBadge label={labelExibido.toUpperCase()} color={cor} variant="filled" />
                           <span
                             className="ml-1 inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 rounded-full text-[11px] font-bold tabular-nums"
                             style={{ backgroundColor: `${cor}26`, color: cor }}

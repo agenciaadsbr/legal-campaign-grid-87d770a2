@@ -1,68 +1,131 @@
 
-# ⚡ Toggle "Urgente" — PostDetalhe + Kanban
+# ✅ Grupo "CONCLUÍDOS" no painel de Clientes — sem novo status, sem migration
 
-A implementação atual do **Painel Inteligente de Clientes** já cobre 90% do guia recebido (2 grupos REVISAR/CRIAR, chips 🔴/⚡/🟡, popover de tarefas, filtro "apenas com pendências", `cards.is_urgent` no banco, store mapeando o campo, função `update_client_primary_status` reescrita).
+## 📋 Verificação do guia vs. estado atual
 
-A peça que falta é a **UI para marcar um card como urgente** — sem ela o chip ⚡ no painel nunca é populado organicamente.
-
----
-
-## ✅ Verificação do guia recebido vs. estado atual
-
-| Item do guia | Status |
+| Item do guia | Decisão |
 |---|---|
-| Cliente único em REVISAR ou CRIAR | ✅ implementado (`primary_status`) |
-| Ignorar `Agendado`/`Postado` no agrupamento | ✅ função SQL atual já faz isso |
-| Chips de tarefas no nome (🔴 ⚡ 🟡) | ✅ implementado em `Clientes.tsx` (`tarefasPorCliente`) |
-| Popover com lista de tarefas (máx 5) | ✅ componente `TarefasInline` |
-| Filtro "Apenas com ações pendentes" | ✅ Switch já existe |
-| `is_urgent` no banco | ✅ coluna em `cards` |
-| Atualização realtime | ✅ store já assina `cards`/`clientes` |
-| **Toggle para marcar urgente** | ❌ **falta** |
+| Não criar novo status `REVISADO` no banco | ✅ |
+| Não alterar Kanban / fluxo de posts | ✅ |
+| Manter lógica REVISAR/CRIAR | ✅ |
+| VIEW `clients_panel_view` no Postgres | ❌ **dispensável** — a derivação roda em memória no front e mantém realtime imediato (já temos `cards` + `clientes` assinados na store). Criar VIEW exigiria migration, RPC e quebraria a reatividade que já funciona. |
+| Trocar tabela `posts` + coluna `due_date` | ❌ **não aplicável** — projeto usa `cards.data_agendada` e `cards.status` (`Postado`/`Atrasado`/`Revisar`/`Criar`). Já cobre o conceito. |
+| Toggle "mostrar concluídos" + grupo cinza no fim | ✅ **a implementar** |
 
-> Nota: o guia menciona `due_date` em `posts`, mas o domínio do projeto usa `cards.data_agendada` (cards = unidade semanal de trabalho). A classificação atrasado/hoje já funciona corretamente nessa base — não vamos migrar.
+> Mantenho o padrão atual (derivação no front via `useMemo`) — é mais simples, instantâneo via realtime, e zero retrabalho.
 
 ---
 
-## 🛠️ Mudanças
+## 🧠 Conceito de "concluído" (frontend)
 
-### 1. `src/pages/PostDetalhe.tsx` — toggle ⚡ Urgente
+Cliente é **CONCLUÍDO** quando, considerando todos os seus cards:
 
-Adicionar um botão toggle no cabeçalho do card (próximo ao status), visível apenas quando `canWrite`:
+- `cards.length > 0` (cliente tem trabalho cadastrado), **e**
+- todos os cards têm `status_card === "Postado"`
 
-- Ícone `Zap` da lucide-react
-- Estado lido de `card.is_urgent`
-- Ao clicar: `updateCard(card.id, { is_urgent: !card.is_urgent })`
-- Visual: botão outline normal quando off; preenchido âmbar/amarelo + ícone preenchido quando on
-- Tooltip: "Marcar como urgente" / "Remover urgência"
-- Toast curto ao alternar
+Equivalente: **`pendentes === 0`** onde `pendentes = cards não-Postados`.
 
-### 2. `src/pages/ClienteDetalhe.tsx` — indicador + toggle ⚡ no card do Kanban
-
-No `CardItem` (linhas 15–42):
-
-- **Indicador visual** quando `card.is_urgent === true`: ícone `Zap` âmbar pequeno ao lado do título + borda esquerda âmbar (`border-l-2 border-l-amber-500`)
-- **Botão toggle** discreto no canto superior direito do card (ícone `Zap`, `h-6 w-6`, ghost):
-  - Aparece sempre, mas com `opacity-0 group-hover:opacity-100` quando off (não polui)
-  - Sempre visível quando on
-  - `onClick` precisa de `e.preventDefault()` + `e.stopPropagation()` para não disparar o `<Link>` nem o drag
-  - Só renderiza se `canWrite`
-- Adicionar `group` no `className` do card
-
-### 3. (Sem mudanças) — store e banco
-
-`updateCard` já aceita `is_urgent` (`crm.ts:611`). Schema já tem a coluna. Realtime já propaga.
+Cliente sem nenhum card → continua em **CRIAR** (default atual), não em concluído (evita poluir).
 
 ---
 
-## 🎯 Resultado
+## 🛠️ Mudanças (1 arquivo)
 
-- Usuário marca card como urgente em 1 clique (no Kanban ou abrindo o post)
-- Chip ⚡ aparece imediatamente no painel `/clientes` via realtime
-- Popover de tarefas lista o card na seção "⚡ Urgentes"
-- Zero mudança de schema, zero migration
+### `src/pages/Clientes.tsx`
+
+**1. Novo estado de toggle** (próximo a `apenasPendentes`, ~linha 787):
+
+```tsx
+const [mostrarConcluidos, setMostrarConcluidos] = useState(false);
+```
+
+**2. Pré-cálculo de pendências por cliente** (novo `useMemo`, antes de `gruposPosts`):
+
+```tsx
+const pendentesPorCliente = useMemo(() => {
+  const map: Record<string, { total: number; pendentes: number }> = {};
+  cards.forEach((card) => {
+    if (!map[card.cliente_id]) map[card.cliente_id] = { total: 0, pendentes: 0 };
+    map[card.cliente_id].total += 1;
+    if (card.status_card !== "Postado") map[card.cliente_id].pendentes += 1;
+  });
+  return map;
+}, [cards]);
+```
+
+**3. Atualizar `GRUPOS` e `gruposPosts`** (~linhas 786, 817):
+
+```tsx
+const GRUPOS = ["Revisar", "Criar", "Concluidos"] as const;
+
+const gruposPosts = useMemo(() => {
+  const map: Record<string, typeof clientes> = { Revisar: [], Criar: [], Concluidos: [] };
+  filtradosFinal.forEach((c) => {
+    const stats = pendentesPorCliente[c.id];
+    const concluido = stats && stats.total > 0 && stats.pendentes === 0;
+    if (concluido) {
+      if (mostrarConcluidos) map.Concluidos.push(c);
+      // se toggle off → cliente concluído some do painel
+      return;
+    }
+    const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
+    map[ps].push(c);
+  });
+  return map;
+}, [filtradosFinal, pendentesPorCliente, mostrarConcluidos]);
+```
+
+> Importante: quando `mostrarConcluidos === false`, clientes concluídos são **ocultados** (comportamento que o usuário pediu — "painel limpo por padrão"). Isso muda o comportamento atual ligeiramente: hoje eles aparecem em CRIAR. O guia explicitamente quer esse filtro. Ok e desejado.
+
+**4. Renderização do header do grupo** (`tbody` ~linha 898) — atualizar a cor default para incluir Concluidos:
+
+```tsx
+const cor = statusOpt?.cor ?? (
+  statusLabel === "Revisar" ? "#f59e0b" :
+  statusLabel === "Criar"   ? "#3b82f6" :
+  "#9ca3af"  // Concluidos: cinza neutro
+);
+const labelExibido = statusLabel === "Concluidos" ? "Concluídos" : statusLabel;
+// usar labelExibido no <ColorBadge label={labelExibido.toUpperCase()} ... />
+```
+
+A ordem do `GRUPOS` (Revisar → Criar → Concluidos) já garante que CONCLUÍDOS aparece por último.
+
+**5. Toggle na barra superior** (~linha 839, ao lado de "Apenas com ações pendentes"):
+
+```tsx
+<label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
+  <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
+  <span>Mostrar concluídos</span>
+</label>
+```
+
+**6. Esconder chip de tarefas para concluídos**: como concluídos não têm pendentes (`total === 0` em `tarefasPorCliente`), o `<TarefasInline>` já não renderiza. Nada a fazer.
+
+---
+
+## 🚫 O que NÃO mudo
+
+- Banco: zero migration, zero VIEW, zero RPC
+- Kanban (`ClienteDetalhe.tsx`): inalterado
+- `cards.status` / `posts.status`: inalterados
+- Função `update_client_primary_status`: inalterada (concluído é derivação puramente visual no front)
+- Realtime: já funciona, propaga mudança de `status_card → Postado` instantaneamente
+
+---
+
+## 🧪 Casos de teste
+
+| Cenário | Resultado esperado |
+|---|---|
+| Cliente com todos cards `Postado` + toggle OFF | Não aparece |
+| Cliente com todos cards `Postado` + toggle ON | Aparece em **CONCLUÍDOS** (cinza, último grupo) |
+| Cliente com 1 card `Revisar` + 9 `Postado` | Aparece em **REVISAR** com chip de tarefas |
+| Cliente sem nenhum card | Aparece em **CRIAR** (não concluído) |
+| Marcar último card pendente como `Postado` | Realtime → cliente sai dos grupos ativos imediatamente |
+
+---
 
 ## 📂 Arquivos afetados
 
-- `src/pages/PostDetalhe.tsx` — botão toggle no header
-- `src/pages/ClienteDetalhe.tsx` — toggle + indicador visual no `CardItem`
+- `src/pages/Clientes.tsx` (único)
