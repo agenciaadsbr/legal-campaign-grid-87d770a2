@@ -296,17 +296,18 @@ function seedClientes() {
   const postsAll: Post[] = [];
 
   const exemplos = [
-    { nome: "Dr. José Almeida", nicho: "Trabalhista", resp: ["r1", "r2"] },
-    { nome: "Silva & Associados", nicho: "Empresarial", resp: ["r2"] },
-    { nome: "Mariana Ferreira Adv.", nicho: "Família", resp: ["r3", "r1"] },
-    { nome: "Escritório Tributus", nicho: "Tributário", resp: ["r1"] },
-    { nome: "Defesa Total", nicho: "Criminal", resp: ["r4", "r2"] },
+    { nome: "Dr. José Almeida", nicho: "Trabalhista", resp: ["r1", "r2"], meses: 3 },
+    { nome: "Silva & Associados", nicho: "Empresarial", resp: ["r2"], meses: 6 },
+    { nome: "Mariana Ferreira Adv.", nicho: "Família", resp: ["r3", "r1"], meses: 3 },
+    { nome: "Escritório Tributus", nicho: "Tributário", resp: ["r1"], meses: 6 },
+    { nome: "Defesa Total", nicho: "Criminal", resp: ["r4", "r2"], meses: 3 },
   ];
 
   exemplos.forEach((e, i) => {
     const id = uid();
     const inicio = addMonths(new Date(), -i);
-    const fim = addMonths(inicio, 3);
+    const fim = addMonths(inicio, e.meses);
+    const totalPosts = e.meses * 4;
     clientes.push({
       id,
       nome_cliente: e.nome,
@@ -326,10 +327,10 @@ function seedClientes() {
       status: "Ativo",
       data_inicio: inicio.toISOString().slice(0, 10),
       data_fim: fim.toISOString().slice(0, 10),
-      total_posts: 12,
-      posts_concluidos: i === 0 ? 5 : i === 4 ? 12 : 2,
+      total_posts: totalPosts,
+      posts_concluidos: i === 0 ? 5 : i === 4 ? totalPosts : 2,
     });
-    const { cards, posts } = gerarCardsEPosts(id, e.resp);
+    const { cards, posts } = gerarCardsEPosts(id, e.resp, e.meses);
     // distribui status para parecer real
     cards.forEach((c, idx) => {
       const post = posts[idx];
