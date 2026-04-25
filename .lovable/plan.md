@@ -1,47 +1,53 @@
-## Problema
 
-Na aba **Clientes**, o grupo **"Revisar"** está sumindo quando não há clientes nele. Isso acontece em `src/pages/Clientes.tsx` linha **931**:
+## Objetivo
 
-```ts
-if (items.length === 0) return null;
-```
+Permitir que o usuário **edite, salve, atualize e remova clientes** diretamente da aba `/clientes`, reaproveitando as funções `updateCliente` e `deleteCliente` que já existem no `src/store/crm.ts` (linhas 548 e 570). Nenhuma mudança no banco é necessária — toda a infraestrutura (tabelas, RLS, função no store) já existe.
 
-Esse `return null` esconde qualquer grupo vazio — incluindo "Revisar", "Criar" e "Concluídos".
+## O que está pronto hoje
 
-Além disso, hoje a classificação em `gruposPosts` (linhas 828-842) só considera o cliente como "Revisar" ou "Criar" se ele **tiver pelo menos um post pendente**. Clientes sem post pendente caem em "Concluídos" (que fica oculto se `mostrarConcluidos = false`) — então eles **somem da listagem**, contrariando a regra "todos os clientes devem ficar visíveis na aba Clientes".
+- `addCliente` → usado pelo botão **Novo Cliente** ✅
+- `updateCliente(id, patch)` → existe no store, mas **não é exposto na UI** ❌
+- `deleteCliente(id)` → existe no store, mas **não é exposto na UI** ❌
+- RLS: admin pode deletar; admin/editor podem atualizar (já configurado)
 
-## Correção (mínima, sem mexer em estrutura/layout)
+## Mudanças propostas
 
-Em **`src/pages/Clientes.tsx`**:
+### 1. Nova coluna fixa "Ações" na tabela de clientes (`src/pages/Clientes.tsx`)
 
-### 1. Sempre renderizar os grupos fixos (linhas 920-954)
+Adicionar uma coluna fixa à direita em cada linha de cliente (linhas 974–1001) com dois botões ícone:
+- ✏️ **Editar** → abre `EditarClienteDialog`
+- 🗑️ **Excluir** → abre `AlertDialog` de confirmação e chama `deleteCliente`
 
-Remover o `if (items.length === 0) return null;` para os grupos **Revisar** e **Criar** — eles ficam sempre visíveis, mesmo vazios, com o contador `0` e um estado vazio discreto ("Nenhum cliente neste status").
-O grupo **Concluídos** continua respeitando a flag `mostrarConcluidos` (sem mudança nesse comportamento).
+A coluna não fará parte do `colunasVisiveis` configurável — ficará sempre visível como última célula, similar ao botão de ações em listas comuns.
 
-### 2. Garantir que todo cliente apareça em algum grupo (linhas 828-842)
+### 2. Componente `EditarClienteDialog`
 
-Ajustar `gruposPosts` para que **nenhum cliente desapareça**:
-- Cliente com post pendente em status "Revisar" → grupo **Revisar**.
-- Cliente com post pendente em status "Criar" (ou demais status pendentes) → grupo **Criar**.
-- Cliente sem nenhum post pendente → grupo **Concluídos** (visível só com toggle, comportamento atual mantido).
-- Cliente **sem cards nenhum** → cai por padrão em **Criar** (em vez de Concluídos), para ficar visível imediatamente. _(Isso reflete melhor a referência do ClickUp: cliente novo aparece num grupo de trabalho, não em "Concluídos".)_
+Criado dentro de `src/pages/Clientes.tsx` (mesmo padrão do `NovoClienteDialog` já existente nas linhas 100–214). Será praticamente um clone com:
+- Pré-preenchimento dos campos a partir do `cliente` recebido por prop (nome, nicho, status, responsáveis, observações, datas do contrato)
+- Botão **Salvar Alterações** chamando `updateCliente(cliente.id, patch)`
+- Reuso do `ResponsaveisPicker` já existente
+- Reuso da lógica de `data_inicio` + `duracao_meses` → `data_fim`
 
-### 3. Cabeçalho da página (linha 854)
+### 3. Confirmação de exclusão
 
-Atualizar o subtítulo para refletir que ambos os grupos ficam fixos:
-`{clientes.length} clientes • Revisar • Criar` (já está nesse espírito; só garantir que não some).
+Usar `AlertDialog` (`src/components/ui/alert-dialog.tsx`) com mensagem clara:
+> "Excluir o cliente **{nome}**? Todos os cards, posts, contratos e alertas vinculados serão removidos. Esta ação não pode ser desfeita."
 
-## O que NÃO muda
+Ao confirmar:
+- `deleteCliente(cliente.id)` (já remove cascata: contratos, alertas, posts, cards, cliente)
+- `toast.success("Cliente excluído")`
 
-- Layout, cores, tokens, sidebar, colunas, filtros — tudo intacto.
-- Tabela `status_options` (status do cliente: Ativo / Pausado / etc.) — sem alteração.
-- Lógica de `primary_status` no banco — sem alteração.
-- Componentes `ColorBadge`, `StatusBadge`, `OpcoesEditor` — sem alteração.
-- Página `ClienteDetalhe`, kanban dos posts — sem alteração.
+### 4. Permissões
 
-## Arquivo afetado
+- Botão **Editar** visível para qualquer usuário autenticado (RLS bloqueia se não tiver permissão e mostramos toast de erro)
+- Botão **Excluir** visível somente para `admin` (verificado via `useAuth` + `has_role`). Para usuários não-admin o botão fica oculto.
 
-- `src/pages/Clientes.tsx` (apenas o bloco de agrupamento + render dos grupos, ~20 linhas).
+## Arquivos a modificar
 
-Nenhuma migration, nenhum outro arquivo tocado.
+- `src/pages/Clientes.tsx` — adicionar `EditarClienteDialog`, coluna "Ações" na tabela e wiring de delete com AlertDialog
+
+## Não será alterado
+
+- Banco de dados (schema, RLS, funções) — tudo já preparado
+- `src/store/crm.ts` — `updateCliente` e `deleteCliente` já fazem o trabalho
+- Layout/identidade visual — apenas adição de uma coluna de ações no padrão atual
