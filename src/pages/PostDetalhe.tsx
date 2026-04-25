@@ -513,19 +513,11 @@ function ComentarioBubble({
         </div>
         {editando ? (
           <div className="mt-1.5 space-y-2">
-            <Textarea
-              autoFocus
-              rows={2}
+            <RichTextEditor
               value={valor}
-              onChange={(e) => setValor(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setValor(comentario.comentario_texto);
-                  setEditando(false);
-                }
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) salvar();
-              }}
-              className="text-sm"
+              onChange={setValor}
+              placeholder="Editar comentário..."
+              minHeight="min-h-[60px]"
             />
             <div className="flex justify-end gap-1.5">
               <Button size="sm" variant="ghost" onClick={() => { setValor(comentario.comentario_texto); setEditando(false); }}>
@@ -539,7 +531,7 @@ function ComentarioBubble({
         ) : (
           <>
             {comentario.comentario_texto && (
-              <div className="text-sm whitespace-pre-wrap break-words mt-0.5">{comentario.comentario_texto}</div>
+              <RichTextView content={comentario.comentario_texto} className="mt-0.5" />
             )}
             {comentario.imagem_url && (
               <a href={comentario.imagem_url} target="_blank" rel="noreferrer">
