@@ -389,19 +389,14 @@ export default function PostDetalhe() {
                 </button>
               </div>
             )}
-            <Textarea
-              rows={1}
-              placeholder="Escreva um comentário..."
+            <RichTextEditor
               value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  enviar();
-                }
-              }}
-              className="border-0 focus-visible:ring-0 resize-none bg-transparent min-h-[36px] p-0 shadow-none"
+              onChange={setTexto}
+              placeholder="Escreva um comentário..."
+              onEnterSubmit={enviar}
+              minHeight="min-h-[44px]"
             />
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <input
