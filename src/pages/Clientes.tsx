@@ -722,6 +722,11 @@ export default function Clientes() {
     return map;
   }, [filtrados, statusOptions]);
 
+  const algumGrupoAberto = useMemo(
+    () => statusOptions.some((s) => (grupos[s.label]?.length ?? 0) > 0 && !grupoColapsado[s.label]),
+    [statusOptions, grupos, grupoColapsado]
+  );
+
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -750,22 +755,24 @@ export default function Clientes() {
       <div className="border rounded-lg bg-card overflow-hidden">
         <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-160px)]">
           <table className="w-full text-xs border-collapse">
-            <thead className="sticky top-0 bg-muted/50 z-10">
-              <tr>
-                {colunasVisiveis.map((c) => (
-                  <th
-                    key={c.key}
-                    className={cn(
-                      "text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5 border-b border-r",
-                      c.fixada && "sticky left-0 bg-muted/50 z-20"
-                    )}
-                    style={{ minWidth: c.largura, width: c.largura }}
-                  >
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+            {algumGrupoAberto && (
+              <thead className="sticky top-0 bg-muted/50 z-10">
+                <tr>
+                  {colunasVisiveis.map((c) => (
+                    <th
+                      key={c.key}
+                      className={cn(
+                        "text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5 border-b border-r",
+                        c.fixada && "sticky left-0 bg-muted/50 z-20"
+                      )}
+                      style={{ minWidth: c.largura, width: c.largura }}
+                    >
+                      {c.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
             <tbody>
               {statusOptions.map((status) => {
                 const items = grupos[status.label] ?? [];
@@ -773,7 +780,7 @@ export default function Clientes() {
                 return (
                   <Fragment2 key={status.label}>
                     <tr className="bg-muted/30 hover:bg-muted/40 sticky">
-                      <td colSpan={colunasVisiveis.length} className="px-2 py-1 border-b">
+                      <td colSpan={colunasVisiveis.length} className={cn("px-2 py-1", !colapsado && "border-b")}>
                         <button
                           onClick={() => setGrupoColapsado((g) => ({ ...g, [status.label]: !colapsado }))}
                           className="flex items-center gap-1.5 text-xs font-medium"
