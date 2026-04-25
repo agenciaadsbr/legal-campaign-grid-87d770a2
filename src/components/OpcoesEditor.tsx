@@ -140,13 +140,15 @@ export function OpcoesEditor({ tipo }: Props) {
           if (editando === it.label) {
             return (
               <div key={it.label} className="flex items-center gap-2 p-2 rounded-md border bg-card">
-                <input
-                  type="color"
-                  value={editCor}
-                  onChange={(e) => setEditCor(e.target.value)}
-                  className="h-8 w-10 rounded cursor-pointer border bg-transparent"
-                  aria-label="Cor"
-                />
+                {mostrarCor && (
+                  <input
+                    type="color"
+                    value={editCor}
+                    onChange={(e) => setEditCor(e.target.value)}
+                    className="h-8 w-10 rounded cursor-pointer border bg-transparent"
+                    aria-label="Cor"
+                  />
+                )}
                 <Input
                   value={editLabel}
                   onChange={(e) => setEditLabel(e.target.value)}
