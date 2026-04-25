@@ -154,6 +154,7 @@ Recomendamos trocar a senha no primeiro acesso.`;
     }
   };
 
+  const salvarEdicao = async () => {
     if (!editing) return;
     setEditSaving(true);
     const { error } = await supabase.functions.invoke("admin-update-user", {
