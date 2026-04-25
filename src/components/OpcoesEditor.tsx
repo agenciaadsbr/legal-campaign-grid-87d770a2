@@ -65,7 +65,7 @@ export function toHex(color: string): string {
 }
 
 interface Props {
-  tipo: "status" | "nicho";
+  tipo: "status" | "nicho" | "status_post";
 }
 
 interface ItemProps {
@@ -208,7 +208,9 @@ export function OpcoesEditor({ tipo }: Props) {
   const {
     nichos,
     statusOptions,
+    statusPostOptions,
     clientes,
+    cards,
     addNicho,
     updateNicho,
     deleteNicho,
@@ -216,9 +218,15 @@ export function OpcoesEditor({ tipo }: Props) {
     updateStatusOption,
     deleteStatusOption,
     reorderStatusOptions,
+    addStatusPostOption,
+    updateStatusPostOption,
+    deleteStatusPostOption,
+    reorderStatusPostOptions,
   } = useCRM();
 
   const isStatus = tipo === "status";
+  const isStatusPost = tipo === "status_post";
+  const isColorful = isStatus || isStatusPost;
 
   const cfg = isStatus
     ? {
@@ -227,8 +235,20 @@ export function OpcoesEditor({ tipo }: Props) {
         onAdd: addStatusOption,
         onUpdate: updateStatusOption,
         onDelete: deleteStatusOption,
+        onReorder: reorderStatusOptions,
         rotuloSingular: "Status",
         placeholder: "Novo status",
+      }
+    : isStatusPost
+    ? {
+        itens: statusPostOptions,
+        contagemUso: (label: string) => cards.filter((c) => c.status_card === label).length,
+        onAdd: addStatusPostOption,
+        onUpdate: updateStatusPostOption,
+        onDelete: deleteStatusPostOption,
+        onReorder: reorderStatusPostOptions,
+        rotuloSingular: "Status de Post",
+        placeholder: "Novo status de post",
       }
     : {
         itens: nichos,
@@ -236,11 +256,12 @@ export function OpcoesEditor({ tipo }: Props) {
         onAdd: addNicho,
         onUpdate: updateNicho,
         onDelete: deleteNicho,
+        onReorder: async (_l: string[]) => {},
         rotuloSingular: "Nicho",
         placeholder: "Novo nicho",
       };
 
-  const { itens, contagemUso, onAdd, onUpdate, onDelete, rotuloSingular, placeholder } = cfg;
+  const { itens, contagemUso, onAdd, onUpdate, onDelete, onReorder, rotuloSingular, placeholder } = cfg;
 
   const [editando, setEditando] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
