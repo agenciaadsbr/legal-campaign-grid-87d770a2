@@ -574,15 +574,15 @@ function ConfiguracoesSheet() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1.5 h-8" title="Configurações">
+        <Button size="sm" variant="outline" className="gap-1.5 h-8" title="Configurações do painel">
           <Settings className="h-3.5 w-3.5" />
-          <span className="text-xs">Configurações</span>
+          <span className="text-xs">Configurações do painel</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="sm:max-w-xl w-full overflow-y-auto p-4">
         <SheetHeader className="mb-3">
           <SheetTitle className="flex items-center gap-2 text-base">
-            <Settings className="h-4 w-4" /> Configurações
+            <Settings className="h-4 w-4" /> Configurações do painel
           </SheetTitle>
         </SheetHeader>
         <div className="space-y-3">
