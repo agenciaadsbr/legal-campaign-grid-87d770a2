@@ -48,7 +48,7 @@ const isImageUrl = (url: string, nome?: string) => {
 
 export default function PostDetalhe() {
   const { postId } = useParams();
-  const { posts, cards, comentarios, responsaveis, updatePost, addComentario, updateComentario, deleteComentario } = useCRM();
+  const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario } = useCRM();
   const post = posts.find((p) => p.id === postId);
   const card = post && cards.find((c) => c.id === post.card_id);
 
