@@ -240,20 +240,9 @@ function NovoClienteDialog() {
             </div>
             <div>
               <Label>Status</Label>
-              <Select value={form.status_cliente} onValueChange={(v) => setForm({ ...form, status_cliente: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Status do cliente (ciclo de vida)</Label>
               <Select
                 value={form.status_global}
-                onValueChange={(v) => setForm({ ...form, status_global: v as any })}
+                onValueChange={(v) => setForm({ ...form, status_global: v as any, status_cliente: v as any })}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -264,14 +253,14 @@ function NovoClienteDialog() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Prazo de onboarding</Label>
-              <Input
-                type="date"
-                value={form.prazo_onboarding}
-                onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
-              />
-            </div>
+          </div>
+          <div>
+            <Label>Prazo de onboarding</Label>
+            <Input
+              type="date"
+              value={form.prazo_onboarding}
+              onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
+            />
           </div>
           <div>
             <Label>Responsáveis</Label>
@@ -446,20 +435,9 @@ function EditarClienteDialog({
             </div>
             <div>
               <Label>Status</Label>
-              <Select value={form.status_cliente} onValueChange={(v) => setForm({ ...form, status_cliente: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Status do cliente (ciclo de vida)</Label>
               <Select
                 value={form.status_global}
-                onValueChange={(v) => setForm({ ...form, status_global: v as any })}
+                onValueChange={(v) => setForm({ ...form, status_global: v as any, status_cliente: v as any })}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -470,14 +448,14 @@ function EditarClienteDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Prazo de onboarding</Label>
-              <Input
-                type="date"
-                value={form.prazo_onboarding}
-                onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
-              />
-            </div>
+          </div>
+          <div>
+            <Label>Prazo de onboarding</Label>
+            <Input
+              type="date"
+              value={form.prazo_onboarding}
+              onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
+            />
           </div>
           <div>
             <Label>Responsáveis</Label>
@@ -1272,11 +1250,11 @@ export default function Clientes() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={filtroStatusGlobal} onValueChange={setFiltroStatusGlobal}>
-            <SelectTrigger className="h-8 w-[170px] text-xs">
+            <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Status do cliente" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos (ciclo de vida)</SelectItem>
+              <SelectItem value="todos">Todos os status</SelectItem>
               {STATUS_CLIENTE_OPCOES.map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
@@ -1294,22 +1272,6 @@ export default function Clientes() {
               </label>
             </>
           )}
-          <Select value={filtroStatusCliente} onValueChange={setFiltroStatusCliente}>
-            <SelectTrigger className="h-8 w-[180px] text-xs">
-              <SelectValue placeholder="Status do cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os status</SelectItem>
-              {statusOptions.map((s) => (
-                <SelectItem key={s.label} value={s.label}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.cor }} />
-                    {s.label}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <FiltrosTopo
             filtroResponsaveis={filtroResponsaveis}
             setFiltroResponsaveis={setFiltroResponsaveis}

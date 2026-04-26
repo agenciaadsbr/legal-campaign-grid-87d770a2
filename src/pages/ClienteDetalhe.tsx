@@ -3,6 +3,7 @@ import { useCRM, StatusCard, Card as CardT } from "@/store/crm";
 import { useMemo, useState } from "react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { StatusBadge, ColorBadge } from "@/components/StatusBadge";
+import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
@@ -434,7 +435,7 @@ export default function ClienteDetalhe() {
   const cardsCliente = cards.filter((c) => c.cliente_id === cliente.id);
   const postados = cardsCliente.filter((c) => c.status_card === "Postado").length;
   const resps = responsaveis.filter((r) => cliente.responsaveis.includes(r.id));
-  const statusOpt = statusOptions.find((s) => s.label === cliente.status_cliente);
+  // Badge unificado: ciclo de vida
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
@@ -442,7 +443,7 @@ export default function ClienteDetalhe() {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold">{cliente.nome_cliente}</h1>
-            {statusOpt && <ColorBadge label={statusOpt.label} color={statusOpt.cor} />}
+            <StatusClienteBadge status={cliente.status_global} size="sm" />
           </div>
           <div className="text-sm text-muted-foreground flex items-center gap-3 flex-wrap">
             <span>Nicho: <span className="text-foreground">{cliente.nicho}</span></span>
