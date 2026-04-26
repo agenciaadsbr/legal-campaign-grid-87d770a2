@@ -60,10 +60,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Kpi label="Clientes ativos" value={ativos} icon={Users} accent="hsl(var(--primary))" />
+        <Kpi label="Em onboarding" value={onboarding} icon={Sparkles} accent="hsl(217 91% 60%)" />
+        <Kpi label="Clientes ativos" value={ativos} icon={UserCheck} accent="hsl(160 84% 39%)" />
+        <Kpi label="Clientes pausados" value={pausados} icon={Pause} accent="hsl(38 92% 50%)" />
         <Kpi label="Posts hoje" value={postsHoje} icon={FileText} accent="hsl(var(--info))" />
         <Kpi label="Agendados" value={agendados} icon={Calendar} accent="hsl(var(--status-agendar))" />
         <Kpi label="Postados" value={postados} icon={CheckCircle2} accent="hsl(var(--status-postado))" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Kpi label="Total clientes" value={clientes.length} icon={Users} accent="hsl(var(--primary))" />
         <Kpi label="Renovação" value={renovacao} icon={RefreshCw} accent="hsl(var(--status-renovacao))" />
         <Kpi label="Alertas" value={alertasPendentes} icon={Bell} accent="hsl(var(--destructive))" />
       </div>
