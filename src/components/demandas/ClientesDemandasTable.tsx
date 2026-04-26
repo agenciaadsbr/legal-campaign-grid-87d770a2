@@ -133,7 +133,7 @@ export function ClientesDemandasTable() {
             className="w-56 h-9"
           />
           <Select value={fResp} onValueChange={setFResp}>
-            <SelectTrigger className="h-9 w-44">
+            <SelectTrigger className="h-9 w-48">
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent>
@@ -146,7 +146,7 @@ export function ClientesDemandasTable() {
             </SelectContent>
           </Select>
           <Select value={fStatus} onValueChange={setFStatus}>
-            <SelectTrigger className="h-9 w-36">
+            <SelectTrigger className="h-9 w-40">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -159,7 +159,7 @@ export function ClientesDemandasTable() {
             </SelectContent>
           </Select>
           <Select value={fPrio} onValueChange={setFPrio}>
-            <SelectTrigger className="h-9 w-36">
+            <SelectTrigger className="h-9 w-44">
               <SelectValue placeholder="Prioridade" />
             </SelectTrigger>
             <SelectContent>
