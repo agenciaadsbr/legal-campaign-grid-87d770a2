@@ -142,6 +142,15 @@ export const useDemandasStore = create<State>((set, get) => ({
     }
     set({ demandas: [data as Demanda, ...get().demandas] });
     toast.success("Demanda criada");
+
+    // Alerta para demanda urgente
+    if ((data as Demanda).prioridade === "Urgente") {
+      supabase.from("alertas").insert({
+        cliente_id: (data as Demanda).cliente_id,
+        mensagem: `[DEMANDA] Nova demanda urgente: "${(data as Demanda).titulo}"`,
+        tipo_alerta: "Posts_Pendentes" as any,
+      }).then(() => {});
+    }
     return data!.id;
   },
 
@@ -150,6 +159,7 @@ export const useDemandasStore = create<State>((set, get) => ({
     delete clean.id;
     delete clean.created_at;
     delete clean.updated_at;
+    const prev = get().demandas.find((x) => x.id === id);
     const { data, error } = await supabase
       .from("demandas")
       .update(clean)
@@ -163,6 +173,16 @@ export const useDemandasStore = create<State>((set, get) => ({
     set({
       demandas: get().demandas.map((d) => (d.id === id ? (data as Demanda) : d)),
     });
+
+    // Alerta quando transita para Atrasado
+    const next = data as Demanda;
+    if (prev && prev.status !== "Atrasado" && next.status === "Atrasado") {
+      supabase.from("alertas").insert({
+        cliente_id: next.cliente_id,
+        mensagem: `[DEMANDA] "${next.titulo}" está atrasada`,
+        tipo_alerta: "Posts_Pendentes" as any,
+      }).then(() => {});
+    }
   },
 
   async deleteDemanda(id) {

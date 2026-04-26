@@ -1,59 +1,133 @@
-## Objetivo
 
-Reestruturar o **interior do card de detalhe da Demanda** (`DemandaDetalheDialog.tsx`) para reproduzir fielmente a mesma estrutura visual do card do módulo **Clientes** (`PostDetalhe.tsx`) mostrada na imagem de referência — eliminando o layout atual baseado em `Tabs` e adotando o formato em **dois Cards verticais** (informações + atividade).
+# Plano: Camada de Clientes dentro do módulo Demandas
 
----
-
-## Comparação atual × alvo
-
-**Hoje (Demandas):** `Dialog` com `Tabs` (Atividade / Arquivos / Comentários / Histórico), grid de 4 selects no topo, textareas simples.
-
-**Alvo (igual à imagem do Clientes/PostDetalhe):**
-1. **Card 1 — "Informações da Demanda"** (substitui o conteúdo atual do dialog), contendo, em ordem:
-   - **Header**: label "TÍTULO DA TAREFA" em uppercase pequeno, `Input` grande do título (sem borda), subtítulo `Cliente · Categoria · Subtipo`. À direita: botão **Urgente** (toggle amarelo/âmbar quando `prioridade = "Urgente"`) + `Select` de **Status**.
-   - **Grid 2 colunas** com: Data limite (datetime-local), Data início, Link/Referência (se aplicável — opcional, podemos omitir se não houver campos equivalentes), Responsável (Select).
-   - **Bloco Responsáveis** com `Popover` + `AvatarStack` (igual ao PostDetalhe) — usando `responsavel_id` (single) ou habilitando múltiplos se desejado (mantém single por enquanto, apenas visual com avatar).
-   - **Separador + Bloco Anexos**: thumbnails 72×72 com preview de imagem, ícone para arquivos, botão "+ Adicionar anexo" e tile tracejado "Anexar". Reaproveita `anexos` de `useDemandas` + `addAnexo`.
-   - **Separador + Atividade / Briefing**: `Textarea` ligada a `descricao` com hint "Visível apenas dentro deste card."
-   - **Separador + Campo extra opcional** (ex: "Observações") — só se fizer sentido; caso contrário, omitir para manter simetria sem inventar campo.
-2. **Card 2 — "Atividade"** (igual ao da imagem):
-   - Lista de comentários com bolhas (componente local simples — não precisa do `ComentarioBubble` do PostDetalhe, mas estilo similar: avatar do autor colorido, nome, data, texto).
-   - Composer com `RichTextEditor` (mesmo componente usado em PostDetalhe), botões de anexar imagem/arquivo/emoji/menção (visuais), e botão **Enviar** azul à direita com texto "Enter envia · Shift+Enter quebra".
-   - Mantém `addComentario` existente.
+Objetivo: criar uma hierarquia **Cliente → Projeto → Demanda** dentro do módulo `Demandas`, sem alterar o módulo Clientes, Posts, Kanban de posts ou Cards existentes.
 
 ---
 
-## Mudanças técnicas
+## 1. Nova subaba "Clientes" em `src/pages/Demandas.tsx`
 
-### Arquivo principal
-**`src/components/demandas/DemandaDetalheDialog.tsx`** — reescrito:
-- Remove `Tabs` e o grid de 4 selects superior.
-- Mantém `Dialog` + `DialogContent` (max-w-4xl, scroll), mas o conteúdo interno passa a ser **dois `<Card>` empilhados** com a mesma estrutura/classes do `PostDetalhe` (linhas 132–399 e 402+).
-- Reaproveita: `updateDemanda`, `addComentario`, `addAnexo`, `deleteDemanda`, `comentarios`, `anexos`, `historico` do `useDemandas`.
-- Botão **Urgente** alterna `prioridade` entre `"Urgente"` e `"Normal"` (estilo `bg-amber-500` quando ativo, igual ao PostDetalhe).
-- **Histórico**: vira um `<details>`/colapsável discreto no rodapé do Card 1 (ou removido daqui — pode ficar acessível pelo `HistoricoComentariosDialog` existente). Proposta: manter um botão pequeno "Ver histórico" que abre o dialog já existente, evitando poluir o layout.
-- **Excluir** (admin): mantém o `AlertDialog` no canto superior direito do Card 1, ao lado do Status.
+Adicionar nova `TabsTrigger value="clientes"` no `<TabsList>` (entre "Quadro Geral" e "Minhas Demandas"). O conteúdo da aba renderiza o novo componente `ClientesDemandasTable`.
 
-### Componentes reutilizados (sem alterar)
-- `Card`, `CardHeader`, `CardContent`, `CardTitle` de `@/components/ui/card`.
-- `RichTextEditor` e `RichTextView` de `@/components/`.
-- `AvatarStack` de `@/components/AvatarStack`.
-- `Popover`, `Checkbox`, `Select`, `Input`, `Textarea`, `Button`, `Label`.
-
-### Bolhas de comentário
-Componente inline simples no próprio arquivo (não justifica novo arquivo): avatar circular colorido com inicial do autor, nome + timestamp, `RichTextView` para o texto, suporte a `imagem_url` se houver. Não precisa editar/deletar nesta primeira versão (mantém paridade com o store atual de demandas).
-
-### Tokens de design
-Tudo via tokens semânticos (`bg-card`, `border-border`, `text-muted-foreground`, etc.) conforme a regra de Core Memory — sem cores hardcoded. O amarelo do botão Urgente segue o padrão já usado em PostDetalhe (`bg-amber-500`), mantendo consistência cross-módulo.
+Nada do que já existe (Quadro Geral, Minhas, Novas, Calendário, Relatórios) será alterado.
 
 ---
 
-## Itens não incluídos (fora de escopo)
-- Não altera o `DemandCard.tsx` (cards do Kanban) — só o **interior do dialog de detalhe**.
-- Não altera o schema do banco nem o store `useDemandas`.
-- Não adiciona campos novos à entidade `Demanda` que não existam hoje.
+## 2. Novo componente `src/components/demandas/ClientesDemandasTable.tsx`
+
+Lista clientes que possuem ao menos uma demanda. Estrutura visual no padrão da tabela do módulo Clientes (mesmas classes / `Table` shadcn), porém **derivada de `useDemandas` + `useCRM`** (não toca em `clientes` como entidade primária — apenas lê).
+
+### Agregação por cliente
+Para cada `cliente_id` distinto presente em `demandas`:
+- **Nome do cliente** — buscado em `useCRM().clientes`
+- **Responsáveis** — união de `responsavel_id` das demandas do cliente, renderizados em `AvatarStack`
+- **Última atividade** — `max(updated_at)` das demandas do cliente
+- **Total de demandas** — count
+- **Demandas atrasadas** — count onde `status === 'Atrasado'`
+- **Demandas urgentes** — count onde `prioridade === 'Urgente'`
+- **Ações** — botão "Abrir projeto" → navega para `/demandas/cliente/:id`
+
+### Filtros (acima da tabela)
+- Busca por nome de cliente (`Input`)
+- Filtro por responsável (`Select`)
+- Filtro por status (`Select`, usa `STATUS_DEMANDA`)
+- Filtro por prioridade (`Select`, usa `PRIORIDADES`)
+
+Os filtros aplicam-se às demandas antes da agregação (ex.: filtro por status mostra apenas clientes que têm demandas naquele status, e os contadores refletem o filtro).
 
 ---
 
-## Resultado esperado
-Ao clicar em uma demanda em qualquer aba (Quadro, Calendário, Novas Solicitações, Minhas Demandas), o dialog aberto terá **a mesma identidade visual** do detalhe de Post do módulo Clientes: dois cards empilhados, header com Urgente + Status, grid de campos, anexos em thumbnails, briefing, e bloco de Atividade com editor rico — exatamente como na imagem de referência.
+## 3. Nova rota `/demandas/cliente/:clienteId`
+
+### 3a. Registrar em `src/App.tsx`
+Dentro do bloco protegido pelo `RequireAuth`/`AppLayout`, adicionar:
+```tsx
+<Route path="/demandas/cliente/:clienteId" element={<ProjetoDemandasCliente />} />
+```
+
+### 3b. Nova página `src/pages/ProjetoDemandasCliente.tsx`
+Estrutura:
+- **Topo**: breadcrumb "Demandas / Clientes / {Nome}" + nome do cliente em destaque + logo (se existir em `clientes.logo_url`).
+- **Resumo**: cards pequenos com totais — Total, Em andamento, Atrasadas, Urgentes, Concluídas.
+- **Filtros**: responsável, prioridade, categoria, busca por título (mesmos componentes já usados em `Demandas.tsx`).
+- **Kanban**: novo componente `ProjetoKanban` com as 6 colunas exigidas: `Planejamento`, `Criar`, `Revisar`, `Entregue`, `Concluido`, `Atrasado` (já são exatamente os valores em `STATUS_DEMANDA`).
+- Botão "Nova demanda" no topo (reusa `NovaDemandaDialog` com `cliente_id` pré-preenchido — passar prop opcional).
+
+Reusa `DemandaDetalheDialog` para abrir cards.
+
+---
+
+## 4. Novo componente `src/components/demandas/ProjetoKanban.tsx`
+
+Componente **separado** do `DemandasKanban` atual (que continua intocado). Diferenças:
+- Recebe `clienteId` e filtra demandas localmente.
+- Reusa visual de `DemandCard` (cards seguem padrão atual conforme requisito 7).
+- Drag & drop de status reusando `useDemandas().moveStatus`.
+- Em cards na coluna **Planejamento**, exibe botão extra **"Iniciar Demanda"** que executa:
+  ```ts
+  updateDemanda(d.id, { status: 'Criar', data_inicio: new Date().toISOString() })
+  ```
+  (Requisito 8.) O botão pode aparecer no rodapé do card ou via overlay/hover; preferimos botão pequeno fixo no card quando `status === 'Planejamento'`.
+
+Para evitar mexer em `DemandCard.tsx` (usado em outras telas), vamos adicionar uma **prop opcional** `extraAction?: ReactNode` em `DemandCard` — não altera comportamento existente, apenas renderiza o slot quando passado. O `ProjetoKanban` injeta o botão "Iniciar Demanda" via essa prop.
+
+---
+
+## 5. Regra de atraso (requisito 10)
+
+Já está garantida pelas funções Postgres existentes:
+- `auto_marcar_demanda_atrasada` (trigger) marca `Atrasado` quando `data_limite < now()` e status não é `Concluido/Entregue/Atrasado`.
+- `marcar_demandas_atrasadas` (RPC) já é chamada em `useDemandasStore.load()`.
+
+Nada a fazer no banco. Apenas confirmar que a lógica já cobre a regra (status != concluído + data_limite < hoje → Atrasado). **Não** mover tarefas automaticamente por outras datas (requisito 9 — já é o comportamento atual).
+
+---
+
+## 6. Alertas com tag `[DEMANDA]` (requisito 13)
+
+Sempre que uma demanda transitar para `Atrasado` ou for criada como `Urgente`, inserir em `public.alertas` uma linha com:
+- `cliente_id` da demanda
+- `mensagem` prefixada com `[DEMANDA] ...` (ex.: `[DEMANDA] "Criativo X" está atrasada`)
+- `tipo_alerta` reusando enum existente (provavelmente `Atraso` / `Urgente` — vou confirmar lendo o enum no momento da implementação; se não existir, uso o valor padrão mais próximo).
+- `status` = `Pendente`
+
+Implementação: dentro de `useDemandasStore.updateDemanda` e `createDemanda`, após sucesso, fazer um `supabase.from('alertas').insert(...)` quando aplicável. Sem migrações de schema.
+
+---
+
+## 7. Itens preservados (requisito 11)
+
+- Módulo `Clientes` (`src/pages/Clientes.tsx`, `ClienteDetalhe.tsx`): **não tocar**.
+- Kanban de posts (`PostDetalhe`, `cards`, `posts`): **não tocar**.
+- `DemandasKanban` (Quadro Geral): **não tocar**.
+- `DemandCard`: apenas adição de prop opcional `extraAction` (backward compatible).
+- `cliente_id` reusa o mesmo da tabela `clientes` (requisito 12) — nenhuma duplicação.
+
+---
+
+## 8. Arquivos a criar / modificar
+
+**Criar:**
+- `src/components/demandas/ClientesDemandasTable.tsx`
+- `src/components/demandas/ProjetoKanban.tsx`
+- `src/pages/ProjetoDemandasCliente.tsx`
+
+**Modificar (cirúrgico):**
+- `src/pages/Demandas.tsx` — adicionar 1 `TabsTrigger` + 1 `TabsContent`.
+- `src/App.tsx` — registrar rota `/demandas/cliente/:clienteId`.
+- `src/components/demandas/DemandCard.tsx` — adicionar prop opcional `extraAction`.
+- `src/components/demandas/NovaDemandaDialog.tsx` — aceitar `defaultClienteId` opcional.
+- `src/store/demandas.ts` — disparar insert em `alertas` ao atrasar / criar urgente (alteração isolada, sem mudar API existente).
+
+**Sem migrações de banco.** Estruturas (`demandas`, `alertas`, triggers) já comportam o requisito.
+
+---
+
+## 9. Validação pós-implementação
+
+- `tsc --noEmit` deve passar.
+- Navegar `/demandas` → aba Clientes mostra lista agregada.
+- Clicar em um cliente → `/demandas/cliente/:id` abre Kanban filtrado.
+- Card em "Planejamento" exibe botão "Iniciar Demanda"; clique muda status para `Criar` e seta `data_inicio`.
+- Quadro Geral, Minhas, Novas, Calendário, Relatórios continuam idênticos.
+- Módulo Clientes inalterado.

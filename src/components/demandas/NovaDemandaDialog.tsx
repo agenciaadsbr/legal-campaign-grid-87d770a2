@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -33,13 +33,19 @@ import { useDemandas } from "@/store/demandas";
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  defaultClienteId?: string;
 }
 
-export function NovaDemandaDialog({ open, onOpenChange }: Props) {
+export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Props) {
   const { clientes, responsaveis } = useCRM();
   const createDemanda = useDemandas((s) => s.createDemanda);
 
-  const [cliente_id, setClienteId] = useState("");
+  const [cliente_id, setClienteId] = useState(defaultClienteId ?? "");
+
+  useEffect(() => {
+    if (open && defaultClienteId) setClienteId(defaultClienteId);
+  }, [open, defaultClienteId]);
+
   const [titulo, setTitulo] = useState("");
   const [categoria, setCategoria] = useState<DemandaCategoria>("Designer");
   const [subtipo, setSubtipo] = useState<string>("");

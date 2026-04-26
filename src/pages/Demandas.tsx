@@ -15,6 +15,7 @@ import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
 import { DemandaRapidaDialog } from "@/components/demandas/DemandaRapidaDialog";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { RelatoriosDemandas } from "@/components/demandas/RelatoriosDemandas";
+import { ClientesDemandasTable } from "@/components/demandas/ClientesDemandasTable";
 import {
   CATEGORIAS, CATEGORIA_LABEL, PRIORIDADES, PRIORIDADE_LABEL,
   STATUS_DEMANDA, STATUS_DEMANDA_LABEL,
@@ -174,6 +175,7 @@ export default function Demandas() {
       <Tabs defaultValue="quadro">
         <TabsList>
           <TabsTrigger value="quadro">Quadro Geral</TabsTrigger>
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="minhas">Minhas Demandas</TabsTrigger>
           <TabsTrigger value="novas">Novas Solicitações</TabsTrigger>
           <TabsTrigger value="calendario">Calendário</TabsTrigger>
@@ -182,6 +184,10 @@ export default function Demandas() {
 
         <TabsContent value="quadro" className="mt-4">
           <DemandasKanban demandas={filtradas} onOpen={setSelecionada} />
+        </TabsContent>
+
+        <TabsContent value="clientes" className="mt-4">
+          <ClientesDemandasTable />
         </TabsContent>
 
         <TabsContent value="minhas" className="mt-4">
