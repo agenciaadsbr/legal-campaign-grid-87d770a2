@@ -1327,6 +1327,20 @@ export default function Clientes() {
         </div>
       </div>
 
+      {visao === "clientes" ? (
+        <ClientesGeralTable
+          filtroBusca={busca}
+          filtroResponsaveis={filtroResponsaveis}
+          apenasMinhas={apenasMinhas}
+          currentUserId={currentUserId}
+          filtroStatusGlobal={filtroStatusGlobal}
+          onAbrirHistorico={setHistoricoClienteId}
+          acoesSlot={(clienteId) => {
+            const cli = clientes.find((c) => c.id === clienteId);
+            return cli ? <AcoesCliente cliente={cli} /> : null;
+          }}
+        />
+      ) : (
       <div className="border rounded-lg bg-card overflow-hidden">
         <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-160px)]">
           <table className="w-full text-xs border-collapse">
