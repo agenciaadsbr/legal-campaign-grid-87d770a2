@@ -119,6 +119,12 @@ export function DemandCard({ demanda, onClick, draggable, onDragStart, extraActi
           {STATUS_DEMANDA_LABEL[demanda.status]} · {PRIORIDADE_LABEL[demanda.prioridade]}
         </span>
       </div>
+
+      {extraAction && (
+        <div onClick={(e) => e.stopPropagation()} className="pt-1">
+          {extraAction}
+        </div>
+      )}
     </div>
   );
 }
