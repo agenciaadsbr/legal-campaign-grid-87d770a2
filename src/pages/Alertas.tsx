@@ -18,6 +18,9 @@ const tipoCor: Record<TipoAlerta, string> = {
   Cliente_Pausado: "#9ca3af",
   Sem_Posts_Ativos: "#f59e0b",
   Posts_Atrasados: "#ef4444",
+  Onboarding_Sem_Demanda: "#3b82f6",
+  Onboarding_Sem_Post: "#3b82f6",
+  Onboarding_Prazo_Vencido: "#ef4444",
 };
 
 type AlertaItem = Alerta & { _derivado?: boolean; _origem?: "POST" | "DEMANDA" };
