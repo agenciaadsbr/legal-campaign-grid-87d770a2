@@ -8,6 +8,8 @@ import { Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useDemandas, useDemandasBootstrap } from "@/store/demandas";
+import { Badge } from "@/components/ui/badge";
 
 const tipoCor: Record<TipoAlerta, string> = {
   Renovacao: "#a855f7",
@@ -18,7 +20,44 @@ const tipoCor: Record<TipoAlerta, string> = {
   Posts_Atrasados: "#ef4444",
 };
 
-type AlertaItem = Alerta & { _derivado?: boolean };
+type AlertaItem = Alerta & { _derivado?: boolean; _origem?: "POST" | "DEMANDA" };
+
+function useAlertasDemandas(): AlertaItem[] {
+  useDemandasBootstrap();
+  const demandas = useDemandas((s) => s.demandas);
+  return useMemo(() => {
+    const out: AlertaItem[] = [];
+    demandas.forEach((d) => {
+      if (d.status === "Atrasado") {
+        out.push({
+          id: `demanda-atraso:${d.id}`,
+          cliente_id: d.cliente_id,
+          tipo_alerta: "Posts_Atrasados" as TipoAlerta,
+          data_alerta: new Date().toISOString().slice(0, 10),
+          mensagem: `${d.titulo} — atrasada`,
+          status: "Pendente",
+          created_at: d.updated_at,
+          _derivado: true,
+          _origem: "DEMANDA",
+        });
+      }
+      if (d.prioridade === "Urgente" && !d.responsavel_id && d.status !== "Concluido") {
+        out.push({
+          id: `demanda-urgente:${d.id}`,
+          cliente_id: d.cliente_id,
+          tipo_alerta: "Posts_Pendentes" as TipoAlerta,
+          data_alerta: new Date().toISOString().slice(0, 10),
+          mensagem: `${d.titulo} — urgente sem responsável`,
+          status: "Pendente",
+          created_at: d.created_at,
+          _derivado: true,
+          _origem: "DEMANDA",
+        });
+      }
+    });
+    return out;
+  }, [demandas]);
+}
 
 function useAlertasDerivados(): AlertaItem[] {
   const { clientes, cards } = useCRM();
@@ -63,6 +102,7 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
   const { alertas, clientes, resolverAlerta, _loadAll } = useCRM();
   const { canWrite } = useAuth();
   const derivados = useAlertasDerivados();
+  const derivadosDemandas = useAlertasDemandas();
   const [resolvendo, setResolvendo] = useState<string | null>(null);
 
   // Chave de "resolvido" para alertas derivados: usamos linhas em `alertas`
@@ -79,10 +119,10 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
       const derivadosVisiveis = derivados.filter(
         (d) => !resolvidosKeys.has(`${d.cliente_id}|${d.tipo_alerta}|${d.mensagem}`),
       );
-      return [...persistidos, ...derivadosVisiveis];
+      return [...persistidos, ...derivadosVisiveis, ...derivadosDemandas];
     }
     return alertas.filter((a) => a.status === "Resolvido");
-  }, [status, alertas, derivados, resolvidosKeys]);
+  }, [status, alertas, derivados, derivadosDemandas, resolvidosKeys]);
 
   const onResolver = async (a: AlertaItem) => {
     setResolvendo(a.id);
@@ -131,7 +171,12 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
                 <td className="px-4 py-2.5"><ColorBadge label={a.tipo_alerta.replace(/_/g, " ")} color={tipoCor[a.tipo_alerta]} /></td>
                 <td className="px-4 py-2.5"><Link to={`/clientes/${a.cliente_id}`} className="text-primary hover:underline">{cli?.nome_cliente}</Link></td>
                 <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.data_alerta).toLocaleDateString("pt-BR")}</td>
-                <td className="px-4 py-2.5">{a.mensagem}</td>
+                <td className="px-4 py-2.5">
+                  <Badge variant="outline" className="text-[10px] mr-2 font-mono">
+                    {a._origem === "DEMANDA" ? "[DEMANDA]" : "[POST]"}
+                  </Badge>
+                  {a.mensagem}
+                </td>
                 <td className="px-4 py-2.5 text-right">
                   {status === "Pendente" && canWrite && (
                     <Button size="sm" variant="outline" disabled={resolvendo === a.id} onClick={() => onResolver(a)}>

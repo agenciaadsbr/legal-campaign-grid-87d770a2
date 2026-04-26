@@ -2,6 +2,8 @@ import { useCRM } from "@/store/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
 import { useMemo } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { RelatoriosDemandas } from "@/components/demandas/RelatoriosDemandas";
 
 export default function Relatorios() {
   const { posts, responsaveis, cards } = useCRM();
@@ -31,6 +33,12 @@ export default function Relatorios() {
         <h1 className="text-2xl font-bold">Relatórios</h1>
         <p className="text-sm text-muted-foreground">Visão analítica do CRM</p>
       </div>
+      <Tabs defaultValue="posts">
+        <TabsList>
+          <TabsTrigger value="posts">Posts</TabsTrigger>
+          <TabsTrigger value="demandas">Demandas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="posts" className="mt-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader><CardTitle className="text-base">Posts por mês</CardTitle></CardHeader>
@@ -69,6 +77,11 @@ export default function Relatorios() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+        <TabsContent value="demandas" className="mt-4">
+          <RelatoriosDemandas />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

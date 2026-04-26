@@ -4,7 +4,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, FileText, Bell, BarChart3, Scale, LogOut, Settings } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Bell, BarChart3, Scale, LogOut, Settings, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Contratos", url: "/contratos", icon: FileText },
+  { title: "Demandas", url: "/demandas", icon: ListChecks },
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
