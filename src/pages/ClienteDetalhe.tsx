@@ -434,7 +434,7 @@ export default function ClienteDetalhe() {
   const cardsCliente = cards.filter((c) => c.cliente_id === cliente.id);
   const postados = cardsCliente.filter((c) => c.status_card === "Postado").length;
   const resps = responsaveis.filter((r) => cliente.responsaveis.includes(r.id));
-  const statusOpt = statusOptions.find((s) => s.label === cliente.status_cliente);
+  // Badge unificado: ciclo de vida
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
