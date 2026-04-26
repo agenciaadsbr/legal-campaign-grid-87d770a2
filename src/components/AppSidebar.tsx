@@ -19,7 +19,7 @@ const items = [
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
-] as const;
+] as { title: string; url: string; icon: typeof LayoutDashboard; end?: boolean }[];
 
 export function AppSidebar() {
   const { state } = useSidebar();
