@@ -440,7 +440,7 @@ export default function ClienteDetalhe() {
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-wrap items-start gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold">{cliente.nome_cliente}</h1>
@@ -454,18 +454,20 @@ export default function ClienteDetalhe() {
             <AvatarStack responsaveis={resps} size="sm" />
           </div>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/clientes/${cliente.id}/projeto`}>
-            <LayoutDashboard className="h-4 w-4 mr-1" /> Ver projeto completo
-          </Link>
-        </Button>
       </div>
 
       <Tabs defaultValue="quadro">
-        <TabsList>
-          <TabsTrigger value="quadro">Quadro</TabsTrigger>
-          <TabsTrigger value="atividade">Atividade</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TabsList>
+            <TabsTrigger value="quadro">Quadro</TabsTrigger>
+            <TabsTrigger value="atividade">Atividade</TabsTrigger>
+          </TabsList>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/clientes/${cliente.id}/projeto`}>
+              <LayoutDashboard className="h-4 w-4 mr-1" /> Ver projeto completo
+            </Link>
+          </Button>
+        </div>
         <TabsContent value="quadro" className="mt-4"><KanbanView /></TabsContent>
         <TabsContent value="atividade" className="mt-4"><AtividadeView /></TabsContent>
       </Tabs>
