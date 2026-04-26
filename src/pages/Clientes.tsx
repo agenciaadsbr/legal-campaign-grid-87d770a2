@@ -254,16 +254,13 @@ function NovoClienteDialog() {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-            <div>
-              <Label>Prazo de onboarding</Label>
-              <Input
-                type="date"
-                value={form.prazo_onboarding}
-                onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
-              />
-            </div>
+          <div>
+            <Label>Prazo de onboarding</Label>
+            <Input
+              type="date"
+              value={form.prazo_onboarding}
+              onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
+            />
           </div>
           <div>
             <Label>Responsáveis</Label>
