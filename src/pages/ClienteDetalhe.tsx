@@ -442,7 +442,7 @@ export default function ClienteDetalhe() {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold">{cliente.nome_cliente}</h1>
-            {statusOpt && <ColorBadge label={statusOpt.label} color={statusOpt.cor} />}
+            <StatusClienteBadge status={cliente.status_global} size="sm" />
           </div>
           <div className="text-sm text-muted-foreground flex items-center gap-3 flex-wrap">
             <span>Nicho: <span className="text-foreground">{cliente.nicho}</span></span>
