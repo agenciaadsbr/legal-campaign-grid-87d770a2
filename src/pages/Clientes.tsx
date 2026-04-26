@@ -1255,19 +1255,45 @@ export default function Clientes() {
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold leading-tight">Clientes</h1>
-          <p className="text-xs text-muted-foreground">{clientes.length} clientes • Revisar / Criar</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-xl font-bold leading-tight">Clientes</h1>
+            <p className="text-xs text-muted-foreground">{clientes.length} clientes</p>
+          </div>
+          <ToggleGroup
+            type="single"
+            value={visao}
+            onValueChange={(v) => v && setVisao(v as any)}
+            className="border rounded-md p-0.5"
+          >
+            <ToggleGroupItem value="clientes" className="h-7 px-2 text-xs">Clientes</ToggleGroupItem>
+            <ToggleGroupItem value="status" className="h-7 px-2 text-xs">Status</ToggleGroupItem>
+          </ToggleGroup>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
-            <Switch checked={apenasPendentes} onCheckedChange={setApenasPendentes} />
-            <span>Apenas com ações pendentes</span>
-          </label>
-          <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
-            <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
-            <span>Mostrar concluídos</span>
-          </label>
+          <Select value={filtroStatusGlobal} onValueChange={setFiltroStatusGlobal}>
+            <SelectTrigger className="h-8 w-[170px] text-xs">
+              <SelectValue placeholder="Status do cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos (ciclo de vida)</SelectItem>
+              {STATUS_CLIENTE_OPCOES.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {visao === "status" && (
+            <>
+              <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
+                <Switch checked={apenasPendentes} onCheckedChange={setApenasPendentes} />
+                <span>Apenas com ações pendentes</span>
+              </label>
+              <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
+                <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
+                <span>Mostrar concluídos</span>
+              </label>
+            </>
+          )}
           <Select value={filtroStatusCliente} onValueChange={setFiltroStatusCliente}>
             <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Status do cliente" />
