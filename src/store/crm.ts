@@ -33,11 +33,18 @@ export interface Responsavel {
   email: string;
 }
 
+export type StatusClienteGlobal = "Onboarding" | "Ativo" | "Pausado" | "Encerrado";
+
 export interface Cliente {
   id: string;
   nome_cliente: string;
   nicho: string;
   status_cliente: StatusCliente;
+  /** Status global do ciclo de vida (Onboarding/Ativo/Pausado/Encerrado) — independente de `status_cliente` */
+  status_global: StatusClienteGlobal;
+  data_inicio_onboarding: string | null;
+  prazo_onboarding: string | null;
+  data_ativacao: string | null;
   data_inicio_contrato: string;
   data_fim_contrato: string;
   responsaveis: string[];
