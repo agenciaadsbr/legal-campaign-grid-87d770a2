@@ -1,6 +1,6 @@
 import { useCRM } from "@/store/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Calendar, CheckCircle2, RefreshCw, Bell } from "lucide-react";
+import { Users, FileText, Calendar, CheckCircle2, RefreshCw, Bell, Sparkles, Pause, UserCheck } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from "recharts";
 import { useMemo } from "react";
 import { DashboardDemandasSection } from "@/components/demandas/DashboardDemandasSection";
