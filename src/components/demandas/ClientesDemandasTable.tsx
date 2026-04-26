@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AvatarStack } from "@/components/AvatarStack";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
+import { CelulaResponsaveis } from "@/components/clientes/CelulaResponsaveis";
 import { ArrowRight, AlertTriangle, Zap } from "lucide-react";
 
 interface Props {
