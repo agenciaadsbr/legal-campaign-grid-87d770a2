@@ -64,6 +64,7 @@ function useAlertasDemandas(): AlertaItem[] {
 
 function useAlertasDerivados(): AlertaItem[] {
   const { clientes, cards } = useCRM();
+  const demandas = useDemandas((s) => s.demandas);
   return useMemo(() => {
     const out: AlertaItem[] = [];
     const hoje = new Date();
@@ -96,9 +97,27 @@ function useAlertasDerivados(): AlertaItem[] {
       if (atrasados.length > 0) {
         out.push(mk("Posts_Atrasados", c.id, `${atrasados.length} post(s) atrasado(s)`));
       }
+
+      // [ONBOARDING] alertas para clientes em fase de onboarding
+      if ((c.status_global ?? "Onboarding") === "Onboarding") {
+        const temDemanda = demandas.some((d) => d.cliente_id === c.id);
+        if (!temDemanda) {
+          out.push(mk("Onboarding_Sem_Demanda", c.id, "[ONBOARDING] Cliente sem demanda criada"));
+        }
+        const temPostIniciado = meusCards.some((k) => k.status_card !== "Planejamento");
+        if (!temPostIniciado) {
+          out.push(mk("Onboarding_Sem_Post", c.id, "[ONBOARDING] Cliente sem post iniciado"));
+        }
+        if (c.prazo_onboarding) {
+          const prazo = new Date(c.prazo_onboarding);
+          if (prazo < hoje) {
+            out.push(mk("Onboarding_Prazo_Vencido", c.id, "[ONBOARDING] Prazo de ativação vencido"));
+          }
+        }
+      }
     });
     return out;
-  }, [clientes, cards]);
+  }, [clientes, cards, demandas]);
 }
 
 function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
