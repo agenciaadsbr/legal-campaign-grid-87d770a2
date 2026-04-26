@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDemandas } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AvatarStack } from "@/components/AvatarStack";
@@ -21,18 +20,18 @@ interface Props {
   filtroResp?: string;
   filtroStatus?: string;
   filtroPrio?: string;
+  filtroBusca?: string;
 }
 
 export function ClientesDemandasTable({
   filtroResp = "todos",
   filtroStatus = "todos",
   filtroPrio = "todas",
+  filtroBusca = "",
 }: Props) {
   const demandas = useDemandas((s) => s.demandas);
   const { clientes, responsaveis } = useCRM();
   const navigate = useNavigate();
-
-  const [busca, setBusca] = useState("");
 
   const linhas = useMemo(() => {
     const filtroAtivo =
@@ -104,8 +103,8 @@ export function ClientesDemandasTable({
       lista = lista.filter((l) => l.temDemanda);
     }
 
-    if (busca.trim()) {
-      const q = busca.toLowerCase();
+    if (filtroBusca.trim()) {
+      const q = filtroBusca.toLowerCase();
       lista = lista.filter((l) => l.nome.toLowerCase().includes(q));
     }
 
@@ -114,20 +113,10 @@ export function ClientesDemandasTable({
       (a, b) => +new Date(b.ultimaAtividade) - +new Date(a.ultimaAtividade),
     );
     return lista;
-  }, [demandas, clientes, busca, filtroResp, filtroStatus, filtroPrio]);
+  }, [demandas, clientes, filtroBusca, filtroResp, filtroStatus, filtroPrio]);
 
   return (
     <div className="space-y-1.5">
-      <Card>
-        <CardContent className="p-2 flex flex-wrap items-center gap-1.5">
-          <Input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar cliente..."
-            className="w-56 h-9"
-          />
-        </CardContent>
-      </Card>
 
       <Card>
         <CardContent className="p-0">

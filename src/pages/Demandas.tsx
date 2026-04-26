@@ -194,6 +194,7 @@ export default function Demandas() {
             filtroResp={fResp}
             filtroStatus={fStatus}
             filtroPrio={fPrio}
+            filtroBusca={busca}
           />
         </TabsContent>
 
