@@ -27,8 +27,13 @@ type FiltroRapido = "todas" | "hoje" | "atrasadas" | "semana";
 
 export default function Demandas() {
   useDemandasBootstrap();
+  useCRMBootstrap();
   const demandas = useDemandas((s) => s.demandas);
   const { clientes, responsaveis } = useCRM();
+  const clientesOrdenados = useMemo(
+    () => [...clientes].sort((a, b) => a.nome_cliente.localeCompare(b.nome_cliente, "pt-BR")),
+    [clientes]
+  );
   const { user } = useAuth();
 
   const [novaOpen, setNovaOpen] = useState(false);
