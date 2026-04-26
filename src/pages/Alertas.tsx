@@ -102,6 +102,7 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
   const { alertas, clientes, resolverAlerta, _loadAll } = useCRM();
   const { canWrite } = useAuth();
   const derivados = useAlertasDerivados();
+  const derivadosDemandas = useAlertasDemandas();
   const [resolvendo, setResolvendo] = useState<string | null>(null);
 
   // Chave de "resolvido" para alertas derivados: usamos linhas em `alertas`
@@ -118,10 +119,10 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
       const derivadosVisiveis = derivados.filter(
         (d) => !resolvidosKeys.has(`${d.cliente_id}|${d.tipo_alerta}|${d.mensagem}`),
       );
-      return [...persistidos, ...derivadosVisiveis];
+      return [...persistidos, ...derivadosVisiveis, ...derivadosDemandas];
     }
     return alertas.filter((a) => a.status === "Resolvido");
-  }, [status, alertas, derivados, resolvidosKeys]);
+  }, [status, alertas, derivados, derivadosDemandas, resolvidosKeys]);
 
   const onResolver = async (a: AlertaItem) => {
     setResolvendo(a.id);
