@@ -34,7 +34,7 @@ export function ClientesDemandasTable({
   filtroStatusGlobal = "todos",
 }: Props) {
   const demandas = useDemandas((s) => s.demandas);
-  const { clientes, responsaveis } = useCRM();
+  const { clientes } = useCRM();
   const navigate = useNavigate();
 
   const linhas = useMemo(() => {
