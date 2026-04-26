@@ -574,6 +574,21 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
     if (patch.observacoes !== undefined) dbPatch.descricao = patch.observacoes;
     if (patch.custom !== undefined) dbPatch.campos_personalizados = patch.custom;
+    if ((patch as any).status_global !== undefined) {
+      const novoStatus = (patch as any).status_global as StatusClienteGlobal;
+      dbPatch.status_cliente = novoStatus;
+      // ao mover para Ativo, marca data_ativacao se ainda não estiver setada
+      const cur = get().clientes.find((c) => c.id === id);
+      if (novoStatus === "Ativo" && cur && !cur.data_ativacao) {
+        dbPatch.data_ativacao = new Date().toISOString();
+      }
+    }
+    if ((patch as any).data_inicio_onboarding !== undefined)
+      dbPatch.data_inicio_onboarding = (patch as any).data_inicio_onboarding;
+    if ((patch as any).prazo_onboarding !== undefined)
+      dbPatch.prazo_onboarding = (patch as any).prazo_onboarding;
+    if ((patch as any).data_ativacao !== undefined)
+      dbPatch.data_ativacao = (patch as any).data_ativacao;
     if (Object.keys(dbPatch).length > 0) {
       await supabase.from("clientes").update(dbPatch).eq("id", id);
     }
