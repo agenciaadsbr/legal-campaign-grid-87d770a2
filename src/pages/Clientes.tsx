@@ -184,8 +184,11 @@ function NovoClienteDialog() {
     }
     setSaving(true);
     try {
-      const { duracao_meses, ...patch } = form;
-      await updateCliente(createdId, patch);
+      const { duracao_meses, prazo_onboarding, ...patch } = form;
+      await updateCliente(createdId, {
+        ...(patch as any),
+        prazo_onboarding: prazo_onboarding || null,
+      });
       toast.success("Alterações salvas");
     } catch (e: any) {
       toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
