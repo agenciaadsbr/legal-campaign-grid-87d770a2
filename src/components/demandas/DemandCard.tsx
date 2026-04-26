@@ -17,9 +17,10 @@ interface Props {
   onClick?: () => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  extraAction?: React.ReactNode;
 }
 
-export function DemandCard({ demanda, onClick, draggable, onDragStart }: Props) {
+export function DemandCard({ demanda, onClick, draggable, onDragStart, extraAction }: Props) {
   const { clientes, responsaveis } = useCRM();
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
   const resp = responsaveis.find((r) => r.id === demanda.responsavel_id);
