@@ -151,7 +151,7 @@ export function ClientesDemandasTable() {
               Nenhum cliente com demandas
             </div>
           ) : (
-            <Table className="[&_th]:py-2 [&_th]:px-2 [&_td]:py-1.5 [&_td]:px-2">
+            <Table className="[&_th]:py-1 [&_th]:px-2 [&_th]:h-7 [&_td]:py-0.5 [&_td]:px-2">
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
@@ -177,7 +177,7 @@ export function ClientesDemandasTable() {
                       <TableCell className="font-medium">{l.nome}</TableCell>
                       <TableCell>
                         {respObjs.length > 0 ? (
-                          <AvatarStack responsaveis={respObjs} size="sm" max={4} />
+                          <AvatarStack responsaveis={respObjs} size="xs" max={4} />
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
@@ -194,7 +194,7 @@ export function ClientesDemandasTable() {
                       </TableCell>
                       <TableCell className="text-center">
                         {l.atrasadas > 0 ? (
-                          <Badge variant="destructive" className="gap-1">
+                          <Badge variant="destructive" className="gap-1 h-5 px-1.5 text-xs">
                             <AlertTriangle className="h-3 w-3" />
                             {l.atrasadas}
                           </Badge>
@@ -204,7 +204,7 @@ export function ClientesDemandasTable() {
                       </TableCell>
                       <TableCell className="text-center">
                         {l.urgentes > 0 ? (
-                          <Badge className="gap-1 bg-status-renovacao text-white">
+                          <Badge className="gap-1 h-5 px-1.5 text-xs bg-status-renovacao text-white">
                             <Zap className="h-3 w-3" />
                             {l.urgentes}
                           </Badge>
@@ -214,8 +214,8 @@ export function ClientesDemandasTable() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
-                          size="sm"
                           variant="ghost"
+                          className="h-6 px-2 text-xs"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/demandas/cliente/${l.cliente_id}`);
