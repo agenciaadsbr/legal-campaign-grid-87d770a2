@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDemandas } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
+import { ColorBadge } from "@/components/StatusBadge";
+import { HistoricoComentariosDialog } from "@/components/HistoricoComentariosDialog";
 import {
   Table,
   TableBody,
