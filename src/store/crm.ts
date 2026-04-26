@@ -574,6 +574,9 @@ export const useCRM = create<State>()((set, get) => ({
     const dbPatch: any = {};
     if (patch.nome_cliente !== undefined) dbPatch.nome = patch.nome_cliente;
     if (patch.nicho !== undefined) dbPatch.nicho = patch.nicho || null;
+    if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
+    if (patch.observacoes !== undefined) dbPatch.descricao = patch.observacoes;
+    if (patch.custom !== undefined) dbPatch.campos_personalizados = patch.custom;
     // Unificado: status_cliente e status_global são o mesmo campo (ciclo de vida)
     const novoStatusUnificado =
       (patch as any).status_global ?? (patch.status_cliente as any);
