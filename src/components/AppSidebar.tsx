@@ -59,7 +59,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => {
+              {MENU_ITEMS.map((item) => {
                 const active = item.end ? pathname === item.url : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
