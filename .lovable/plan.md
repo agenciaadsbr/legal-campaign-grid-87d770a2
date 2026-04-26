@@ -1,18 +1,33 @@
-## Problema
-O campo "Buscar cliente..." no sub-tab **Clientes** duplica a função do "Buscar por título..." global no header de filtros.
+## Objetivo
+Mover os botões **Todas / Hoje / Atrasadas / Semana** para a mesma linha das abas (Clientes, Quadro Geral, Minhas Demandas, Novas Solicitações, Calendário, Relatórios), alinhados à direita — conforme a seta vermelha do print.
 
-## Plano
+## Alterações em `src/pages/Demandas.tsx`
 
-### `src/components/demandas/ClientesDemandasTable.tsx`
-- Remover o `Input` de "Buscar cliente..." e o `Card` que o envolve.
-- Remover o estado local `busca` e o `useState` correspondente.
-- Adicionar nova prop opcional `filtroBusca?: string` para receber o termo global.
-- Atualizar o `useMemo` para filtrar clientes pelo `filtroBusca` (match no `nome`), mantendo o comportamento atual de busca.
-- Remover import não usado `Input` se não houver mais uso.
+### 1. Remover do Card de filtros
+Excluir o bloco (linhas 162–174) com os botões rápidos. A barra superior fica apenas com: busca, selects, Rápida e Nova Demanda.
 
-### `src/pages/Demandas.tsx`
-- Passar `filtroBusca={busca}` para `<ClientesDemandasTable />` na aba Clientes, para que o input global "Buscar por título..." também filtre a lista de clientes por nome.
+### 2. Reposicionar ao lado da TabsList
+Envolver `<TabsList>` em um wrapper flex e renderizar os botões à direita:
+```tsx
+<div className="flex items-center justify-between gap-2 flex-wrap">
+  <TabsList>
+    <TabsTrigger value="clientes">Clientes</TabsTrigger>
+    {/* ... demais triggers ... */}
+  </TabsList>
+  <div className="flex gap-1">
+    {(["todas","hoje","atrasadas","semana"] as FiltroRapido[]).map((f) => (
+      <Button
+        key={f}
+        size="sm"
+        variant={fRapido === f ? "default" : "outline"}
+        onClick={() => setFRapido(f)}
+        className="capitalize"
+      >
+        {f}
+      </Button>
+    ))}
+  </div>
+</div>
+```
 
-## Resultado
-- Apenas uma barra de busca visível (a global no topo).
-- O termo digitado filtra demandas (por título) e também clientes (por nome) no sub-tab Clientes.
+O estado `fRapido` / `setFRapido` permanece o mesmo — apenas o local de renderização muda. Nenhuma outra lógica é afetada.
