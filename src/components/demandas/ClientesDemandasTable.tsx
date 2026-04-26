@@ -125,7 +125,7 @@ export function ClientesDemandasTable({
       a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
     );
     return lista;
-  }, [demandas, clientes, filtroBusca, filtroResp, filtroStatus, filtroPrio]);
+  }, [demandas, clientes, filtroBusca, filtroResp, filtroStatus, filtroPrio, filtroStatusGlobal]);
 
   return (
     <div className="space-y-1.5">
