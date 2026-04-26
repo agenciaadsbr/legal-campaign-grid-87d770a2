@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Calendar, CheckCircle2, RefreshCw, Bell } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from "recharts";
 import { useMemo } from "react";
+import { DashboardDemandasSection } from "@/components/demandas/DashboardDemandasSection";
 
 function Kpi({ label, value, icon: Icon, accent }: { label: string; value: number; icon: any; accent: string }) {
   return (
@@ -97,6 +98,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <DashboardDemandasSection />
     </div>
   );
 }
