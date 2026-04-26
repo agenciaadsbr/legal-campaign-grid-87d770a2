@@ -154,9 +154,8 @@ export function ClientesDemandasTable({
               </TableHeader>
               <TableBody>
                 {linhas.map((l, idx) => {
-                  const respObjs = responsaveis.filter((r) =>
-                    l.responsaveisIds.has(r.id)
-                  );
+                  const clienteAtual = clientes.find((c) => c.id === l.cliente_id);
+                  const idsCliente = clienteAtual?.responsaveis ?? [];
                   return (
                     <TableRow
                       key={l.cliente_id}
@@ -170,12 +169,11 @@ export function ClientesDemandasTable({
                       <TableCell>
                         <StatusClienteBadge status={l.statusGlobal} />
                       </TableCell>
-                      <TableCell>
-                        {respObjs.length > 0 ? (
-                          <AvatarStack responsaveis={respObjs} size="xs" max={4} />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <CelulaResponsaveis
+                          clienteId={l.cliente_id}
+                          ids={idsCliente}
+                        />
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {new Date(l.ultimaAtividade).toLocaleDateString("pt-BR", {
