@@ -1,35 +1,26 @@
 ## Diagnóstico
-As setas vermelhas na captura apontam para selects da barra de filtros do módulo **Demandas** que estão exibindo seus textos cortados:
 
-- Barra principal (`src/pages/Demandas.tsx`):
-  - **Responsável** (`w-40`) → mostra "Todos..."
-  - **Categoria** (`w-36`) → mostra "Todas..."
-  - **Prioridade** (`w-32`) → mostra "Todas..."
-- Sub-barra do painel **Clientes** (`src/components/demandas/ClientesDemandasTable.tsx`):
-  - **Prioridade** (`w-36`) → mostra "Todas..."
+Os filtros indicados ("Todos responsáveis", "Todos status", "Todas prioridades") aparecem em **dois lugares ao mesmo tempo** no módulo Demandas:
 
-A causa é a largura fixa pequena demais para acomodar os textos completos ("Todos responsáveis", "Todas categorias", "Todas prioridades").
+1. **Barra principal** (`src/pages/Demandas.tsx`) — global, já aplica filtro a todas as abas (Clientes, Quadro Geral, Minhas Demandas, etc.).
+2. **Sub-barra da aba Clientes** (`src/components/demandas/ClientesDemandasTable.tsx`, linhas 135–173) — repete exatamente os mesmos três `<Select>`, gerando a duplicação visual mostrada na captura.
 
-## Correções
+A sub-barra é redundante: o usuário aplica o filtro em cima e vê o mesmo controle logo abaixo, sem ganho funcional.
 
-### 1) `src/pages/Demandas.tsx` — barra de filtros principal
-Aumentar a largura dos triggers para acomodar o texto completo (mantendo `h-9` e o mesmo estilo visual):
+## Correção
 
-- Cliente: `w-40` → `w-44` (acomoda nomes longos de cliente já que o placeholder é "Todos clientes")
-- Responsável: `w-40` → `w-48` (placeholder "Todos responsáveis")
-- Categoria: `w-36` → `w-44` (placeholder "Todas categorias")
-- Prioridade: `w-32` → `w-44` (placeholder "Todas prioridades")
-- Status: `w-32` → `w-40` (placeholder "Todos status")
+### 1) `src/components/demandas/ClientesDemandasTable.tsx`
+- **Remover** os três `<Select>` duplicados (Responsável, Status, Prioridade).
+- **Manter** apenas o campo `Buscar cliente...` (único filtro exclusivo desta aba).
+- **Remover** os states locais `fResp`, `fStatus`, `fPrio` e os imports não mais usados (`Select*`, `STATUS_DEMANDA`, `STATUS_DEMANDA_LABEL`, `PRIORIDADES`, `PRIORIDADE_LABEL`).
+- **Aceitar props** `filtroResp`, `filtroStatus`, `filtroPrio` vindas da página, e usá-las no `useMemo` no lugar dos states removidos. A lógica de filtragem permanece igual.
 
-### 2) `src/components/demandas/ClientesDemandasTable.tsx` — sub-barra Clientes
-- Responsável: `w-44` → `w-48`
-- Status: `w-36` → `w-40`
-- Prioridade: `w-36` → `w-44`
-
-### 3) Defesa adicional
-Para garantir que nenhum texto seja cortado mesmo em telas/zooms diferentes, adicionar `whitespace-nowrap` ao `<SelectValue>` via classe no trigger (`[&>span]:truncate-0` não é necessário — basta as larguras acima). Caso a barra fique apertada em viewports menores, o `flex-wrap` do `CardContent` já quebra para a próxima linha.
+### 2) `src/pages/Demandas.tsx`
+- Passar os estados globais já existentes (`fResp`, `fStatus`, `fPrio`) como props para `<ClientesDemandasTable filtroResp={fResp} filtroStatus={fStatus} filtroPrio={fPrio} />` no render da aba Clientes.
 
 ## Resultado
-Todos os títulos dos filtros ("Todos clientes", "Todos responsáveis", "Todas categorias", "Todas prioridades", "Todos status") ficam **completamente visíveis** tanto na barra principal de Demandas quanto na sub-barra do painel Clientes — sem truncamento com reticências.
 
-Nenhuma outra funcionalidade ou layout é alterado.
+- Sub-barra da aba Clientes exibe **apenas** o campo "Buscar cliente...".
+- Os filtros de Responsável, Status e Prioridade ficam **somente** na barra principal e seguem agindo globalmente sobre a tabela de clientes.
+- Sem duplicação visual; comportamento de filtragem preservado.
+- Nenhum outro layout, estilo ou funcionalidade é alterado.

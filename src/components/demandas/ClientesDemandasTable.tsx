@@ -12,42 +12,36 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AvatarStack } from "@/components/AvatarStack";
 import { ArrowRight, AlertTriangle, Zap } from "lucide-react";
-import {
-  STATUS_DEMANDA,
-  STATUS_DEMANDA_LABEL,
-  PRIORIDADES,
-  PRIORIDADE_LABEL,
-} from "@/lib/demandas-categorias";
 
-export function ClientesDemandasTable() {
+interface Props {
+  filtroResp?: string;
+  filtroStatus?: string;
+  filtroPrio?: string;
+}
+
+export function ClientesDemandasTable({
+  filtroResp = "todos",
+  filtroStatus = "todos",
+  filtroPrio = "todas",
+}: Props) {
   const demandas = useDemandas((s) => s.demandas);
   const { clientes, responsaveis } = useCRM();
   const navigate = useNavigate();
 
   const [busca, setBusca] = useState("");
-  const [fResp, setFResp] = useState("todos");
-  const [fStatus, setFStatus] = useState("todos");
-  const [fPrio, setFPrio] = useState("todas");
 
   const linhas = useMemo(() => {
     const filtroAtivo =
-      fResp !== "todos" || fStatus !== "todos" || fPrio !== "todas";
+      filtroResp !== "todos" || filtroStatus !== "todos" || filtroPrio !== "todas";
 
     const filtradas = demandas.filter((d) => {
-      if (fResp !== "todos" && d.responsavel_id !== fResp) return false;
-      if (fStatus !== "todos" && d.status !== fStatus) return false;
-      if (fPrio !== "todas" && d.prioridade !== fPrio) return false;
+      if (filtroResp !== "todos" && d.responsavel_id !== filtroResp) return false;
+      if (filtroStatus !== "todos" && d.status !== filtroStatus) return false;
+      if (filtroPrio !== "todas" && d.prioridade !== filtroPrio) return false;
       return true;
     });
 
@@ -120,7 +114,7 @@ export function ClientesDemandasTable() {
       (a, b) => +new Date(b.ultimaAtividade) - +new Date(a.ultimaAtividade),
     );
     return lista;
-  }, [demandas, clientes, busca, fResp, fStatus, fPrio]);
+  }, [demandas, clientes, busca, filtroResp, filtroStatus, filtroPrio]);
 
   return (
     <div className="space-y-1.5">
@@ -132,45 +126,6 @@ export function ClientesDemandasTable() {
             placeholder="Buscar cliente..."
             className="w-56 h-9"
           />
-          <Select value={fResp} onValueChange={setFResp}>
-            <SelectTrigger className="h-9 w-48">
-              <SelectValue placeholder="Responsável" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos responsáveis</SelectItem>
-              {responsaveis.map((r) => (
-                <SelectItem key={r.id} value={r.id}>
-                  {r.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={fStatus} onValueChange={setFStatus}>
-            <SelectTrigger className="h-9 w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos status</SelectItem>
-              {STATUS_DEMANDA.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {STATUS_DEMANDA_LABEL[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={fPrio} onValueChange={setFPrio}>
-            <SelectTrigger className="h-9 w-44">
-              <SelectValue placeholder="Prioridade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas prioridades</SelectItem>
-              {PRIORIDADES.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {PRIORIDADE_LABEL[p]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </CardContent>
       </Card>
 
