@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDemandas } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
+import { ColorBadge } from "@/components/StatusBadge";
+import { HistoricoComentariosDialog } from "@/components/HistoricoComentariosDialog";
 import {
   Table,
   TableBody,
@@ -34,8 +36,9 @@ export function ClientesDemandasTable({
   filtroStatusGlobal = "todos",
 }: Props) {
   const demandas = useDemandas((s) => s.demandas);
-  const { clientes } = useCRM();
+  const { clientes, nichos } = useCRM();
   const navigate = useNavigate();
+  const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
 
   const linhas = useMemo(() => {
     const filtroAtivo =
@@ -145,6 +148,8 @@ export function ClientesDemandasTable({
                   <TableHead>Cliente</TableHead>
                   <TableHead>Status do cliente</TableHead>
                   <TableHead>Responsáveis</TableHead>
+                  <TableHead className="min-w-[180px]">Último comentário</TableHead>
+                  <TableHead>Nicho</TableHead>
                   <TableHead>Última atividade</TableHead>
                   <TableHead className="text-center">Total</TableHead>
                   <TableHead className="text-center">Atrasadas</TableHead>
@@ -156,6 +161,7 @@ export function ClientesDemandasTable({
                 {linhas.map((l, idx) => {
                   const clienteAtual = clientes.find((c) => c.id === l.cliente_id);
                   const idsCliente = clienteAtual?.responsaveis ?? [];
+                  const nichoOpt = nichos.find((n) => n.label === clienteAtual?.nicho);
                   return (
                     <TableRow
                       key={l.cliente_id}
@@ -174,6 +180,28 @@ export function ClientesDemandasTable({
                           clienteId={l.cliente_id}
                           ids={idsCliente}
                         />
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setHistoricoClienteId(l.cliente_id);
+                          }}
+                          className="text-left truncate max-w-[220px] hover:text-primary block"
+                          title={clienteAtual?.ultimo_comentario}
+                        >
+                          {clienteAtual?.ultimo_comentario || (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        {clienteAtual?.nicho && nichoOpt ? (
+                          <ColorBadge label={nichoOpt.label} color={nichoOpt.cor} />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {new Date(l.ultimaAtividade).toLocaleDateString("pt-BR", {
@@ -225,6 +253,12 @@ export function ClientesDemandasTable({
           )}
         </CardContent>
       </Card>
+
+      <HistoricoComentariosDialog
+        clienteId={historicoClienteId}
+        open={!!historicoClienteId}
+        onOpenChange={(v) => !v && setHistoricoClienteId(null)}
+      />
     </div>
   );
 }

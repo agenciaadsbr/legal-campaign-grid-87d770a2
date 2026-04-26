@@ -1,33 +1,61 @@
+## Objetivo
 
-## Diagnóstico
+No módulo **Demandas**, na aba **"Clientes"** (componente `ClientesDemandasTable`), adicionar duas novas colunas entre **"Responsáveis"** e **"Última atividade"**, replicando exatamente o comportamento do módulo Clientes:
 
-Hoje a coluna **Responsáveis** nas duas tabelas novas (`ClientesGeralTable` e `ClientesDemandasTable`) renderiza apenas `AvatarStack`, que é puramente visual — não abre nenhum popover para atribuir/remover responsáveis. Já existe na base do projeto um componente pronto e funcional: `CelulaResponsaveis` em `src/pages/Clientes.tsx` (linhas 789–847), com popover, checkbox por responsável, atalho "+ atribuir" quando vazio, e que persiste via `updateCliente(clienteId, { responsaveis: next })`.
+1. **Último comentário** — texto truncado clicável que abre o histórico de comentários do cliente.
+2. **Nicho** — `ColorBadge` colorido com o nicho cadastrado.
 
-A correção é reaproveitar esse componente nas duas tabelas, sem mexer no comportamento existente do Kanban legado nem na lógica de filtros.
+## Arquivos a alterar
 
-## Mudanças propostas
+### 1. `src/components/demandas/ClientesDemandasTable.tsx`
 
-### 1. Extrair `CelulaResponsaveis` para um componente compartilhado
-- Criar `src/components/clientes/CelulaResponsaveis.tsx` movendo o componente que hoje vive dentro de `src/pages/Clientes.tsx`.
-- Em `src/pages/Clientes.tsx`, manter a função local apenas como re-export/import do novo arquivo (zero mudança de comportamento na visão "Status" Kanban legada).
+- **Imports adicionais**:
+  - `ColorBadge` de `@/components/StatusBadge`
+  - `HistoricoComentariosDialog` de `@/components/HistoricoComentariosDialog`
+  - `useState` do React
+  - `nichos` do hook `useCRM` (já importado)
 
-### 2. `src/components/clientes/ClientesGeralTable.tsx` (módulo Clientes)
-- Substituir o bloco que renderiza `<AvatarStack ... />` na coluna "Responsáveis" por `<CelulaResponsaveis clienteId={cliente.id} ids={cliente.responsaveis} />`.
-- Adicionar `onClick={(e) => e.stopPropagation()}` na `<TableCell>` para evitar que a navegação para `/clientes/:id` dispare ao abrir o popover.
-- Manter tamanho compacto (`size="xs"`) e o restante das colunas inalterado.
+- **Estado local**: `const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);`
 
-### 3. `src/components/demandas/ClientesDemandasTable.tsx` (módulo Demandas → Clientes)
-- A linha agrega responsáveis vindos do **cliente** + dos **responsáveis das demandas daquele cliente**. Editar diretamente "responsáveis das demandas" na linha do cliente é ambíguo (uma linha = N demandas).
-- Decisão: o popover edita os **responsáveis do CLIENTE** (mesma fonte de verdade do módulo Clientes). A pílula continuará mostrando a união (cliente + responsáveis das demandas), mas a edição altera apenas o cliente — comportamento idêntico ao módulo Clientes e consistente com o que o usuário pediu ("atribuir/remover responsáveis").
-- Substituir `<AvatarStack ... />` por `<CelulaResponsaveis clienteId={l.cliente_id} ids={Array.from(l.responsaveisIds)} />` envolvido em `onClick={(e) => e.stopPropagation()}` na `<TableCell>` para não disparar a navegação `/demandas/cliente/:id` da `<TableRow>`.
-- Como a `Set<string>` exibida hoje mistura cliente + demandas, vamos passar para o popover **apenas os ids do cliente** (`clientes.find(c => c.id === l.cliente_id)?.responsaveis ?? []`), garantindo que o estado dos checkboxes reflita corretamente o que está atribuído ao cliente. O `AvatarStack` agregado some — a pílula passa a mostrar exatamente os responsáveis do cliente (consistente com a tabela Clientes).
+- **Header da tabela** — inserir entre `<TableHead>Responsáveis</TableHead>` e `<TableHead>Última atividade</TableHead>`:
+  ```tsx
+  <TableHead className="min-w-[180px]">Último comentário</TableHead>
+  <TableHead>Nicho</TableHead>
+  ```
 
-### 4. Sem alterações em
-- `AvatarStack.tsx` (continua sendo usado em outros lugares como Kanban, dialogs, cards).
-- Lógica de filtros, métricas, navegação ou qualquer outra coluna.
-- Edição de responsável **dentro de uma demanda específica** — segue funcionando pelo `DemandaDetalheDialog` / Kanban como hoje.
+- **Linhas** — para cada `clienteAtual`, calcular `nichoOpt = nichos.find(n => n.label === clienteAtual?.nicho)` e inserir, entre a célula de Responsáveis e a de Última atividade:
+  ```tsx
+  <TableCell className="text-xs">
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); setHistoricoClienteId(l.cliente_id); }}
+      className="text-left truncate max-w-[220px] hover:text-primary block"
+      title={clienteAtual?.ultimo_comentario}
+    >
+      {clienteAtual?.ultimo_comentario || <span className="text-muted-foreground">—</span>}
+    </button>
+  </TableCell>
+  <TableCell>
+    {clienteAtual?.nicho && nichoOpt ? (
+      <ColorBadge label={nichoOpt.label} color={nichoOpt.cor} />
+    ) : (
+      <span className="text-xs text-muted-foreground">—</span>
+    )}
+  </TableCell>
+  ```
 
-## Resultado esperado
-- Em **Clientes** (visão nova) e em **Demandas → Clientes**, clicar na célula "Responsáveis" abre um popover com checkboxes para marcar/desmarcar cada responsável, persistindo imediatamente no cliente.
-- Quando vazia, a célula mostra "+ atribuir" em hover — igual à visão Kanban legada.
-- Nenhuma regressão no Kanban de posts, no Kanban de demandas ou nos filtros existentes.
+- **Renderizar o dialog** ao final do componente (irmão do Card):
+  ```tsx
+  <HistoricoComentariosDialog
+    clienteId={historicoClienteId}
+    open={!!historicoClienteId}
+    onOpenChange={(v) => !v && setHistoricoClienteId(null)}
+  />
+  ```
+
+## Observações
+
+- O dado `ultimo_comentario` já vem mapeado em `Cliente` no `crm.ts`, sem necessidade de query adicional.
+- `nichos` já está disponível via `useCRM`.
+- Mantém o padrão visual e comportamental idêntico ao módulo Clientes (mesma classe, mesmo `ColorBadge`, mesmo dialog).
+- Nenhuma migração de banco é necessária.
