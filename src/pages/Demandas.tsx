@@ -190,7 +190,11 @@ export default function Demandas() {
         </TabsContent>
 
         <TabsContent value="clientes" className="mt-2">
-          <ClientesDemandasTable />
+          <ClientesDemandasTable
+            filtroResp={fResp}
+            filtroStatus={fStatus}
+            filtroPrio={fPrio}
+          />
         </TabsContent>
 
         <TabsContent value="minhas" className="mt-2">
