@@ -195,7 +195,11 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
                 <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.data_alerta).toLocaleDateString("pt-BR")}</td>
                 <td className="px-4 py-2.5">
                   <Badge variant="outline" className="text-[10px] mr-2 font-mono">
-                    {a._origem === "DEMANDA" ? "[DEMANDA]" : "[POST]"}
+                    {a._origem === "DEMANDA"
+                      ? "[DEMANDA]"
+                      : a.tipo_alerta.startsWith("Onboarding_")
+                        ? "[ONBOARDING]"
+                        : "[POST]"}
                   </Badge>
                   {a.mensagem}
                 </td>
