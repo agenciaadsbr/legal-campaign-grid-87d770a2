@@ -1,44 +1,35 @@
-## Objetivo
-1. Mover os botões **Rápida** e **Nova Demanda** do cabeçalho para dentro da barra de filtros, posicionados imediatamente após o filtro "Todos os status" (e antes dos botões rápidos `todas / hoje / atrasadas / semana`).
-2. Centralizar os títulos das colunas de status no Kanban (`Quadro Geral`) para que fiquem totalmente legíveis dentro de cada seção.
+## Diagnóstico
+As setas vermelhas na captura apontam para selects da barra de filtros do módulo **Demandas** que estão exibindo seus textos cortados:
 
-## Alterações
+- Barra principal (`src/pages/Demandas.tsx`):
+  - **Responsável** (`w-40`) → mostra "Todos..."
+  - **Categoria** (`w-36`) → mostra "Todas..."
+  - **Prioridade** (`w-32`) → mostra "Todas..."
+- Sub-barra do painel **Clientes** (`src/components/demandas/ClientesDemandasTable.tsx`):
+  - **Prioridade** (`w-36`) → mostra "Todas..."
 
-### 1) `src/pages/Demandas.tsx`
-- **Remover** o bloco de botões do header (linhas 110–117), mantendo apenas o título e a descrição. O cabeçalho ficará mais limpo.
-- **Inserir** os mesmos botões dentro do `CardContent` dos filtros, logo após o `<Select>` de Status (linha 163) e antes do bloco `flex gap-1 ml-auto` dos filtros rápidos. Manter `size="sm"` e altura `h-9` para alinhar com os selects.
-- Ajustar o agrupamento para que `Rápida` + `Nova Demanda` fiquem juntos em um wrapper `flex gap-1.5`, e os botões rápidos continuem encostados à direita via `ml-auto`.
+A causa é a largura fixa pequena demais para acomodar os textos completos ("Todos responsáveis", "Todas categorias", "Todas prioridades").
 
-```tsx
-<Button variant="outline" size="sm" className="h-9" onClick={() => setRapidaOpen(true)}>
-  <Zap className="h-4 w-4 mr-1" /> Rápida
-</Button>
-<Button size="sm" className="h-9" onClick={() => setNovaOpen(true)}>
-  <Plus className="h-4 w-4 mr-1" /> Nova Demanda
-</Button>
-```
+## Correções
 
-### 2) `src/components/demandas/DemandasKanban.tsx`
-- Centralizar o cabeçalho de cada coluna (linhas 42–55):
-  - Trocar `flex items-center justify-between` por um layout centralizado (`flex flex-col items-center` ou `justify-center` com contador discreto ao lado).
-  - Garantir que `STATUS_DEMANDA_LABEL[status]` use `text-center` e `whitespace-nowrap` para ser legível.
-  - Manter o ponto colorido + label + contador, mas alinhados ao centro da coluna.
+### 1) `src/pages/Demandas.tsx` — barra de filtros principal
+Aumentar a largura dos triggers para acomodar o texto completo (mantendo `h-9` e o mesmo estilo visual):
 
-Estrutura proposta:
-```tsx
-<div className="flex items-center justify-center gap-2 mb-2 px-1">
-  <span className="h-2 w-2 rounded-full" style={{ background: STATUS_DEMANDA_COR[status] }} />
-  <span className="text-xs font-semibold uppercase tracking-wide text-center">
-    {STATUS_DEMANDA_LABEL[status]}
-  </span>
-  <span className="text-[10px] text-muted-foreground bg-background rounded px-1.5 py-0.5">
-    {items.length}
-  </span>
-</div>
-```
+- Cliente: `w-40` → `w-44` (acomoda nomes longos de cliente já que o placeholder é "Todos clientes")
+- Responsável: `w-40` → `w-48` (placeholder "Todos responsáveis")
+- Categoria: `w-36` → `w-44` (placeholder "Todas categorias")
+- Prioridade: `w-32` → `w-44` (placeholder "Todas prioridades")
+- Status: `w-32` → `w-40` (placeholder "Todos status")
 
-## Resultado esperado
-- Cabeçalho da página "Demandas" mostra apenas título/descrição.
-- Barra de filtros passa a conter, na sequência: Buscar · Cliente · Responsável · Categoria · Prioridade · Status · **Rápida · Nova Demanda** · (à direita) todas/hoje/atrasadas/semana.
-- No "Quadro Geral", os nomes dos status (Planejamento, Criar, Revisar, Entregue, Concluído, Atrasado) ficam centralizados em cada coluna e totalmente visíveis.
-- Nenhuma outra funcionalidade é alterada.
+### 2) `src/components/demandas/ClientesDemandasTable.tsx` — sub-barra Clientes
+- Responsável: `w-44` → `w-48`
+- Status: `w-36` → `w-40`
+- Prioridade: `w-36` → `w-44`
+
+### 3) Defesa adicional
+Para garantir que nenhum texto seja cortado mesmo em telas/zooms diferentes, adicionar `whitespace-nowrap` ao `<SelectValue>` via classe no trigger (`[&>span]:truncate-0` não é necessário — basta as larguras acima). Caso a barra fique apertada em viewports menores, o `flex-wrap` do `CardContent` já quebra para a próxima linha.
+
+## Resultado
+Todos os títulos dos filtros ("Todos clientes", "Todos responsáveis", "Todas categorias", "Todas prioridades", "Todos status") ficam **completamente visíveis** tanto na barra principal de Demandas quanto na sub-barra do painel Clientes — sem truncamento com reticências.
+
+Nenhuma outra funcionalidade ou layout é alterado.

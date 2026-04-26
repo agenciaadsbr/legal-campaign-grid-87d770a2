@@ -117,35 +117,35 @@ export default function Demandas() {
             className="w-56 h-9"
           />
           <Select value={fCliente} onValueChange={setFCliente}>
-            <SelectTrigger className="h-9 w-40"><SelectValue placeholder="Cliente" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Cliente" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos clientes</SelectItem>
               {clientesOrdenados.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={fResp} onValueChange={setFResp}>
-            <SelectTrigger className="h-9 w-40"><SelectValue placeholder="Responsável" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-48"><SelectValue placeholder="Responsável" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos responsáveis</SelectItem>
               {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={fCat} onValueChange={setFCat}>
-            <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Categoria" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Categoria" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas categorias</SelectItem>
               {CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={fPrio} onValueChange={setFPrio}>
-            <SelectTrigger className="h-9 w-32"><SelectValue placeholder="Prioridade" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Prioridade" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas prioridades</SelectItem>
               {PRIORIDADES.map((p) => <SelectItem key={p} value={p}>{PRIORIDADE_LABEL[p]}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={fStatus} onValueChange={setFStatus}>
-            <SelectTrigger className="h-9 w-32"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-40"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos status</SelectItem>
               {STATUS_DEMANDA.map((s) => <SelectItem key={s} value={s}>{STATUS_DEMANDA_LABEL[s]}</SelectItem>)}
