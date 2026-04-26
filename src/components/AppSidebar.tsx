@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+// Menu fixo — visível para TODOS os usuários autenticados (sem filtro por role)
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
   { title: "Clientes", url: "/clientes", icon: Users },
@@ -18,7 +19,7 @@ const items = [
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
-];
+] as { title: string; url: string; icon: typeof LayoutDashboard; end?: boolean }[];
 
 export function AppSidebar() {
   const { state } = useSidebar();
