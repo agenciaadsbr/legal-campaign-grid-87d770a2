@@ -12,6 +12,7 @@ import Clientes from "./pages/Clientes";
 import Demandas from "./pages/Demandas";
 import ProjetoDemandasCliente from "./pages/ProjetoDemandasCliente";
 import ClienteDetalhe from "./pages/ClienteDetalhe";
+import ProjetoCliente from "./pages/ProjetoCliente";
 import PostDetalhe from "./pages/PostDetalhe";
 import Contratos from "./pages/Contratos";
 import Alertas from "./pages/Alertas";
@@ -49,6 +50,7 @@ const App = () => (
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/clientes" element={<Clientes />} />
                 <Route path="/clientes/:clienteId" element={<ClienteDetalhe />} />
+                <Route path="/clientes/:clienteId/projeto" element={<ProjetoCliente />} />
                 <Route path="/clientes/:clienteId/posts/:postId" element={<PostDetalhe />} />
                 <Route path="/contratos" element={<Contratos />} />
                 <Route path="/demandas" element={<Demandas />} />
