@@ -93,9 +93,9 @@ export function ClientesDemandasTable() {
   }, [demandas, clientes, busca, fResp, fStatus, fPrio]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1.5">
       <Card>
-        <CardContent className="p-3 flex flex-wrap items-center gap-2">
+        <CardContent className="p-2 flex flex-wrap items-center gap-1.5">
           <Input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -147,11 +147,11 @@ export function ClientesDemandasTable() {
       <Card>
         <CardContent className="p-0">
           {linhas.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
+            <div className="p-3 text-center text-sm text-muted-foreground">
               Nenhum cliente com demandas
             </div>
           ) : (
-            <Table>
+            <Table className="[&_th]:py-2 [&_th]:px-2 [&_td]:py-1.5 [&_td]:px-2">
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
