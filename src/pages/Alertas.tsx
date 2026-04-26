@@ -90,7 +90,7 @@ function useAlertasDerivados(): AlertaItem[] {
       }
       const meusCards = cards.filter((k) => k.cliente_id === c.id);
       const ativos = meusCards.filter((k) => k.status_card !== "Postado" && k.status_card !== "Atrasado");
-      if (meusCards.length > 0 && ativos.length === 0 && c.status_cliente !== "Finalizado") {
+      if (meusCards.length > 0 && ativos.length === 0 && c.status_cliente !== "Encerrado") {
         out.push(mk("Sem_Posts_Ativos", c.id, "Sem posts em andamento"));
       }
       const atrasados = meusCards.filter((k) => k.status_card === "Atrasado");
