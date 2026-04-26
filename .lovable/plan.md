@@ -1,74 +1,40 @@
 ## Diagnóstico
 
-A screenshot do **robsonlobato31@gmail.com** mostra a versão **antiga** do app:
-- Sidebar **sem** o item "Demandas"
-- Dashboard **sem** a seção "Demandas Operacionais"
-- Dados de exemplo antigos (Ana, Bruno, Carla, Diego)
+Observação: o screenshot enviado é da rota `/clientes` (módulo antigo), não da subaba "Clientes" dentro de `/demandas`. Como você está atualmente em `/demandas` e mencionou explicitamente "painel clientes no módulo demandas", vou tratar a subaba **Demandas → Clientes** (`ClientesDemandasTable.tsx` + wrapper em `Demandas.tsx`).
 
-Já o admin (`agenciaadsbr@gmail.com`) vê a versão nova, com Demandas e dados reais. Isso confirma que **o código está correto** (verifiquei `AppSidebar.tsx` — "Demandas" está fixo no menu, sem filtro por role) e que **a publicação está ativa** (`legal-campaign-grid.lovable.app`, visibilidade pública).
+Pontos de espaço excessivo identificados:
 
-### Causa raiz
+1. **Wrapper da página** (`Demandas.tsx`): `p-6 space-y-4` — padding lateral e vertical grandes.
+2. **Dois cards de filtro empilhados**: o card de filtros global de Demandas (linhas 116–173) + o card de filtros local dentro de `ClientesDemandasTable` (linhas 87–135) → duplicação visual com gap entre eles.
+3. **Gap entre filtros e tabela** dentro de `ClientesDemandasTable`: `space-y-3`.
+4. **`TabsContent` mt-4** entre as abas e o conteúdo.
+5. **Padding interno do header/título**: `space-y-4` entre header, filtros e tabs.
+6. **Linhas da tabela**: `TableCell` padrão tem `p-4` (vertical generoso).
 
-O problema é **bundle JavaScript antigo cacheado** no navegador do Robson. As meta tags `Cache-Control` no `index.html` só evitam cache do HTML, mas **não obrigam recarga quando um novo bundle é publicado** enquanto a aba já está aberta. Como o Robson provavelmente deixou a aba aberta antes de novos deploys, o app continua executando JS antigo.
+## Mudanças propostas
 
-Hard refresh resolve pontualmente, mas precisamos de uma **solução definitiva** que detecte novas versões em runtime e atualize automaticamente.
+### `src/pages/Demandas.tsx`
+- Trocar wrapper: `p-6 space-y-4` → `p-3 space-y-2`.
+- Reduzir gap do header: o bloco `flex items-start justify-between gap-4` → `gap-2` e remover margem do parágrafo descritivo (ou deixá-lo mais compacto: `text-xs`).
+- Card de filtros global: `CardContent p-3 ... gap-2` → `p-2 gap-1.5`.
+- `TabsContent` (todos os 6): `mt-4` → `mt-2`.
 
----
+### `src/components/demandas/ClientesDemandasTable.tsx`
+- Wrapper externo: `space-y-3` → `space-y-1.5`.
+- Card de filtros local: `CardContent p-3 ... gap-2` → `p-2 gap-1.5`. Inputs/Selects já têm `h-9`, manter.
+- **Tabela compacta**: adicionar classe `[&_td]:py-1.5 [&_th]:py-2 [&_td]:px-2 [&_th]:px-2` no `<Table>` para reduzir 90% do padding vertical das linhas.
+- Mensagem vazia: `p-8` → `p-3`.
 
-## Plano de correção
+### Resultado esperado
+- Header → filtros: gap mínimo (~6px em vez de 16px).
+- Filtros → tabs: gap mínimo.
+- Tabs → tabela: gap mínimo.
+- Linhas da tabela ~50% mais baixas (densidade de planilha).
+- Padding lateral da página reduzido para aproveitar a largura.
 
-### 1. Sistema de auto-update em runtime (definitivo)
+### Não alterado
+- Lógica, dados, ordem das colunas, componentes `Avatar`, `Badge`, navegação.
+- Demais abas (Quadro Geral, Minhas Demandas, etc.) recebem apenas o ajuste do wrapper/tabs (proporcional, não destrutivo).
+- Tokens semânticos de cor (mantidos conforme memória do projeto).
 
-Implementar um detector de versão que faz o app se atualizar sozinho quando há deploy novo, sem o usuário precisar fazer hard refresh.
-
-**Como vai funcionar:**
-
-- Gerar uma constante `APP_VERSION` em build (timestamp do build, injetado via `define` no `vite.config.ts`).
-- Criar arquivo estático `public/version.json` com o mesmo timestamp, gerado no build.
-- Hook novo `useVersionCheck` em `src/hooks/useVersionCheck.tsx`:
-  - A cada 60 segundos faz `fetch('/version.json?t=' + Date.now())`.
-  - Se a versão remota for diferente da `APP_VERSION` em memória → mostra toast "Nova versão disponível" com botão **"Atualizar agora"** que executa `window.location.reload()`.
-  - Também checa quando a aba volta a ficar visível (`visibilitychange`).
-- Plugar o hook em `src/App.tsx` (uma vez, dentro do provider raiz).
-
-### 2. Cache busting forte no HTML
-
-- Adicionar `<meta http-equiv="Cache-Control" content="no-store">` reforçado e remover qualquer service worker remanescente.
-- Garantir que `index.html` nunca seja cacheado (já está configurado, mas vou validar headers).
-- Vite já adiciona hash nos bundles JS/CSS, então o `index.html` novo aponta para arquivos com nome novo automaticamente.
-
-### 3. Garantir que "Demandas" carregue mesmo se o store falhar
-
-Reforço defensivo em `src/components/AppSidebar.tsx`: o item "Demandas" continua fixo (já está) e adicionar log de versão no console para diagnóstico futuro:
-```ts
-console.log('[CRM] App version:', APP_VERSION);
-```
-
-### 4. Republicar o app
-
-Após implementar, **republicar** para que o `legal-campaign-grid.lovable.app` sirva o novo bundle com o sistema de auto-update embutido. A partir desse deploy, **todos os usuários** (incluindo o Robson) recebem updates automáticos sem hard refresh.
-
-### 5. Ação imediata para o Robson (uma única vez)
-
-Para sair do bundle antigo agora, o Robson precisa fazer **uma vez**:
-- `Ctrl + Shift + R` (Windows) ou `Cmd + Shift + R` (Mac), **ou**
-- Abrir em aba anônima e logar.
-
-Depois desse refresh único, ele vai carregar o bundle novo com o auto-update, e nunca mais vai ficar travado em versão antiga.
-
----
-
-## Arquivos que serão alterados/criados
-
-- `vite.config.ts` — injetar `__APP_VERSION__` via `define`, plugin para gerar `public/version.json` no build.
-- `src/hooks/useVersionCheck.tsx` — **novo**, lógica de polling + toast.
-- `src/App.tsx` — invocar `useVersionCheck()` no nível raiz.
-- `src/vite-env.d.ts` — declarar `__APP_VERSION__` global.
-- `index.html` — reforçar `no-store`.
-- `src/components/AppSidebar.tsx` — log de versão (diagnóstico).
-
-## Resultado esperado
-
-- Próximo deploy: todos os usuários autenticados recebem em até 60s um toast "Nova versão disponível — Atualizar agora", e ao clicar a página recarrega no bundle novo.
-- Robson, após o hard refresh único, passa a ver "Demandas" no menu, "Demandas Operacionais" no Dashboard, e todas as próximas atualizações automaticamente.
-- Não mexe em layout, dados, RLS ou roles — é só infraestrutura de versão.
+Após aprovação, aplico as edições nos 2 arquivos acima.

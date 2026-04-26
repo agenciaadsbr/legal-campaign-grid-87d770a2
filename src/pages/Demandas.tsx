@@ -94,11 +94,11 @@ export default function Demandas() {
   }, [filtradas]);
 
   return (
-    <div className="p-6 space-y-4 animate-fade-in">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="p-3 space-y-2 animate-fade-in">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Demandas</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold leading-tight">Demandas</h1>
+          <p className="text-xs text-muted-foreground">
             Tarefas operacionais por cliente — separadas dos posts
           </p>
         </div>
@@ -114,7 +114,7 @@ export default function Demandas() {
 
       {/* Filtros */}
       <Card>
-        <CardContent className="p-3 flex flex-wrap items-center gap-2">
+        <CardContent className="p-2 flex flex-wrap items-center gap-1.5">
           <Input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -182,15 +182,15 @@ export default function Demandas() {
           <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="quadro" className="mt-4">
+        <TabsContent value="quadro" className="mt-2">
           <DemandasKanban demandas={filtradas} onOpen={setSelecionada} />
         </TabsContent>
 
-        <TabsContent value="clientes" className="mt-4">
+        <TabsContent value="clientes" className="mt-2">
           <ClientesDemandasTable />
         </TabsContent>
 
-        <TabsContent value="minhas" className="mt-4">
+        <TabsContent value="minhas" className="mt-2">
           {minhas.length === 0 ? (
             <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">
               Nenhuma demanda atribuída a você
@@ -204,7 +204,7 @@ export default function Demandas() {
           )}
         </TabsContent>
 
-        <TabsContent value="novas" className="mt-4">
+        <TabsContent value="novas" className="mt-2">
           {novasSolicitacoes.length === 0 ? (
             <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">
               Nenhuma nova solicitação
@@ -218,7 +218,7 @@ export default function Demandas() {
           )}
         </TabsContent>
 
-        <TabsContent value="calendario" className="mt-4">
+        <TabsContent value="calendario" className="mt-2">
           <Card>
             <CardContent className="p-4 flex flex-col md:flex-row gap-6">
               <Calendar
@@ -249,7 +249,7 @@ export default function Demandas() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="relatorios" className="mt-4">
+        <TabsContent value="relatorios" className="mt-2">
           <RelatoriosDemandas />
         </TabsContent>
       </Tabs>
