@@ -57,6 +57,10 @@ export default function Demandas() {
     const hojeFim = new Date(); hojeFim.setHours(23, 59, 59, 999);
     const semana = new Date(); semana.setDate(semana.getDate() + 7);
 
+    const clientesPorStatus = new Map(
+      clientes.map((c) => [c.id, c.status_global ?? "Onboarding"]),
+    );
+
     return demandas.filter((d) => {
       if (busca && !d.titulo.toLowerCase().includes(busca.toLowerCase())) return false;
       if (fCliente !== "todos" && d.cliente_id !== fCliente) return false;
@@ -64,6 +68,11 @@ export default function Demandas() {
       if (fCat !== "todas" && d.categoria !== fCat) return false;
       if (fPrio !== "todas" && d.prioridade !== fPrio) return false;
       if (fStatus !== "todos" && d.status !== fStatus) return false;
+      if (
+        fStatusGlobal !== "todos" &&
+        clientesPorStatus.get(d.cliente_id) !== fStatusGlobal
+      )
+        return false;
       if (fRapido === "atrasadas" && d.status !== "Atrasado") return false;
       if (fRapido === "hoje") {
         if (!d.data_limite) return false;
@@ -77,7 +86,7 @@ export default function Demandas() {
       }
       return true;
     });
-  }, [demandas, busca, fCliente, fResp, fCat, fPrio, fStatus, fRapido]);
+  }, [demandas, clientes, busca, fCliente, fResp, fCat, fPrio, fStatus, fStatusGlobal, fRapido]);
 
   const [meuResponsavelId, setMeuResponsavelId] = useState<string | null>(null);
   useEffect(() => {
