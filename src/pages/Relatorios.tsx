@@ -77,6 +77,11 @@ export default function Relatorios() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+        <TabsContent value="demandas" className="mt-4">
+          <RelatoriosDemandas />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
