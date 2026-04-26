@@ -17,6 +17,7 @@ import { DemandaRapidaDialog } from "@/components/demandas/DemandaRapidaDialog";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { RelatoriosDemandas } from "@/components/demandas/RelatoriosDemandas";
 import { ClientesDemandasTable } from "@/components/demandas/ClientesDemandasTable";
+import { STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
 import {
   CATEGORIAS, CATEGORIA_LABEL, PRIORIDADES, PRIORIDADE_LABEL,
   STATUS_DEMANDA, STATUS_DEMANDA_LABEL,
