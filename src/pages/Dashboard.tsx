@@ -31,7 +31,11 @@ export default function Dashboard() {
   const postsHoje = posts.filter((p) => p.created_at.slice(0, 10) === today).length;
   const agendados = posts.filter((p) => p.status === "Agendar").length;
   const postados = posts.filter((p) => p.status === "Postado").length;
-  const renovacao = clientes.filter((c) => c.status_cliente === "Próximo da renovação").length;
+  const renovacao = clientes.filter((c) => {
+    if (!c.prazo_onboarding) return false;
+    const dias = Math.ceil((new Date(c.prazo_onboarding).getTime() - Date.now()) / 86400000);
+    return dias >= 0 && dias <= 7 && (c.status_global ?? "Onboarding") === "Onboarding";
+  }).length;
   const alertasPendentes = alertas.filter((a) => a.status === "Pendente").length;
 
   const postsPorMes = useMemo(() => {
