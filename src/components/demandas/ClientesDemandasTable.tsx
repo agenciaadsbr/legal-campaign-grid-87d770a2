@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AvatarStack } from "@/components/AvatarStack";
+import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { ArrowRight, AlertTriangle, Zap } from "lucide-react";
 
 interface Props {
@@ -21,6 +22,7 @@ interface Props {
   filtroStatus?: string;
   filtroPrio?: string;
   filtroBusca?: string;
+  filtroStatusGlobal?: string;
 }
 
 export function ClientesDemandasTable({
@@ -28,6 +30,7 @@ export function ClientesDemandasTable({
   filtroStatus = "todos",
   filtroPrio = "todas",
   filtroBusca = "",
+  filtroStatusGlobal = "todos",
 }: Props) {
   const demandas = useDemandas((s) => s.demandas);
   const { clientes, responsaveis } = useCRM();
@@ -49,6 +52,7 @@ export function ClientesDemandasTable({
       {
         cliente_id: string;
         nome: string;
+        statusGlobal: string;
         responsaveisIds: Set<string>;
         ultimaAtividade: string;
         total: number;
@@ -60,9 +64,15 @@ export function ClientesDemandasTable({
 
     // 1) Inicializa com TODOS os clientes cadastrados (responsáveis vindos do próprio cliente)
     clientes.forEach((c) => {
+      if (
+        filtroStatusGlobal !== "todos" &&
+        (c.status_global ?? "Onboarding") !== filtroStatusGlobal
+      )
+        return;
       map.set(c.id, {
         cliente_id: c.id,
         nome: c.nome_cliente,
+        statusGlobal: c.status_global ?? "Onboarding",
         responsaveisIds: new Set<string>(c.responsaveis ?? []),
         ultimaAtividade: c.created_at,
         total: 0,
