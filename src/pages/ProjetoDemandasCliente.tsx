@@ -83,17 +83,9 @@ export default function ProjetoDemandasCliente() {
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          {cliente?.logo_url ? (
-            <img
-              src={cliente.logo_url}
-              alt={cliente.nome_cliente}
-              className="h-12 w-12 rounded-lg object-cover border"
-            />
-          ) : (
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
-              {cliente?.nome_cliente?.charAt(0)?.toUpperCase() ?? "?"}
-            </div>
-          )}
+          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
+            {cliente?.nome_cliente?.charAt(0)?.toUpperCase() ?? "?"}
+          </div>
           <div>
             <h1 className="text-2xl font-bold">
               {cliente?.nome_cliente ?? "Cliente"}
