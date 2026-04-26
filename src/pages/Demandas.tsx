@@ -100,21 +100,11 @@ export default function Demandas() {
 
   return (
     <div className="p-3 space-y-2 animate-fade-in">
-      <div className="flex items-start justify-between gap-2 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold leading-tight">Demandas</h1>
-          <p className="text-xs text-muted-foreground">
-            Tarefas operacionais por cliente — separadas dos posts
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setRapidaOpen(true)}>
-            <Zap className="h-4 w-4 mr-1" /> Rápida
-          </Button>
-          <Button size="sm" onClick={() => setNovaOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Nova Demanda
-          </Button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold leading-tight">Demandas</h1>
+        <p className="text-xs text-muted-foreground">
+          Tarefas operacionais por cliente — separadas dos posts
+        </p>
       </div>
 
       {/* Filtros */}
@@ -161,6 +151,14 @@ export default function Demandas() {
               {STATUS_DEMANDA.map((s) => <SelectItem key={s} value={s}>{STATUS_DEMANDA_LABEL[s]}</SelectItem>)}
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" className="h-9" onClick={() => setRapidaOpen(true)}>
+              <Zap className="h-4 w-4 mr-1" /> Rápida
+            </Button>
+            <Button size="sm" className="h-9" onClick={() => setNovaOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Nova Demanda
+            </Button>
+          </div>
           <div className="flex gap-1 ml-auto">
             {(["todas", "hoje", "atrasadas", "semana"] as FiltroRapido[]).map((f) => (
               <Button
