@@ -10,6 +10,7 @@ import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Demandas from "./pages/Demandas";
+import ProjetoDemandasCliente from "./pages/ProjetoDemandasCliente";
 import ClienteDetalhe from "./pages/ClienteDetalhe";
 import PostDetalhe from "./pages/PostDetalhe";
 import Contratos from "./pages/Contratos";
@@ -44,6 +45,7 @@ const App = () => (
                 <Route path="/clientes/:clienteId/posts/:postId" element={<PostDetalhe />} />
                 <Route path="/contratos" element={<Contratos />} />
                 <Route path="/demandas" element={<Demandas />} />
+                <Route path="/demandas/cliente/:clienteId" element={<ProjetoDemandasCliente />} />
                 <Route path="/alertas" element={<Alertas />} />
                 <Route path="/relatorios" element={<Relatorios />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
