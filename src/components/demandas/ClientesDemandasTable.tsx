@@ -148,6 +148,8 @@ export function ClientesDemandasTable({
                   <TableHead>Cliente</TableHead>
                   <TableHead>Status do cliente</TableHead>
                   <TableHead>Responsáveis</TableHead>
+                  <TableHead className="min-w-[180px]">Último comentário</TableHead>
+                  <TableHead>Nicho</TableHead>
                   <TableHead>Última atividade</TableHead>
                   <TableHead className="text-center">Total</TableHead>
                   <TableHead className="text-center">Atrasadas</TableHead>
