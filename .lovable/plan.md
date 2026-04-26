@@ -1,70 +1,59 @@
-## Diagnóstico
+## Objetivo
 
-Investiguei o problema e **não existe bug no código**. Veja o que verifiquei:
-
-### 1. Banco de dados (Supabase)
-O usuário `robsonlobato31@gmail.com` ("Lobato Teste") está:
-- `ativo = true` ✅
-- `role = editor` ✅
-
-### 2. Código do menu (`src/components/AppSidebar.tsx`)
-O item **"Demandas"** está hardcoded na lista `items` (linha 17), **sem nenhum filtro por role ou por usuário**. Ou seja, o menu deve aparecer para **todos** os usuários autenticados, inclusive editors.
-
-```ts
-const items = [
-  { title: "Dashboard", url: "/", ... },
-  { title: "Clientes", url: "/clientes", ... },
-  { title: "Contratos", url: "/contratos", ... },
-  { title: "Demandas", url: "/demandas", icon: ListChecks }, // <- já está aqui
-  { title: "Alertas", url: "/alertas", ... },
-  ...
-];
-```
-
-### 3. Sem sistema de "menus visíveis por usuário"
-Pesquisei em todo o projeto (`EquipeAcessosManager`, `Configuracoes`, etc.) e **não existe** controle granular de visibilidade de menus por usuário. Logo, nada está escondendo "Demandas" do Lobato.
-
-### 4. Conclusão — Causa raiz
-A screenshot enviada mostra o menu **sem "Demandas"**, mas o código atual claramente inclui o item. Isso só pode ser explicado por **cache do bundle JavaScript antigo no navegador do Lobato** (a versão anterior à criação do módulo Demandas).
-
-O Vite já faz hash dos assets, mas o `index.html` pode estar sendo servido de cache pelo Service Worker do navegador / CDN edge cache, fazendo com que ele continue carregando a versão antiga do app.
+Reestruturar o **interior do card de detalhe da Demanda** (`DemandaDetalheDialog.tsx`) para reproduzir fielmente a mesma estrutura visual do card do módulo **Clientes** (`PostDetalhe.tsx`) mostrada na imagem de referência — eliminando o layout atual baseado em `Tabs` e adotando o formato em **dois Cards verticais** (informações + atividade).
 
 ---
 
-## Plano de correção (incremental e seguro)
+## Comparação atual × alvo
 
-### Etapa 1 — Solução imediata (sem código)
-Pedir ao Lobato para fazer **hard refresh** no navegador:
-- **Windows/Linux:** `Ctrl + Shift + R` ou `Ctrl + F5`
-- **Mac:** `Cmd + Shift + R`
-- Ou abrir em aba anônima para confirmar que é cache
+**Hoje (Demandas):** `Dialog` com `Tabs` (Atividade / Arquivos / Comentários / Histórico), grid de 4 selects no topo, textareas simples.
 
-### Etapa 2 — Garantir que o `index.html` nunca seja cacheado
-Adicionar meta tags no `index.html` para evitar cache do shell HTML (os assets JS/CSS já têm hash, então só o `index.html` precisa desse cuidado):
-
-```html
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<meta http-equiv="Pragma" content="no-cache" />
-<meta http-equiv="Expires" content="0" />
-```
-
-Isso garante que, em deploys futuros, qualquer usuário receba o `index.html` mais recente (que aponta para os bundles JS novos com hash atualizado).
-
-### Etapa 3 — Verificar Service Worker
-Verificar se há algum Service Worker registrado em `public/` ou `index.html` que esteja servindo a versão antiga em cache. Se houver, ajustar a estratégia para `network-first` no `index.html`.
-
-### Etapa 4 — Validação
-1. Pedir ao Lobato para acessar novamente após o deploy.
-2. Confirmar que "Demandas" aparece no menu lateral entre "Contratos" e "Alertas".
-3. Confirmar acesso à rota `/demandas` (sem necessidade de role admin).
+**Alvo (igual à imagem do Clientes/PostDetalhe):**
+1. **Card 1 — "Informações da Demanda"** (substitui o conteúdo atual do dialog), contendo, em ordem:
+   - **Header**: label "TÍTULO DA TAREFA" em uppercase pequeno, `Input` grande do título (sem borda), subtítulo `Cliente · Categoria · Subtipo`. À direita: botão **Urgente** (toggle amarelo/âmbar quando `prioridade = "Urgente"`) + `Select` de **Status**.
+   - **Grid 2 colunas** com: Data limite (datetime-local), Data início, Link/Referência (se aplicável — opcional, podemos omitir se não houver campos equivalentes), Responsável (Select).
+   - **Bloco Responsáveis** com `Popover` + `AvatarStack` (igual ao PostDetalhe) — usando `responsavel_id` (single) ou habilitando múltiplos se desejado (mantém single por enquanto, apenas visual com avatar).
+   - **Separador + Bloco Anexos**: thumbnails 72×72 com preview de imagem, ícone para arquivos, botão "+ Adicionar anexo" e tile tracejado "Anexar". Reaproveita `anexos` de `useDemandas` + `addAnexo`.
+   - **Separador + Atividade / Briefing**: `Textarea` ligada a `descricao` com hint "Visível apenas dentro deste card."
+   - **Separador + Campo extra opcional** (ex: "Observações") — só se fizer sentido; caso contrário, omitir para manter simetria sem inventar campo.
+2. **Card 2 — "Atividade"** (igual ao da imagem):
+   - Lista de comentários com bolhas (componente local simples — não precisa do `ComentarioBubble` do PostDetalhe, mas estilo similar: avatar do autor colorido, nome, data, texto).
+   - Composer com `RichTextEditor` (mesmo componente usado em PostDetalhe), botões de anexar imagem/arquivo/emoji/menção (visuais), e botão **Enviar** azul à direita com texto "Enter envia · Shift+Enter quebra".
+   - Mantém `addComentario` existente.
 
 ---
 
-## O que NÃO será feito
-- ❌ Nenhuma alteração em `AppSidebar.tsx` (já está correto).
-- ❌ Nenhuma mudança nas roles do banco (`editor` já tem acesso).
-- ❌ Nenhuma alteração no roteamento (`/demandas` em `App.tsx` já está dentro do `RequireAuth`, sem filtro de role).
-- ❌ Nada destrutivo em módulos existentes.
+## Mudanças técnicas
 
-## Observação
-Se após o hard refresh o menu **ainda não aparecer** para o Lobato, será necessário investigar logs do console do navegador dele especificamente — mas pelo código atual, não há razão técnica para o item estar oculto.
+### Arquivo principal
+**`src/components/demandas/DemandaDetalheDialog.tsx`** — reescrito:
+- Remove `Tabs` e o grid de 4 selects superior.
+- Mantém `Dialog` + `DialogContent` (max-w-4xl, scroll), mas o conteúdo interno passa a ser **dois `<Card>` empilhados** com a mesma estrutura/classes do `PostDetalhe` (linhas 132–399 e 402+).
+- Reaproveita: `updateDemanda`, `addComentario`, `addAnexo`, `deleteDemanda`, `comentarios`, `anexos`, `historico` do `useDemandas`.
+- Botão **Urgente** alterna `prioridade` entre `"Urgente"` e `"Normal"` (estilo `bg-amber-500` quando ativo, igual ao PostDetalhe).
+- **Histórico**: vira um `<details>`/colapsável discreto no rodapé do Card 1 (ou removido daqui — pode ficar acessível pelo `HistoricoComentariosDialog` existente). Proposta: manter um botão pequeno "Ver histórico" que abre o dialog já existente, evitando poluir o layout.
+- **Excluir** (admin): mantém o `AlertDialog` no canto superior direito do Card 1, ao lado do Status.
+
+### Componentes reutilizados (sem alterar)
+- `Card`, `CardHeader`, `CardContent`, `CardTitle` de `@/components/ui/card`.
+- `RichTextEditor` e `RichTextView` de `@/components/`.
+- `AvatarStack` de `@/components/AvatarStack`.
+- `Popover`, `Checkbox`, `Select`, `Input`, `Textarea`, `Button`, `Label`.
+
+### Bolhas de comentário
+Componente inline simples no próprio arquivo (não justifica novo arquivo): avatar circular colorido com inicial do autor, nome + timestamp, `RichTextView` para o texto, suporte a `imagem_url` se houver. Não precisa editar/deletar nesta primeira versão (mantém paridade com o store atual de demandas).
+
+### Tokens de design
+Tudo via tokens semânticos (`bg-card`, `border-border`, `text-muted-foreground`, etc.) conforme a regra de Core Memory — sem cores hardcoded. O amarelo do botão Urgente segue o padrão já usado em PostDetalhe (`bg-amber-500`), mantendo consistência cross-módulo.
+
+---
+
+## Itens não incluídos (fora de escopo)
+- Não altera o `DemandCard.tsx` (cards do Kanban) — só o **interior do dialog de detalhe**.
+- Não altera o schema do banco nem o store `useDemandas`.
+- Não adiciona campos novos à entidade `Demanda` que não existam hoje.
+
+---
+
+## Resultado esperado
+Ao clicar em uma demanda em qualquer aba (Quadro, Calendário, Novas Solicitações, Minhas Demandas), o dialog aberto terá **a mesma identidade visual** do detalhe de Post do módulo Clientes: dois cards empilhados, header com Urgente + Status, grid de campos, anexos em thumbnails, briefing, e bloco de Atividade com editor rico — exatamente como na imagem de referência.
