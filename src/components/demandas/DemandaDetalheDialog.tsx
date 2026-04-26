@@ -1,16 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -18,18 +15,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Demanda, useDemandas } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import {
   STATUS_DEMANDA,
   STATUS_DEMANDA_LABEL,
-  PRIORIDADES,
-  PRIORIDADE_LABEL,
   STATUS_DEMANDA_COR,
   CATEGORIA_LABEL,
 } from "@/lib/demandas-categorias";
-import { Trash2 } from "lucide-react";
+import {
+  Trash2,
+  Zap,
+  Plus,
+  X,
+  FileText,
+  Send,
+  Image as ImageIcon,
+  Smile,
+  AtSign,
+  Paperclip,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,18 +48,37 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { RichTextView } from "@/components/RichTextView";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Props {
   demanda: Demanda | null;
   onOpenChange: (v: boolean) => void;
 }
 
+const fileToDataUrl = (f: File) =>
+  new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(f);
+  });
+
+const isImageUrl = (url: string, nome?: string) => {
+  if (url.startsWith("data:image")) return true;
+  const n = (nome || url).toLowerCase();
+  return /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/.test(n);
+};
+
 export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
   const { clientes, responsaveis } = useCRM();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, canWrite } = useAuth();
   const {
     updateDemanda,
     addComentario,
+    addAnexo,
     deleteDemanda,
     comentarios,
     historico,
@@ -60,10 +86,18 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
   } = useDemandas();
 
   const [novoComentario, setNovoComentario] = useState("");
+  const [composerImg, setComposerImg] = useState<string | null>(null);
+  const composerFileRef = useRef<HTMLInputElement>(null);
+  const anexoFileRef = useRef<HTMLInputElement>(null);
 
   const cliente = demanda && clientes.find((c) => c.id === demanda.cliente_id);
   const meusComentarios = useMemo(
-    () => (demanda ? comentarios.filter((c) => c.demanda_id === demanda.id) : []),
+    () =>
+      demanda
+        ? comentarios
+            .filter((c) => c.demanda_id === demanda.id)
+            .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        : [],
     [demanda, comentarios]
   );
   const meuHistorico = useMemo(
@@ -77,205 +111,566 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
 
   if (!demanda) return null;
 
-  const enviarComentario = async () => {
-    if (!user || !novoComentario.trim()) return;
-    await addComentario(demanda.id, user.id, novoComentario.trim());
+  const isUrgente = demanda.prioridade === "Urgente";
+
+  const enviar = async () => {
+    if (!user) return;
+    const txt = novoComentario.replace(/<p><\/p>/g, "").trim();
+    if (!txt && !composerImg) return;
+    await addComentario(demanda.id, user.id, txt, composerImg);
     setNovoComentario("");
+    setComposerImg(null);
+    toast.success("Comentário adicionado");
+  };
+
+  const onPickComposerImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      setComposerImg(await fileToDataUrl(f));
+    } catch {
+      toast.error("Falha ao carregar imagem");
+    }
+    e.target.value = "";
+  };
+
+  const adicionarAnexo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    try {
+      for (const f of files) {
+        const url = await fileToDataUrl(f);
+        await addAnexo({
+          demanda_id: demanda.id,
+          nome: f.name,
+          url,
+          mime: f.type || null,
+          size: f.size,
+        });
+      }
+      toast.success(`${files.length} anexo(s) adicionado(s)`);
+    } catch {
+      toast.error("Falha ao adicionar anexo");
+    }
+    e.target.value = "";
   };
 
   return (
     <Dialog open={!!demanda} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-start justify-between gap-3">
-            <div className="flex-1">
-              <Input
-                value={demanda.titulo}
-                onChange={(e) => updateDemanda(demanda.id, { titulo: e.target.value })}
-                className="text-lg font-semibold border-0 px-0 focus-visible:ring-0"
-              />
-              <div className="text-xs text-muted-foreground mt-1">
-                {cliente?.nome_cliente} · {CATEGORIA_LABEL[demanda.categoria]}
-                {demanda.subtipo && ` · ${demanda.subtipo}`}
-              </div>
-            </div>
-            {isAdmin && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="icon" variant="ghost" className="text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir demanda?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação não pode ser desfeita. Comentários, anexos e histórico serão removidos.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={async () => {
-                        await deleteDemanda(demanda.id);
-                        onOpenChange(false);
-                      }}
-                    >
-                      Excluir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="grid grid-cols-4 gap-3 text-xs border rounded-md p-3 bg-muted/30">
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Status</Label>
-            <Select
-              value={demanda.status}
-              onValueChange={(v) => updateDemanda(demanda.id, { status: v as any })}
-            >
-              <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {STATUS_DEMANDA.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    <span className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full" style={{ background: STATUS_DEMANDA_COR[s] }} />
-                      {STATUS_DEMANDA_LABEL[s]}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Prioridade</Label>
-            <Select
-              value={demanda.prioridade}
-              onValueChange={(v) => updateDemanda(demanda.id, { prioridade: v as any })}
-            >
-              <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PRIORIDADES.map((p) => (
-                  <SelectItem key={p} value={p}>{PRIORIDADE_LABEL[p]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Responsável</Label>
-            <Select
-              value={demanda.responsavel_id ?? ""}
-              onValueChange={(v) => updateDemanda(demanda.id, { responsavel_id: v || null })}
-            >
-              <SelectTrigger className="h-8 mt-1"><SelectValue placeholder="Selecionar" /></SelectTrigger>
-              <SelectContent>
-                {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Data limite</Label>
-            <Input
-              type="datetime-local"
-              className="h-8 mt-1"
-              value={demanda.data_limite ? demanda.data_limite.slice(0, 16) : ""}
-              onChange={(e) =>
-                updateDemanda(demanda.id, {
-                  data_limite: e.target.value ? new Date(e.target.value).toISOString() : null,
-                })
-              }
-            />
-          </div>
-        </div>
-
-        <Tabs defaultValue="atividade" className="mt-2">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="atividade">Atividade</TabsTrigger>
-            <TabsTrigger value="arquivos">Arquivos</TabsTrigger>
-            <TabsTrigger value="comentarios">Comentários</TabsTrigger>
-            <TabsTrigger value="historico">Histórico</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="atividade" className="space-y-3">
-            <div>
-              <Label>Descrição</Label>
-              <Textarea
-                rows={6}
-                value={demanda.descricao ?? ""}
-                onChange={(e) => updateDemanda(demanda.id, { descricao: e.target.value })}
-                placeholder="Detalhes da demanda..."
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="arquivos">
-            {meusAnexos.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-6">Sem anexos</div>
-            ) : (
-              <ul className="space-y-1.5">
-                {meusAnexos.map((a) => (
-                  <li key={a.id}>
-                    <a href={a.url} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline">
-                      {a.nome}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </TabsContent>
-
-          <TabsContent value="comentarios" className="space-y-3">
-            <div className="space-y-2 max-h-72 overflow-y-auto">
-              {meusComentarios.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-4">Nenhum comentário ainda</div>
-              )}
-              {meusComentarios.map((c) => (
-                <div key={c.id} className="border rounded-md p-2 text-sm">
-                  <div className="text-[10px] text-muted-foreground mb-1">
-                    {new Date(c.created_at).toLocaleString("pt-BR")}
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
+        <fieldset disabled={!canWrite} className="contents">
+          {/* CARD 1 — Informações da Demanda */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">
+                    Título da tarefa
                   </div>
-                  {c.texto}
+                  <Input
+                    value={demanda.titulo}
+                    onChange={(e) =>
+                      updateDemanda(demanda.id, { titulo: e.target.value })
+                    }
+                    placeholder="Ex: Criar landing page para campanha de inverno"
+                    className="text-xl font-bold border-0 px-0 focus-visible:ring-0 h-auto"
+                  />
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {cliente?.nome_cliente ?? "—"} ·{" "}
+                    {CATEGORIA_LABEL[demanda.categoria]}
+                    {demanda.subtipo && ` · ${demanda.subtipo}`}
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Textarea
-                rows={2}
-                value={novoComentario}
-                onChange={(e) => setNovoComentario(e.target.value)}
-                placeholder="Escreva um comentário..."
-              />
-              <Button onClick={enviarComentario} disabled={!novoComentario.trim()}>Enviar</Button>
-            </div>
-          </TabsContent>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={isUrgente ? "default" : "outline"}
+                    size="sm"
+                    disabled={!canWrite}
+                    onClick={() => {
+                      const next = isUrgente ? "Media" : "Urgente";
+                      updateDemanda(demanda.id, { prioridade: next as any });
+                      toast.success(
+                        next === "Urgente"
+                          ? "Demanda marcada como urgente"
+                          : "Urgência removida"
+                      );
+                    }}
+                    className={cn(
+                      "gap-1.5",
+                      isUrgente &&
+                        "bg-amber-500 hover:bg-amber-500/90 text-white border-amber-500"
+                    )}
+                    title={isUrgente ? "Remover urgência" : "Marcar como urgente"}
+                  >
+                    <Zap
+                      className={cn("h-4 w-4", isUrgente && "fill-current")}
+                    />
+                    Urgente
+                  </Button>
+                  <Select
+                    value={demanda.status}
+                    onValueChange={(v) =>
+                      updateDemanda(demanda.id, { status: v as any })
+                    }
+                  >
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_DEMANDA.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ background: STATUS_DEMANDA_COR[s] }}
+                            />
+                            {STATUS_DEMANDA_LABEL[s]}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive shrink-0"
+                          title="Excluir demanda"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir demanda?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Comentários, anexos
+                            e histórico serão removidos.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={async () => {
+                              await deleteDemanda(demanda.id);
+                              onOpenChange(false);
+                            }}
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
 
-          <TabsContent value="historico">
-            {meuHistorico.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-6">Sem histórico</div>
-            ) : (
-              <ul className="space-y-1.5 text-xs">
-                {meuHistorico.map((h) => (
-                  <li key={h.id} className="flex items-center justify-between border rounded p-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px]">{h.acao}</Badge>
-                      {h.de_status && h.para_status && (
-                        <span className="text-muted-foreground">
-                          {h.de_status} → {h.para_status}
+            <CardContent className="space-y-5">
+              {/* Datas + Responsável */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Data início</Label>
+                  <Input
+                    type="datetime-local"
+                    value={
+                      demanda.data_inicio ? demanda.data_inicio.slice(0, 16) : ""
+                    }
+                    onChange={(e) =>
+                      updateDemanda(demanda.id, {
+                        data_inicio: e.target.value
+                          ? new Date(e.target.value).toISOString()
+                          : null,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Data limite</Label>
+                  <Input
+                    type="datetime-local"
+                    value={
+                      demanda.data_limite ? demanda.data_limite.slice(0, 16) : ""
+                    }
+                    onChange={(e) =>
+                      updateDemanda(demanda.id, {
+                        data_limite: e.target.value
+                          ? new Date(e.target.value).toISOString()
+                          : null,
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Responsável (single) — exibido como "Responsáveis" no estilo do PostDetalhe */}
+                <div className="md:col-span-2">
+                  <Label className="text-xs">Responsáveis</Label>
+                  <div className="mt-1">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1.5 -mx-2 transition-colors min-h-[40px]"
+                          title="Clique para alterar o responsável"
+                        >
+                          {(() => {
+                            const r = responsaveis.find(
+                              (x) => x.id === demanda.responsavel_id
+                            );
+                            return r ? (
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="h-7 w-7 rounded-full text-white text-[11px] font-semibold flex items-center justify-center"
+                                  style={{ backgroundColor: r.cor }}
+                                >
+                                  {r.nome
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .slice(0, 2)
+                                    .join("")}
+                                </div>
+                                <span className="text-sm">{r.nome}</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">
+                                + atribuir responsável
+                              </span>
+                            );
+                          })()}
+                          <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="text-[11px] text-muted-foreground px-2 pb-1.5">
+                          Responsável
+                        </div>
+                        <div className="max-h-60 overflow-auto space-y-0.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateDemanda(demanda.id, { responsavel_id: null })
+                            }
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm text-muted-foreground"
+                          >
+                            <X className="h-3.5 w-3.5" /> Sem responsável
+                          </button>
+                          {responsaveis.map((r) => {
+                            const active = demanda.responsavel_id === r.id;
+                            return (
+                              <button
+                                type="button"
+                                key={r.id}
+                                onClick={() =>
+                                  updateDemanda(demanda.id, {
+                                    responsavel_id: r.id,
+                                  })
+                                }
+                                className={cn(
+                                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                                  active && "bg-accent"
+                                )}
+                              >
+                                <div
+                                  className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
+                                  style={{ backgroundColor: r.cor }}
+                                >
+                                  {r.nome
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .slice(0, 2)
+                                    .join("")}
+                                </div>
+                                <span className="truncate">{r.nome}</span>
+                              </button>
+                            );
+                          })}
+                          {responsaveis.length === 0 && (
+                            <div className="text-xs text-muted-foreground px-2 py-3 text-center">
+                              Nenhum responsável cadastrado
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+
+              {/* Anexos */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-xs">Anexos</Label>
+                  <input
+                    ref={anexoFileRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={adicionarAnexo}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs text-primary hover:text-primary"
+                    onClick={() => anexoFileRef.current?.click()}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar anexo
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {meusAnexos.map((a) => {
+                    const img = isImageUrl(a.url, a.nome);
+                    return (
+                      <div
+                        key={a.id}
+                        className="group relative h-[72px] w-[72px] border rounded-lg overflow-hidden bg-muted/30"
+                      >
+                        {img ? (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block w-full h-full"
+                          >
+                            <img
+                              src={a.url}
+                              alt={a.nome}
+                              className="w-full h-full object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            download={a.nome}
+                            className="flex flex-col items-center justify-center w-full h-full p-1 text-center hover:bg-accent"
+                            title={a.nome}
+                          >
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-[9px] mt-0.5 truncate w-full leading-tight">
+                              {a.nome}
+                            </span>
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <button
+                    onClick={() => anexoFileRef.current?.click()}
+                    className="flex flex-col items-center justify-center h-[72px] w-[72px] border border-dashed rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    title="Adicionar anexo"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span className="text-[9px] mt-0.5">Anexar</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Atividade / Briefing */}
+              <div className="border-t pt-4">
+                <Label className="text-xs">Atividade / Briefing</Label>
+                <Textarea
+                  rows={5}
+                  placeholder="Detalhes internos da demanda: contexto, requisitos, referências..."
+                  value={demanda.descricao ?? ""}
+                  onChange={(e) =>
+                    updateDemanda(demanda.id, { descricao: e.target.value })
+                  }
+                  className="mt-1.5"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Visível apenas dentro deste card. O título principal acima é o
+                  que aparece no Kanban.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </fieldset>
+
+        {/* CARD 2 — Atividade (comentários) */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Atividade</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 max-h-80 overflow-auto pr-1">
+              {meusComentarios.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-6">
+                  Sem comentários ainda
+                </div>
+              )}
+              {meusComentarios.map((c) => {
+                const autor = responsaveis.find((r) => r.id === c.usuario_id);
+                const cor = autor?.cor ?? "hsl(var(--muted))";
+                const nome = autor?.nome ?? "Usuário";
+                return (
+                  <div key={c.id} className="flex gap-2">
+                    <div
+                      className="h-8 w-8 rounded-full text-white text-[11px] font-semibold flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: cor }}
+                    >
+                      {nome
+                        .split(" ")
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join("")}
+                    </div>
+                    <div className="flex-1 rounded-lg border bg-muted/30 px-3 py-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium">{nome}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(c.created_at).toLocaleString("pt-BR")}
                         </span>
+                      </div>
+                      {c.texto && <RichTextView content={c.texto} />}
+                      {c.imagem_url && (
+                        <a
+                          href={c.imagem_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block mt-2"
+                        >
+                          <img
+                            src={c.imagem_url}
+                            alt="anexo"
+                            className="max-h-48 rounded-md border"
+                          />
+                        </a>
                       )}
                     </div>
-                    <span className="text-muted-foreground">
-                      {new Date(h.created_at).toLocaleString("pt-BR")}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Composer */}
+            {canWrite && (
+              <div className="border rounded-lg overflow-hidden">
+                <RichTextEditor
+                  value={novoComentario}
+                  onChange={setNovoComentario}
+                  placeholder="Escreva um comentário..."
+                  onEnterSubmit={enviar}
+                  minHeight="60px"
+                />
+                {composerImg && (
+                  <div className="px-3 py-2 border-t bg-muted/30 flex items-center gap-2">
+                    <img
+                      src={composerImg}
+                      alt="preview"
+                      className="h-12 w-12 rounded object-cover border"
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setComposerImg(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <div className="flex items-center justify-between px-2 py-1.5 border-t bg-muted/20">
+                  <div className="flex items-center gap-0.5">
+                    <input
+                      ref={composerFileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={onPickComposerImg}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      title="Anexar"
+                      onClick={() => composerFileRef.current?.click()}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      title="Imagem"
+                      onClick={() => composerFileRef.current?.click()}
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      title="Emoji"
+                      disabled
+                    >
+                      <Smile className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      title="Mencionar"
+                      disabled
+                    >
+                      <AtSign className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                      Enter envia · Shift+Enter quebra
                     </span>
-                  </li>
-                ))}
-              </ul>
+                    <Button
+                      size="sm"
+                      onClick={enviar}
+                      disabled={
+                        !novoComentario.replace(/<p><\/p>/g, "").trim() &&
+                        !composerImg
+                      }
+                      className="gap-1.5"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      Enviar
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
-          </TabsContent>
-        </Tabs>
+
+            {/* Histórico (colapsável discreto) */}
+            {meuHistorico.length > 0 && (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-1">
+                  Ver histórico ({meuHistorico.length})
+                </summary>
+                <ul className="space-y-1.5 mt-2">
+                  {meuHistorico.map((h) => (
+                    <li
+                      key={h.id}
+                      className="flex items-center justify-between border rounded p-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-wide font-medium px-1.5 py-0.5 rounded bg-muted">
+                          {h.acao}
+                        </span>
+                        {h.de_status && h.para_status && (
+                          <span className="text-muted-foreground">
+                            {h.de_status} → {h.para_status}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-muted-foreground">
+                        {new Date(h.created_at).toLocaleString("pt-BR")}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </CardContent>
+        </Card>
       </DialogContent>
     </Dialog>
   );
