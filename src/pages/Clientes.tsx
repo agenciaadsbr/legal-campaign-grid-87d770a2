@@ -1079,19 +1079,28 @@ export default function Clientes() {
     [colunasCliente]
   );
 
-  const filtrados = useMemo(
-    () =>
-      clientes
-        .filter((c) => c.nome_cliente.toLowerCase().includes(busca.toLowerCase()))
-        .filter(
-          (c) =>
-            filtroResponsaveis.length === 0 ||
-            c.responsaveis.some((r) => filtroResponsaveis.includes(r))
-        )
-        .filter((c) => !apenasMinhas || (currentUserId !== null && c.responsaveis.includes(currentUserId)))
-        .filter((c) => filtroStatusCliente === "todos" || c.status_cliente === filtroStatusCliente),
-    [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]
-  );
+  const filtrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return clientes
+      .filter((c) => {
+        if (!termo) return true;
+        return (
+          c.nome_cliente?.toLowerCase().includes(termo) ||
+          (c.nicho ?? "").toLowerCase().includes(termo) ||
+          (c.observacoes ?? "").toLowerCase().includes(termo) ||
+          (c.status_cliente ?? "").toLowerCase().includes(termo)
+        );
+      })
+      .filter(
+        (c) =>
+          filtroResponsaveis.length === 0 ||
+          c.responsaveis.some((r) => filtroResponsaveis.includes(r))
+      )
+      .filter((c) => !apenasMinhas || (currentUserId !== null && c.responsaveis.includes(currentUserId)))
+      // Quando há busca ativa, ignora o filtro de status para permitir achar qualquer cliente
+      .filter((c) => !!termo || filtroStatusCliente === "todos" || c.status_cliente === filtroStatusCliente);
+  }, [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]);
+
 
   const GRUPOS = ["Revisar", "Criar", "Concluidos"] as const;
   const [apenasPendentes, setApenasPendentes] = useState(false);
@@ -1128,12 +1137,13 @@ export default function Clientes() {
   }, [cards]);
 
   const filtradosFinal = useMemo(() => {
-    if (!apenasPendentes) return filtrados;
+    if (!apenasPendentes || busca.trim()) return filtrados;
     return filtrados.filter((c) => {
       const t = tarefasPorCliente[c.id];
       return t && (t.atrasado.length + t.urgente.length + t.hoje.length) > 0;
     });
-  }, [filtrados, apenasPendentes, tarefasPorCliente]);
+  }, [filtrados, apenasPendentes, tarefasPorCliente, busca]);
+
 
   const gruposPosts = useMemo(() => {
     const map: Record<string, typeof clientes> = { Revisar: [], Criar: [], Concluidos: [] };
@@ -1143,14 +1153,15 @@ export default function Clientes() {
       // Cliente sem nenhum card NÃO é concluído — vai para "Criar" para ficar visível.
       const concluido = !!stats && stats.total > 0 && stats.pendentes === 0;
       if (concluido) {
-        if (mostrarConcluidos) map.Concluidos.push(c);
+        if (mostrarConcluidos || busca.trim()) map.Concluidos.push(c);
         return;
       }
       const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
       map[ps].push(c);
     });
     return map;
-  }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos]);
+  }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos, busca]);
+
 
   const algumGrupoAberto = useMemo(
     // Revisar e Criar são fixos (sempre renderizam). Concluídos só aparece com toggle.
