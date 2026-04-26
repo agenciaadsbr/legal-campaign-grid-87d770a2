@@ -1,61 +1,74 @@
 ## Diagnóstico
 
-O usuário conseguiu entrar no app publicado, mas o item **Demandas** não aparece na sidebar. Pelo screenshot, a sidebar exibida está com a lista antiga:
+A screenshot do **robsonlobato31@gmail.com** mostra a versão **antiga** do app:
+- Sidebar **sem** o item "Demandas"
+- Dashboard **sem** a seção "Demandas Operacionais"
+- Dados de exemplo antigos (Ana, Bruno, Carla, Diego)
 
-```text
-Dashboard
-Clientes
-Contratos
-Alertas
-Relatórios
-Configurações
-```
+Já o admin (`agenciaadsbr@gmail.com`) vê a versão nova, com Demandas e dados reais. Isso confirma que **o código está correto** (verifiquei `AppSidebar.tsx` — "Demandas" está fixo no menu, sem filtro por role) e que **a publicação está ativa** (`legal-campaign-grid.lovable.app`, visibilidade pública).
 
-No código atual, `AppSidebar.tsx` já contém o item **Demandas**, então o problema mais provável é que a correção anterior ainda não esteja refletida de forma confiável no build publicado/cache do usuário ou que exista uma renderização/menu antigo sendo servido. Também vou reforçar a navegação para garantir que **Demandas** fique visível para todo usuário autenticado, sem depender de perfil/role.
+### Causa raiz
+
+O problema é **bundle JavaScript antigo cacheado** no navegador do Robson. As meta tags `Cache-Control` no `index.html` só evitam cache do HTML, mas **não obrigam recarga quando um novo bundle é publicado** enquanto a aba já está aberta. Como o Robson provavelmente deixou a aba aberta antes de novos deploys, o app continua executando JS antigo.
+
+Hard refresh resolve pontualmente, mas precisamos de uma **solução definitiva** que detecte novas versões em runtime e atualize automaticamente.
+
+---
 
 ## Plano de correção
 
-1. **Reforçar a sidebar principal**
-   - Manter **Demandas** no array fixo de navegação de `src/components/AppSidebar.tsx`.
-   - Garantir que o item fique na ordem correta:
-     ```text
-     Dashboard
-     Clientes
-     Contratos
-     Demandas
-     Alertas
-     Relatórios
-     Configurações
-     ```
-   - Não aplicar nenhum filtro por role/permissão no item **Demandas**.
+### 1. Sistema de auto-update em runtime (definitivo)
 
-2. **Adicionar fallback de acesso direto ao módulo**
-   - Incluir um atalho visível para **Demandas** também no topo/layout quando o usuário estiver autenticado, se necessário, para evitar que cache ou sidebar antiga bloqueie o acesso.
-   - A rota `/demandas` continuará protegida apenas por login, não por role específica.
+Implementar um detector de versão que faz o app se atualizar sozinho quando há deploy novo, sem o usuário precisar fazer hard refresh.
 
-3. **Revisar autenticação sem bloqueio indevido**
-   - Ajustar `useAuth.tsx` para separar melhor:
-     - carregamento da sessão/login;
-     - carregamento de roles/perfil.
-   - O menu e as rotas básicas não devem depender de `roles` para aparecer.
-   - Manter apenas a validação de usuário logado em `RequireAuth`.
+**Como vai funcionar:**
 
-4. **Verificar rotas do módulo Demandas**
-   - Confirmar que continuam registradas:
-     - `/demandas`
-     - `/demandas/cliente/:clienteId`
-   - Não alterar módulos de Clientes, Posts, Kanban atual ou cards existentes.
+- Gerar uma constante `APP_VERSION` em build (timestamp do build, injetado via `define` no `vite.config.ts`).
+- Criar arquivo estático `public/version.json` com o mesmo timestamp, gerado no build.
+- Hook novo `useVersionCheck` em `src/hooks/useVersionCheck.tsx`:
+  - A cada 60 segundos faz `fetch('/version.json?t=' + Date.now())`.
+  - Se a versão remota for diferente da `APP_VERSION` em memória → mostra toast "Nova versão disponível" com botão **"Atualizar agora"** que executa `window.location.reload()`.
+  - Também checa quando a aba volta a ficar visível (`visibilitychange`).
+- Plugar o hook em `src/App.tsx` (uma vez, dentro do provider raiz).
 
-5. **Validação**
-   - Rodar verificação de TypeScript/build.
-   - Confirmar que, para usuário comum autenticado, o menu lateral mostra **Demandas** e o acesso direto a `/demandas` funciona.
+### 2. Cache busting forte no HTML
 
-## Arquivos previstos
+- Adicionar `<meta http-equiv="Cache-Control" content="no-store">` reforçado e remover qualquer service worker remanescente.
+- Garantir que `index.html` nunca seja cacheado (já está configurado, mas vou validar headers).
+- Vite já adiciona hash nos bundles JS/CSS, então o `index.html` novo aponta para arquivos com nome novo automaticamente.
 
-- `src/components/AppSidebar.tsx`
-- `src/hooks/useAuth.tsx` se necessário para remover dependência indireta de roles no carregamento
-- `src/App.tsx` apenas para conferência/ajuste mínimo de rotas, se necessário
+### 3. Garantir que "Demandas" carregue mesmo se o store falhar
+
+Reforço defensivo em `src/components/AppSidebar.tsx`: o item "Demandas" continua fixo (já está) e adicionar log de versão no console para diagnóstico futuro:
+```ts
+console.log('[CRM] App version:', APP_VERSION);
+```
+
+### 4. Republicar o app
+
+Após implementar, **republicar** para que o `legal-campaign-grid.lovable.app` sirva o novo bundle com o sistema de auto-update embutido. A partir desse deploy, **todos os usuários** (incluindo o Robson) recebem updates automáticos sem hard refresh.
+
+### 5. Ação imediata para o Robson (uma única vez)
+
+Para sair do bundle antigo agora, o Robson precisa fazer **uma vez**:
+- `Ctrl + Shift + R` (Windows) ou `Cmd + Shift + R` (Mac), **ou**
+- Abrir em aba anônima e logar.
+
+Depois desse refresh único, ele vai carregar o bundle novo com o auto-update, e nunca mais vai ficar travado em versão antiga.
+
+---
+
+## Arquivos que serão alterados/criados
+
+- `vite.config.ts` — injetar `__APP_VERSION__` via `define`, plugin para gerar `public/version.json` no build.
+- `src/hooks/useVersionCheck.tsx` — **novo**, lógica de polling + toast.
+- `src/App.tsx` — invocar `useVersionCheck()` no nível raiz.
+- `src/vite-env.d.ts` — declarar `__APP_VERSION__` global.
+- `index.html` — reforçar `no-store`.
+- `src/components/AppSidebar.tsx` — log de versão (diagnóstico).
 
 ## Resultado esperado
 
-Qualquer usuário criado no sistema e autenticado com login e senha conseguirá ver e acessar o módulo **Demandas**, sem bloqueio extra por role ou permissão.
+- Próximo deploy: todos os usuários autenticados recebem em até 60s um toast "Nova versão disponível — Atualizar agora", e ao clicar a página recarrega no bundle novo.
+- Robson, após o hard refresh único, passa a ver "Demandas" no menu, "Demandas Operacionais" no Dashboard, e todas as próximas atualizações automaticamente.
+- Não mexe em layout, dados, RLS ou roles — é só infraestrutura de versão.
