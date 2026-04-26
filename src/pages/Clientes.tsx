@@ -1137,12 +1137,13 @@ export default function Clientes() {
   }, [cards]);
 
   const filtradosFinal = useMemo(() => {
-    if (!apenasPendentes) return filtrados;
+    if (!apenasPendentes || busca.trim()) return filtrados;
     return filtrados.filter((c) => {
       const t = tarefasPorCliente[c.id];
       return t && (t.atrasado.length + t.urgente.length + t.hoje.length) > 0;
     });
-  }, [filtrados, apenasPendentes, tarefasPorCliente]);
+  }, [filtrados, apenasPendentes, tarefasPorCliente, busca]);
+
 
   const gruposPosts = useMemo(() => {
     const map: Record<string, typeof clientes> = { Revisar: [], Criar: [], Concluidos: [] };
