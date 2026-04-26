@@ -1,10 +1,10 @@
 import { useCRM } from "@/store/crm";
 import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
-import { ColorBadge } from "@/components/StatusBadge";
+import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 
 export default function Contratos() {
-  const { contratos, clientes, statusOptions } = useCRM();
+  const { contratos, clientes } = useCRM();
   return (
     <div className="p-6 space-y-4 animate-fade-in">
       <div>
