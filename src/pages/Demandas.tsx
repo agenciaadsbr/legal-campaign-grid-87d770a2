@@ -226,16 +226,18 @@ export default function Demandas() {
                   hasDemand: { fontWeight: 700, textDecoration: "underline", color: "hsl(var(--primary))" },
                 }}
               />
-              <div className="flex-1 space-y-2 max-h-96 overflow-y-auto">
-                <div className="text-xs text-muted-foreground mb-1">
+              <div className="flex-1 max-h-96 overflow-y-auto">
+                <div className="text-xs text-muted-foreground mb-2">
                   Demandas com data limite no mês:
                 </div>
-                {filtradas
-                  .filter((d) => d.data_limite && new Date(d.data_limite).getMonth() === calMonth.getMonth() && new Date(d.data_limite).getFullYear() === calMonth.getFullYear())
-                  .sort((a, b) => +new Date(a.data_limite!) - +new Date(b.data_limite!))
-                  .map((d) => (
-                    <DemandCard key={d.id} demanda={d} onClick={() => setSelecionada(d)} />
-                  ))}
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-2 items-start">
+                  {filtradas
+                    .filter((d) => d.data_limite && new Date(d.data_limite).getMonth() === calMonth.getMonth() && new Date(d.data_limite).getFullYear() === calMonth.getFullYear())
+                    .sort((a, b) => +new Date(a.data_limite!) - +new Date(b.data_limite!))
+                    .map((d) => (
+                      <DemandCard key={d.id} demanda={d} onClick={() => setSelecionada(d)} />
+                    ))}
+                </div>
               </div>
             </CardContent>
           </Card>
