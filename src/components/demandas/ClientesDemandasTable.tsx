@@ -108,9 +108,9 @@ export function ClientesDemandasTable({
       lista = lista.filter((l) => l.nome.toLowerCase().includes(q));
     }
 
-    // Ordena: primeiro com atividade mais recente, sem demandas vão pelo created_at do cliente
-    lista.sort(
-      (a, b) => +new Date(b.ultimaAtividade) - +new Date(a.ultimaAtividade),
+    // Ordena alfabeticamente A → Z (case/acento insensível, pt-BR)
+    lista.sort((a, b) =>
+      a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
     );
     return lista;
   }, [demandas, clientes, filtroBusca, filtroResp, filtroStatus, filtroPrio]);
@@ -128,6 +128,7 @@ export function ClientesDemandasTable({
             <Table className="[&_th]:py-1 [&_th]:px-2 [&_th]:h-7 [&_td]:py-0.5 [&_td]:px-2">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10 text-xs text-muted-foreground">#</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Responsáveis</TableHead>
                   <TableHead>Última atividade</TableHead>
@@ -138,7 +139,7 @@ export function ClientesDemandasTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {linhas.map((l) => {
+                {linhas.map((l, idx) => {
                   const respObjs = responsaveis.filter((r) =>
                     l.responsaveisIds.has(r.id)
                   );
@@ -148,6 +149,9 @@ export function ClientesDemandasTable({
                       className="cursor-pointer"
                       onClick={() => navigate(`/demandas/cliente/${l.cliente_id}`)}
                     >
+                      <TableCell className="text-xs text-muted-foreground tabular-nums w-10">
+                        {idx + 1}
+                      </TableCell>
                       <TableCell className="font-medium">{l.nome}</TableCell>
                       <TableCell>
                         {respObjs.length > 0 ? (
