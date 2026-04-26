@@ -33,11 +33,18 @@ export interface Responsavel {
   email: string;
 }
 
+export type StatusClienteGlobal = "Onboarding" | "Ativo" | "Pausado" | "Encerrado";
+
 export interface Cliente {
   id: string;
   nome_cliente: string;
   nicho: string;
   status_cliente: StatusCliente;
+  /** Status global do ciclo de vida (Onboarding/Ativo/Pausado/Encerrado) — independente de `status_cliente` */
+  status_global: StatusClienteGlobal;
+  data_inicio_onboarding: string | null;
+  prazo_onboarding: string | null;
+  data_ativacao: string | null;
   data_inicio_contrato: string;
   data_fim_contrato: string;
   responsaveis: string[];
@@ -163,7 +170,12 @@ interface State {
 
   // ações cliente
   addCliente: (
-    data: Omit<Cliente, "id" | "created_at" | "ultimo_comentario" | "custom">,
+    data: Omit<Cliente, "id" | "created_at" | "ultimo_comentario" | "custom" | "status_global" | "data_inicio_onboarding" | "prazo_onboarding" | "data_ativacao"> & {
+      status_global?: StatusClienteGlobal;
+      data_inicio_onboarding?: string | null;
+      prazo_onboarding?: string | null;
+      data_ativacao?: string | null;
+    },
   ) => Promise<string>;
   updateCliente: (id: string, patch: Partial<Cliente>) => Promise<void>;
   deleteCliente: (id: string) => Promise<void>;
@@ -253,6 +265,10 @@ function mapCliente(
     nome_cliente: row.nome ?? "",
     nicho: row.nicho ?? "",
     status_cliente: row.status ?? "Ativo",
+    status_global: (row.status_cliente as StatusClienteGlobal) ?? "Onboarding",
+    data_inicio_onboarding: row.data_inicio_onboarding ?? null,
+    prazo_onboarding: row.prazo_onboarding ?? null,
+    data_ativacao: row.data_ativacao ?? null,
     data_inicio_contrato: contrato?.data_inicio ?? "",
     data_fim_contrato: contrato?.data_fim ?? "",
     responsaveis: row.responsaveis_ids ?? [],
@@ -486,10 +502,15 @@ export const useCRM = create<State>()((set, get) => ({
         nome: data.nome_cliente,
         nicho: data.nicho || null,
         status: (data.status_cliente || "Ativo") as any,
+        status_cliente: (data.status_global ?? "Onboarding") as any,
+        data_inicio_onboarding:
+          data.data_inicio_onboarding ?? new Date().toISOString(),
+        prazo_onboarding: data.prazo_onboarding ?? null,
+        data_ativacao: data.data_ativacao ?? null,
         responsaveis_ids: data.responsaveis ?? [],
         descricao: data.observacoes ?? "",
         campos_personalizados: {},
-      })
+      } as any)
       .select()
       .single();
     if (error || !inserted) {
@@ -553,6 +574,21 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
     if (patch.observacoes !== undefined) dbPatch.descricao = patch.observacoes;
     if (patch.custom !== undefined) dbPatch.campos_personalizados = patch.custom;
+    if ((patch as any).status_global !== undefined) {
+      const novoStatus = (patch as any).status_global as StatusClienteGlobal;
+      dbPatch.status_cliente = novoStatus;
+      // ao mover para Ativo, marca data_ativacao se ainda não estiver setada
+      const cur = get().clientes.find((c) => c.id === id);
+      if (novoStatus === "Ativo" && cur && !cur.data_ativacao) {
+        dbPatch.data_ativacao = new Date().toISOString();
+      }
+    }
+    if ((patch as any).data_inicio_onboarding !== undefined)
+      dbPatch.data_inicio_onboarding = (patch as any).data_inicio_onboarding;
+    if ((patch as any).prazo_onboarding !== undefined)
+      dbPatch.prazo_onboarding = (patch as any).prazo_onboarding;
+    if ((patch as any).data_ativacao !== undefined)
+      dbPatch.data_ativacao = (patch as any).data_ativacao;
     if (Object.keys(dbPatch).length > 0) {
       await supabase.from("clientes").update(dbPatch).eq("id", id);
     }

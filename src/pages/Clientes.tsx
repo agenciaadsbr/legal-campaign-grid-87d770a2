@@ -1,5 +1,5 @@
 import { useCRM, ColumnConfig, DropdownOption } from "@/store/crm";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X, Settings, Zap, AlertCircle, Clock, ChevronsUpDown, Pencil } from "lucide-react";
@@ -50,6 +50,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ClientesGeralTable } from "@/components/clientes/ClientesGeralTable";
+import { StatusClienteBadge, STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const { responsaveis, addResponsavel } = useCRM();
@@ -124,6 +127,8 @@ function NovoClienteDialog() {
     nome_cliente: "",
     nicho: nichos[0]?.label ?? "",
     status_cliente: "Ativo" as any,
+    status_global: "Onboarding" as any,
+    prazo_onboarding: "" as string,
     data_inicio_contrato: hojeISO,
     duracao_meses: 3,
     data_fim_contrato: calcFim(hojeISO, 3),
@@ -158,8 +163,13 @@ function NovoClienteDialog() {
     }
     setSaving(true);
     try {
-      const { duracao_meses, ...payload } = form;
-      const id = await addCliente(payload);
+      const { duracao_meses, prazo_onboarding, status_global, ...rest } = form;
+      const payload = {
+        ...rest,
+        status_global,
+        prazo_onboarding: prazo_onboarding || null,
+      };
+      const id = await addCliente(payload as any);
       setCreatedId(id);
       toast.success(`Cliente criado — ${totalCards} cards e contrato gerados automaticamente`);
     } catch (e: any) {
@@ -177,8 +187,11 @@ function NovoClienteDialog() {
     }
     setSaving(true);
     try {
-      const { duracao_meses, ...patch } = form;
-      await updateCliente(createdId, patch);
+      const { duracao_meses, prazo_onboarding, ...patch } = form;
+      await updateCliente(createdId, {
+        ...(patch as any),
+        prazo_onboarding: prazo_onboarding || null,
+      });
       toast.success("Alterações salvas");
     } catch (e: any) {
       toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
@@ -233,6 +246,31 @@ function NovoClienteDialog() {
                   {statusOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Status do cliente (ciclo de vida)</Label>
+              <Select
+                value={form.status_global}
+                onValueChange={(v) => setForm({ ...form, status_global: v as any })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Onboarding">Onboarding</SelectItem>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Pausado">Pausado</SelectItem>
+                  <SelectItem value="Encerrado">Encerrado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Prazo de onboarding</Label>
+              <Input
+                type="date"
+                value={form.prazo_onboarding}
+                onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
+              />
             </div>
           </div>
           <div>
@@ -355,6 +393,8 @@ function EditarClienteDialog({
     nome_cliente: cliente?.nome_cliente ?? "",
     nicho: cliente?.nicho ?? "",
     status_cliente: cliente?.status_cliente ?? "Ativo",
+    status_global: (cliente?.status_global ?? "Onboarding") as any,
+    prazo_onboarding: (cliente?.prazo_onboarding ?? "") as string,
     data_inicio_contrato: cliente?.data_inicio_contrato ?? "",
     duracao_meses: calcMeses(cliente?.data_inicio_contrato, cliente?.data_fim_contrato),
     data_fim_contrato: cliente?.data_fim_contrato ?? "",
@@ -373,8 +413,11 @@ function EditarClienteDialog({
       return;
     }
     try {
-      const { duracao_meses, ...patch } = form;
-      await updateCliente(cliente.id, patch);
+      const { duracao_meses, prazo_onboarding, ...patch } = form;
+      await updateCliente(cliente.id, {
+        ...(patch as any),
+        prazo_onboarding: prazo_onboarding || null,
+      });
       toast.success("Cliente atualizado");
       onOpenChange(false);
     } catch (e: any) {
@@ -409,6 +452,31 @@ function EditarClienteDialog({
                   {statusOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Status do cliente (ciclo de vida)</Label>
+              <Select
+                value={form.status_global}
+                onValueChange={(v) => setForm({ ...form, status_global: v as any })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Onboarding">Onboarding</SelectItem>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Pausado">Pausado</SelectItem>
+                  <SelectItem value="Encerrado">Encerrado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Prazo de onboarding</Label>
+              <Input
+                type="date"
+                value={form.prazo_onboarding}
+                onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
+              />
             </div>
           </div>
           <div>
@@ -1070,6 +1138,20 @@ export default function Clientes() {
   const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
   const [apenasMinhas, setApenasMinhas] = useState(false);
   const [filtroStatusCliente, setFiltroStatusCliente] = useState<string>("todos");
+  const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
+    () => localStorage.getItem("clientes:filtroStatusGlobal") ?? "todos",
+  );
+  const [visao, setVisao] = useState<"clientes" | "status">(
+    () => (localStorage.getItem("clientes:visao") as any) ?? "clientes",
+  );
+
+  // Persistência das preferências do usuário
+  useEffect(() => {
+    localStorage.setItem("clientes:visao", visao);
+  }, [visao]);
+  useEffect(() => {
+    localStorage.setItem("clientes:filtroStatusGlobal", filtroStatusGlobal);
+  }, [filtroStatusGlobal]);
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
@@ -1173,19 +1255,45 @@ export default function Clientes() {
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold leading-tight">Clientes</h1>
-          <p className="text-xs text-muted-foreground">{clientes.length} clientes • Revisar / Criar</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-xl font-bold leading-tight">Clientes</h1>
+            <p className="text-xs text-muted-foreground">{clientes.length} clientes</p>
+          </div>
+          <ToggleGroup
+            type="single"
+            value={visao}
+            onValueChange={(v) => v && setVisao(v as any)}
+            className="border rounded-md p-0.5"
+          >
+            <ToggleGroupItem value="clientes" className="h-7 px-2 text-xs">Clientes</ToggleGroupItem>
+            <ToggleGroupItem value="status" className="h-7 px-2 text-xs">Status</ToggleGroupItem>
+          </ToggleGroup>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
-            <Switch checked={apenasPendentes} onCheckedChange={setApenasPendentes} />
-            <span>Apenas com ações pendentes</span>
-          </label>
-          <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
-            <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
-            <span>Mostrar concluídos</span>
-          </label>
+          <Select value={filtroStatusGlobal} onValueChange={setFiltroStatusGlobal}>
+            <SelectTrigger className="h-8 w-[170px] text-xs">
+              <SelectValue placeholder="Status do cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos (ciclo de vida)</SelectItem>
+              {STATUS_CLIENTE_OPCOES.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {visao === "status" && (
+            <>
+              <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
+                <Switch checked={apenasPendentes} onCheckedChange={setApenasPendentes} />
+                <span>Apenas com ações pendentes</span>
+              </label>
+              <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
+                <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
+                <span>Mostrar concluídos</span>
+              </label>
+            </>
+          )}
           <Select value={filtroStatusCliente} onValueChange={setFiltroStatusCliente}>
             <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Status do cliente" />
@@ -1219,6 +1327,20 @@ export default function Clientes() {
         </div>
       </div>
 
+      {visao === "clientes" ? (
+        <ClientesGeralTable
+          filtroBusca={busca}
+          filtroResponsaveis={filtroResponsaveis}
+          apenasMinhas={apenasMinhas}
+          currentUserId={currentUserId}
+          filtroStatusGlobal={filtroStatusGlobal}
+          onAbrirHistorico={setHistoricoClienteId}
+          acoesSlot={(clienteId) => {
+            const cli = clientes.find((c) => c.id === clienteId);
+            return cli ? <AcoesCliente cliente={cli} /> : null;
+          }}
+        />
+      ) : (
       <div className="border rounded-lg bg-card overflow-hidden">
         <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-160px)]">
           <table className="w-full text-xs border-collapse">
@@ -1347,6 +1469,7 @@ export default function Clientes() {
           </table>
         </div>
       </div>
+      )}
 
       <HistoricoComentariosDialog
         clienteId={historicoClienteId}
