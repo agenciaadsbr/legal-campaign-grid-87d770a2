@@ -162,40 +162,52 @@ export type Database = {
         Row: {
           campos_personalizados: Json
           created_at: string
+          data_ativacao: string | null
+          data_inicio_onboarding: string | null
           descricao: string | null
           id: string
           logo_url: string | null
           nicho: string | null
           nome: string
+          prazo_onboarding: string | null
           primary_status: string
           responsaveis_ids: string[]
           status: string
+          status_cliente: string
           updated_at: string
         }
         Insert: {
           campos_personalizados?: Json
           created_at?: string
+          data_ativacao?: string | null
+          data_inicio_onboarding?: string | null
           descricao?: string | null
           id?: string
           logo_url?: string | null
           nicho?: string | null
           nome: string
+          prazo_onboarding?: string | null
           primary_status?: string
           responsaveis_ids?: string[]
           status?: string
+          status_cliente?: string
           updated_at?: string
         }
         Update: {
           campos_personalizados?: Json
           created_at?: string
+          data_ativacao?: string | null
+          data_inicio_onboarding?: string | null
           descricao?: string | null
           id?: string
           logo_url?: string | null
           nicho?: string | null
           nome?: string
+          prazo_onboarding?: string | null
           primary_status?: string
           responsaveis_ids?: string[]
           status?: string
+          status_cliente?: string
           updated_at?: string
         }
         Relationships: []
@@ -396,6 +408,90 @@ export type Database = {
           opcoes?: Json
           ordem?: number
           tipo?: Database["public"]["Enums"]["tipo_custom_field"]
+        }
+        Relationships: []
+      }
+      demanda_categorias_custom: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          id: string
+          label: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          label: string
+          ordem?: number
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          label?: string
+          ordem?: number
+        }
+        Relationships: []
+      }
+      demanda_prioridades_custom: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          id: string
+          label: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          label: string
+          ordem?: number
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          label?: string
+          ordem?: number
+        }
+        Relationships: []
+      }
+      demanda_status_custom: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          id: string
+          label: string
+          ordem: number
+          protegido: boolean
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          label: string
+          ordem?: number
+          protegido?: boolean
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          label?: string
+          ordem?: number
+          protegido?: boolean
         }
         Relationships: []
       }
