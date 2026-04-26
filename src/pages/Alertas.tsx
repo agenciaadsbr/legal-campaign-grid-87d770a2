@@ -20,7 +20,44 @@ const tipoCor: Record<TipoAlerta, string> = {
   Posts_Atrasados: "#ef4444",
 };
 
-type AlertaItem = Alerta & { _derivado?: boolean };
+type AlertaItem = Alerta & { _derivado?: boolean; _origem?: "POST" | "DEMANDA" };
+
+function useAlertasDemandas(): AlertaItem[] {
+  useDemandasBootstrap();
+  const demandas = useDemandas((s) => s.demandas);
+  return useMemo(() => {
+    const out: AlertaItem[] = [];
+    demandas.forEach((d) => {
+      if (d.status === "Atrasado") {
+        out.push({
+          id: `demanda-atraso:${d.id}`,
+          cliente_id: d.cliente_id,
+          tipo_alerta: "Posts_Atrasados" as TipoAlerta,
+          data_alerta: new Date().toISOString().slice(0, 10),
+          mensagem: `${d.titulo} — atrasada`,
+          status: "Pendente",
+          created_at: d.updated_at,
+          _derivado: true,
+          _origem: "DEMANDA",
+        });
+      }
+      if (d.prioridade === "Urgente" && !d.responsavel_id && d.status !== "Concluido") {
+        out.push({
+          id: `demanda-urgente:${d.id}`,
+          cliente_id: d.cliente_id,
+          tipo_alerta: "Posts_Pendentes" as TipoAlerta,
+          data_alerta: new Date().toISOString().slice(0, 10),
+          mensagem: `${d.titulo} — urgente sem responsável`,
+          status: "Pendente",
+          created_at: d.created_at,
+          _derivado: true,
+          _origem: "DEMANDA",
+        });
+      }
+    });
+    return out;
+  }, [demandas]);
+}
 
 function useAlertasDerivados(): AlertaItem[] {
   const { clientes, cards } = useCRM();
