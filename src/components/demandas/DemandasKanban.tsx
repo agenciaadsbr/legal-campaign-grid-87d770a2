@@ -39,17 +39,15 @@ export function DemandasKanban({ demandas, onOpen }: Props) {
               dragOver === status ? "bg-muted/60" : ""
             }`}
           >
-            <div className="flex items-center justify-between mb-2 px-1">
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: STATUS_DEMANDA_COR[status] }}
-                />
-                <span className="text-xs font-semibold uppercase tracking-wide">
-                  {STATUS_DEMANDA_LABEL[status]}
-                </span>
-              </div>
-              <span className="text-[10px] text-muted-foreground bg-background rounded px-1.5 py-0.5">
+            <div className="flex items-center justify-center gap-2 mb-2 px-1">
+              <span
+                className="h-2 w-2 rounded-full shrink-0"
+                style={{ background: STATUS_DEMANDA_COR[status] }}
+              />
+              <span className="text-xs font-semibold uppercase tracking-wide text-center whitespace-nowrap">
+                {STATUS_DEMANDA_LABEL[status]}
+              </span>
+              <span className="text-[10px] text-muted-foreground bg-background rounded px-1.5 py-0.5 shrink-0">
                 {items.length}
               </span>
             </div>

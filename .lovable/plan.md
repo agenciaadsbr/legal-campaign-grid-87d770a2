@@ -1,37 +1,44 @@
-## Diagnóstico
+## Objetivo
+1. Mover os botões **Rápida** e **Nova Demanda** do cabeçalho para dentro da barra de filtros, posicionados imediatamente após o filtro "Todos os status" (e antes dos botões rápidos `todas / hoje / atrasadas / semana`).
+2. Centralizar os títulos das colunas de status no Kanban (`Quadro Geral`) para que fiquem totalmente legíveis dentro de cada seção.
 
-Após inspecionar o código, identifiquei dois pontos onde **clientes cadastrados não aparecem automaticamente** no módulo Demandas:
+## Alterações
 
-### 1. Aba "Clientes" (`ClientesDemandasTable.tsx`) — PROBLEMA PRINCIPAL
-A tabela é construída **iterando apenas sobre `demandas`** e agrupando por `cliente_id`. Resultado: clientes que ainda **não têm nenhuma demanda criada não aparecem na lista**. O usuário precisa abrir um cliente para começar a criar demandas — mas hoje ele só vê o cliente depois que já existe demanda, criando um beco sem saída.
+### 1) `src/pages/Demandas.tsx`
+- **Remover** o bloco de botões do header (linhas 110–117), mantendo apenas o título e a descrição. O cabeçalho ficará mais limpo.
+- **Inserir** os mesmos botões dentro do `CardContent` dos filtros, logo após o `<Select>` de Status (linha 163) e antes do bloco `flex gap-1 ml-auto` dos filtros rápidos. Manter `size="sm"` e altura `h-9` para alinhar com os selects.
+- Ajustar o agrupamento para que `Rápida` + `Nova Demanda` fiquem juntos em um wrapper `flex gap-1.5`, e os botões rápidos continuem encostados à direita via `ml-auto`.
 
-### 2. Filtros e dropdowns (`Demandas.tsx`)
-O dropdown "Cliente" já lê `clientes` direto do `useCRM()` (linha 128), portanto **lista todos os clientes corretamente** — desde que o CRM esteja carregado. O `useCRMBootstrap()` já roda no `AppLayout`, então isso funciona globalmente. ✅
+```tsx
+<Button variant="outline" size="sm" className="h-9" onClick={() => setRapidaOpen(true)}>
+  <Zap className="h-4 w-4 mr-1" /> Rápida
+</Button>
+<Button size="sm" className="h-9" onClick={() => setNovaOpen(true)}>
+  <Plus className="h-4 w-4 mr-1" /> Nova Demanda
+</Button>
+```
 
-### 3. Página `ProjetoDemandasCliente.tsx`
-Usa `clientes.find(...)` corretamente. ✅
+### 2) `src/components/demandas/DemandasKanban.tsx`
+- Centralizar o cabeçalho de cada coluna (linhas 42–55):
+  - Trocar `flex items-center justify-between` por um layout centralizado (`flex flex-col items-center` ou `justify-center` com contador discreto ao lado).
+  - Garantir que `STATUS_DEMANDA_LABEL[status]` use `text-center` e `whitespace-nowrap` para ser legível.
+  - Manter o ponto colorido + label + contador, mas alinhados ao centro da coluna.
 
-## Plano de correção
+Estrutura proposta:
+```tsx
+<div className="flex items-center justify-center gap-2 mb-2 px-1">
+  <span className="h-2 w-2 rounded-full" style={{ background: STATUS_DEMANDA_COR[status] }} />
+  <span className="text-xs font-semibold uppercase tracking-wide text-center">
+    {STATUS_DEMANDA_LABEL[status]}
+  </span>
+  <span className="text-[10px] text-muted-foreground bg-background rounded px-1.5 py-0.5">
+    {items.length}
+  </span>
+</div>
+```
 
-### A) `src/components/demandas/ClientesDemandasTable.tsx`
-- **Inicializar o `Map` com TODOS os clientes** vindos de `useCRM()` antes de iterar pelas demandas, para que cada cliente cadastrado apareça na tabela mesmo com 0 demandas (total/atrasadas/urgentes = 0).
-- Manter a ordenação por última atividade, mas usar `cliente.created_at` como fallback para clientes sem nenhuma demanda.
-- Manter os filtros de Responsável/Status/Prioridade aplicados às demandas — clientes que não casam com filtros estritos (responsável, status, prioridade) continuam aparecendo apenas se o usuário **não** restringir, ou ficam ocultos quando o filtro restringe explicitamente (comportamento intuitivo).
-- Garantir que a busca por nome continue funcionando sobre a lista completa.
-- O clique na linha continua navegando para `/demandas/cliente/:id`, permitindo criar a primeira demanda diretamente.
-
-### B) `src/pages/Demandas.tsx`
-- Garantir que o dropdown "Cliente" use `clientes` ordenados por `nome_cliente` (atualmente vem na ordem do banco — `created_at desc`). Pequeno ajuste de UX para facilitar localização.
-- Sem outras mudanças funcionais — o filtro já lista todos.
-
-### C) Garantia de carregamento (defensivo)
-- Adicionar `useCRMBootstrap()` também na página `Demandas.tsx` (idempotente — o store já tem guarda interna `realtimeStarted` e `loaded`). Isso garante que, se o usuário abrir `/demandas` por link direto antes do `AppLayout` montar plenamente, os clientes ainda assim sejam carregados.
-
-### Resultado esperado
-- Aba **Clientes** lista 100% dos clientes cadastrados, mesmo sem demandas, com contadores zerados e botão "Abrir" funcional.
-- Dropdown **Cliente** nos filtros lista todos em ordem alfabética.
-- Novos clientes cadastrados em `/clientes` aparecem **automaticamente** no módulo Demandas (já existe realtime no `useCRM`).
-
-## Arquivos que serão alterados
-1. `src/components/demandas/ClientesDemandasTable.tsx` — inicializar Map com todos os clientes.
-2. `src/pages/Demandas.tsx` — ordenar dropdown de clientes + bootstrap defensivo do CRM.
+## Resultado esperado
+- Cabeçalho da página "Demandas" mostra apenas título/descrição.
+- Barra de filtros passa a conter, na sequência: Buscar · Cliente · Responsável · Categoria · Prioridade · Status · **Rápida · Nova Demanda** · (à direita) todas/hoje/atrasadas/semana.
+- No "Quadro Geral", os nomes dos status (Planejamento, Criar, Revisar, Entregue, Concluído, Atrasado) ficam centralizados em cada coluna e totalmente visíveis.
+- Nenhuma outra funcionalidade é alterada.
