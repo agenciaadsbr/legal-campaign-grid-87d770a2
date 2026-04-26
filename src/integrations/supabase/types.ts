@@ -90,6 +90,42 @@ export type Database = {
           },
         ]
       }
+      atividade_cliente: {
+        Row: {
+          acao: string
+          cliente_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          payload: Json
+          referencia_id: string | null
+          tipo: string
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          cliente_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          payload?: Json
+          referencia_id?: string | null
+          tipo: string
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          cliente_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          payload?: Json
+          referencia_id?: string | null
+          tipo?: string
+          usuario_id?: string | null
+        }
+        Relationships: []
+      }
       cards: {
         Row: {
           cliente_id: string
