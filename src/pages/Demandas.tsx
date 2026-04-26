@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Zap } from "lucide-react";
 import { useDemandas, useDemandasBootstrap, Demanda } from "@/store/demandas";
-import { useCRM } from "@/store/crm";
+import { useCRM, useCRMBootstrap } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import { DemandasKanban } from "@/components/demandas/DemandasKanban";
 import { DemandCard } from "@/components/demandas/DemandCard";
