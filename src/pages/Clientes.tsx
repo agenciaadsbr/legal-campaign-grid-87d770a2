@@ -124,6 +124,8 @@ function NovoClienteDialog() {
     nome_cliente: "",
     nicho: nichos[0]?.label ?? "",
     status_cliente: "Ativo" as any,
+    status_global: "Onboarding" as any,
+    prazo_onboarding: "" as string,
     data_inicio_contrato: hojeISO,
     duracao_meses: 3,
     data_fim_contrato: calcFim(hojeISO, 3),
