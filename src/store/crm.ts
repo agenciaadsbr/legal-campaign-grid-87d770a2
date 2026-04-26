@@ -170,7 +170,12 @@ interface State {
 
   // ações cliente
   addCliente: (
-    data: Omit<Cliente, "id" | "created_at" | "ultimo_comentario" | "custom">,
+    data: Omit<Cliente, "id" | "created_at" | "ultimo_comentario" | "custom" | "status_global" | "data_inicio_onboarding" | "prazo_onboarding" | "data_ativacao"> & {
+      status_global?: StatusClienteGlobal;
+      data_inicio_onboarding?: string | null;
+      prazo_onboarding?: string | null;
+      data_ativacao?: string | null;
+    },
   ) => Promise<string>;
   updateCliente: (id: string, patch: Partial<Cliente>) => Promise<void>;
   deleteCliente: (id: string) => Promise<void>;
