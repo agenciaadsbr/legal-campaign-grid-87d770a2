@@ -48,6 +48,7 @@ export default function Demandas() {
   const [fCat, setFCat] = useState<string>("todas");
   const [fPrio, setFPrio] = useState<string>("todas");
   const [fStatus, setFStatus] = useState<string>("todos");
+  const [fStatusGlobal, setFStatusGlobal] = useState<string>("todos");
   const [fRapido, setFRapido] = useState<FiltroRapido>("todas");
   const [calMonth, setCalMonth] = useState<Date>(new Date());
 
