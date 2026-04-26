@@ -144,7 +144,7 @@ export function ClientesDemandasTable() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="max-w-4xl">
         <CardContent className="p-0">
           {linhas.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
