@@ -25,7 +25,9 @@ export default function Dashboard() {
   const { clientes, posts, alertas, cards, responsaveis } = useCRM();
 
   const today = new Date().toISOString().slice(0, 10);
-  const ativos = clientes.filter((c) => c.status_cliente === "Ativo").length;
+  const ativos = clientes.filter((c) => (c.status_global ?? "Onboarding") === "Ativo").length;
+  const onboarding = clientes.filter((c) => (c.status_global ?? "Onboarding") === "Onboarding").length;
+  const pausados = clientes.filter((c) => (c.status_global ?? "Onboarding") === "Pausado").length;
   const postsHoje = posts.filter((p) => p.created_at.slice(0, 10) === today).length;
   const agendados = posts.filter((p) => p.status === "Agendar").length;
   const postados = posts.filter((p) => p.status === "Postado").length;
