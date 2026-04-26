@@ -502,10 +502,15 @@ export const useCRM = create<State>()((set, get) => ({
         nome: data.nome_cliente,
         nicho: data.nicho || null,
         status: (data.status_cliente || "Ativo") as any,
+        status_cliente: (data.status_global ?? "Onboarding") as any,
+        data_inicio_onboarding:
+          data.data_inicio_onboarding ?? new Date().toISOString(),
+        prazo_onboarding: data.prazo_onboarding ?? null,
+        data_ativacao: data.data_ativacao ?? null,
         responsaveis_ids: data.responsaveis ?? [],
         descricao: data.observacoes ?? "",
         campos_personalizados: {},
-      })
+      } as any)
       .select()
       .single();
     if (error || !inserted) {
