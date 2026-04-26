@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EquipeAcessosManager } from "@/components/EquipeAcessosManager";
 import { MeuPerfil } from "@/components/MeuPerfil";
+import { ConfiguracoesDemandasManager } from "@/components/ConfiguracoesDemandasManager";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Configuracoes() {
