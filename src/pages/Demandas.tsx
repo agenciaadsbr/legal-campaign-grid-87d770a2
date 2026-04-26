@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,9 +77,26 @@ export default function Demandas() {
     });
   }, [demandas, busca, fCliente, fResp, fCat, fPrio, fStatus, fRapido]);
 
+  const [meuResponsavelId, setMeuResponsavelId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.id) { setMeuResponsavelId(null); return; }
+    supabase
+      .from("profiles")
+      .select("responsavel_id")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setMeuResponsavelId(data?.responsavel_id ?? null));
+  }, [user?.id]);
+
   const minhas = useMemo(
-    () => filtradas.filter((d) => d.responsavel_id && d.responsavel_id === user?.id),
-    [filtradas, user]
+    () =>
+      filtradas.filter(
+        (d) =>
+          (d.responsavel_id && d.responsavel_id === user?.id) ||
+          (meuResponsavelId && d.responsavel_id === meuResponsavelId) ||
+          (d.criado_por && d.criado_por === user?.id)
+      ),
+    [filtradas, user, meuResponsavelId]
   );
 
   const novasSolicitacoes = useMemo(() => {
