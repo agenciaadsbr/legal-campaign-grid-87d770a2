@@ -159,7 +159,20 @@ export default function Demandas() {
               <Plus className="h-4 w-4 mr-1" /> Nova Demanda
             </Button>
           </div>
-          <div className="flex gap-1 ml-auto">
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="clientes">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <TabsList>
+            <TabsTrigger value="clientes">Clientes</TabsTrigger>
+            <TabsTrigger value="quadro">Quadro Geral</TabsTrigger>
+            <TabsTrigger value="minhas">Minhas Demandas</TabsTrigger>
+            <TabsTrigger value="novas">Novas Solicitações</TabsTrigger>
+            <TabsTrigger value="calendario">Calendário</TabsTrigger>
+            <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
+          </TabsList>
+          <div className="flex gap-1">
             {(["todas", "hoje", "atrasadas", "semana"] as FiltroRapido[]).map((f) => (
               <Button
                 key={f}
@@ -172,18 +185,7 @@ export default function Demandas() {
               </Button>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="clientes">
-        <TabsList>
-          <TabsTrigger value="clientes">Clientes</TabsTrigger>
-          <TabsTrigger value="quadro">Quadro Geral</TabsTrigger>
-          <TabsTrigger value="minhas">Minhas Demandas</TabsTrigger>
-          <TabsTrigger value="novas">Novas Solicitações</TabsTrigger>
-          <TabsTrigger value="calendario">Calendário</TabsTrigger>
-          <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
-        </TabsList>
+        </div>
 
         <TabsContent value="quadro" className="mt-2">
           <DemandasKanban demandas={filtradas} onOpen={setSelecionada} />
