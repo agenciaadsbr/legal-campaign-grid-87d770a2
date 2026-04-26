@@ -1469,6 +1469,7 @@ export default function Clientes() {
           </table>
         </div>
       </div>
+      )}
 
       <HistoricoComentariosDialog
         clienteId={historicoClienteId}
