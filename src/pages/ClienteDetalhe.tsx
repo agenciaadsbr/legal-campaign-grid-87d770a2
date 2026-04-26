@@ -3,6 +3,7 @@ import { useCRM, StatusCard, Card as CardT } from "@/store/crm";
 import { useMemo, useState } from "react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { StatusBadge, ColorBadge } from "@/components/StatusBadge";
+import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
