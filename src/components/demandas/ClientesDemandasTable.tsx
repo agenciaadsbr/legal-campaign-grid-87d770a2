@@ -144,7 +144,7 @@ export function ClientesDemandasTable() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="max-w-4xl">
         <CardContent className="p-0">
           {linhas.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
@@ -154,13 +154,13 @@ export function ClientesDemandasTable() {
             <Table className="[&_th]:py-2 [&_th]:px-2 [&_td]:py-1.5 [&_td]:px-2">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Responsáveis</TableHead>
-                  <TableHead>Última atividade</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">Atrasadas</TableHead>
-                  <TableHead className="text-center">Urgentes</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="w-[260px]">Cliente</TableHead>
+                  <TableHead className="w-[110px]">Responsáveis</TableHead>
+                  <TableHead className="w-[120px]">Última atividade</TableHead>
+                  <TableHead className="w-[70px] text-center">Total</TableHead>
+                  <TableHead className="w-[80px] text-center">Atrasadas</TableHead>
+                  <TableHead className="w-[80px] text-center">Urgentes</TableHead>
+                  <TableHead className="w-[100px] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
