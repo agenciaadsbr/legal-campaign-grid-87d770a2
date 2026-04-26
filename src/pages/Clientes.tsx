@@ -1138,6 +1138,20 @@ export default function Clientes() {
   const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
   const [apenasMinhas, setApenasMinhas] = useState(false);
   const [filtroStatusCliente, setFiltroStatusCliente] = useState<string>("todos");
+  const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
+    () => localStorage.getItem("clientes:filtroStatusGlobal") ?? "todos",
+  );
+  const [visao, setVisao] = useState<"clientes" | "status">(
+    () => (localStorage.getItem("clientes:visao") as any) ?? "clientes",
+  );
+
+  // Persistência das preferências do usuário
+  useEffect(() => {
+    localStorage.setItem("clientes:visao", visao);
+  }, [visao]);
+  useEffect(() => {
+    localStorage.setItem("clientes:filtroStatusGlobal", filtroStatusGlobal);
+  }, [filtroStatusGlobal]);
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
