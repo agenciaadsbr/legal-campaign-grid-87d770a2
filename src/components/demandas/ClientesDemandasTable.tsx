@@ -161,6 +161,7 @@ export function ClientesDemandasTable({
                 {linhas.map((l, idx) => {
                   const clienteAtual = clientes.find((c) => c.id === l.cliente_id);
                   const idsCliente = clienteAtual?.responsaveis ?? [];
+                  const nichoOpt = nichos.find((n) => n.label === clienteAtual?.nicho);
                   return (
                     <TableRow
                       key={l.cliente_id}
@@ -179,6 +180,28 @@ export function ClientesDemandasTable({
                           clienteId={l.cliente_id}
                           ids={idsCliente}
                         />
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setHistoricoClienteId(l.cliente_id);
+                          }}
+                          className="text-left truncate max-w-[220px] hover:text-primary block"
+                          title={clienteAtual?.ultimo_comentario}
+                        >
+                          {clienteAtual?.ultimo_comentario || (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        {clienteAtual?.nicho && nichoOpt ? (
+                          <ColorBadge label={nichoOpt.label} color={nichoOpt.cor} />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {new Date(l.ultimaAtividade).toLocaleDateString("pt-BR", {
