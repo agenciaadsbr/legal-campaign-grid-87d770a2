@@ -167,6 +167,9 @@ export function ClientesDemandasTable({
                       </TableCell>
                       <TableCell className="font-medium">{l.nome}</TableCell>
                       <TableCell>
+                        <StatusClienteBadge status={l.statusGlobal} />
+                      </TableCell>
+                      <TableCell>
                         {respObjs.length > 0 ? (
                           <AvatarStack responsaveis={respObjs} size="xs" max={4} />
                         ) : (
