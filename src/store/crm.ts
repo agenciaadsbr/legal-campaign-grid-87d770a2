@@ -574,14 +574,13 @@ export const useCRM = create<State>()((set, get) => ({
     const dbPatch: any = {};
     if (patch.nome_cliente !== undefined) dbPatch.nome = patch.nome_cliente;
     if (patch.nicho !== undefined) dbPatch.nicho = patch.nicho || null;
-    if (patch.status_cliente !== undefined) dbPatch.status = patch.status_cliente;
-    if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
-    if (patch.observacoes !== undefined) dbPatch.descricao = patch.observacoes;
-    if (patch.custom !== undefined) dbPatch.campos_personalizados = patch.custom;
-    if ((patch as any).status_global !== undefined) {
-      const novoStatus = (patch as any).status_global as StatusClienteGlobal;
+    // Unificado: status_cliente e status_global são o mesmo campo (ciclo de vida)
+    const novoStatusUnificado =
+      (patch as any).status_global ?? (patch.status_cliente as any);
+    if (novoStatusUnificado !== undefined) {
+      const novoStatus = novoStatusUnificado as StatusClienteGlobal;
+      dbPatch.status = novoStatus;
       dbPatch.status_cliente = novoStatus;
-      // ao mover para Ativo, marca data_ativacao se ainda não estiver setada
       const cur = get().clientes.find((c) => c.id === id);
       if (novoStatus === "Ativo" && cur && !cur.data_ativacao) {
         dbPatch.data_ativacao = new Date().toISOString();
