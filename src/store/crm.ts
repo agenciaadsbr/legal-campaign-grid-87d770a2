@@ -267,7 +267,8 @@ function mapCliente(
     id: row.id,
     nome_cliente: row.nome ?? "",
     nicho: row.nicho ?? "",
-    status_cliente: row.status ?? "Ativo",
+    // Unificado: ambos refletem o ciclo de vida (Onboarding/Ativo/Pausado/Encerrado)
+    status_cliente: (row.status_cliente as StatusClienteGlobal) ?? "Onboarding",
     status_global: (row.status_cliente as StatusClienteGlobal) ?? "Onboarding",
     data_inicio_onboarding: row.data_inicio_onboarding ?? null,
     prazo_onboarding: row.prazo_onboarding ?? null,
