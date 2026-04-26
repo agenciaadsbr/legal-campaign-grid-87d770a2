@@ -435,20 +435,9 @@ function EditarClienteDialog({
             </div>
             <div>
               <Label>Status</Label>
-              <Select value={form.status_cliente} onValueChange={(v) => setForm({ ...form, status_cliente: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Status do cliente (ciclo de vida)</Label>
               <Select
                 value={form.status_global}
-                onValueChange={(v) => setForm({ ...form, status_global: v as any })}
+                onValueChange={(v) => setForm({ ...form, status_global: v as any, status_cliente: v as any })}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -459,14 +448,14 @@ function EditarClienteDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Prazo de onboarding</Label>
-              <Input
-                type="date"
-                value={form.prazo_onboarding}
-                onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
-              />
-            </div>
+          </div>
+          <div>
+            <Label>Prazo de onboarding</Label>
+            <Input
+              type="date"
+              value={form.prazo_onboarding}
+              onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
+            />
           </div>
           <div>
             <Label>Responsáveis</Label>
