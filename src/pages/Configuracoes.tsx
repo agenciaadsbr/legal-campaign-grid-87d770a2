@@ -25,6 +25,7 @@ export default function Configuracoes() {
           <TabsTrigger value="perfil">Meu perfil</TabsTrigger>
           <TabsTrigger value="aparencia">Aparência</TabsTrigger>
           {isAdmin && <TabsTrigger value="equipe">Equipe & Acessos</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="demandas">Demandas</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="perfil" className="mt-4">
@@ -47,6 +48,12 @@ export default function Configuracoes() {
         {isAdmin && (
           <TabsContent value="equipe" className="mt-4">
             <EquipeAcessosManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="demandas" className="mt-4">
+            <ConfiguracoesDemandasManager />
           </TabsContent>
         )}
       </Tabs>
