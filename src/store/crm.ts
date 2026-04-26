@@ -505,8 +505,8 @@ export const useCRM = create<State>()((set, get) => ({
       .insert({
         nome: data.nome_cliente,
         nicho: data.nicho || null,
-        status: (data.status_cliente || "Ativo") as any,
-        status_cliente: (data.status_global ?? "Onboarding") as any,
+        status: (data.status_global ?? data.status_cliente ?? "Onboarding") as any,
+        status_cliente: (data.status_global ?? data.status_cliente ?? "Onboarding") as any,
         data_inicio_onboarding:
           data.data_inicio_onboarding ?? new Date().toISOString(),
         prazo_onboarding: data.prazo_onboarding ?? null,
