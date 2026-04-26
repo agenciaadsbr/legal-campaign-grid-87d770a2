@@ -169,18 +169,11 @@ export function ClientesGeralTable({
                         <TableCell>
                           <StatusClienteBadge status={cliente.status_global} />
                         </TableCell>
-                        <TableCell>
-                          {respObjs.length > 0 ? (
-                            <AvatarStack
-                              responsaveis={respObjs}
-                              size="xs"
-                              max={4}
-                            />
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              —
-                            </span>
-                          )}
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <CelulaResponsaveis
+                            clienteId={cliente.id}
+                            ids={cliente.responsaveis}
+                          />
                         </TableCell>
                         <TableCell className="text-xs">
                           <button
