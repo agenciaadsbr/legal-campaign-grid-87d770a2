@@ -52,6 +52,44 @@ export type Database = {
           },
         ]
       }
+      anexos_demandas: {
+        Row: {
+          created_at: string
+          demanda_id: string
+          id: string
+          mime: string | null
+          nome: string
+          size: number | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          demanda_id: string
+          id?: string
+          mime?: string | null
+          nome: string
+          size?: number | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          demanda_id?: string
+          id?: string
+          mime?: string | null
+          nome?: string
+          size?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_demandas_demanda_id_fkey"
+            columns: ["demanda_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cards: {
         Row: {
           cliente_id: string
@@ -252,6 +290,41 @@ export type Database = {
           },
         ]
       }
+      comentarios_demandas: {
+        Row: {
+          created_at: string
+          demanda_id: string
+          id: string
+          imagem_url: string | null
+          texto: string
+          usuario_id: string
+        }
+        Insert: {
+          created_at?: string
+          demanda_id: string
+          id?: string
+          imagem_url?: string | null
+          texto: string
+          usuario_id: string
+        }
+        Update: {
+          created_at?: string
+          demanda_id?: string
+          id?: string
+          imagem_url?: string | null
+          texto?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comentarios_demandas_demanda_id_fkey"
+            columns: ["demanda_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contratos: {
         Row: {
           cliente_id: string
@@ -325,6 +398,107 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_custom_field"]
         }
         Relationships: []
+      }
+      demandas: {
+        Row: {
+          aprovado_por: string | null
+          categoria: Database["public"]["Enums"]["demanda_categoria"]
+          cliente_id: string
+          created_at: string
+          criado_por: string | null
+          data_conclusao: string | null
+          data_inicio: string | null
+          data_limite: string | null
+          descricao: string | null
+          id: string
+          precisa_aprovacao: boolean
+          prioridade: Database["public"]["Enums"]["demanda_prioridade"]
+          responsavel_id: string | null
+          status: Database["public"]["Enums"]["demanda_status"]
+          subtipo: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          aprovado_por?: string | null
+          categoria?: Database["public"]["Enums"]["demanda_categoria"]
+          cliente_id: string
+          created_at?: string
+          criado_por?: string | null
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          data_limite?: string | null
+          descricao?: string | null
+          id?: string
+          precisa_aprovacao?: boolean
+          prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
+          responsavel_id?: string | null
+          status?: Database["public"]["Enums"]["demanda_status"]
+          subtipo?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          aprovado_por?: string | null
+          categoria?: Database["public"]["Enums"]["demanda_categoria"]
+          cliente_id?: string
+          created_at?: string
+          criado_por?: string | null
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          data_limite?: string | null
+          descricao?: string | null
+          id?: string
+          precisa_aprovacao?: boolean
+          prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
+          responsavel_id?: string | null
+          status?: Database["public"]["Enums"]["demanda_status"]
+          subtipo?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      historico_demandas: {
+        Row: {
+          acao: string
+          created_at: string
+          de_status: Database["public"]["Enums"]["demanda_status"] | null
+          demanda_id: string
+          id: string
+          para_status: Database["public"]["Enums"]["demanda_status"] | null
+          payload: Json
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          de_status?: Database["public"]["Enums"]["demanda_status"] | null
+          demanda_id: string
+          id?: string
+          para_status?: Database["public"]["Enums"]["demanda_status"] | null
+          payload?: Json
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          de_status?: Database["public"]["Enums"]["demanda_status"] | null
+          demanda_id?: string
+          id?: string
+          para_status?: Database["public"]["Enums"]["demanda_status"] | null
+          payload?: Json
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_demandas_demanda_id_fkey"
+            columns: ["demanda_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       modelos_colunas: {
         Row: {
@@ -578,6 +752,7 @@ export type Database = {
         Returns: boolean
       }
       marcar_cards_atrasados: { Args: never; Returns: undefined }
+      marcar_demandas_atrasadas: { Args: never; Returns: undefined }
       update_client_primary_status: {
         Args: { p_client_id: string }
         Returns: undefined
@@ -585,6 +760,22 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
+      demanda_categoria:
+        | "Designer"
+        | "EditorVideo"
+        | "LandingPage"
+        | "TrafegoPago"
+        | "Tecnologia"
+        | "Suporte"
+        | "Personalizado"
+      demanda_prioridade: "Baixa" | "Media" | "Alta" | "Urgente"
+      demanda_status:
+        | "Planejamento"
+        | "Criar"
+        | "Revisar"
+        | "Entregue"
+        | "Concluido"
+        | "Atrasado"
       escopo_custom_field: "cliente" | "post"
       status_alerta: "Pendente" | "Resolvido"
       status_card:
@@ -741,6 +932,24 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "editor", "viewer"],
+      demanda_categoria: [
+        "Designer",
+        "EditorVideo",
+        "LandingPage",
+        "TrafegoPago",
+        "Tecnologia",
+        "Suporte",
+        "Personalizado",
+      ],
+      demanda_prioridade: ["Baixa", "Media", "Alta", "Urgente"],
+      demanda_status: [
+        "Planejamento",
+        "Criar",
+        "Revisar",
+        "Entregue",
+        "Concluido",
+        "Atrasado",
+      ],
       escopo_custom_field: ["cliente", "post"],
       status_alerta: ["Pendente", "Resolvido"],
       status_card: [
