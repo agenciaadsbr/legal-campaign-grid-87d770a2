@@ -160,8 +160,13 @@ function NovoClienteDialog() {
     }
     setSaving(true);
     try {
-      const { duracao_meses, ...payload } = form;
-      const id = await addCliente(payload);
+      const { duracao_meses, prazo_onboarding, status_global, ...rest } = form;
+      const payload = {
+        ...rest,
+        status_global,
+        prazo_onboarding: prazo_onboarding || null,
+      };
+      const id = await addCliente(payload as any);
       setCreatedId(id);
       toast.success(`Cliente criado — ${totalCards} cards e contrato gerados automaticamente`);
     } catch (e: any) {
