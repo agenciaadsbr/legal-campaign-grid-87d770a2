@@ -84,17 +84,19 @@ export function ClientesDemandasTable({
 
     // 2) Agrega métricas das demandas filtradas
     filtradas.forEach((d) => {
-      const cur =
-        map.get(d.cliente_id) ?? {
-          cliente_id: d.cliente_id,
-          nome: "Cliente removido",
-          responsaveisIds: new Set<string>(),
-          ultimaAtividade: d.updated_at,
-          total: 0,
-          atrasadas: 0,
-          urgentes: 0,
-          temDemanda: false,
-        };
+      const existing = map.get(d.cliente_id);
+      if (!existing && filtroStatusGlobal !== "todos") return;
+      const cur = existing ?? {
+        cliente_id: d.cliente_id,
+        nome: "Cliente removido",
+        statusGlobal: "Onboarding",
+        responsaveisIds: new Set<string>(),
+        ultimaAtividade: d.updated_at,
+        total: 0,
+        atrasadas: 0,
+        urgentes: 0,
+        temDemanda: false,
+      };
       cur.total += 1;
       cur.temDemanda = true;
       if (d.status === "Atrasado") cur.atrasadas += 1;
