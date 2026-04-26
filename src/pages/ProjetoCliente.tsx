@@ -207,7 +207,8 @@ function VisaoGeral({
   demandasCli: Demanda[];
   clienteId: string;
 }) {
-  const ultimas = useAtividades((s) => s.porCliente[clienteId] ?? []).slice(0, 6);
+  const lista = useAtividades((s) => s.porCliente[clienteId]);
+  const ultimas = (lista ?? []).slice(0, 6);
   const { responsaveis } = useCRM();
 
   const postsPlanej = cardsCli.filter((c) => c.status_card === "Planejamento").length;
