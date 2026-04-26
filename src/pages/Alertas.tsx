@@ -23,7 +23,7 @@ const tipoCor: Record<TipoAlerta, string> = {
   Onboarding_Prazo_Vencido: "#ef4444",
 };
 
-type AlertaItem = Alerta & { _derivado?: boolean; _origem?: "POST" | "DEMANDA" };
+type AlertaItem = Alerta & { _derivado?: boolean; _origem?: "POST" | "DEMANDA" | "ONBOARDING" };
 
 function useAlertasDemandas(): AlertaItem[] {
   useDemandasBootstrap();
