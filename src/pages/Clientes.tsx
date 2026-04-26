@@ -1250,11 +1250,11 @@ export default function Clientes() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={filtroStatusGlobal} onValueChange={setFiltroStatusGlobal}>
-            <SelectTrigger className="h-8 w-[170px] text-xs">
+            <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Status do cliente" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos (ciclo de vida)</SelectItem>
+              <SelectItem value="todos">Todos os status</SelectItem>
               {STATUS_CLIENTE_OPCOES.map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
@@ -1272,22 +1272,6 @@ export default function Clientes() {
               </label>
             </>
           )}
-          <Select value={filtroStatusCliente} onValueChange={setFiltroStatusCliente}>
-            <SelectTrigger className="h-8 w-[180px] text-xs">
-              <SelectValue placeholder="Status do cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os status</SelectItem>
-              {statusOptions.map((s) => (
-                <SelectItem key={s.label} value={s.label}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.cor }} />
-                    {s.label}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <FiltrosTopo
             filtroResponsaveis={filtroResponsaveis}
             setFiltroResponsaveis={setFiltroResponsaveis}
