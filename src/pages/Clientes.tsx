@@ -108,15 +108,19 @@ function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v
 }
 
 function NovoClienteDialog() {
-  const { addCliente, nichos, statusOptions } = useCRM();
+  const { addCliente, updateCliente, deleteCliente, nichos, statusOptions } = useCRM();
+  const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
   const hojeISO = new Date().toISOString().slice(0, 10);
   const calcFim = (inicioISO: string, meses: number) => {
     const d = new Date(inicioISO);
     d.setMonth(d.getMonth() + meses);
     return d.toISOString().slice(0, 10);
   };
-  const [form, setForm] = useState({
+  const initialForm = () => ({
     nome_cliente: "",
     nicho: nichos[0]?.label ?? "",
     status_cliente: "Ativo" as any,
@@ -126,6 +130,7 @@ function NovoClienteDialog() {
     responsaveis: [] as string[],
     observacoes: "",
   });
+  const [form, setForm] = useState(initialForm());
 
   const setInicio = (v: string) =>
     setForm((f) => ({ ...f, data_inicio_contrato: v, data_fim_contrato: calcFim(v, f.duracao_meses) }));
@@ -134,28 +139,77 @@ function NovoClienteDialog() {
     setForm((f) => ({ ...f, duracao_meses: m, data_fim_contrato: calcFim(f.data_inicio_contrato, m) }));
 
   const totalCards = form.duracao_meses * 4;
+  const isEdit = createdId !== null;
 
-  const submit = () => {
+  const resetAll = () => {
+    setForm(initialForm());
+    setCreatedId(null);
+  };
+
+  const handleOpenChange = (v: boolean) => {
+    setOpen(v);
+    if (!v) resetAll();
+  };
+
+  const submitCreate = async () => {
     if (!form.nome_cliente.trim()) {
       toast.error("Informe o nome do cliente");
       return;
     }
-    const { duracao_meses, ...payload } = form;
-    addCliente(payload);
-    toast.success(`Cliente criado — ${totalCards} cards e contrato gerados automaticamente`);
-    setOpen(false);
-    setForm({ ...form, nome_cliente: "", observacoes: "", responsaveis: [] });
+    setSaving(true);
+    try {
+      const { duracao_meses, ...payload } = form;
+      const id = await addCliente(payload);
+      setCreatedId(id);
+      toast.success(`Cliente criado — ${totalCards} cards e contrato gerados automaticamente`);
+    } catch (e: any) {
+      toast.error(`Erro ao criar: ${e?.message ?? "tente novamente"}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitUpdate = async () => {
+    if (!createdId) return;
+    if (!form.nome_cliente.trim()) {
+      toast.error("Informe o nome do cliente");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { duracao_meses, ...patch } = form;
+      await updateCliente(createdId, patch);
+      toast.success("Alterações salvas");
+    } catch (e: any) {
+      toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitDelete = async () => {
+    if (!createdId) return;
+    try {
+      await deleteCliente(createdId);
+      toast.success("Cliente removido");
+      setConfirmDel(false);
+      handleOpenChange(false);
+    } catch (e: any) {
+      toast.error(`Erro ao remover: ${e?.message ?? "tente novamente"}`);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5">
           <Plus className="h-4 w-4" /> Novo Cliente
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Novo Cliente</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+        </DialogHeader>
         <div className="space-y-3">
           <div>
             <Label>Nome do Cliente</Label>
@@ -195,7 +249,7 @@ function NovoClienteDialog() {
               <Select value={String(form.duracao_meses)} onValueChange={(v) => setMeses(Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {[1, 2, 3, 4, 5, 6].map((m) => (
+                  {[1, 2, 3, 4, 5, 6, 9, 12].map((m) => (
                     <SelectItem key={m} value={String(m)}>{m} {m === 1 ? "mês" : "meses"}</SelectItem>
                   ))}
                 </SelectContent>
@@ -206,19 +260,71 @@ function NovoClienteDialog() {
               <Input type="date" value={form.data_fim_contrato} onChange={(e) => setForm({ ...form, data_fim_contrato: e.target.value })} />
             </div>
           </div>
-          <div className="text-xs text-muted-foreground">
-            Serão criados <span className="font-medium text-foreground">{totalCards} cards</span> ({form.duracao_meses} {form.duracao_meses === 1 ? "mês" : "meses"} × 4 semanas).
-          </div>
+          {!isEdit && (
+            <div className="text-xs text-muted-foreground">
+              Serão criados <span className="font-medium text-foreground">{totalCards} cards</span> ({form.duracao_meses} {form.duracao_meses === 1 ? "mês" : "meses"} × 4 semanas).
+            </div>
+          )}
           <div>
             <Label>Observações</Label>
             <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={submit}>Criar Cliente</Button>
+        <DialogFooter className="gap-2 sm:gap-2 flex-wrap">
+          {!isEdit ? (
+            <>
+              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button onClick={submitCreate} disabled={saving}>
+                {saving ? "Criando..." : "Criar Cliente"}
+              </Button>
+            </>
+          ) : (
+            <>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 mr-auto"
+                  onClick={() => setConfirmDel(true)}
+                  disabled={saving}
+                >
+                  <Trash2 className="h-4 w-4" /> Remover
+                </Button>
+              )}
+              <Button variant="outline" onClick={resetAll} disabled={saving}>
+                Novo
+              </Button>
+              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
+                Fechar
+              </Button>
+              <Button onClick={submitUpdate} disabled={saving}>
+                <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
+      <AlertDialog open={confirmDel} onOpenChange={setConfirmDel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação removerá <strong>{form.nome_cliente}</strong> e todos os cards, posts,
+              contratos e alertas vinculados. Não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={submitDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
