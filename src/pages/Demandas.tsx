@@ -180,6 +180,13 @@ export default function Demandas() {
               {STATUS_DEMANDA.map((s) => <SelectItem key={s} value={s}>{STATUS_DEMANDA_LABEL[s]}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={fStatusGlobal} onValueChange={setFStatusGlobal}>
+            <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Status do cliente" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os status</SelectItem>
+              {STATUS_CLIENTE_OPCOES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="sm" className="h-9" onClick={() => setRapidaOpen(true)}>
               <Zap className="h-4 w-4 mr-1" /> Rápida
