@@ -1,32 +1,70 @@
-## Objetivo
-Corrigir o tamanho dos cards exibidos em **"Demandas com data limite no mês"** (aba Calendário do módulo Demandas), que atualmente aparecem esticados/compridos ocupando toda a largura disponível. Os cards devem ficar no tamanho padrão usado no **Quadro Geral** (Kanban), dispostos lado a lado com quebra de linha automática quando o espaço acabar.
-
 ## Diagnóstico
-Em `src/pages/Demandas.tsx` (linhas 229-239), o container da lista usa:
-- `flex-1 space-y-2` → empilha verticalmente, e como `DemandCard` é `display: block` (div), ele se estende ocupando 100% da largura do `flex-1` (que pode ter ~1500px+ no viewport atual de 2368px).
 
-No Quadro Geral (`DemandasKanban.tsx`), as colunas têm `auto-cols-[minmax(260px,1fr)]` — limitando o card a ~260-280px de largura, que é o tamanho padrão correto.
+Investiguei o problema e **não existe bug no código**. Veja o que verifiquei:
 
-## Alteração proposta
-**Arquivo:** `src/pages/Demandas.tsx` (linhas 229-239)
+### 1. Banco de dados (Supabase)
+O usuário `robsonlobato31@gmail.com` ("Lobato Teste") está:
+- `ativo = true` ✅
+- `role = editor` ✅
 
-Trocar o container vertical (`space-y-2`) por um **CSS grid responsivo** com colunas de largura fixa mínima (~260px), permitindo que os cards fluam lado a lado e quebrem para a próxima linha automaticamente — exatamente como descrito pelo usuário.
+### 2. Código do menu (`src/components/AppSidebar.tsx`)
+O item **"Demandas"** está hardcoded na lista `items` (linha 17), **sem nenhum filtro por role ou por usuário**. Ou seja, o menu deve aparecer para **todos** os usuários autenticados, inclusive editors.
 
-### Mudança específica
-- Substituir `flex-1 space-y-2 max-h-96 overflow-y-auto` no wrapper por `flex-1 max-h-96 overflow-y-auto`
-- Envolver o título "Demandas com data limite no mês:" + a grid em estrutura adequada
-- A grid de cards usará: `grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-2`
-  - `auto-fill` + `minmax(260px,1fr)` → cria quantas colunas couberem com no mínimo 260px
-  - Cards mantêm tamanho compacto (mesmo padrão visual do Kanban)
-  - Quebra de linha automática quando o espaço da linha se esgota
+```ts
+const items = [
+  { title: "Dashboard", url: "/", ... },
+  { title: "Clientes", url: "/clientes", ... },
+  { title: "Contratos", url: "/contratos", ... },
+  { title: "Demandas", url: "/demandas", icon: ListChecks }, // <- já está aqui
+  { title: "Alertas", url: "/alertas", ... },
+  ...
+];
+```
 
-## Garantias
-- ❌ **Nenhuma alteração** no componente `DemandCard` (mantém visual idêntico ao usado no Kanban e em "Minhas Demandas").
-- ❌ **Nenhuma alteração** no `DemandasKanban`, filtros, store, ou demais abas.
-- ✅ Apenas o layout do container da lista do Calendário é ajustado.
-- ✅ Comportamento de scroll vertical (`max-h-96 overflow-y-auto`) preservado.
-- ✅ Responsivo: em telas estreitas (mobile) cairá naturalmente para 1 coluna pelo `auto-fill`.
+### 3. Sem sistema de "menus visíveis por usuário"
+Pesquisei em todo o projeto (`EquipeAcessosManager`, `Configuracoes`, etc.) e **não existe** controle granular de visibilidade de menus por usuário. Logo, nada está escondendo "Demandas" do Lobato.
 
-## Resultado esperado
-- Cards no Calendário com a mesma largura compacta do Quadro Geral.
-- Cards exibidos lado a lado horizontalmente, quebrando para a linha seguinte quando preenchem o espaço da linha — comportamento semelhante ao Kanban referenciado pelo usuário.
+### 4. Conclusão — Causa raiz
+A screenshot enviada mostra o menu **sem "Demandas"**, mas o código atual claramente inclui o item. Isso só pode ser explicado por **cache do bundle JavaScript antigo no navegador do Lobato** (a versão anterior à criação do módulo Demandas).
+
+O Vite já faz hash dos assets, mas o `index.html` pode estar sendo servido de cache pelo Service Worker do navegador / CDN edge cache, fazendo com que ele continue carregando a versão antiga do app.
+
+---
+
+## Plano de correção (incremental e seguro)
+
+### Etapa 1 — Solução imediata (sem código)
+Pedir ao Lobato para fazer **hard refresh** no navegador:
+- **Windows/Linux:** `Ctrl + Shift + R` ou `Ctrl + F5`
+- **Mac:** `Cmd + Shift + R`
+- Ou abrir em aba anônima para confirmar que é cache
+
+### Etapa 2 — Garantir que o `index.html` nunca seja cacheado
+Adicionar meta tags no `index.html` para evitar cache do shell HTML (os assets JS/CSS já têm hash, então só o `index.html` precisa desse cuidado):
+
+```html
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+```
+
+Isso garante que, em deploys futuros, qualquer usuário receba o `index.html` mais recente (que aponta para os bundles JS novos com hash atualizado).
+
+### Etapa 3 — Verificar Service Worker
+Verificar se há algum Service Worker registrado em `public/` ou `index.html` que esteja servindo a versão antiga em cache. Se houver, ajustar a estratégia para `network-first` no `index.html`.
+
+### Etapa 4 — Validação
+1. Pedir ao Lobato para acessar novamente após o deploy.
+2. Confirmar que "Demandas" aparece no menu lateral entre "Contratos" e "Alertas".
+3. Confirmar acesso à rota `/demandas` (sem necessidade de role admin).
+
+---
+
+## O que NÃO será feito
+- ❌ Nenhuma alteração em `AppSidebar.tsx` (já está correto).
+- ❌ Nenhuma mudança nas roles do banco (`editor` já tem acesso).
+- ❌ Nenhuma alteração no roteamento (`/demandas` em `App.tsx` já está dentro do `RequireAuth`, sem filtro de role).
+- ❌ Nada destrutivo em módulos existentes.
+
+## Observação
+Se após o hard refresh o menu **ainda não aparecer** para o Lobato, será necessário investigar logs do console do navegador dele especificamente — mas pelo código atual, não há razão técnica para o item estar oculto.
