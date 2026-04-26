@@ -41,6 +41,9 @@ export function ClientesDemandasTable() {
   const [fPrio, setFPrio] = useState("todas");
 
   const linhas = useMemo(() => {
+    const filtroAtivo =
+      fResp !== "todos" || fStatus !== "todos" || fPrio !== "todas";
+
     const filtradas = demandas.filter((d) => {
       if (fResp !== "todos" && d.responsavel_id !== fResp) return false;
       if (fStatus !== "todos" && d.status !== fStatus) return false;
@@ -58,22 +61,39 @@ export function ClientesDemandasTable() {
         total: number;
         atrasadas: number;
         urgentes: number;
+        temDemanda: boolean;
       }
     >();
 
-    filtradas.forEach((d) => {
-      const cli = clientes.find((c) => c.id === d.cliente_id);
-      const nome = cli?.nome_cliente ?? "Cliente removido";
-      const cur = map.get(d.cliente_id) ?? {
-        cliente_id: d.cliente_id,
-        nome,
-        responsaveisIds: new Set<string>(),
-        ultimaAtividade: d.updated_at,
+    // 1) Inicializa com TODOS os clientes cadastrados (responsáveis vindos do próprio cliente)
+    clientes.forEach((c) => {
+      map.set(c.id, {
+        cliente_id: c.id,
+        nome: c.nome_cliente,
+        responsaveisIds: new Set<string>(c.responsaveis ?? []),
+        ultimaAtividade: c.created_at,
         total: 0,
         atrasadas: 0,
         urgentes: 0,
-      };
+        temDemanda: false,
+      });
+    });
+
+    // 2) Agrega métricas das demandas filtradas
+    filtradas.forEach((d) => {
+      const cur =
+        map.get(d.cliente_id) ?? {
+          cliente_id: d.cliente_id,
+          nome: "Cliente removido",
+          responsaveisIds: new Set<string>(),
+          ultimaAtividade: d.updated_at,
+          total: 0,
+          atrasadas: 0,
+          urgentes: 0,
+          temDemanda: false,
+        };
       cur.total += 1;
+      cur.temDemanda = true;
       if (d.status === "Atrasado") cur.atrasadas += 1;
       if (d.prioridade === "Urgente") cur.urgentes += 1;
       if (d.responsavel_id) cur.responsaveisIds.add(d.responsavel_id);
@@ -84,11 +104,21 @@ export function ClientesDemandasTable() {
     });
 
     let lista = Array.from(map.values());
+
+    // Quando há filtro de demanda ativo, ocultar clientes sem demandas que correspondam
+    if (filtroAtivo) {
+      lista = lista.filter((l) => l.temDemanda);
+    }
+
     if (busca.trim()) {
       const q = busca.toLowerCase();
       lista = lista.filter((l) => l.nome.toLowerCase().includes(q));
     }
-    lista.sort((a, b) => +new Date(b.ultimaAtividade) - +new Date(a.ultimaAtividade));
+
+    // Ordena: primeiro com atividade mais recente, sem demandas vão pelo created_at do cliente
+    lista.sort(
+      (a, b) => +new Date(b.ultimaAtividade) - +new Date(a.ultimaAtividade),
+    );
     return lista;
   }, [demandas, clientes, busca, fResp, fStatus, fPrio]);
 
@@ -148,7 +178,7 @@ export function ClientesDemandasTable() {
         <CardContent className="p-0">
           {linhas.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
-              Nenhum cliente com demandas
+              Nenhum cliente cadastrado
             </div>
           ) : (
             <Table className="[&_th]:py-1 [&_th]:px-2 [&_th]:h-7 [&_td]:py-0.5 [&_td]:px-2">

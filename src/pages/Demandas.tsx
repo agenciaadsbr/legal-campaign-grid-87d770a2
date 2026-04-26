@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Zap } from "lucide-react";
 import { useDemandas, useDemandasBootstrap, Demanda } from "@/store/demandas";
-import { useCRM } from "@/store/crm";
+import { useCRM, useCRMBootstrap } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import { DemandasKanban } from "@/components/demandas/DemandasKanban";
 import { DemandCard } from "@/components/demandas/DemandCard";
@@ -27,8 +27,13 @@ type FiltroRapido = "todas" | "hoje" | "atrasadas" | "semana";
 
 export default function Demandas() {
   useDemandasBootstrap();
+  useCRMBootstrap();
   const demandas = useDemandas((s) => s.demandas);
   const { clientes, responsaveis } = useCRM();
+  const clientesOrdenados = useMemo(
+    () => [...clientes].sort((a, b) => a.nome_cliente.localeCompare(b.nome_cliente, "pt-BR")),
+    [clientes]
+  );
   const { user } = useAuth();
 
   const [novaOpen, setNovaOpen] = useState(false);
@@ -125,7 +130,7 @@ export default function Demandas() {
             <SelectTrigger className="h-9 w-40"><SelectValue placeholder="Cliente" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos clientes</SelectItem>
-              {clientes.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>)}
+              {clientesOrdenados.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={fResp} onValueChange={setFResp}>
