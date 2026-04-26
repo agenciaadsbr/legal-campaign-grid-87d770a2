@@ -245,6 +245,31 @@ function NovoClienteDialog() {
               </Select>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Status do cliente (ciclo de vida)</Label>
+              <Select
+                value={form.status_global}
+                onValueChange={(v) => setForm({ ...form, status_global: v as any })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Onboarding">Onboarding</SelectItem>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Pausado">Pausado</SelectItem>
+                  <SelectItem value="Encerrado">Encerrado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Prazo de onboarding</Label>
+              <Input
+                type="date"
+                value={form.prazo_onboarding}
+                onChange={(e) => setForm({ ...form, prazo_onboarding: e.target.value })}
+              />
+            </div>
+          </div>
           <div>
             <Label>Responsáveis</Label>
             <ResponsaveisPicker value={form.responsaveis} onChange={(v) => setForm({ ...form, responsaveis: v })} />
