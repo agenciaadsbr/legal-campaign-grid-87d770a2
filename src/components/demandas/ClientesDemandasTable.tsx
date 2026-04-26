@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDemandas } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AvatarStack } from "@/components/AvatarStack";
@@ -21,18 +20,18 @@ interface Props {
   filtroResp?: string;
   filtroStatus?: string;
   filtroPrio?: string;
+  filtroBusca?: string;
 }
 
 export function ClientesDemandasTable({
   filtroResp = "todos",
   filtroStatus = "todos",
   filtroPrio = "todas",
+  filtroBusca = "",
 }: Props) {
   const demandas = useDemandas((s) => s.demandas);
   const { clientes, responsaveis } = useCRM();
   const navigate = useNavigate();
-
-  const [busca, setBusca] = useState("");
 
   const linhas = useMemo(() => {
     const filtroAtivo =
