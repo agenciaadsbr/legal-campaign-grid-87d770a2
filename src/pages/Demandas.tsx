@@ -130,7 +130,7 @@ export default function Demandas() {
             <SelectTrigger className="h-9 w-40"><SelectValue placeholder="Cliente" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos clientes</SelectItem>
-              {clientes.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>)}
+              {clientesOrdenados.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={fResp} onValueChange={setFResp}>
