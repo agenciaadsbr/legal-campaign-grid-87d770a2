@@ -25,12 +25,11 @@ export default function Contratos() {
           <tbody>
             {contratos.map((ct) => {
               const cli = clientes.find((c) => c.id === ct.cliente_id);
-              const opt = statusOptions.find((s) => s.label === cli?.status_cliente);
               const pct = (ct.posts_concluidos / ct.total_posts) * 100;
               return (
                 <tr key={ct.id} className="border-t hover:bg-accent/30">
                   <td className="px-4 py-2.5"><Link to={`/clientes/${ct.cliente_id}`} className="text-primary font-medium hover:underline">{cli?.nome_cliente}</Link></td>
-                  <td className="px-4 py-2.5">{opt && <ColorBadge label={opt.label} color={opt.cor} />}</td>
+                  <td className="px-4 py-2.5"><StatusClienteBadge status={cli?.status_global} size="sm" /></td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
                       <Progress value={pct} className="h-2 flex-1" />
