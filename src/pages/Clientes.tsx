@@ -1153,14 +1153,15 @@ export default function Clientes() {
       // Cliente sem nenhum card NÃO é concluído — vai para "Criar" para ficar visível.
       const concluido = !!stats && stats.total > 0 && stats.pendentes === 0;
       if (concluido) {
-        if (mostrarConcluidos) map.Concluidos.push(c);
+        if (mostrarConcluidos || busca.trim()) map.Concluidos.push(c);
         return;
       }
       const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
       map[ps].push(c);
     });
     return map;
-  }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos]);
+  }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos, busca]);
+
 
   const algumGrupoAberto = useMemo(
     // Revisar e Criar são fixos (sempre renderizam). Concluídos só aparece com toggle.
