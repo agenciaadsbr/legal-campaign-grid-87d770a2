@@ -171,7 +171,12 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
                 <td className="px-4 py-2.5"><ColorBadge label={a.tipo_alerta.replace(/_/g, " ")} color={tipoCor[a.tipo_alerta]} /></td>
                 <td className="px-4 py-2.5"><Link to={`/clientes/${a.cliente_id}`} className="text-primary hover:underline">{cli?.nome_cliente}</Link></td>
                 <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.data_alerta).toLocaleDateString("pt-BR")}</td>
-                <td className="px-4 py-2.5">{a.mensagem}</td>
+                <td className="px-4 py-2.5">
+                  <Badge variant="outline" className="text-[10px] mr-2 font-mono">
+                    {a._origem === "DEMANDA" ? "[DEMANDA]" : "[POST]"}
+                  </Badge>
+                  {a.mensagem}
+                </td>
                 <td className="px-4 py-2.5 text-right">
                   {status === "Pendente" && canWrite && (
                     <Button size="sm" variant="outline" disabled={resolvendo === a.id} onClick={() => onResolver(a)}>
