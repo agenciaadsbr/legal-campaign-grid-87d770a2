@@ -10,8 +10,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-// Menu fixo — visível para TODOS os usuários autenticados (sem filtro por role)
-const items = [
+// Menu fixo — visível para TODOS os usuários autenticados (admin, editor, viewer)
+// Build tag: sidebar-v3-demandas-always-visible
+type MenuItem = { title: string; url: string; icon: typeof LayoutDashboard; end?: boolean };
+
+const MENU_ITEMS: MenuItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Contratos", url: "/contratos", icon: FileText },
@@ -19,7 +22,7 @@ const items = [
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
-] as { title: string; url: string; icon: typeof LayoutDashboard; end?: boolean }[];
+];
 
 export function AppSidebar() {
   const { state } = useSidebar();
