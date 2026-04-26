@@ -172,10 +172,10 @@ export default function Demandas() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="quadro">
+      <Tabs defaultValue="clientes">
         <TabsList>
-          <TabsTrigger value="quadro">Quadro Geral</TabsTrigger>
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          <TabsTrigger value="quadro">Quadro Geral</TabsTrigger>
           <TabsTrigger value="minhas">Minhas Demandas</TabsTrigger>
           <TabsTrigger value="novas">Novas Solicitações</TabsTrigger>
           <TabsTrigger value="calendario">Calendário</TabsTrigger>
