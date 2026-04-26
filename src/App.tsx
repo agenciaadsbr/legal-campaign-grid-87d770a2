@@ -19,8 +19,14 @@ import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { useVersionCheck } from "./hooks/useVersionCheck";
 
 const queryClient = new QueryClient();
+
+function VersionWatcher() {
+  useVersionCheck();
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -28,6 +34,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <VersionWatcher />
         <BrowserRouter>
           <AuthProvider>
             <Routes>
