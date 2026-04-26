@@ -390,6 +390,8 @@ function EditarClienteDialog({
     nome_cliente: cliente?.nome_cliente ?? "",
     nicho: cliente?.nicho ?? "",
     status_cliente: cliente?.status_cliente ?? "Ativo",
+    status_global: (cliente?.status_global ?? "Onboarding") as any,
+    prazo_onboarding: (cliente?.prazo_onboarding ?? "") as string,
     data_inicio_contrato: cliente?.data_inicio_contrato ?? "",
     duracao_meses: calcMeses(cliente?.data_inicio_contrato, cliente?.data_fim_contrato),
     data_fim_contrato: cliente?.data_fim_contrato ?? "",
@@ -408,8 +410,11 @@ function EditarClienteDialog({
       return;
     }
     try {
-      const { duracao_meses, ...patch } = form;
-      await updateCliente(cliente.id, patch);
+      const { duracao_meses, prazo_onboarding, ...patch } = form;
+      await updateCliente(cliente.id, {
+        ...(patch as any),
+        prazo_onboarding: prazo_onboarding || null,
+      });
       toast.success("Cliente atualizado");
       onOpenChange(false);
     } catch (e: any) {
