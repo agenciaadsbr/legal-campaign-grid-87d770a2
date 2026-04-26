@@ -142,6 +142,7 @@ export function ClientesDemandasTable({
                 <TableRow>
                   <TableHead className="w-10 text-xs text-muted-foreground">#</TableHead>
                   <TableHead>Cliente</TableHead>
+                  <TableHead>Status do cliente</TableHead>
                   <TableHead>Responsáveis</TableHead>
                   <TableHead>Última atividade</TableHead>
                   <TableHead className="text-center">Total</TableHead>
