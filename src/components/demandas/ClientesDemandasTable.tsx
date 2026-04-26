@@ -178,7 +178,7 @@ export function ClientesDemandasTable() {
         <CardContent className="p-0">
           {linhas.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
-              Nenhum cliente com demandas
+              Nenhum cliente cadastrado
             </div>
           ) : (
             <Table className="[&_th]:py-1 [&_th]:px-2 [&_th]:h-7 [&_td]:py-0.5 [&_td]:px-2">
