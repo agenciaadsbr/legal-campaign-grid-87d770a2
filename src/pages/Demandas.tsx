@@ -17,6 +17,7 @@ import { DemandaRapidaDialog } from "@/components/demandas/DemandaRapidaDialog";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { RelatoriosDemandas } from "@/components/demandas/RelatoriosDemandas";
 import { ClientesDemandasTable } from "@/components/demandas/ClientesDemandasTable";
+import { STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
 import {
   CATEGORIAS, CATEGORIA_LABEL, PRIORIDADES, PRIORIDADE_LABEL,
   STATUS_DEMANDA, STATUS_DEMANDA_LABEL,
@@ -47,6 +48,7 @@ export default function Demandas() {
   const [fCat, setFCat] = useState<string>("todas");
   const [fPrio, setFPrio] = useState<string>("todas");
   const [fStatus, setFStatus] = useState<string>("todos");
+  const [fStatusGlobal, setFStatusGlobal] = useState<string>("todos");
   const [fRapido, setFRapido] = useState<FiltroRapido>("todas");
   const [calMonth, setCalMonth] = useState<Date>(new Date());
 
@@ -55,6 +57,10 @@ export default function Demandas() {
     const hojeFim = new Date(); hojeFim.setHours(23, 59, 59, 999);
     const semana = new Date(); semana.setDate(semana.getDate() + 7);
 
+    const clientesPorStatus = new Map(
+      clientes.map((c) => [c.id, c.status_global ?? "Onboarding"]),
+    );
+
     return demandas.filter((d) => {
       if (busca && !d.titulo.toLowerCase().includes(busca.toLowerCase())) return false;
       if (fCliente !== "todos" && d.cliente_id !== fCliente) return false;
@@ -62,6 +68,11 @@ export default function Demandas() {
       if (fCat !== "todas" && d.categoria !== fCat) return false;
       if (fPrio !== "todas" && d.prioridade !== fPrio) return false;
       if (fStatus !== "todos" && d.status !== fStatus) return false;
+      if (
+        fStatusGlobal !== "todos" &&
+        clientesPorStatus.get(d.cliente_id) !== fStatusGlobal
+      )
+        return false;
       if (fRapido === "atrasadas" && d.status !== "Atrasado") return false;
       if (fRapido === "hoje") {
         if (!d.data_limite) return false;
@@ -75,7 +86,7 @@ export default function Demandas() {
       }
       return true;
     });
-  }, [demandas, busca, fCliente, fResp, fCat, fPrio, fStatus, fRapido]);
+  }, [demandas, clientes, busca, fCliente, fResp, fCat, fPrio, fStatus, fStatusGlobal, fRapido]);
 
   const [meuResponsavelId, setMeuResponsavelId] = useState<string | null>(null);
   useEffect(() => {
@@ -169,6 +180,13 @@ export default function Demandas() {
               {STATUS_DEMANDA.map((s) => <SelectItem key={s} value={s}>{STATUS_DEMANDA_LABEL[s]}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={fStatusGlobal} onValueChange={setFStatusGlobal}>
+            <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Status do cliente" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os status</SelectItem>
+              {STATUS_CLIENTE_OPCOES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="sm" className="h-9" onClick={() => setRapidaOpen(true)}>
               <Zap className="h-4 w-4 mr-1" /> Rápida
@@ -215,6 +233,7 @@ export default function Demandas() {
             filtroStatus={fStatus}
             filtroPrio={fPrio}
             filtroBusca={busca}
+            filtroStatusGlobal={fStatusGlobal}
           />
         </TabsContent>
 

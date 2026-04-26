@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EquipeAcessosManager } from "@/components/EquipeAcessosManager";
 import { MeuPerfil } from "@/components/MeuPerfil";
+import { ConfiguracoesDemandasManager } from "@/components/ConfiguracoesDemandasManager";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Configuracoes() {
@@ -24,6 +25,7 @@ export default function Configuracoes() {
           <TabsTrigger value="perfil">Meu perfil</TabsTrigger>
           <TabsTrigger value="aparencia">Aparência</TabsTrigger>
           {isAdmin && <TabsTrigger value="equipe">Equipe & Acessos</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="demandas">Demandas</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="perfil" className="mt-4">
@@ -46,6 +48,12 @@ export default function Configuracoes() {
         {isAdmin && (
           <TabsContent value="equipe" className="mt-4">
             <EquipeAcessosManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="demandas" className="mt-4">
+            <ConfiguracoesDemandasManager />
           </TabsContent>
         )}
       </Tabs>

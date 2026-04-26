@@ -1,6 +1,6 @@
 import { useCRM } from "@/store/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Calendar, CheckCircle2, RefreshCw, Bell } from "lucide-react";
+import { Users, FileText, Calendar, CheckCircle2, RefreshCw, Bell, Sparkles, Pause, UserCheck } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from "recharts";
 import { useMemo } from "react";
 import { DashboardDemandasSection } from "@/components/demandas/DashboardDemandasSection";
@@ -25,7 +25,9 @@ export default function Dashboard() {
   const { clientes, posts, alertas, cards, responsaveis } = useCRM();
 
   const today = new Date().toISOString().slice(0, 10);
-  const ativos = clientes.filter((c) => c.status_cliente === "Ativo").length;
+  const ativos = clientes.filter((c) => (c.status_global ?? "Onboarding") === "Ativo").length;
+  const onboarding = clientes.filter((c) => (c.status_global ?? "Onboarding") === "Onboarding").length;
+  const pausados = clientes.filter((c) => (c.status_global ?? "Onboarding") === "Pausado").length;
   const postsHoje = posts.filter((p) => p.created_at.slice(0, 10) === today).length;
   const agendados = posts.filter((p) => p.status === "Agendar").length;
   const postados = posts.filter((p) => p.status === "Postado").length;
@@ -58,10 +60,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Kpi label="Clientes ativos" value={ativos} icon={Users} accent="hsl(var(--primary))" />
+        <Kpi label="Em onboarding" value={onboarding} icon={Sparkles} accent="hsl(217 91% 60%)" />
+        <Kpi label="Clientes ativos" value={ativos} icon={UserCheck} accent="hsl(160 84% 39%)" />
+        <Kpi label="Clientes pausados" value={pausados} icon={Pause} accent="hsl(38 92% 50%)" />
         <Kpi label="Posts hoje" value={postsHoje} icon={FileText} accent="hsl(var(--info))" />
         <Kpi label="Agendados" value={agendados} icon={Calendar} accent="hsl(var(--status-agendar))" />
         <Kpi label="Postados" value={postados} icon={CheckCircle2} accent="hsl(var(--status-postado))" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Kpi label="Total clientes" value={clientes.length} icon={Users} accent="hsl(var(--primary))" />
         <Kpi label="Renovação" value={renovacao} icon={RefreshCw} accent="hsl(var(--status-renovacao))" />
         <Kpi label="Alertas" value={alertasPendentes} icon={Bell} accent="hsl(var(--destructive))" />
       </div>

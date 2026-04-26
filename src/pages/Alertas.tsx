@@ -18,9 +18,12 @@ const tipoCor: Record<TipoAlerta, string> = {
   Cliente_Pausado: "#9ca3af",
   Sem_Posts_Ativos: "#f59e0b",
   Posts_Atrasados: "#ef4444",
+  Onboarding_Sem_Demanda: "#3b82f6",
+  Onboarding_Sem_Post: "#3b82f6",
+  Onboarding_Prazo_Vencido: "#ef4444",
 };
 
-type AlertaItem = Alerta & { _derivado?: boolean; _origem?: "POST" | "DEMANDA" };
+type AlertaItem = Alerta & { _derivado?: boolean; _origem?: "POST" | "DEMANDA" | "ONBOARDING" };
 
 function useAlertasDemandas(): AlertaItem[] {
   useDemandasBootstrap();
@@ -61,6 +64,7 @@ function useAlertasDemandas(): AlertaItem[] {
 
 function useAlertasDerivados(): AlertaItem[] {
   const { clientes, cards } = useCRM();
+  const demandas = useDemandas((s) => s.demandas);
   return useMemo(() => {
     const out: AlertaItem[] = [];
     const hoje = new Date();
@@ -93,9 +97,27 @@ function useAlertasDerivados(): AlertaItem[] {
       if (atrasados.length > 0) {
         out.push(mk("Posts_Atrasados", c.id, `${atrasados.length} post(s) atrasado(s)`));
       }
+
+      // [ONBOARDING] alertas para clientes em fase de onboarding
+      if ((c.status_global ?? "Onboarding") === "Onboarding") {
+        const temDemanda = demandas.some((d) => d.cliente_id === c.id);
+        if (!temDemanda) {
+          out.push(mk("Onboarding_Sem_Demanda", c.id, "[ONBOARDING] Cliente sem demanda criada"));
+        }
+        const temPostIniciado = meusCards.some((k) => k.status_card !== "Planejamento");
+        if (!temPostIniciado) {
+          out.push(mk("Onboarding_Sem_Post", c.id, "[ONBOARDING] Cliente sem post iniciado"));
+        }
+        if (c.prazo_onboarding) {
+          const prazo = new Date(c.prazo_onboarding);
+          if (prazo < hoje) {
+            out.push(mk("Onboarding_Prazo_Vencido", c.id, "[ONBOARDING] Prazo de ativação vencido"));
+          }
+        }
+      }
     });
     return out;
-  }, [clientes, cards]);
+  }, [clientes, cards, demandas]);
 }
 
 function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
@@ -173,7 +195,11 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
                 <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.data_alerta).toLocaleDateString("pt-BR")}</td>
                 <td className="px-4 py-2.5">
                   <Badge variant="outline" className="text-[10px] mr-2 font-mono">
-                    {a._origem === "DEMANDA" ? "[DEMANDA]" : "[POST]"}
+                    {a._origem === "DEMANDA"
+                      ? "[DEMANDA]"
+                      : a.tipo_alerta.startsWith("Onboarding_")
+                        ? "[ONBOARDING]"
+                        : "[POST]"}
                   </Badge>
                   {a.mensagem}
                 </td>

@@ -12,7 +12,10 @@ export type TipoAlerta =
   | "Contrato_Finalizando"
   | "Cliente_Pausado"
   | "Sem_Posts_Ativos"
-  | "Posts_Atrasados";
+  | "Posts_Atrasados"
+  | "Onboarding_Sem_Demanda"
+  | "Onboarding_Sem_Post"
+  | "Onboarding_Prazo_Vencido";
 export type Permissao = "admin" | "editor" | "viewer";
 export type ColumnTipo =
   | "texto"

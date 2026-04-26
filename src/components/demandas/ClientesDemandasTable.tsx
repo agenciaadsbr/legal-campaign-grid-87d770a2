@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AvatarStack } from "@/components/AvatarStack";
+import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { ArrowRight, AlertTriangle, Zap } from "lucide-react";
 
 interface Props {
@@ -21,6 +22,7 @@ interface Props {
   filtroStatus?: string;
   filtroPrio?: string;
   filtroBusca?: string;
+  filtroStatusGlobal?: string;
 }
 
 export function ClientesDemandasTable({
@@ -28,6 +30,7 @@ export function ClientesDemandasTable({
   filtroStatus = "todos",
   filtroPrio = "todas",
   filtroBusca = "",
+  filtroStatusGlobal = "todos",
 }: Props) {
   const demandas = useDemandas((s) => s.demandas);
   const { clientes, responsaveis } = useCRM();
@@ -49,6 +52,7 @@ export function ClientesDemandasTable({
       {
         cliente_id: string;
         nome: string;
+        statusGlobal: string;
         responsaveisIds: Set<string>;
         ultimaAtividade: string;
         total: number;
@@ -60,9 +64,15 @@ export function ClientesDemandasTable({
 
     // 1) Inicializa com TODOS os clientes cadastrados (responsáveis vindos do próprio cliente)
     clientes.forEach((c) => {
+      if (
+        filtroStatusGlobal !== "todos" &&
+        (c.status_global ?? "Onboarding") !== filtroStatusGlobal
+      )
+        return;
       map.set(c.id, {
         cliente_id: c.id,
         nome: c.nome_cliente,
+        statusGlobal: c.status_global ?? "Onboarding",
         responsaveisIds: new Set<string>(c.responsaveis ?? []),
         ultimaAtividade: c.created_at,
         total: 0,
@@ -74,17 +84,19 @@ export function ClientesDemandasTable({
 
     // 2) Agrega métricas das demandas filtradas
     filtradas.forEach((d) => {
-      const cur =
-        map.get(d.cliente_id) ?? {
-          cliente_id: d.cliente_id,
-          nome: "Cliente removido",
-          responsaveisIds: new Set<string>(),
-          ultimaAtividade: d.updated_at,
-          total: 0,
-          atrasadas: 0,
-          urgentes: 0,
-          temDemanda: false,
-        };
+      const existing = map.get(d.cliente_id);
+      if (!existing && filtroStatusGlobal !== "todos") return;
+      const cur = existing ?? {
+        cliente_id: d.cliente_id,
+        nome: "Cliente removido",
+        statusGlobal: "Onboarding",
+        responsaveisIds: new Set<string>(),
+        ultimaAtividade: d.updated_at,
+        total: 0,
+        atrasadas: 0,
+        urgentes: 0,
+        temDemanda: false,
+      };
       cur.total += 1;
       cur.temDemanda = true;
       if (d.status === "Atrasado") cur.atrasadas += 1;
@@ -113,7 +125,7 @@ export function ClientesDemandasTable({
       a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
     );
     return lista;
-  }, [demandas, clientes, filtroBusca, filtroResp, filtroStatus, filtroPrio]);
+  }, [demandas, clientes, filtroBusca, filtroResp, filtroStatus, filtroPrio, filtroStatusGlobal]);
 
   return (
     <div className="space-y-1.5">
@@ -130,6 +142,7 @@ export function ClientesDemandasTable({
                 <TableRow>
                   <TableHead className="w-10 text-xs text-muted-foreground">#</TableHead>
                   <TableHead>Cliente</TableHead>
+                  <TableHead>Status do cliente</TableHead>
                   <TableHead>Responsáveis</TableHead>
                   <TableHead>Última atividade</TableHead>
                   <TableHead className="text-center">Total</TableHead>
@@ -153,6 +166,9 @@ export function ClientesDemandasTable({
                         {idx + 1}
                       </TableCell>
                       <TableCell className="font-medium">{l.nome}</TableCell>
+                      <TableCell>
+                        <StatusClienteBadge status={l.statusGlobal} />
+                      </TableCell>
                       <TableCell>
                         {respObjs.length > 0 ? (
                           <AvatarStack responsaveis={respObjs} size="xs" max={4} />
