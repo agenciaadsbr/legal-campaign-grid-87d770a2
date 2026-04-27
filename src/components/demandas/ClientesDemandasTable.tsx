@@ -147,7 +147,7 @@ export function ClientesDemandasTable({
                   <TableHead className="w-10 text-xs text-muted-foreground">#</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Status do cliente</TableHead>
-                  <TableHead>Responsáveis</TableHead>
+                  <TableHead>Responsáveis do cliente</TableHead>
                   <TableHead className="min-w-[180px]">Último comentário</TableHead>
                   <TableHead>Nicho</TableHead>
                   <TableHead>Última atividade</TableHead>

@@ -1035,7 +1035,7 @@ function FiltrosTopo({
         <PopoverTrigger asChild>
           <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
             <Filter className="h-3.5 w-3.5" />
-            <span className="text-xs">Filtrar por responsável</span>
+            <span className="text-xs">Filtrar por responsável do post</span>
             {filtroResponsaveis.length > 0 && (
               <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
                 {filtroResponsaveis.length}
@@ -1044,7 +1044,7 @@ function FiltrosTopo({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-2" align="start">
-          <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis</div>
+          <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis do post</div>
           <div className="max-h-60 overflow-auto space-y-0.5">
             {responsaveis.map((r) => {
               const checked = filtroResponsaveis.includes(r.id);
@@ -1139,6 +1139,18 @@ export default function Clientes() {
     [colunasCliente]
   );
 
+  // Responsáveis dos POSTS (cards) por cliente — usado nos filtros do módulo Clientes/Posts.
+  // Não usa o "responsável geral do cliente" (c.responsaveis), que é apenas informativo.
+  const respsPostsPorCliente = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    cards.forEach((card) => {
+      let set = map.get(card.cliente_id);
+      if (!set) { set = new Set<string>(); map.set(card.cliente_id, set); }
+      (card.responsaveis ?? []).forEach((r) => set!.add(r));
+    });
+    return map;
+  }, [cards]);
+
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return clientes
@@ -1151,15 +1163,21 @@ export default function Clientes() {
           (c.status_cliente ?? "").toLowerCase().includes(termo)
         );
       })
-      .filter(
-        (c) =>
-          filtroResponsaveis.length === 0 ||
-          c.responsaveis.some((r) => filtroResponsaveis.includes(r))
-      )
-      .filter((c) => !apenasMinhas || (currentUserId !== null && c.responsaveis.includes(currentUserId)))
+      .filter((c) => {
+        if (filtroResponsaveis.length === 0) return true;
+        const respsPosts = respsPostsPorCliente.get(c.id);
+        if (!respsPosts || respsPosts.size === 0) return false;
+        return filtroResponsaveis.some((r) => respsPosts.has(r));
+      })
+      .filter((c) => {
+        if (!apenasMinhas) return true;
+        if (!currentUserId) return false;
+        const respsPosts = respsPostsPorCliente.get(c.id);
+        return !!respsPosts && respsPosts.has(currentUserId);
+      })
       // Quando há busca ativa, ignora o filtro de status para permitir achar qualquer cliente
       .filter((c) => !!termo || filtroStatusCliente === "todos" || c.status_cliente === filtroStatusCliente);
-  }, [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]);
+  }, [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente, respsPostsPorCliente]);
 
 
   const GRUPOS = ["Revisar", "Criar", "Concluidos"] as const;

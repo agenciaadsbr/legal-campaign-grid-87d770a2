@@ -37,7 +37,7 @@ interface Props {
 }
 
 export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Props) {
-  const { clientes, responsaveis } = useCRM();
+  const { clientes, responsaveis, cards } = useCRM();
   const createDemanda = useDemandas((s) => s.createDemanda);
 
   const [cliente_id, setClienteId] = useState(defaultClienteId ?? "");
@@ -50,6 +50,20 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
   const [categoria, setCategoria] = useState<DemandaCategoria>("Designer");
   const [subtipo, setSubtipo] = useState<string>("");
   const [responsavel_id, setResponsavelId] = useState<string>("");
+  const [respManualmenteAlterado, setRespManualmenteAlterado] = useState(false);
+
+  // Autopreencher: ao escolher cliente, sugerir responsável mais frequente nos posts (cards) desse cliente.
+  useEffect(() => {
+    if (!cliente_id) return;
+    if (respManualmenteAlterado) return;
+    const cardsCli = cards.filter((c) => c.cliente_id === cliente_id);
+    const freq = new Map<string, number>();
+    cardsCli.forEach((c) => (c.responsaveis ?? []).forEach((r) => freq.set(r, (freq.get(r) ?? 0) + 1)));
+    let maisFreq: string | null = null;
+    let max = 0;
+    freq.forEach((n, id) => { if (n > max) { max = n; maisFreq = id; } });
+    setResponsavelId(maisFreq ?? "");
+  }, [cliente_id, cards, respManualmenteAlterado]);
   const [prioridade, setPrioridade] = useState<DemandaPrioridade>("Media");
   const [data_limite, setDataLimite] = useState<string>("");
   const [descricao, setDescricao] = useState("");
@@ -62,6 +76,7 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
     setCategoria("Designer");
     setSubtipo("");
     setResponsavelId("");
+    setRespManualmenteAlterado(false);
     setPrioridade("Media");
     setDataLimite("");
     setDescricao("");
@@ -138,8 +153,11 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
             )}
           </div>
           <div>
-            <Label>Responsável</Label>
-            <Select value={responsavel_id} onValueChange={setResponsavelId}>
+            <Label>Responsável da Demanda</Label>
+            <Select
+              value={responsavel_id}
+              onValueChange={(v) => { setResponsavelId(v); setRespManualmenteAlterado(true); }}
+            >
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}

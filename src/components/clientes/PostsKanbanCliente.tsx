@@ -297,7 +297,7 @@ export function PostsKanbanCliente() {
 
   const respsSelLabel =
     filtroResps.length === 0
-      ? "Todos responsáveis"
+      ? "Todos responsáveis do post"
       : filtroResps.length === 1
       ? responsaveis.find((r) => r.id === filtroResps[0])?.nome ?? "1 responsável"
       : `${filtroResps.length} responsáveis`;
@@ -320,7 +320,7 @@ export function PostsKanbanCliente() {
             <Button variant="outline" size="sm" className="h-9">{respsSelLabel}</Button>
           </PopoverTrigger>
           <PopoverContent className="w-64 p-2" align="start">
-            <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Filtrar por responsável</div>
+            <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Filtrar por responsável do post</div>
             <div className="max-h-60 overflow-auto space-y-0.5">
               {responsaveis.map((r) => {
                 const checked = filtroResps.includes(r.id);

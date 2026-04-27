@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,13 +25,27 @@ interface Props {
 }
 
 export function DemandaRapidaDialog({ open, onOpenChange }: Props) {
-  const { clientes, responsaveis } = useCRM();
+  const { clientes, responsaveis, cards } = useCRM();
   const createDemanda = useDemandas((s) => s.createDemanda);
   const [cliente_id, setClienteId] = useState("");
   const [titulo, setTitulo] = useState("");
   const [responsavel_id, setResponsavelId] = useState("");
+  const [respManualmenteAlterado, setRespManualmenteAlterado] = useState(false);
   const [data_limite, setDataLimite] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Autopreencher: ao escolher cliente, sugerir responsável mais frequente nos posts (cards) desse cliente.
+  useEffect(() => {
+    if (!cliente_id) return;
+    if (respManualmenteAlterado) return;
+    const cardsCli = cards.filter((c) => c.cliente_id === cliente_id);
+    const freq = new Map<string, number>();
+    cardsCli.forEach((c) => (c.responsaveis ?? []).forEach((r) => freq.set(r, (freq.get(r) ?? 0) + 1)));
+    let maisFreq: string | null = null;
+    let max = 0;
+    freq.forEach((n, id) => { if (n > max) { max = n; maisFreq = id; } });
+    setResponsavelId(maisFreq ?? "");
+  }, [cliente_id, cards, respManualmenteAlterado]);
 
   const submit = async () => {
     if (!cliente_id || !titulo.trim()) return;
@@ -45,6 +59,7 @@ export function DemandaRapidaDialog({ open, onOpenChange }: Props) {
     setSaving(false);
     if (id) {
       setClienteId(""); setTitulo(""); setResponsavelId(""); setDataLimite("");
+      setRespManualmenteAlterado(false);
       onOpenChange(false);
     }
   };
@@ -70,8 +85,11 @@ export function DemandaRapidaDialog({ open, onOpenChange }: Props) {
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
           </div>
           <div>
-            <Label>Responsável</Label>
-            <Select value={responsavel_id} onValueChange={setResponsavelId}>
+            <Label>Responsável da Demanda</Label>
+            <Select
+              value={responsavel_id}
+              onValueChange={(v) => { setResponsavelId(v); setRespManualmenteAlterado(true); }}
+            >
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
