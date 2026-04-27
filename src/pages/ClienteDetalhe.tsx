@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PostsKanbanCliente } from "@/components/clientes/PostsKanbanCliente";
 
-import { useParams as _useParams } from "react-router-dom";
 
 function AtividadeView() {
   const { clienteId } = useParams();
@@ -83,7 +82,7 @@ export default function ClienteDetalhe() {
             </Link>
           </Button>
         </div>
-        <TabsContent value="quadro" className="mt-4"><KanbanView /></TabsContent>
+        <TabsContent value="quadro" className="mt-4"><PostsKanbanCliente /></TabsContent>
         <TabsContent value="atividade" className="mt-4"><AtividadeView /></TabsContent>
       </Tabs>
     </div>
