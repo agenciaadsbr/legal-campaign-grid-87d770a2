@@ -1139,6 +1139,18 @@ export default function Clientes() {
     [colunasCliente]
   );
 
+  // Responsáveis dos POSTS (cards) por cliente — usado nos filtros do módulo Clientes/Posts.
+  // Não usa o "responsável geral do cliente" (c.responsaveis), que é apenas informativo.
+  const respsPostsPorCliente = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    cards.forEach((card) => {
+      let set = map.get(card.cliente_id);
+      if (!set) { set = new Set<string>(); map.set(card.cliente_id, set); }
+      (card.responsaveis ?? []).forEach((r) => set!.add(r));
+    });
+    return map;
+  }, [cards]);
+
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return clientes
@@ -1151,15 +1163,21 @@ export default function Clientes() {
           (c.status_cliente ?? "").toLowerCase().includes(termo)
         );
       })
-      .filter(
-        (c) =>
-          filtroResponsaveis.length === 0 ||
-          c.responsaveis.some((r) => filtroResponsaveis.includes(r))
-      )
-      .filter((c) => !apenasMinhas || (currentUserId !== null && c.responsaveis.includes(currentUserId)))
+      .filter((c) => {
+        if (filtroResponsaveis.length === 0) return true;
+        const respsPosts = respsPostsPorCliente.get(c.id);
+        if (!respsPosts || respsPosts.size === 0) return false;
+        return filtroResponsaveis.some((r) => respsPosts.has(r));
+      })
+      .filter((c) => {
+        if (!apenasMinhas) return true;
+        if (!currentUserId) return false;
+        const respsPosts = respsPostsPorCliente.get(c.id);
+        return !!respsPosts && respsPosts.has(currentUserId);
+      })
       // Quando há busca ativa, ignora o filtro de status para permitir achar qualquer cliente
       .filter((c) => !!termo || filtroStatusCliente === "todos" || c.status_cliente === filtroStatusCliente);
-  }, [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente]);
+  }, [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente, respsPostsPorCliente]);
 
 
   const GRUPOS = ["Revisar", "Criar", "Concluidos"] as const;
