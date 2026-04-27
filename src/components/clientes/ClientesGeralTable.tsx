@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { AvatarStack } from "@/components/AvatarStack";
 import { ColorBadge } from "@/components/StatusBadge";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
-import { CelulaResponsaveis } from "@/components/clientes/CelulaResponsaveis";
+// FUTURO: responsável geral do cliente — componente CelulaResponsaveis preservado em src/components/clientes/CelulaResponsaveis.tsx
 import { AlertTriangle, Zap } from "lucide-react";
 
 interface Props {
@@ -110,7 +110,7 @@ export function ClientesGeralTable({
                     </TableHead>
                     <TableHead className="min-w-[180px]">Cliente</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Responsáveis do cliente</TableHead>
+                    <TableHead>Responsáveis dos Posts</TableHead>
                     <TableHead className="min-w-[180px]">
                       Último comentário
                     </TableHead>
@@ -126,9 +126,9 @@ export function ClientesGeralTable({
                 </TableHeader>
                 <TableBody>
                   {linhas.map((cliente, idx) => {
-                    const respObjs = responsaveis.filter((r) =>
-                      cliente.responsaveis.includes(r.id),
-                    );
+                    // Responsáveis dos Posts: união dos responsáveis de todos os cards do cliente
+                    const idsPosts = respsPostsPorCliente.get(cliente.id) ?? new Set<string>();
+                    const respObjsPosts = responsaveis.filter((r) => idsPosts.has(r.id));
                     const cardsCli = cards.filter(
                       (k) => k.cliente_id === cliente.id,
                     );
@@ -177,11 +177,12 @@ export function ClientesGeralTable({
                         <TableCell>
                           <StatusClienteBadge status={cliente.status_global} />
                         </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <CelulaResponsaveis
-                            clienteId={cliente.id}
-                            ids={cliente.responsaveis}
-                          />
+                        <TableCell>
+                          {respObjsPosts.length > 0 ? (
+                            <AvatarStack responsaveis={respObjsPosts} size="xs" max={4} />
+                          ) : (
+                            <span className="text-muted-foreground text-[11px]">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-xs">
                           <button
