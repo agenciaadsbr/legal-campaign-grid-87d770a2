@@ -110,7 +110,7 @@ export function ClientesGeralTable({
                     </TableHead>
                     <TableHead className="min-w-[180px]">Cliente</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Responsáveis</TableHead>
+                    <TableHead>Responsáveis do cliente</TableHead>
                     <TableHead className="min-w-[180px]">
                       Último comentário
                     </TableHead>
