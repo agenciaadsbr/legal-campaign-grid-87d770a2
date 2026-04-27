@@ -1,62 +1,64 @@
-## Problema
+# Renomear módulo para "Clientes/Posts" e separar responsáveis por contexto
 
-Na página **Demandas**, o filtro "Responsáveis" funciona de forma inconsistente: alguns responsáveis filtram corretamente, outros não retornam nada — mesmo havendo clientes claramente atribuídos a eles (ex.: avatares verdes "R" visíveis na aba Clientes).
+Mudança puramente visual + ajuste de filtro. **Sem alterar banco, rotas, URLs, tabelas, slugs ou permissões.**
 
-## Causa raiz
+---
 
-O filtro de responsável em duas abas só olha para `d.responsavel_id` (campo singular da demanda):
+## Parte 1 — Rótulos visuais
 
-1. **`src/pages/Demandas.tsx`** (linha 67) — usado para Quadro Geral, Minhas, Novas, Calendário.
-2. **`src/components/demandas/ClientesDemandasTable.tsx`** (linhas 47–52) — usado na aba **Clientes** (a da captura de tela).
+Trocar o texto "Clientes" por **"Clientes/Posts"** nos seguintes pontos:
 
-Porém os responsáveis exibidos na coluna "Responsáveis" da aba Clientes vêm do **cliente** (`cliente.responsaveis[]` — array), não das demandas. Resultado:
+| Arquivo | Linha | Onde |
+|---|---|---|
+| `src/components/AppSidebar.tsx` | 19 | Item do menu lateral |
+| `src/components/AppLayout.tsx` | 20 | Breadcrumb |
+| `src/pages/Clientes.tsx` | 1238 | `<h1>` título da página |
+| `src/pages/ProjetoDemandasCliente.tsx` | 77 | Texto no breadcrumb |
 
-- Responsáveis que possuem ao menos UMA demanda atribuída → aparecem ao filtrar.
-- Responsáveis que estão atribuídos APENAS ao cliente (sem nenhuma demanda individual) → não aparecem ao filtrar, mesmo com o badge verde visível.
+**Não alterar:**
+- `src/pages/Clientes.tsx` linha 1247 — `<ToggleGroupItem value="clientes">Clientes</ToggleGroupItem>`: é o toggle interno "Clientes / Geral" da própria página. Manter "Clientes" para não poluir o switcher.
+- `src/pages/Demandas.tsx` linha 212 — `<TabsTrigger value="clientes">Clientes</TabsTrigger>`: é uma aba dentro do módulo Demandas que lista clientes; manter como está.
 
-Isso bate exatamente com o sintoma "filtra alguns e outros não".
+---
 
-## Correção (escopo mínimo, somente módulo Demandas)
+## Parte 2 — Separação de responsáveis por contexto
 
-### 1) `src/components/demandas/ClientesDemandasTable.tsx` (aba Clientes)
+Atualmente (após o último ajuste), o filtro de responsáveis no módulo **Demandas** considera tanto o `responsavel_id` da demanda quanto os responsáveis gerais do cliente. Isso mistura contextos. Vamos separar:
 
-Alterar a lógica do filtro para casar contra a união:
-- Responsáveis das demandas do cliente, OU
-- `cliente.responsaveis[]` (array do próprio cliente).
+### 2.1 Módulo Demandas → filtra **somente pelo responsável da demanda**
 
-Pseudo:
-```ts
-if (filtroResp !== "todos") {
-  const clienteTemRespNoCard = (c.responsaveis ?? []).includes(filtroResp);
-  const clienteTemDemandaComResp = demandas.some(
-    d => d.cliente_id === c.id && d.responsavel_id === filtroResp
-  );
-  if (!clienteTemRespNoCard && !clienteTemDemandaComResp) return; // pula cliente
-}
-```
-
-A filtragem de demandas (para contar `total/atrasadas/urgentes`) continua por `d.responsavel_id === filtroResp` quando esse filtro está ativo, mas a linha do cliente passa a ser exibida sempre que ele tiver o responsável atribuído (mesmo com `total=0`).
-
-### 2) `src/pages/Demandas.tsx` (demais abas: Quadro, Minhas, Novas, Calendário)
-
-Manter o filtro atual por `d.responsavel_id`, mas adicionar fallback considerando responsáveis do cliente, para coerência:
+**`src/pages/Demandas.tsx`** (linhas 64–75): remover o fallback por responsáveis do cliente.
 
 ```ts
+// antes
+const clientesPorResp = new Map(clientes.map((c) => [c.id, c.responsaveis ?? []]));
+...
 if (fResp !== "todos") {
-  const cli = clientes.find(c => c.id === d.cliente_id);
   const matchDemanda = d.responsavel_id === fResp;
-  const matchCliente = (cli?.responsaveis ?? []).includes(fResp);
+  const matchCliente = (clientesPorResp.get(d.cliente_id) ?? []).includes(fResp);
   if (!matchDemanda && !matchCliente) return false;
 }
+
+// depois
+if (fResp !== "todos" && d.responsavel_id !== fResp) return false;
 ```
 
-## Fora de escopo
+**`src/components/demandas/ClientesDemandasTable.tsx`** (linhas 43–60 e relacionados): remover a lógica `clienteIdsComRespNoCard` que inclui clientes só pelo responsável geral. Cliente só aparece se tiver demanda com `responsavel_id === filtroResp`.
 
-- Nenhuma alteração em Clientes, Posts/Kanban, Alertas, Relatórios, Configurações, Contratos, ProjetoCliente.
-- Sem mudanças no schema/Supabase.
-- Sem alterações de UI/labels.
+### 2.2 Módulo Clientes/Posts → já está correto
 
-## Arquivos editados
+`src/components/clientes/PostsKanbanCliente.tsx` (linha 256) já filtra cards por `card.responsaveis` (responsáveis do post/cronograma). **Nenhuma mudança necessária.**
 
-- `src/components/demandas/ClientesDemandasTable.tsx`
-- `src/pages/Demandas.tsx`
+### 2.3 Responsável geral do cliente → permanece opcional
+
+O campo `cliente.responsaveis` continua existindo no banco e na UI de cadastro do cliente (sem alteração). Apenas deixa de influenciar os filtros de Demandas e de Clientes/Posts.
+
+---
+
+## Resultado esperado
+
+- Sidebar/breadcrumb/título mostram **"Clientes/Posts"**.
+- Filtro "Responsável" em **Demandas** lista apenas demandas onde `responsavel_id` bate com o selecionado.
+- Filtro "Responsável" em **Clientes/Posts** lista apenas cards/posts atribuídos àquele responsável.
+- Responsável geral do cliente fica isolado do cadastro do cliente, sem efeito cruzado.
+- Banco, rotas, RLS, edge functions e tabelas: intactos.
