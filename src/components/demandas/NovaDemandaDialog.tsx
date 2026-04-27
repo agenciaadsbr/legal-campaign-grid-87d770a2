@@ -76,6 +76,7 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
     setCategoria("Designer");
     setSubtipo("");
     setResponsavelId("");
+    setRespManualmenteAlterado(false);
     setPrioridade("Media");
     setDataLimite("");
     setDescricao("");
