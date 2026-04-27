@@ -127,9 +127,22 @@ export function ClientesDemandasTable({
 
     let lista = Array.from(map.values());
 
-    // Quando há filtro de demanda ativo, ocultar clientes sem demandas que correspondam
+    // Quando há filtro de demanda ativo, ocultar clientes sem correspondência.
+    // Para o filtro de responsável, manter clientes que tenham o responsável atribuído
+    // no próprio cadastro (mesmo sem demandas dele), desde que outros filtros não exijam demandas.
     if (filtroAtivo) {
-      lista = lista.filter((l) => l.temDemanda);
+      lista = lista.filter((l) => {
+        if (l.temDemanda) return true;
+        if (
+          filtroResp !== "todos" &&
+          clienteIdsComRespNoCard.has(l.cliente_id) &&
+          filtroStatus === "todos" &&
+          filtroPrio === "todas"
+        ) {
+          return true;
+        }
+        return false;
+      });
     }
 
     if (filtroBusca.trim()) {
