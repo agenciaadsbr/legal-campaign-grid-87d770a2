@@ -74,7 +74,7 @@ export default function ProjetoDemandasCliente() {
           Demandas
         </Link>
         <span>/</span>
-        <span>Clientes</span>
+        <span>Clientes/Posts</span>
         <span>/</span>
         <span className="text-foreground font-medium">
           {cliente?.nome_cliente ?? "Cliente"}
