@@ -207,149 +207,72 @@ function VisaoGeral({
   demandasCli: Demanda[];
   clienteId: string;
 }) {
-  const lista = useAtividades((s) => s.porCliente[clienteId]);
-  const ultimas = (lista ?? []).slice(0, 6);
-  const { responsaveis } = useCRM();
-
-  const postsPlanej = cardsCli.filter((c) => c.status_card === "Planejamento").length;
-  const postsCriar = cardsCli.filter((c) => c.status_card === "Criar").length;
-  const postsRevisar = cardsCli.filter((c) => c.status_card === "Revisar").length;
-  const postsAtrasados = cardsCli.filter((c) => c.status_card === "Atrasado").length;
-
-  const demAbertas = demandasCli.filter(
-    (d) => !["Concluido", "Entregue"].includes(d.status),
-  ).length;
-  const demUrgentes = demandasCli.filter((d) => d.prioridade === "Urgente").length;
-  const demAtrasadas = demandasCli.filter((d) => d.status === "Atrasado").length;
-  const demConcluidas = demandasCli.filter((d) => d.status === "Concluido").length;
-
-  const onbVencido =
-    cliente.status_global === "Onboarding" &&
-    cliente.prazo_onboarding &&
-    new Date(cliente.prazo_onboarding) < new Date();
+  const [novaDemandaOpen, setNovaDemandaOpen] = useState(false);
+  const [demandaSelecionada, setDemandaSelecionada] = useState<Demanda | null>(null);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-      {/* Status */}
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            Status do cliente
+    <div className="space-y-10">
+      {/* ============ POSTS ============ */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Posts
+            </h2>
+            <p className="text-[11px] text-muted-foreground">
+              Kanban completo de posts deste cliente.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <StatusClienteBadge status={cliente.status_global} size="sm" />
-          </div>
-          {cliente.prazo_onboarding && (
-            <div className="text-xs text-muted-foreground">
-              Prazo onboarding:{" "}
-              <span
-                className={cn(
-                  "font-medium",
-                  onbVencido ? "text-destructive" : "text-foreground",
-                )}
-              >
-                {format(new Date(cliente.prazo_onboarding), "dd/MM/yyyy")}
-              </span>
-            </div>
-          )}
-          <div className="text-xs text-muted-foreground">
-            Nicho:{" "}
-            <span className="text-foreground">{cliente.nicho || "—"}</span>
-          </div>
-        </CardContent>
-      </Card>
+          <Badge variant="outline" className="text-[10px]">
+            {cardsCli.length} no total
+          </Badge>
+        </div>
+        <PostsKanbanCliente />
+      </section>
 
-      {/* Posts */}
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            Posts
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <Stat label="Planejamento" value={postsPlanej} />
-            <Stat label="Criar" value={postsCriar} />
-            <Stat label="Revisar" value={postsRevisar} />
-            <Stat label="Atrasados" value={postsAtrasados} danger />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="border-t border-border/60" />
 
-      {/* Demandas */}
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            Demandas
+      {/* ============ DEMANDAS ============ */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Demandas
+            </h2>
+            <p className="text-[11px] text-muted-foreground">
+              Kanban completo de demandas deste cliente.
+            </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <Stat label="Abertas" value={demAbertas} />
-            <Stat label="Urgentes" value={demUrgentes} warn />
-            <Stat label="Atrasadas" value={demAtrasadas} danger />
-            <Stat label="Concluídas" value={demConcluidas} />
-          </div>
-        </CardContent>
-      </Card>
+          <Button size="sm" onClick={() => setNovaDemandaOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Nova Demanda
+          </Button>
+        </div>
+        <ProjetoKanban demandas={demandasCli} onOpen={setDemandaSelecionada} />
+        <NovaDemandaDialog
+          open={novaDemandaOpen}
+          onOpenChange={setNovaDemandaOpen}
+          defaultClienteId={clienteId}
+        />
+        <DemandaDetalheDialog
+          demanda={demandaSelecionada}
+          onOpenChange={(v) => !v && setDemandaSelecionada(null)}
+        />
+      </section>
 
-      {/* Alertas */}
-      <Card className="lg:col-span-1">
-        <CardContent className="p-4 space-y-2">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            Alertas
-          </div>
-          <div className="space-y-1.5 text-xs">
-            {postsAtrasados === 0 && demAtrasadas === 0 && !onbVencido && (
-              <div className="text-muted-foreground">
-                Nenhum alerta no momento.
-              </div>
-            )}
-            {postsAtrasados > 0 && (
-              <AlertaItem text={`${postsAtrasados} post(s) atrasado(s)`} />
-            )}
-            {demAtrasadas > 0 && (
-              <AlertaItem text={`${demAtrasadas} demanda(s) atrasada(s)`} />
-            )}
-            {onbVencido && (
-              <AlertaItem text="Onboarding com prazo vencido" />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="border-t border-border/60" />
 
-      {/* Última atividade */}
-      <Card className="lg:col-span-2">
-        <CardContent className="p-4 space-y-2">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            Última atividade
-          </div>
-          {ultimas.length === 0 ? (
-            <div className="text-xs text-muted-foreground py-2">
-              Sem atividade registrada ainda.
-            </div>
-          ) : (
-            <ul className="space-y-1.5">
-              {ultimas.map((a) => {
-                const autor = responsaveis.find((r) => r.id === a.usuario_id);
-                return (
-                  <li
-                    key={a.id}
-                    className="flex items-start gap-2 text-xs border-b last:border-0 pb-1.5 last:pb-0"
-                  >
-                    <AcaoIcone tipo={a.tipo} acao={a.acao} />
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate">{a.descricao}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {autor?.nome ?? "Sistema"} ·{" "}
-                        {format(new Date(a.created_at), "dd/MM HH:mm", {
-                          locale: ptBR,
-                        })}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {/* ============ ATIVIDADES ============ */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Atividades
+          </h2>
+          <p className="text-[11px] text-muted-foreground">
+            Linha do tempo de tudo que acontece no projeto.
+          </p>
+        </div>
+        <TimelineAtividades clienteId={clienteId} />
+      </section>
     </div>
   );
 }
@@ -377,15 +300,6 @@ function Stat({
       >
         {value}
       </div>
-    </div>
-  );
-}
-
-function AlertaItem({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-1.5 text-destructive">
-      <AlertTriangle className="h-3.5 w-3.5" />
-      <span>{text}</span>
     </div>
   );
 }
