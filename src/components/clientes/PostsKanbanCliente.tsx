@@ -297,7 +297,7 @@ export function PostsKanbanCliente() {
 
   const respsSelLabel =
     filtroResps.length === 0
-      ? "Todos responsáveis"
+      ? "Todos responsáveis do post"
       : filtroResps.length === 1
       ? responsaveis.find((r) => r.id === filtroResps[0])?.nome ?? "1 responsável"
       : `${filtroResps.length} responsáveis`;
