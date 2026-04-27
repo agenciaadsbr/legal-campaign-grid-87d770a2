@@ -44,8 +44,21 @@ export function ClientesDemandasTable({
     const filtroAtivo =
       filtroResp !== "todos" || filtroStatus !== "todos" || filtroPrio !== "todas";
 
+    // Clientes que possuem o responsável atribuído no próprio cadastro do cliente
+    const clienteIdsComRespNoCard = new Set(
+      filtroResp !== "todos"
+        ? clientes
+            .filter((c) => (c.responsaveis ?? []).includes(filtroResp))
+            .map((c) => c.id)
+        : [],
+    );
+
     const filtradas = demandas.filter((d) => {
-      if (filtroResp !== "todos" && d.responsavel_id !== filtroResp) return false;
+      if (filtroResp !== "todos") {
+        const matchDemanda = d.responsavel_id === filtroResp;
+        const matchCliente = clienteIdsComRespNoCard.has(d.cliente_id);
+        if (!matchDemanda && !matchCliente) return false;
+      }
       if (filtroStatus !== "todos" && d.status !== filtroStatus) return false;
       if (filtroPrio !== "todas" && d.prioridade !== filtroPrio) return false;
       return true;
