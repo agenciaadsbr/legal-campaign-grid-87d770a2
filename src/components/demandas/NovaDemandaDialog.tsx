@@ -18,6 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AvatarStack } from "@/components/AvatarStack";
+import { cn } from "@/lib/utils";
 import {
   CATEGORIAS,
   CATEGORIA_LABEL,
@@ -49,10 +52,10 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
   const [titulo, setTitulo] = useState("");
   const [categoria, setCategoria] = useState<DemandaCategoria>("Designer");
   const [subtipo, setSubtipo] = useState<string>("");
-  const [responsavel_id, setResponsavelId] = useState<string>("");
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>([]);
   const [respManualmenteAlterado, setRespManualmenteAlterado] = useState(false);
 
-  // Autopreencher: ao escolher cliente, sugerir responsável mais frequente nos posts (cards) desse cliente.
+  // Autopreencher: ao escolher cliente, sugerir o responsável mais frequente nos posts (cards) do cliente.
   useEffect(() => {
     if (!cliente_id) return;
     if (respManualmenteAlterado) return;
@@ -62,7 +65,7 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
     let maisFreq: string | null = null;
     let max = 0;
     freq.forEach((n, id) => { if (n > max) { max = n; maisFreq = id; } });
-    setResponsavelId(maisFreq ?? "");
+    setResponsaveisIds(maisFreq ? [maisFreq] : []);
   }, [cliente_id, cards, respManualmenteAlterado]);
   const [prioridade, setPrioridade] = useState<DemandaPrioridade>("Media");
   const [data_limite, setDataLimite] = useState<string>("");
@@ -75,7 +78,7 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
     setTitulo("");
     setCategoria("Designer");
     setSubtipo("");
-    setResponsavelId("");
+    setResponsaveisIds([]);
     setRespManualmenteAlterado(false);
     setPrioridade("Media");
     setDataLimite("");
@@ -91,7 +94,7 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
       titulo: titulo.trim(),
       categoria,
       subtipo: subtipo || null,
-      responsavel_id: responsavel_id || null,
+      responsaveis_ids: responsaveisIds,
       prioridade,
       data_limite: data_limite ? new Date(data_limite).toISOString() : null,
       descricao: descricao || null,
@@ -103,6 +106,15 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
       onOpenChange(false);
     }
   };
+
+  const toggleResp = (rid: string) => {
+    setRespManualmenteAlterado(true);
+    setResponsaveisIds((prev) =>
+      prev.includes(rid) ? prev.filter((x) => x !== rid) : [...prev, rid]
+    );
+  };
+
+  const respObjs = responsaveis.filter((r) => responsaveisIds.includes(r.id));
 
   const subtipos = CATEGORIA_SUBTIPOS[categoria] ?? [];
 
@@ -153,16 +165,51 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
             )}
           </div>
           <div>
-            <Label>Responsável da Demanda</Label>
-            <Select
-              value={responsavel_id}
-              onValueChange={(v) => { setResponsavelId(v); setRespManualmenteAlterado(true); }}
-            >
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Label>Responsáveis da Demanda</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" className="w-full justify-start h-9">
+                  {respObjs.length === 0 ? (
+                    <span className="text-muted-foreground text-sm">Selecionar responsáveis</span>
+                  ) : (
+                    <AvatarStack responsaveis={respObjs} size="xs" max={5} />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-2" align="start">
+                <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis</div>
+                <div className="max-h-60 overflow-auto space-y-0.5">
+                  {responsaveis.map((r) => {
+                    const checked = responsaveisIds.includes(r.id);
+                    return (
+                      <button
+                        type="button"
+                        key={r.id}
+                        onClick={() => toggleResp(r.id)}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                          checked && "bg-accent"
+                        )}
+                      >
+                        <Checkbox checked={checked} />
+                        <div
+                          className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: r.cor }}
+                        >
+                          {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                        </div>
+                        <span className="truncate">{r.nome}</span>
+                      </button>
+                    );
+                  })}
+                  {responsaveis.length === 0 && (
+                    <div className="text-xs text-muted-foreground px-2 py-3 text-center">
+                      Nenhum responsável cadastrado
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <div>
             <Label>Prioridade</Label>
