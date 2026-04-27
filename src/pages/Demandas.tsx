@@ -153,9 +153,9 @@ export default function Demandas() {
             </SelectContent>
           </Select>
           <Select value={fResp} onValueChange={setFResp}>
-            <SelectTrigger className="h-9 w-48"><SelectValue placeholder="Responsável" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-56"><SelectValue placeholder="Responsável da Demanda" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos responsáveis</SelectItem>
+              <SelectItem value="todos">Todos responsáveis da demanda</SelectItem>
               {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
             </SelectContent>
           </Select>
