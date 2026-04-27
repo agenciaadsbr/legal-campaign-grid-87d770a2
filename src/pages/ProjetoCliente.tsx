@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCRM } from "@/store/crm";
 import { useDemandas, useDemandasBootstrap, Demanda } from "@/store/demandas";
 import { useAtividades, useAtividadesBootstrap } from "@/store/atividades";
+import { PostsKanbanCliente } from "@/components/clientes/PostsKanbanCliente";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -377,25 +378,37 @@ function DemandasTab({
 }
 
 // =====================================================
-// ATIVIDADES (timeline paginada)
+// ATIVIDADES (timeline paginada — reutilizada na Visão Geral)
 // =====================================================
-function AtividadesTab({ clienteId }: { clienteId: string }) {
-  const itens = useAtividades((s) => s.porCliente[clienteId] ?? []);
+function TimelineAtividades({ clienteId }: { clienteId: string }) {
+  const itens = useAtividades((s) => s.porCliente[clienteId]);
   const loading = useAtividades((s) => s.loading[clienteId]);
   const hasMore = useAtividades((s) => s.hasMore[clienteId]);
   const load = useAtividades((s) => s.loadByCliente);
   const { responsaveis } = useCRM();
 
+  const lista = itens ?? [];
+
   const grupos = useMemo(() => {
-    const map = new Map<string, typeof itens>();
-    itens.forEach((a) => {
+    const map = new Map<string, typeof lista>();
+    lista.forEach((a) => {
       const k = format(new Date(a.created_at), "yyyy-MM-dd");
       const arr = map.get(k) ?? [];
       arr.push(a);
       map.set(k, arr);
     });
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [itens]);
+  }, [lista]);
+
+  const rotuloDia = (dia: string) => {
+    const d = new Date(dia);
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+    const dStart = new Date(d); dStart.setHours(0, 0, 0, 0);
+    if (dStart.getTime() === hoje.getTime()) return "Hoje";
+    if (dStart.getTime() === ontem.getTime()) return "Ontem";
+    return format(d, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
 
   return (
     <Card>
@@ -408,18 +421,13 @@ function AtividadesTab({ clienteId }: { clienteId: string }) {
         {grupos.map(([dia, lista]) => (
           <div key={dia} className="space-y-2">
             <div className="text-xs font-semibold text-muted-foreground sticky top-0 bg-card py-1">
-              {format(new Date(dia), "EEEE, dd 'de' MMMM 'de' yyyy", {
-                locale: ptBR,
-              })}
+              {rotuloDia(dia)}
             </div>
             <ul className="space-y-1.5 border-l-2 border-border pl-3 ml-1">
               {lista.map((a) => {
                 const autor = responsaveis.find((r) => r.id === a.usuario_id);
                 return (
-                  <li
-                    key={a.id}
-                    className="flex items-start gap-2 text-xs"
-                  >
+                  <li key={a.id} className="flex items-start gap-2 text-xs">
                     <AcaoIcone tipo={a.tipo} acao={a.acao} />
                     <div className="flex-1">
                       <div>
@@ -430,9 +438,7 @@ function AtividadesTab({ clienteId }: { clienteId: string }) {
                       </div>
                       <div className="text-[10px] text-muted-foreground">
                         {autor?.nome ?? "Sistema"} ·{" "}
-                        {format(new Date(a.created_at), "HH:mm", {
-                          locale: ptBR,
-                        })}
+                        {format(new Date(a.created_at), "HH:mm", { locale: ptBR })}
                       </div>
                     </div>
                   </li>
@@ -457,6 +463,10 @@ function AtividadesTab({ clienteId }: { clienteId: string }) {
       </CardContent>
     </Card>
   );
+}
+
+function AtividadesTab({ clienteId }: { clienteId: string }) {
+  return <TimelineAtividades clienteId={clienteId} />;
 }
 
 // =====================================================
