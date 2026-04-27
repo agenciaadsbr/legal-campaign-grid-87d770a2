@@ -40,6 +40,16 @@ export function ClientesGeralTable({
   const { clientes, responsaveis, cards, contratos, nichos } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
 
+  const respsPostsPorCliente = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    cards.forEach((card) => {
+      let set = map.get(card.cliente_id);
+      if (!set) { set = new Set<string>(); map.set(card.cliente_id, set); }
+      (card.responsaveis ?? []).forEach((r) => set!.add(r));
+    });
+    return map;
+  }, [cards]);
+
   const linhas = useMemo(() => {
     const termo = filtroBusca.trim().toLowerCase();
     let lista = clientes.filter((c) => {
@@ -48,17 +58,14 @@ export function ClientesGeralTable({
         (c.status_global ?? "Onboarding") !== filtroStatusGlobal
       )
         return false;
-      if (
-        filtroResponsaveis.length > 0 &&
-        !c.responsaveis.some((r) => filtroResponsaveis.includes(r))
-      )
-        return false;
-      if (
-        apenasMinhas &&
-        currentUserId &&
-        !c.responsaveis.includes(currentUserId)
-      )
-        return false;
+      if (filtroResponsaveis.length > 0) {
+        const respsPosts = respsPostsPorCliente.get(c.id);
+        if (!respsPosts || !filtroResponsaveis.some((r) => respsPosts.has(r))) return false;
+      }
+      if (apenasMinhas && currentUserId) {
+        const respsPosts = respsPostsPorCliente.get(c.id);
+        if (!respsPosts || !respsPosts.has(currentUserId)) return false;
+      }
       if (termo) {
         return (
           c.nome_cliente.toLowerCase().includes(termo) ||
@@ -82,6 +89,7 @@ export function ClientesGeralTable({
     apenasMinhas,
     currentUserId,
     filtroStatusGlobal,
+    respsPostsPorCliente,
   ]);
 
   return (
