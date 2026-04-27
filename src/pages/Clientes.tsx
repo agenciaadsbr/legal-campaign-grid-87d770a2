@@ -1235,7 +1235,7 @@ export default function Clientes() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl font-bold leading-tight">Clientes</h1>
+            <h1 className="text-xl font-bold leading-tight">Clientes/Posts</h1>
             <p className="text-xs text-muted-foreground">{clientes.length} clientes</p>
           </div>
           <ToggleGroup

@@ -61,18 +61,10 @@ export default function Demandas() {
       clientes.map((c) => [c.id, c.status_global ?? "Onboarding"]),
     );
 
-    const clientesPorResp = new Map(
-      clientes.map((c) => [c.id, c.responsaveis ?? []]),
-    );
-
     return demandas.filter((d) => {
       if (busca && !d.titulo.toLowerCase().includes(busca.toLowerCase())) return false;
       if (fCliente !== "todos" && d.cliente_id !== fCliente) return false;
-      if (fResp !== "todos") {
-        const matchDemanda = d.responsavel_id === fResp;
-        const matchCliente = (clientesPorResp.get(d.cliente_id) ?? []).includes(fResp);
-        if (!matchDemanda && !matchCliente) return false;
-      }
+      if (fResp !== "todos" && d.responsavel_id !== fResp) return false;
       if (fCat !== "todas" && d.categoria !== fCat) return false;
       if (fPrio !== "todas" && d.prioridade !== fPrio) return false;
       if (fStatus !== "todos" && d.status !== fStatus) return false;
