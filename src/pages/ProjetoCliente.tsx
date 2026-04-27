@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCRM } from "@/store/crm";
-import { useDemandas, useDemandasBootstrap, Demanda } from "@/store/demandas";
+import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useAtividades, useAtividadesBootstrap } from "@/store/atividades";
 import { PostsKanbanCliente } from "@/components/clientes/PostsKanbanCliente";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -501,7 +501,7 @@ function ResponsaveisTab({
         const postsAtras = meusPosts.filter(
           (c) => c.status_card === "Atrasado",
         ).length;
-        const minhasDem = demandasCli.filter((d) => d.responsavel_id === r.id);
+        const minhasDem = demandasCli.filter((d) => getResponsaveisIds(d).includes(r.id));
         const demAbertas = minhasDem.filter(
           (d) => !["Concluido", "Entregue"].includes(d.status),
         ).length;
@@ -569,7 +569,7 @@ function RelatoriosTab({
   });
   const demFilt = demandasCli.filter((d) => {
     if (fTipo === "post") return false;
-    if (fResp !== "todos" && d.responsavel_id !== fResp) return false;
+    if (fResp !== "todos" && !getResponsaveisIds(d).includes(fResp)) return false;
     if (fCat !== "todas" && d.categoria !== fCat) return false;
     return true;
   });
@@ -586,7 +586,7 @@ function RelatoriosTab({
   // Distribuição por responsável
   const distribuicao = respsCli.map((r) => {
     const p = cardsFilt.filter((c) => c.responsaveis.includes(r.id)).length;
-    const d = demFilt.filter((x) => x.responsavel_id === r.id).length;
+    const d = demFilt.filter((x) => getResponsaveisIds(x).includes(r.id)).length;
     return { nome: r.nome.split(" ")[0], Posts: p, Demandas: d };
   });
 

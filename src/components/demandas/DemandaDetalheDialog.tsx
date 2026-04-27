@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Demanda, useDemandas } from "@/store/demandas";
+import { Demanda, useDemandas, getResponsaveisIds } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -305,7 +305,7 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                   />
                 </div>
 
-                {/* Responsável (single) — exibido como "Responsáveis" no estilo do PostDetalhe */}
+                {/* Responsáveis (multi) */}
                 <div className="md:col-span-2">
                   <Label className="text-xs">Responsáveis</Label>
                   <div className="mt-1">
@@ -313,61 +313,62 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1.5 -mx-2 transition-colors min-h-[40px]"
-                          title="Clique para alterar o responsável"
+                          className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1.5 -mx-2 transition-colors min-h-[40px] w-full"
+                          title="Clique para alterar os responsáveis"
                         >
                           {(() => {
-                            const r = responsaveis.find(
-                              (x) => x.id === demanda.responsavel_id
-                            );
-                            return r ? (
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="h-7 w-7 rounded-full text-white text-[11px] font-semibold flex items-center justify-center"
-                                  style={{ backgroundColor: r.cor }}
-                                >
-                                  {r.nome
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .slice(0, 2)
-                                    .join("")}
-                                </div>
-                                <span className="text-sm">{r.nome}</span>
+                            const ids = getResponsaveisIds(demanda);
+                            const lista = responsaveis.filter((x) => ids.includes(x.id));
+                            return lista.length > 0 ? (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {lista.map((r) => (
+                                  <div key={r.id} className="flex items-center gap-1.5">
+                                    <div
+                                      className="h-7 w-7 rounded-full text-white text-[11px] font-semibold flex items-center justify-center"
+                                      style={{ backgroundColor: r.cor }}
+                                    >
+                                      {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                                    </div>
+                                    <span className="text-sm">{r.nome}</span>
+                                  </div>
+                                ))}
                               </div>
                             ) : (
                               <span className="text-sm text-muted-foreground">
-                                + atribuir responsável
+                                + atribuir responsáveis
                               </span>
                             );
                           })()}
-                          <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-2" align="start">
                         <div className="text-[11px] text-muted-foreground px-2 pb-1.5">
-                          Responsável
+                          Responsáveis
                         </div>
                         <div className="max-h-60 overflow-auto space-y-0.5">
                           <button
                             type="button"
                             onClick={() =>
-                              updateDemanda(demanda.id, { responsavel_id: null })
+                              updateDemanda(demanda.id, { responsaveis_ids: [] })
                             }
                             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm text-muted-foreground"
                           >
-                            <X className="h-3.5 w-3.5" /> Sem responsável
+                            <X className="h-3.5 w-3.5" /> Limpar todos
                           </button>
                           {responsaveis.map((r) => {
-                            const active = demanda.responsavel_id === r.id;
+                            const ids = getResponsaveisIds(demanda);
+                            const active = ids.includes(r.id);
                             return (
                               <button
                                 type="button"
                                 key={r.id}
-                                onClick={() =>
-                                  updateDemanda(demanda.id, {
-                                    responsavel_id: r.id,
-                                  })
-                                }
+                                onClick={() => {
+                                  const next = active
+                                    ? ids.filter((x) => x !== r.id)
+                                    : [...ids, r.id];
+                                  updateDemanda(demanda.id, { responsaveis_ids: next });
+                                }}
                                 className={cn(
                                   "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
                                   active && "bg-accent"
@@ -377,11 +378,7 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                                   className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
                                   style={{ backgroundColor: r.cor }}
                                 >
-                                  {r.nome
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .slice(0, 2)
-                                    .join("")}
+                                  {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                                 </div>
                                 <span className="truncate">{r.nome}</span>
                               </button>
