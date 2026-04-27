@@ -197,8 +197,8 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
     </div>
   );
 
-  if (isPlanejamento) return inner;
-  return <Link to={post ? `posts/${post.id}` : "#"}>{inner}</Link>;
+  if (!post) return inner;
+  return <Link to={`posts/${post.id}`}>{inner}</Link>;
 }
 
 function Coluna({ status, cards, onIniciar }: { status: StatusCard; cards: CardT[]; onIniciar: (id: string) => void }) {
