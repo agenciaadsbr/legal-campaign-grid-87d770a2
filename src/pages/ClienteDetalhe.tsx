@@ -1,25 +1,12 @@
 import { useParams, Link, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard } from "lucide-react";
-import { useCRM, StatusCard, Card as CardT } from "@/store/crm";
-import { useMemo, useState } from "react";
+import { useCRM } from "@/store/crm";
 import { AvatarStack } from "@/components/AvatarStack";
-import { StatusBadge, ColorBadge } from "@/components/StatusBadge";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { IniciarTarefaDialog } from "@/components/IniciarTarefaDialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { PostsKanbanCliente } from "@/components/clientes/PostsKanbanCliente";
 
 // Colunas vêm dinamicamente de statusPostOptions
 
