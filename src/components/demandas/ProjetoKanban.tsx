@@ -20,7 +20,9 @@ export function ProjetoKanban({ demandas, onOpen }: Props) {
   const updateDemanda = useDemandas((s) => s.updateDemanda);
   const [dragOver, setDragOver] = useState<DemandaStatus | null>(null);
 
-  const iniciar = (d: Demanda) => {
+  const iniciar = (e: React.MouseEvent, d: Demanda) => {
+    e.preventDefault();
+    e.stopPropagation();
     updateDemanda(d.id, {
       status: "Criar",
       data_inicio: new Date().toISOString(),
@@ -79,7 +81,7 @@ export function ProjetoKanban({ demandas, onOpen }: Props) {
                         size="sm"
                         variant="default"
                         className="w-full h-7 text-xs"
-                        onClick={() => iniciar(d)}
+                        onClick={(e) => iniciar(e, d)}
                       >
                         <Play className="h-3 w-3 mr-1" />
                         Iniciar Demanda
