@@ -17,6 +17,9 @@ export interface Demanda {
   descricao: string | null;
   status: DemandaStatus;
   prioridade: DemandaPrioridade;
+  /** Lista canônica de responsáveis (multi). */
+  responsaveis_ids: string[];
+  /** Legado — não usar na UI. Mantido só para compat de leitura durante a transição. */
   responsavel_id: string | null;
   criado_por: string | null;
   data_limite: string | null;
@@ -26,6 +29,13 @@ export interface Demanda {
   aprovado_por: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Helper: extrai a lista de responsáveis de uma demanda (com fallback ao legado). */
+export function getResponsaveisIds(d: Pick<Demanda, "responsaveis_ids" | "responsavel_id">): string[] {
+  if (Array.isArray(d.responsaveis_ids) && d.responsaveis_ids.length > 0) return d.responsaveis_ids;
+  if (d.responsavel_id) return [d.responsavel_id];
+  return [];
 }
 
 export interface ComentarioDemanda {
@@ -68,12 +78,17 @@ interface State {
 
   load: () => Promise<void>;
   createDemanda: (
-    d: Partial<Demanda> & { cliente_id: string; titulo: string }
+    d: Partial<Omit<Demanda, "responsaveis_ids">> & {
+      cliente_id: string;
+      titulo: string;
+      responsaveis_ids?: string[];
+    }
   ) => Promise<string | null>;
   updateDemanda: (id: string, patch: Partial<Demanda>) => Promise<void>;
   deleteDemanda: (id: string) => Promise<void>;
   moveStatus: (id: string, status: DemandaStatus) => Promise<void>;
-  assign: (id: string, responsavel_id: string | null) => Promise<void>;
+  /** Atribui múltiplos responsáveis a uma demanda. */
+  assign: (id: string, responsaveis_ids: string[]) => Promise<void>;
   addComentario: (
     demanda_id: string,
     usuario_id: string,
@@ -82,6 +97,19 @@ interface State {
   ) => Promise<void>;
   addAnexo: (a: Omit<AnexoDemanda, "id" | "created_at">) => Promise<void>;
   approveDemanda: (id: string, aprovado_por: string) => Promise<void>;
+}
+
+function normalizeDemanda(row: any): Demanda {
+  const responsaveis_ids: string[] = Array.isArray(row.responsaveis_ids)
+    ? row.responsaveis_ids
+    : row.responsavel_id
+      ? [row.responsavel_id]
+      : [];
+  return {
+    ...row,
+    responsaveis_ids,
+    responsavel_id: row.responsavel_id ?? null,
+  } as Demanda;
 }
 
 export const useDemandasStore = create<State>((set, get) => ({
@@ -102,7 +130,7 @@ export const useDemandasStore = create<State>((set, get) => ({
       supabase.from("historico_demandas").select("*").order("created_at", { ascending: false }),
     ]);
     set({
-      demandas: (d.data ?? []) as Demanda[],
+      demandas: (d.data ?? []).map(normalizeDemanda),
       comentarios: (c.data ?? []) as ComentarioDemanda[],
       anexos: (a.data ?? []) as AnexoDemanda[],
       historico: (h.data ?? []) as HistoricoDemanda[],
@@ -116,6 +144,7 @@ export const useDemandasStore = create<State>((set, get) => ({
   async createDemanda(d) {
     const { data: userRes } = await supabase.auth.getUser();
     const uid = userRes.user?.id ?? null;
+    const responsaveis_ids = d.responsaveis_ids ?? [];
     const payload: any = {
       cliente_id: d.cliente_id,
       titulo: d.titulo,
@@ -124,7 +153,9 @@ export const useDemandasStore = create<State>((set, get) => ({
       descricao: d.descricao ?? null,
       status: d.status ?? "Planejamento",
       prioridade: d.prioridade ?? "Media",
-      responsavel_id: d.responsavel_id ?? null,
+      responsaveis_ids,
+      // mantém legacy preenchido com o primeiro, p/ compat de leituras antigas
+      responsavel_id: responsaveis_ids[0] ?? null,
       criado_por: uid,
       data_limite: d.data_limite ?? null,
       data_inicio: d.data_inicio ?? null,
@@ -140,18 +171,18 @@ export const useDemandasStore = create<State>((set, get) => ({
       toast.error("Erro ao criar demanda", { description: error.message });
       return null;
     }
-    set({ demandas: [data as Demanda, ...get().demandas] });
+    const novo = normalizeDemanda(data);
+    set({ demandas: [novo, ...get().demandas] });
     toast.success("Demanda criada");
 
-    // Alerta para demanda urgente
-    if ((data as Demanda).prioridade === "Urgente") {
+    if (novo.prioridade === "Urgente") {
       supabase.from("alertas").insert({
-        cliente_id: (data as Demanda).cliente_id,
-        mensagem: `[DEMANDA] Nova demanda urgente: "${(data as Demanda).titulo}"`,
+        cliente_id: novo.cliente_id,
+        mensagem: `[DEMANDA] Nova demanda urgente: "${novo.titulo}"`,
         tipo_alerta: "Posts_Pendentes" as any,
       }).then(() => {});
     }
-    return data!.id;
+    return novo.id;
   },
 
   async updateDemanda(id, patch) {
@@ -159,6 +190,11 @@ export const useDemandasStore = create<State>((set, get) => ({
     delete clean.id;
     delete clean.created_at;
     delete clean.updated_at;
+    // Se o caller mexeu na lista canônica, sincroniza o legado também
+    if (Array.isArray(patch.responsaveis_ids)) {
+      clean.responsaveis_ids = patch.responsaveis_ids;
+      clean.responsavel_id = patch.responsaveis_ids[0] ?? null;
+    }
     const prev = get().demandas.find((x) => x.id === id);
     const { data, error } = await supabase
       .from("demandas")
@@ -170,12 +206,11 @@ export const useDemandasStore = create<State>((set, get) => ({
       toast.error("Erro ao atualizar", { description: error.message });
       return;
     }
+    const next = normalizeDemanda(data);
     set({
-      demandas: get().demandas.map((d) => (d.id === id ? (data as Demanda) : d)),
+      demandas: get().demandas.map((d) => (d.id === id ? next : d)),
     });
 
-    // Alerta quando transita para Atrasado
-    const next = data as Demanda;
     if (prev && prev.status !== "Atrasado" && next.status === "Atrasado") {
       supabase.from("alertas").insert({
         cliente_id: next.cliente_id,
@@ -201,8 +236,8 @@ export const useDemandasStore = create<State>((set, get) => ({
     await get().updateDemanda(id, patch);
   },
 
-  async assign(id, responsavel_id) {
-    await get().updateDemanda(id, { responsavel_id });
+  async assign(id, responsaveis_ids) {
+    await get().updateDemanda(id, { responsaveis_ids });
   },
 
   async addComentario(demanda_id, usuario_id, texto, imagem_url) {
