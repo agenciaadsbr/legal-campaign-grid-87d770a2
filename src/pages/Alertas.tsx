@@ -8,7 +8,7 @@ import { Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useDemandas, useDemandasBootstrap } from "@/store/demandas";
+import { useDemandas, useDemandasBootstrap, getResponsaveisIds } from "@/store/demandas";
 import { Badge } from "@/components/ui/badge";
 
 const tipoCor: Record<TipoAlerta, string> = {
@@ -44,7 +44,7 @@ function useAlertasDemandas(): AlertaItem[] {
           _origem: "DEMANDA",
         });
       }
-      if (d.prioridade === "Urgente" && !d.responsavel_id && d.status !== "Concluido") {
+      if (d.prioridade === "Urgente" && getResponsaveisIds(d).length === 0 && d.status !== "Concluido") {
         out.push({
           id: `demanda-urgente:${d.id}`,
           cliente_id: d.cliente_id,

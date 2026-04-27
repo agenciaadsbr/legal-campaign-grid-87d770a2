@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { useDemandas } from "@/store/demandas";
+import { useDemandas, getResponsaveisIds } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
 import {
   STATUS_DEMANDA, STATUS_DEMANDA_LABEL, STATUS_DEMANDA_COR, CATEGORIAS, CATEGORIA_LABEL,
@@ -33,7 +33,7 @@ export function RelatoriosDemandas() {
   const porResponsavel = useMemo(
     () => responsaveis.map((r) => ({
       name: r.nome.split(" ")[0],
-      total: demandas.filter((d) => d.responsavel_id === r.id).length,
+      total: demandas.filter((d) => getResponsaveisIds(d).includes(r.id)).length,
       cor: r.cor,
     })),
     [responsaveis, demandas]
