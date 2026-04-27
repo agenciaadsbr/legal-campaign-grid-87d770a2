@@ -545,6 +545,7 @@ export type Database = {
           id: string
           precisa_aprovacao: boolean
           prioridade: Database["public"]["Enums"]["demanda_prioridade"]
+          responsaveis_ids: string[]
           responsavel_id: string | null
           status: Database["public"]["Enums"]["demanda_status"]
           subtipo: string | null
@@ -564,6 +565,7 @@ export type Database = {
           id?: string
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
+          responsaveis_ids?: string[]
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
           subtipo?: string | null
@@ -583,6 +585,7 @@ export type Database = {
           id?: string
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
+          responsaveis_ids?: string[]
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
           subtipo?: string | null
