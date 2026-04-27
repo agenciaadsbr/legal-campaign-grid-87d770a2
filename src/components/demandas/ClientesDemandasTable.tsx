@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDemandas } from "@/store/demandas";
+import { useDemandas, getResponsaveisIds } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
 import { ColorBadge } from "@/components/StatusBadge";
 import { HistoricoComentariosDialog } from "@/components/HistoricoComentariosDialog";
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
-import { CelulaResponsaveis } from "@/components/clientes/CelulaResponsaveis";
+import { AvatarStack } from "@/components/AvatarStack";
 import { ArrowRight, AlertTriangle, Zap } from "lucide-react";
 
 interface Props {
@@ -36,7 +36,7 @@ export function ClientesDemandasTable({
   filtroStatusGlobal = "todos",
 }: Props) {
   const demandas = useDemandas((s) => s.demandas);
-  const { clientes, nichos } = useCRM();
+  const { clientes, nichos, responsaveis } = useCRM();
   const navigate = useNavigate();
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
 
@@ -45,7 +45,8 @@ export function ClientesDemandasTable({
       filtroResp !== "todos" || filtroStatus !== "todos" || filtroPrio !== "todas";
 
     const filtradas = demandas.filter((d) => {
-      if (filtroResp !== "todos" && d.responsavel_id !== filtroResp) return false;
+      const resps = getResponsaveisIds(d);
+      if (filtroResp !== "todos" && !resps.includes(filtroResp)) return false;
       if (filtroStatus !== "todos" && d.status !== filtroStatus) return false;
       if (filtroPrio !== "todas" && d.prioridade !== filtroPrio) return false;
       return true;
@@ -66,7 +67,7 @@ export function ClientesDemandasTable({
       }
     >();
 
-    // 1) Inicializa com TODOS os clientes cadastrados (responsáveis vindos do próprio cliente)
+    // Inicializa com todos os clientes (sem responsáveis cadastrais — passam a vir das demandas)
     clientes.forEach((c) => {
       if (
         filtroStatusGlobal !== "todos" &&
@@ -77,7 +78,7 @@ export function ClientesDemandasTable({
         cliente_id: c.id,
         nome: c.nome_cliente,
         statusGlobal: c.status_global ?? "Onboarding",
-        responsaveisIds: new Set<string>(c.responsaveis ?? []),
+        responsaveisIds: new Set<string>(),
         ultimaAtividade: c.created_at,
         total: 0,
         atrasadas: 0,
@@ -86,7 +87,7 @@ export function ClientesDemandasTable({
       });
     });
 
-    // 2) Agrega métricas das demandas filtradas
+    // Agrega métricas + responsáveis das demandas filtradas
     filtradas.forEach((d) => {
       const existing = map.get(d.cliente_id);
       if (!existing && filtroStatusGlobal !== "todos") return;
@@ -105,7 +106,7 @@ export function ClientesDemandasTable({
       cur.temDemanda = true;
       if (d.status === "Atrasado") cur.atrasadas += 1;
       if (d.prioridade === "Urgente") cur.urgentes += 1;
-      if (d.responsavel_id) cur.responsaveisIds.add(d.responsavel_id);
+      getResponsaveisIds(d).forEach((rid) => cur.responsaveisIds.add(rid));
       if (new Date(d.updated_at) > new Date(cur.ultimaAtividade)) {
         cur.ultimaAtividade = d.updated_at;
       }
@@ -114,7 +115,6 @@ export function ClientesDemandasTable({
 
     let lista = Array.from(map.values());
 
-    // Quando há filtro de demanda ativo, mostrar apenas clientes com demandas correspondentes.
     if (filtroAtivo) {
       lista = lista.filter((l) => l.temDemanda);
     }
@@ -124,7 +124,6 @@ export function ClientesDemandasTable({
       lista = lista.filter((l) => l.nome.toLowerCase().includes(q));
     }
 
-    // Ordena alfabeticamente A → Z (case/acento insensível, pt-BR)
     lista.sort((a, b) =>
       a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
     );
@@ -147,7 +146,7 @@ export function ClientesDemandasTable({
                   <TableHead className="w-10 text-xs text-muted-foreground">#</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Status do cliente</TableHead>
-                  <TableHead>Responsáveis do cliente</TableHead>
+                  <TableHead>Responsáveis das Demandas</TableHead>
                   <TableHead className="min-w-[180px]">Último comentário</TableHead>
                   <TableHead>Nicho</TableHead>
                   <TableHead>Última atividade</TableHead>
@@ -160,7 +159,7 @@ export function ClientesDemandasTable({
               <TableBody>
                 {linhas.map((l, idx) => {
                   const clienteAtual = clientes.find((c) => c.id === l.cliente_id);
-                  const idsCliente = clienteAtual?.responsaveis ?? [];
+                  const respObjs = responsaveis.filter((r) => l.responsaveisIds.has(r.id));
                   const nichoOpt = nichos.find((n) => n.label === clienteAtual?.nicho);
                   return (
                     <TableRow
@@ -175,11 +174,12 @@ export function ClientesDemandasTable({
                       <TableCell>
                         <StatusClienteBadge status={l.statusGlobal} />
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <CelulaResponsaveis
-                          clienteId={l.cliente_id}
-                          ids={idsCliente}
-                        />
+                      <TableCell>
+                        {respObjs.length > 0 ? (
+                          <AvatarStack responsaveis={respObjs} size="xs" max={4} />
+                        ) : (
+                          <span className="text-muted-foreground text-[11px]">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs">
                         <button

@@ -1,4 +1,4 @@
-import { Demanda } from "@/store/demandas";
+import { Demanda, getResponsaveisIds } from "@/store/demandas";
 import {
   PRIORIDADE_COR,
   PRIORIDADE_LABEL,
@@ -9,7 +9,7 @@ import {
 import { useCRM } from "@/store/crm";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, AlertTriangle } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AvatarStack } from "@/components/AvatarStack";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -23,7 +23,8 @@ interface Props {
 export function DemandCard({ demanda, onClick, draggable, onDragStart, extraAction }: Props) {
   const { clientes, responsaveis } = useCRM();
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
-  const resp = responsaveis.find((r) => r.id === demanda.responsavel_id);
+  const respIds = getResponsaveisIds(demanda);
+  const resps = responsaveis.filter((r) => respIds.includes(r.id));
 
   const dataLimite = demanda.data_limite ? new Date(demanda.data_limite) : null;
   const atrasada = demanda.status === "Atrasado";
@@ -80,15 +81,8 @@ export function DemandCard({ demanda, onClick, draggable, onDragStart, extraActi
 
       <div className="flex items-center justify-between pt-1 border-t">
         <div className="flex items-center gap-1.5">
-          {resp ? (
-            <Avatar className="h-6 w-6">
-              <AvatarFallback
-                className="text-[10px] text-white"
-                style={{ background: resp.cor }}
-              >
-                {resp.nome.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+          {resps.length > 0 ? (
+            <AvatarStack responsaveis={resps} size="sm" max={3} />
           ) : (
             <span className="text-[10px] text-muted-foreground">Sem responsável</span>
           )}

@@ -7,7 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Plus, Zap } from "lucide-react";
-import { useDemandas, useDemandasBootstrap, Demanda } from "@/store/demandas";
+import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useCRM, useCRMBootstrap } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import { DemandasKanban } from "@/components/demandas/DemandasKanban";
@@ -64,7 +64,7 @@ export default function Demandas() {
     return demandas.filter((d) => {
       if (busca && !d.titulo.toLowerCase().includes(busca.toLowerCase())) return false;
       if (fCliente !== "todos" && d.cliente_id !== fCliente) return false;
-      if (fResp !== "todos" && d.responsavel_id !== fResp) return false;
+      if (fResp !== "todos" && !getResponsaveisIds(d).includes(fResp)) return false;
       if (fCat !== "todas" && d.categoria !== fCat) return false;
       if (fPrio !== "todas" && d.prioridade !== fPrio) return false;
       if (fStatus !== "todos" && d.status !== fStatus) return false;
@@ -101,12 +101,14 @@ export default function Demandas() {
 
   const minhas = useMemo(
     () =>
-      filtradas.filter(
-        (d) =>
-          (d.responsavel_id && d.responsavel_id === user?.id) ||
-          (meuResponsavelId && d.responsavel_id === meuResponsavelId) ||
+      filtradas.filter((d) => {
+        const ids = getResponsaveisIds(d);
+        return (
+          (user?.id && ids.includes(user.id)) ||
+          (meuResponsavelId && ids.includes(meuResponsavelId)) ||
           (d.criado_por && d.criado_por === user?.id)
-      ),
+        );
+      }),
     [filtradas, user, meuResponsavelId]
   );
 

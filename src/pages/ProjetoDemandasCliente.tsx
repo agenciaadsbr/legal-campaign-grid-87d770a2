@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { useDemandas, useDemandasBootstrap, Demanda } from "@/store/demandas";
+import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +44,7 @@ export default function ProjetoDemandasCliente() {
     return demandas.filter((d) => {
       if (d.cliente_id !== clienteId) return false;
       if (busca && !d.titulo.toLowerCase().includes(busca.toLowerCase())) return false;
-      if (fResp !== "todos" && d.responsavel_id !== fResp) return false;
+      if (fResp !== "todos" && !getResponsaveisIds(d).includes(fResp)) return false;
       if (fPrio !== "todas" && d.prioridade !== fPrio) return false;
       if (fCat !== "todas" && d.categoria !== fCat) return false;
       return true;
