@@ -44,8 +44,21 @@ export function ClientesDemandasTable({
     const filtroAtivo =
       filtroResp !== "todos" || filtroStatus !== "todos" || filtroPrio !== "todas";
 
+    // Clientes que possuem o responsável atribuído no próprio cadastro do cliente
+    const clienteIdsComRespNoCard = new Set(
+      filtroResp !== "todos"
+        ? clientes
+            .filter((c) => (c.responsaveis ?? []).includes(filtroResp))
+            .map((c) => c.id)
+        : [],
+    );
+
     const filtradas = demandas.filter((d) => {
-      if (filtroResp !== "todos" && d.responsavel_id !== filtroResp) return false;
+      if (filtroResp !== "todos") {
+        const matchDemanda = d.responsavel_id === filtroResp;
+        const matchCliente = clienteIdsComRespNoCard.has(d.cliente_id);
+        if (!matchDemanda && !matchCliente) return false;
+      }
       if (filtroStatus !== "todos" && d.status !== filtroStatus) return false;
       if (filtroPrio !== "todas" && d.prioridade !== filtroPrio) return false;
       return true;
@@ -114,9 +127,22 @@ export function ClientesDemandasTable({
 
     let lista = Array.from(map.values());
 
-    // Quando há filtro de demanda ativo, ocultar clientes sem demandas que correspondam
+    // Quando há filtro de demanda ativo, ocultar clientes sem correspondência.
+    // Para o filtro de responsável, manter clientes que tenham o responsável atribuído
+    // no próprio cadastro (mesmo sem demandas dele), desde que outros filtros não exijam demandas.
     if (filtroAtivo) {
-      lista = lista.filter((l) => l.temDemanda);
+      lista = lista.filter((l) => {
+        if (l.temDemanda) return true;
+        if (
+          filtroResp !== "todos" &&
+          clienteIdsComRespNoCard.has(l.cliente_id) &&
+          filtroStatus === "todos" &&
+          filtroPrio === "todas"
+        ) {
+          return true;
+        }
+        return false;
+      });
     }
 
     if (filtroBusca.trim()) {

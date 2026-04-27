@@ -1,49 +1,62 @@
 ## Problema
 
-Hoje, nos cards em coluna **Planejamento** (tanto no Kanban de Posts do Cliente quanto no Kanban de Demandas), o único caminho disponível é o botão **"Iniciar tarefa" / "Iniciar Demanda"**. Não dá para abrir o card e editar seus dados (responsáveis, prazo, descrição, etc.) antes de iniciar.
+Na página **Demandas**, o filtro "Responsáveis" funciona de forma inconsistente: alguns responsáveis filtram corretamente, outros não retornam nada — mesmo havendo clientes claramente atribuídos a eles (ex.: avatares verdes "R" visíveis na aba Clientes).
 
-Comportamento esperado: o usuário deve poder **clicar no card** para abrir o detalhe/edição mesmo quando está em "Planejamento", mantendo o botão de iniciar tarefa como ação rápida ao lado.
+## Causa raiz
 
-## Escopo (apenas estes dois módulos)
+O filtro de responsável em duas abas só olha para `d.responsavel_id` (campo singular da demanda):
 
-1. **Clientes** — `src/components/clientes/PostsKanbanCliente.tsx` (usado em `ClienteDetalhe` e na "Visão Geral" do `ProjetoCliente`).
-2. **Demandas** — `src/components/demandas/ProjetoKanban.tsx` (usado em `ProjetoDemandasCliente` e em `ProjetoCliente`) e `src/components/demandas/DemandCard.tsx` (clique do card).
+1. **`src/pages/Demandas.tsx`** (linha 67) — usado para Quadro Geral, Minhas, Novas, Calendário.
+2. **`src/components/demandas/ClientesDemandasTable.tsx`** (linhas 47–52) — usado na aba **Clientes** (a da captura de tela).
 
-Nada fora destes dois módulos será tocado.
+Porém os responsáveis exibidos na coluna "Responsáveis" da aba Clientes vêm do **cliente** (`cliente.responsaveis[]` — array), não das demandas. Resultado:
 
-## Mudanças
+- Responsáveis que possuem ao menos UMA demanda atribuída → aparecem ao filtrar.
+- Responsáveis que estão atribuídos APENAS ao cliente (sem nenhuma demanda individual) → não aparecem ao filtrar, mesmo com o badge verde visível.
 
-### 1. Posts do Cliente (`PostsKanbanCliente.tsx`)
+Isso bate exatamente com o sintoma "filtra alguns e outros não".
 
-Atualmente, em `CardItem`:
-- Se `status_card === "Planejamento"` → renderiza apenas a `<div>` interna (sem `<Link>`), bloqueando navegação para o post.
-- Se `!== "Planejamento"` → embrulha em `<Link to={posts/${post.id}}>`.
+## Correção (escopo mínimo, somente módulo Demandas)
 
-Fix:
-- Sempre embrulhar em `<Link>` quando existir `post` correspondente, inclusive em "Planejamento". O post já é criado junto com o card, então a rota `posts/:id` existe.
-- Manter o botão **"Iniciar tarefa"** intacto (já tem `e.preventDefault()` + `e.stopPropagation()` no handler, então o clique nele não vai navegar).
-- Manter a edição inline do título (já tem `stopPropagation`).
-- Caso não exista `post` para o card, manter fallback sem link (não regredir).
+### 1) `src/components/demandas/ClientesDemandasTable.tsx` (aba Clientes)
 
-### 2. Demandas em Planejamento (`ProjetoKanban.tsx` + `DemandCard.tsx`)
+Alterar a lógica do filtro para casar contra a união:
+- Responsáveis das demandas do cliente, OU
+- `cliente.responsaveis[]` (array do próprio cliente).
 
-Atualmente em `ProjetoKanban`:
-- O `DemandCard` recebe `onClick={() => onOpen(d)}` para todas as colunas — **clique no card já abre o detalhe**.
-- Para a coluna "Planejamento", recebe `extraAction` com o botão **"Iniciar Demanda"**.
-- Em `DemandCard.tsx`, o `extraAction` é renderizado dentro de um `<div onClick={(e) => e.stopPropagation()}>`, então o botão não dispara o `onClick` do card.
+Pseudo:
+```ts
+if (filtroResp !== "todos") {
+  const clienteTemRespNoCard = (c.responsaveis ?? []).includes(filtroResp);
+  const clienteTemDemandaComResp = demandas.some(
+    d => d.cliente_id === c.id && d.responsavel_id === filtroResp
+  );
+  if (!clienteTemRespNoCard && !clienteTemDemandaComResp) return; // pula cliente
+}
+```
 
-Verificação: o clique no card de planejamento **já** abre o `DemandaDetalheDialog`. Aparentemente o problema reportado é apenas o de Posts.
+A filtragem de demandas (para contar `total/atrasadas/urgentes`) continua por `d.responsavel_id === filtroResp` quando esse filtro está ativo, mas a linha do cliente passa a ser exibida sempre que ele tiver o responsável atribuído (mesmo com `total=0`).
 
-Fix de robustez (defensivo):
-- Garantir que o handler `iniciar` em `ProjetoKanban` chame `e.stopPropagation()` para evitar qualquer condição em que o clique no botão também dispare `onClick` do card.
+### 2) `src/pages/Demandas.tsx` (demais abas: Quadro, Minhas, Novas, Calendário)
 
-## Arquivos alterados
+Manter o filtro atual por `d.responsavel_id`, mas adicionar fallback considerando responsáveis do cliente, para coerência:
 
-- `src/components/clientes/PostsKanbanCliente.tsx` — sempre envolver o card em `<Link>` quando houver post associado, incluindo Planejamento.
-- `src/components/demandas/ProjetoKanban.tsx` — adicionar `stopPropagation` no `iniciar`.
+```ts
+if (fResp !== "todos") {
+  const cli = clientes.find(c => c.id === d.cliente_id);
+  const matchDemanda = d.responsavel_id === fResp;
+  const matchCliente = (cli?.responsaveis ?? []).includes(fResp);
+  if (!matchDemanda && !matchCliente) return false;
+}
+```
 
-## Resultado esperado
+## Fora de escopo
 
-- **Posts (Clientes)**: clicar em qualquer ponto do card de Planejamento (exceto botão "Iniciar tarefa", título em modo edição e botão de urgência) abre o detalhe do post para edição. Botão "Iniciar tarefa" continua disparando o diálogo `IniciarTarefaDialog` normalmente.
-- **Demandas**: clicar em qualquer card de Planejamento (exceto botão "Iniciar Demanda") abre `DemandaDetalheDialog`. O botão continua iniciando a demanda sem reabrir o detalhe.
-- Drag-and-drop, filtros, e demais comportamentos preservados.
+- Nenhuma alteração em Clientes, Posts/Kanban, Alertas, Relatórios, Configurações, Contratos, ProjetoCliente.
+- Sem mudanças no schema/Supabase.
+- Sem alterações de UI/labels.
+
+## Arquivos editados
+
+- `src/components/demandas/ClientesDemandasTable.tsx`
+- `src/pages/Demandas.tsx`
