@@ -1035,7 +1035,7 @@ function FiltrosTopo({
         <PopoverTrigger asChild>
           <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
             <Filter className="h-3.5 w-3.5" />
-            <span className="text-xs">Filtrar por responsável</span>
+            <span className="text-xs">Filtrar por responsável do post</span>
             {filtroResponsaveis.length > 0 && (
               <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
                 {filtroResponsaveis.length}
@@ -1044,7 +1044,7 @@ function FiltrosTopo({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-2" align="start">
-          <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis</div>
+          <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis do post</div>
           <div className="max-h-60 overflow-auto space-y-0.5">
             {responsaveis.map((r) => {
               const checked = filtroResponsaveis.includes(r.id);
