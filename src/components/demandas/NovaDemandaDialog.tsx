@@ -153,8 +153,11 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
             )}
           </div>
           <div>
-            <Label>Responsável</Label>
-            <Select value={responsavel_id} onValueChange={setResponsavelId}>
+            <Label>Responsável da Demanda</Label>
+            <Select
+              value={responsavel_id}
+              onValueChange={(v) => { setResponsavelId(v); setRespManualmenteAlterado(true); }}
+            >
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
