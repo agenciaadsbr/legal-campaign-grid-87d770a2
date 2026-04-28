@@ -1,37 +1,26 @@
-## Objetivo
+## Problema
 
-No módulo **Demandas**, aba **Clientes**, ao passar o mouse sobre os badges vermelhos **Atrasadas** e roxo **Urgentes** de cada linha, exibir um tooltip com a lista detalhada das demandas correspondentes daquele cliente.
+Na aba **Clientes** do módulo Demandas, ao passar o mouse sobre os badges **Atrasadas** (vermelho) e **Urgentes** (roxo), o usuário vê apenas um "ponto de interrogação" — que na verdade é o cursor `cursor-help` do navegador (uma seta com `?`). O conteúdo do tooltip em si **não aparece**.
 
-## O que será exibido no tooltip
+## Causa raiz
 
-Para cada demanda (atrasada ou urgente) do cliente, mostrar:
-- Título da demanda
-- Categoria / subtipo
-- Status atual
-- Data limite formatada (dd/mm/aa) — destacada se vencida
-- Responsáveis (nomes)
+O componente `src/components/ui/tooltip.tsx` deste projeto **não envolve** o `TooltipPrimitive.Content` em um `TooltipPrimitive.Portal`. Sem portal, o conteúdo do tooltip é renderizado dentro da célula da tabela (`<td>`), onde restrições de layout/overflow da `<table>` o tornam invisível. Para comparação, `src/components/ui/popover.tsx` já usa `PopoverPrimitive.Portal` corretamente.
 
-Cabeçalho do tooltip: "X demanda(s) atrasada(s)" ou "X demanda(s) urgente(s)".
+A própria sessão antiga mostrou os tooltips funcionando em alguns hovers, mas o comportamento é instável justamente por não estar portado.
 
-Se a lista for longa (>6 itens), mostrar os 6 primeiros + "… e mais N".
+## Correção
 
-## Implementação técnica
+Editar `src/components/ui/tooltip.tsx` para envolver o `TooltipPrimitive.Content` em `TooltipPrimitive.Portal`, exatamente no mesmo padrão já usado pelo `popover.tsx`:
 
-Arquivo: `src/components/demandas/ClientesDemandasTable.tsx`
+```tsx
+<TooltipPrimitive.Portal>
+  <TooltipPrimitive.Content ref={ref} sideOffset={sideOffset} className={...} {...props} />
+</TooltipPrimitive.Portal>
+```
 
-1. Já agregamos `total/atrasadas/urgentes` por cliente. Estender o agregador para guardar também as **listas** das demandas relevantes:
-   - `demandasAtrasadas: Demanda[]`
-   - `demandasUrgentes: Demanda[]`
-
-2. Envolver os badges de **Atrasadas** e **Urgentes** com `Tooltip` / `TooltipTrigger` / `TooltipContent` (de `@/components/ui/tooltip`, já existente no projeto). Garantir `TooltipProvider` no escopo (envolver a tabela com um único `TooltipProvider delayDuration={150}`).
-
-3. Conteúdo do tooltip renderizado como uma pequena lista compacta usando tokens semânticos (`bg-popover`, `text-popover-foreground`, `border-border`) — sem cores hardcoded, respeitando o tema dark azul-escuro do projeto.
-
-4. `e.stopPropagation()` no trigger para evitar conflito com o `onClick` da linha (navegação).
-
-5. Quando `atrasadas === 0` ou `urgentes === 0`, manter o "0" atual sem tooltip.
+Isso renderiza o conteúdo no `document.body`, escapando do clipping da tabela, e o tooltip ficará visível em todos os usos do projeto (não só nos badges de Demandas).
 
 ## Fora de escopo
 
-- Não alterar lógica de filtros, navegação, ou estilos das demais colunas.
-- Não criar nova página ou rota.
+- Não alterar `ClientesDemandasTable.tsx` (a lógica e o conteúdo do tooltip já estão corretos).
+- Não modificar outros tooltips/componentes UI.
