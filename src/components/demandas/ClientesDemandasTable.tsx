@@ -390,7 +390,28 @@ export function ClientesDemandasTable({
                         })}
                       </TableCell>
                       <TableCell className="text-center font-semibold">
-                        {l.total}
+                        {l.total > 0 ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="cursor-help inline-block px-1"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {l.total}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="p-3">
+                              <DemandasTooltipList
+                                titulo={l.total === 1 ? "demanda cadastrada" : "demandas cadastradas"}
+                                demandas={l.todasDemandas}
+                                responsaveis={responsaveis}
+                                variant="total"
+                              />
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {l.atrasadas > 0 ? (
