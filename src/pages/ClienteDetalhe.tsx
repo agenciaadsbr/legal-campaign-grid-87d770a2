@@ -38,8 +38,10 @@ function AtividadeView() {
 }
 
 export default function ClienteDetalhe() {
+  useDemandasBootstrap();
   const { clienteId } = useParams();
   const { clientes, cards, contratos, responsaveis, statusOptions } = useCRM();
+  const demandas = useDemandas((s) => s.demandas);
   const { pathname } = useLocation();
   const cliente = clientes.find((c) => c.id === clienteId);
 
@@ -49,9 +51,17 @@ export default function ClienteDetalhe() {
 
   const contrato = contratos.find((c) => c.cliente_id === cliente.id);
   const cardsCliente = cards.filter((c) => c.cliente_id === cliente.id);
+  const demandasCliente = demandas.filter((d) => d.cliente_id === cliente.id);
   const postados = cardsCliente.filter((c) => c.status_card === "Postado").length;
-  const resps = responsaveis.filter((r) => cliente.responsaveis.includes(r.id));
-  // Badge unificado: ciclo de vida
+
+  // Responsáveis SEPARADOS por origem (nunca usar cliente.responsaveis)
+  const respsPostsIds = new Set<string>();
+  cardsCliente.forEach((c) => (c.responsaveis ?? []).forEach((r) => respsPostsIds.add(r)));
+  const respsPosts = responsaveis.filter((r) => respsPostsIds.has(r.id));
+
+  const respsDemandasIds = new Set<string>();
+  demandasCliente.forEach((d) => getResponsaveisIds(d).forEach((r) => respsDemandasIds.add(r)));
+  const respsDemandas = responsaveis.filter((r) => respsDemandasIds.has(r.id));
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
@@ -65,8 +75,24 @@ export default function ClienteDetalhe() {
             <span>Nicho: <span className="text-foreground">{cliente.nicho}</span></span>
             <span>·</span>
             <span>{postados}/{contrato?.total_posts ?? cardsCliente.length} postados</span>
-            <span>·</span>
-            <AvatarStack responsaveis={resps} size="sm" />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-4 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Responsáveis dos Posts:</span>
+              {respsPosts.length > 0 ? (
+                <AvatarStack responsaveis={respsPosts} size="xs" max={5} />
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Responsáveis das Demandas:</span>
+              {respsDemandas.length > 0 ? (
+                <AvatarStack responsaveis={respsDemandas} size="xs" max={5} />
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
