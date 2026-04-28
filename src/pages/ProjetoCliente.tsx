@@ -6,6 +6,7 @@ import { useAtividades, useAtividadesBootstrap } from "@/store/atividades";
 import { PostsKanbanCliente } from "@/components/clientes/PostsKanbanCliente";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { AvatarStack } from "@/components/AvatarStack";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
