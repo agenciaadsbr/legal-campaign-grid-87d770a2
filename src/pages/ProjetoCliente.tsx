@@ -182,7 +182,8 @@ export default function ProjetoCliente() {
         {/* ============== RESPONSÁVEIS ============== */}
         <TabsContent value="responsaveis" className="mt-4">
           <ResponsaveisTab
-            respsCli={respsCli}
+            respsPosts={respsPosts}
+            respsDemandas={respsDemandas}
             cardsCli={cardsCli}
             demandasCli={demandasCli}
           />
@@ -193,7 +194,8 @@ export default function ProjetoCliente() {
           <RelatoriosTab
             cardsCli={cardsCli}
             demandasCli={demandasCli}
-            respsCli={respsCli}
+            respsPosts={respsPosts}
+            respsDemandas={respsDemandas}
           />
         </TabsContent>
       </Tabs>
