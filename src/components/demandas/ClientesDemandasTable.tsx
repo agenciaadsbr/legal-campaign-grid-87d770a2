@@ -78,12 +78,7 @@ function DemandasTooltipList({
             <li
               key={d.id}
               className="text-[11px] leading-tight border-l-2 pl-2"
-              style={{
-                borderColor:
-                  variant === "atrasadas"
-                    ? "hsl(var(--destructive))"
-                    : "hsl(var(--primary))",
-              }}
+              style={{ borderColor }}
             >
               <div className="font-medium text-popover-foreground truncate">
                 {d.titulo}
