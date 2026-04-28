@@ -102,10 +102,10 @@ export function NovaDemandaDialog({
   const [saving, setSaving] = useState(false);
 
   const reset = () => {
-    setClienteId("");
+    setClienteId(defaultClienteId ?? "");
     setTitulo("");
-    setCategoria("Designer");
-    setSubtipo("");
+    setCategoria(defaultCategoria ?? "Personalizado");
+    setSubtipo(defaultSubtipo ?? "");
     setResponsaveisIds([]);
     setRespManualmenteAlterado(false);
     setPrioridade("Media");
@@ -130,6 +130,7 @@ export function NovaDemandaDialog({
     });
     setSaving(false);
     if (id) {
+      onCreated?.(id, categoria);
       reset();
       onOpenChange(false);
     }
@@ -146,23 +147,48 @@ export function NovaDemandaDialog({
 
   const subtipos = CATEGORIA_SUBTIPOS[categoria] ?? [];
 
+  const showCliente = !lockCliente && !defaultClienteId;
+  const showCategoria = !lockCategoria;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Nova Demanda</DialogTitle>
+          <DialogTitle>{tituloModal ?? "Nova Tarefa"}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
+          {showCliente && (
+            <div className="col-span-2">
+              <Label>Cliente *</Label>
+              <Select value={cliente_id} onValueChange={setClienteId}>
+                <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                <SelectContent>
+                  {clientes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {showCategoria && (
+            <div className="col-span-2">
+              <Label>Categoria *</Label>
+              <Select value={categoria} onValueChange={(v) => { setCategoria(v as DemandaCategoria); setSubtipo(""); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS.map((c) => (
+                    <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                A tarefa aparecerá apenas na aba <strong>{CATEGORIA_LABEL[categoria]}</strong>.
+              </p>
+            </div>
+          )}
           <div className="col-span-2">
-            <Label>Cliente *</Label>
-            <Select value={cliente_id} onValueChange={setClienteId}>
-              <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-              <SelectContent>
-                {clientes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Título da tarefa *</Label>
+            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
           </div>
           <div className="col-span-2">
             <Label>Título da tarefa *</Label>
