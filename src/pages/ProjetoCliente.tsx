@@ -180,7 +180,7 @@ export default function ProjetoCliente() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-max">
             <TabsTrigger value="visao" className="gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
@@ -315,7 +315,7 @@ export default function ProjetoCliente() {
         titulo="Nova Tarefa"
         onCreated={(_id, categoria) => {
           // Após criar, leva o usuário para a aba correspondente
-          setTab(categoriaParaAba(categoria));
+          handleTabChange(categoriaParaAba(categoria));
         }}
       />
     </div>
