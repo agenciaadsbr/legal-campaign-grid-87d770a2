@@ -188,6 +188,12 @@ export default function ProjetoCliente() {
           />
         </TabsContent>
       </Tabs>
+
+      <NovaDemandaDialog
+        open={novaTarefaOpen}
+        onOpenChange={setNovaTarefaOpen}
+        defaultClienteId={clienteId!}
+      />
     </div>
   );
 }
