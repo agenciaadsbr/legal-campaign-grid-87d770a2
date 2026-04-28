@@ -110,6 +110,68 @@ function DemandasTooltipList({
   );
 }
 
+function ResponsaveisComTooltip({
+  responsaveis,
+  contagem,
+  max = 4,
+}: {
+  responsaveis: { id: string; nome: string; cor?: string | null }[];
+  contagem: Map<string, number>;
+  max?: number;
+}) {
+  const visible = responsaveis.slice(0, max);
+  const overflow = responsaveis.slice(max);
+  const sizeCls = "h-5 w-5 text-[9px]";
+
+  return (
+    <div className="flex -space-x-2">
+      {visible.map((r) => {
+        const qtd = contagem.get(r.id) ?? 0;
+        return (
+          <Tooltip key={r.id}>
+            <TooltipTrigger asChild>
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className={`rounded-full ring-2 ring-background flex items-center justify-center font-semibold text-white cursor-help ${sizeCls}`}
+                style={{ backgroundColor: r.cor ?? "hsl(var(--primary))" }}
+              >
+                {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="px-2.5 py-1.5">
+              <div className="text-xs font-medium">{r.nome}</div>
+              <div className="text-[11px] text-muted-foreground">
+                {qtd} {qtd === 1 ? "demanda atribuída" : "demandas atribuídas"}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      })}
+      {overflow.length > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={`rounded-full ring-2 ring-background bg-muted text-muted-foreground flex items-center justify-center font-semibold cursor-help ${sizeCls}`}
+            >
+              +{overflow.length}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="px-2.5 py-1.5">
+            <ul className="text-[11px] space-y-0.5">
+              {overflow.map((r) => (
+                <li key={r.id}>
+                  {r.nome} — {contagem.get(r.id) ?? 0}
+                </li>
+              ))}
+            </ul>
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   filtroResp?: string;
   filtroStatus?: string;
