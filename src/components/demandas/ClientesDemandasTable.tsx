@@ -316,20 +316,51 @@ export function ClientesDemandasTable({
                       </TableCell>
                       <TableCell className="text-center">
                         {l.atrasadas > 0 ? (
-                          <Badge variant="destructive" className="gap-1 h-5 px-1.5 text-xs">
-                            <AlertTriangle className="h-3 w-3" />
-                            {l.atrasadas}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="destructive"
+                                className="gap-1 h-5 px-1.5 text-xs cursor-help"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <AlertTriangle className="h-3 w-3" />
+                                {l.atrasadas}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="p-3">
+                              <DemandasTooltipList
+                                titulo={l.atrasadas === 1 ? "demanda atrasada" : "demandas atrasadas"}
+                                demandas={l.demandasAtrasadas}
+                                responsaveis={responsaveis}
+                                variant="atrasadas"
+                              />
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
                           <span className="text-xs text-muted-foreground">0</span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
                         {l.urgentes > 0 ? (
-                          <Badge className="gap-1 h-5 px-1.5 text-xs bg-status-renovacao text-white">
-                            <Zap className="h-3 w-3" />
-                            {l.urgentes}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                className="gap-1 h-5 px-1.5 text-xs bg-status-renovacao text-white cursor-help"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Zap className="h-3 w-3" />
+                                {l.urgentes}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="p-3">
+                              <DemandasTooltipList
+                                titulo={l.urgentes === 1 ? "demanda urgente" : "demandas urgentes"}
+                                demandas={l.demandasUrgentes}
+                                responsaveis={responsaveis}
+                                variant="urgentes"
+                              />
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
                           <span className="text-xs text-muted-foreground">0</span>
                         )}
