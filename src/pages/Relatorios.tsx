@@ -53,14 +53,14 @@ export default function Relatorios() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="text-base">Carga por responsável</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Carga por responsável — Posts</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer><BarChart data={carga} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
               <YAxis dataKey="name" type="category" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
               <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-              <Bar dataKey="cards" fill="hsl(var(--primary-glow))" radius={[0,4,4,0]} />
+              <Bar dataKey="cards" name="Posts atribuídos" fill="hsl(var(--primary-glow))" radius={[0,4,4,0]} />
             </BarChart></ResponsiveContainer>
           </CardContent>
         </Card>
