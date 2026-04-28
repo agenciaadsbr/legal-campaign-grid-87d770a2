@@ -68,9 +68,15 @@ export default function ProjetoCliente() {
 
   const cardsCli = cards.filter((c) => c.cliente_id === clienteId);
   const demandasCli = demandas.filter((d) => d.cliente_id === clienteId);
-  const respsCli = responsaveis.filter((r) =>
-    cliente.responsaveis.includes(r.id),
-  );
+
+  // Responsáveis SEPARADOS por origem (Posts / Demandas) — nunca cliente.responsaveis
+  const respsPostsIds = new Set<string>();
+  cardsCli.forEach((c) => (c.responsaveis ?? []).forEach((r: string) => respsPostsIds.add(r)));
+  const respsPosts = responsaveis.filter((r) => respsPostsIds.has(r.id));
+
+  const respsDemandasIds = new Set<string>();
+  demandasCli.forEach((d) => getResponsaveisIds(d).forEach((r) => respsDemandasIds.add(r)));
+  const respsDemandas = responsaveis.filter((r) => respsDemandasIds.has(r.id));
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
