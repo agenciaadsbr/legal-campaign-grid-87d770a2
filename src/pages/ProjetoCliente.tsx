@@ -544,151 +544,201 @@ function AtividadesTab({ clienteId }: { clienteId: string }) {
 }
 
 // =====================================================
-// RESPONSÁVEIS
+// RESPONSÁVEIS — duas seções separadas (Posts / Demandas)
 // =====================================================
 function ResponsaveisTab({
-  respsCli,
+  respsPosts,
+  respsDemandas,
   cardsCli,
   demandasCli,
 }: {
-  respsCli: any[];
+  respsPosts: any[];
+  respsDemandas: any[];
   cardsCli: any[];
   demandasCli: Demanda[];
 }) {
-  if (respsCli.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center text-sm text-muted-foreground">
-          Nenhum responsável atribuído a este cliente.
-        </CardContent>
-      </Card>
-    );
-  }
+  const renderEmpty = (msg: string) => (
+    <Card>
+      <CardContent className="p-6 text-center text-sm text-muted-foreground">{msg}</CardContent>
+    </Card>
+  );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {respsCli.map((r) => {
-        const meusPosts = cardsCli.filter((c) => c.responsaveis.includes(r.id));
-        const postsAbertos = meusPosts.filter(
-          (c) => c.status_card !== "Postado",
-        ).length;
-        const postsAtras = meusPosts.filter(
-          (c) => c.status_card === "Atrasado",
-        ).length;
-        const minhasDem = demandasCli.filter((d) => getResponsaveisIds(d).includes(r.id));
-        const demAbertas = minhasDem.filter(
-          (d) => !["Concluido", "Entregue"].includes(d.status),
-        ).length;
-        const demAtras = minhasDem.filter((d) => d.status === "Atrasado").length;
+    <div className="space-y-6">
+      {/* ====== Responsáveis dos Posts ====== */}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold">Responsáveis dos Posts</h3>
+          <Badge variant="outline" className="text-[10px]">{respsPosts.length}</Badge>
+        </div>
+        {respsPosts.length === 0 ? (
+          renderEmpty("Nenhum responsável atribuído aos posts deste cliente.")
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {respsPosts.map((r) => {
+              const meusPosts = cardsCli.filter((c) => (c.responsaveis ?? []).includes(r.id));
+              const abertos = meusPosts.filter((c) => c.status_card !== "Postado").length;
+              const atras = meusPosts.filter((c) => c.status_card === "Atrasado").length;
+              return (
+                <Card key={r.id}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-9 w-9 rounded-full text-white text-xs font-semibold flex items-center justify-center"
+                        style={{ backgroundColor: r.cor }}
+                      >
+                        {r.nome.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{r.nome}</div>
+                        <div className="text-[10px] text-muted-foreground">{r.email}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Stat label="Posts" value={meusPosts.length} />
+                      <Stat label="Abertos" value={abertos} />
+                      <Stat label="Atrasados" value={atras} danger={atras > 0} />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
-        return (
-          <Card key={r.id}>
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <div
-                  className="h-9 w-9 rounded-full text-white text-xs font-semibold flex items-center justify-center"
-                  style={{ backgroundColor: r.cor }}
-                >
-                  {r.nome
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .slice(0, 2)
-                    .join("")}
-                </div>
-                <div>
-                  <div className="font-medium text-sm">{r.nome}</div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {r.email}
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Stat label="Posts" value={meusPosts.length} />
-                <Stat label="Posts abertos" value={postsAbertos} />
-                <Stat label="Posts atrasados" value={postsAtras} danger />
-                <Stat label="Demandas" value={minhasDem.length} />
-                <Stat label="Dem. abertas" value={demAbertas} />
-                <Stat label="Dem. atrasadas" value={demAtras} danger />
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {/* ====== Responsáveis das Demandas ====== */}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold">Responsáveis das Demandas</h3>
+          <Badge variant="outline" className="text-[10px]">{respsDemandas.length}</Badge>
+        </div>
+        {respsDemandas.length === 0 ? (
+          renderEmpty("Nenhum responsável atribuído às demandas deste cliente.")
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {respsDemandas.map((r) => {
+              const minhasDem = demandasCli.filter((d) => getResponsaveisIds(d).includes(r.id));
+              const abertas = minhasDem.filter((d) => !["Concluido", "Entregue"].includes(d.status)).length;
+              const atras = minhasDem.filter((d) => d.status === "Atrasado").length;
+              return (
+                <Card key={r.id}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-9 w-9 rounded-full text-white text-xs font-semibold flex items-center justify-center"
+                        style={{ backgroundColor: r.cor }}
+                      >
+                        {r.nome.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{r.nome}</div>
+                        <div className="text-[10px] text-muted-foreground">{r.email}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Stat label="Demandas" value={minhasDem.length} />
+                      <Stat label="Abertas" value={abertas} />
+                      <Stat label="Atrasadas" value={atras} danger={atras > 0} />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
 
 // =====================================================
-// RELATÓRIOS
+// RELATÓRIOS — KPIs e gráfico SEPARADOS por origem
 // =====================================================
 function RelatoriosTab({
   cardsCli,
   demandasCli,
-  respsCli,
+  respsPosts,
+  respsDemandas,
 }: {
   cardsCli: any[];
   demandasCli: Demanda[];
-  respsCli: any[];
+  respsPosts: any[];
+  respsDemandas: any[];
 }) {
+  // Origem do filtro de responsável: posts | demandas | ambos (separados)
+  const [origem, setOrigem] = useState<"ambos" | "posts" | "demandas">("ambos");
   const [fResp, setFResp] = useState("todos");
-  const [fTipo, setFTipo] = useState<"todos" | "post" | "demanda">("todos");
   const [fCat, setFCat] = useState("todas");
 
   const cats = Array.from(new Set(demandasCli.map((d) => d.categoria)));
 
+  // Lista de responsáveis no seletor depende da origem
+  const respsParaFiltro =
+    origem === "posts" ? respsPosts : origem === "demandas" ? respsDemandas : [...respsPosts, ...respsDemandas.filter((r) => !respsPosts.some((p) => p.id === r.id))];
+
   const cardsFilt = cardsCli.filter((c) => {
-    if (fTipo === "demanda") return false;
-    if (fResp !== "todos" && !c.responsaveis.includes(fResp)) return false;
+    if (origem === "demandas") return false;
+    if (fResp !== "todos" && !(c.responsaveis ?? []).includes(fResp)) return false;
     return true;
   });
   const demFilt = demandasCli.filter((d) => {
-    if (fTipo === "post") return false;
+    if (origem === "posts") return false;
     if (fResp !== "todos" && !getResponsaveisIds(d).includes(fResp)) return false;
     if (fCat !== "todas" && d.categoria !== fCat) return false;
     return true;
   });
 
-  const entregues =
-    cardsFilt.filter((c) => c.status_card === "Postado").length +
-    demFilt.filter((d) => ["Concluido", "Entregue"].includes(d.status)).length;
-  const atrasos =
-    cardsFilt.filter((c) => c.status_card === "Atrasado").length +
-    demFilt.filter((d) => d.status === "Atrasado").length;
-  const total = cardsFilt.length + demFilt.length;
-  const pctAtraso = total > 0 ? Math.round((atrasos / total) * 100) : 0;
+  // KPIs SEPARADOS — nunca somar
+  const postsTotal = cardsFilt.length;
+  const postsEntregues = cardsFilt.filter((c) => c.status_card === "Postado").length;
+  const postsAtrasos = cardsFilt.filter((c) => c.status_card === "Atrasado").length;
+  const postsPctAtraso = postsTotal > 0 ? Math.round((postsAtrasos / postsTotal) * 100) : 0;
 
-  // Distribuição por responsável
-  const distribuicao = respsCli.map((r) => {
-    const p = cardsFilt.filter((c) => c.responsaveis.includes(r.id)).length;
-    const d = demFilt.filter((x) => getResponsaveisIds(x).includes(r.id)).length;
-    return { nome: r.nome.split(" ")[0], Posts: p, Demandas: d };
-  });
+  const demTotal = demFilt.length;
+  const demEntregues = demFilt.filter((d) => ["Concluido", "Entregue"].includes(d.status)).length;
+  const demAtrasos = demFilt.filter((d) => d.status === "Atrasado").length;
+  const demPctAtraso = demTotal > 0 ? Math.round((demAtrasos / demTotal) * 100) : 0;
+
+  // Distribuição — duas séries (Posts / Demandas), nunca empilhadas
+  const distribuicaoPosts = respsPosts.map((r) => ({
+    nome: r.nome.split(" ")[0],
+    Posts: cardsFilt.filter((c) => (c.responsaveis ?? []).includes(r.id)).length,
+  }));
+  const distribuicaoDem = respsDemandas.map((r) => ({
+    nome: r.nome.split(" ")[0],
+    Demandas: demFilt.filter((x) => getResponsaveisIds(x).includes(r.id)).length,
+  }));
 
   return (
     <div className="space-y-3">
       <Card>
         <CardContent className="p-3 flex flex-wrap gap-2">
+          <Select value={origem} onValueChange={(v: any) => { setOrigem(v); setFResp("todos"); }}>
+            <SelectTrigger className="h-9 w-48">
+              <SelectValue placeholder="Origem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ambos">Ambos (separados)</SelectItem>
+              <SelectItem value="posts">Apenas Posts</SelectItem>
+              <SelectItem value="demandas">Apenas Demandas</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={fResp} onValueChange={setFResp}>
-            <SelectTrigger className="h-9 w-44">
+            <SelectTrigger className="h-9 w-56">
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos responsáveis</SelectItem>
-              {respsCli.map((r) => (
+              <SelectItem value="todos">
+                {origem === "posts" ? "Todos resp. dos posts" : origem === "demandas" ? "Todos resp. das demandas" : "Todos responsáveis"}
+              </SelectItem>
+              {respsParaFiltro.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.nome}
                 </SelectItem>
               ))}
-            </SelectContent>
-          </Select>
-          <Select value={fTipo} onValueChange={(v: any) => setFTipo(v)}>
-            <SelectTrigger className="h-9 w-40">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Posts e Demandas</SelectItem>
-              <SelectItem value="post">Apenas Posts</SelectItem>
-              <SelectItem value="demanda">Apenas Demandas</SelectItem>
             </SelectContent>
           </Select>
           <Select value={fCat} onValueChange={setFCat}>
@@ -698,73 +748,88 @@ function RelatoriosTab({
             <SelectContent>
               <SelectItem value="todas">Todas categorias</SelectItem>
               {cats.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
+                <SelectItem key={c} value={c}>{c}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      {/* KPIs em DUAS GRADES SEPARADAS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase text-muted-foreground">
-              Volume total
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <FileText className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-wide">Posts</span>
             </div>
-            <div className="text-2xl font-bold">{total}</div>
+            <div className="grid grid-cols-4 gap-2">
+              <Stat label="Volume" value={postsTotal} />
+              <Stat label="Entregues" value={postsEntregues} />
+              <Stat label="Atrasos" value={postsAtrasos} danger={postsAtrasos > 0} />
+              <Stat label="% Atraso" value={postsPctAtraso} />
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase text-muted-foreground">
-              Entregues
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-wide">Demandas Diárias</span>
             </div>
-            <div className="text-2xl font-bold text-emerald-500">{entregues}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase text-muted-foreground">
-              Atrasos
+            <div className="grid grid-cols-4 gap-2">
+              <Stat label="Volume" value={demTotal} />
+              <Stat label="Entregues" value={demEntregues} />
+              <Stat label="Atrasos" value={demAtrasos} danger={demAtrasos > 0} />
+              <Stat label="% Atraso" value={demPctAtraso} />
             </div>
-            <div className="text-2xl font-bold text-destructive">{atrasos}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase text-muted-foreground">
-              % Atrasos
-            </div>
-            <div className="text-2xl font-bold">{pctAtraso}%</div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="text-xs font-semibold mb-2 text-muted-foreground">
-            Distribuição por responsável
-          </div>
-          {distribuicao.length === 0 ? (
-            <div className="text-xs text-muted-foreground py-4 text-center">
-              Nenhum responsável.
+      {/* Distribuição — duas barras lado a lado */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs font-semibold mb-2 text-muted-foreground">
+              Carga — Responsáveis dos Posts
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={distribuicao}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="nome" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="Posts" fill="hsl(var(--primary))" />
-                <Bar dataKey="Demandas" fill="hsl(var(--status-renovacao))" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+            {distribuicaoPosts.length === 0 ? (
+              <div className="text-xs text-muted-foreground py-4 text-center">Nenhum responsável.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={distribuicaoPosts}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="nome" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="Posts" fill="hsl(var(--primary))" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs font-semibold mb-2 text-muted-foreground">
+              Carga — Responsáveis das Demandas
+            </div>
+            {distribuicaoDem.length === 0 ? (
+              <div className="text-xs text-muted-foreground py-4 text-center">Nenhum responsável.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={distribuicaoDem}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="nome" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="Demandas" fill="hsl(var(--status-renovacao))" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
