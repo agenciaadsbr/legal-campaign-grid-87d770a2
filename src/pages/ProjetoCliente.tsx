@@ -151,20 +151,7 @@ export default function ProjetoCliente() {
 
         {/* ============== POSTS ============== */}
         <TabsContent value="posts" className="mt-4">
-          <Card>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                O quadro de posts continua disponível no formato original.
-              </div>
-              <Button
-                size="sm"
-                onClick={() => navigate(`/clientes/${clienteId}`)}
-              >
-                Abrir Kanban de Posts <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </CardContent>
-          </Card>
-          <ResumoPosts cardsCli={cardsCli} className="mt-3" />
+          <PostsKanbanCliente />
         </TabsContent>
 
         {/* ============== DEMANDAS ============== */}
