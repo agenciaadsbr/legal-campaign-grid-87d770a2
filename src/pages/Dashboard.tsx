@@ -23,7 +23,9 @@ function Kpi({ label, value, icon: Icon, accent }: { label: string; value: numbe
 }
 
 export default function Dashboard() {
+  useDemandasBootstrap();
   const { clientes, posts, alertas, cards, responsaveis } = useCRM();
+  const demandas = useDemandas((s) => s.demandas);
 
   const today = new Date().toISOString().slice(0, 10);
   const ativos = clientes.filter((c) => (c.status_global ?? "Onboarding") === "Ativo").length;
@@ -49,13 +51,26 @@ export default function Dashboard() {
     return months.map((name, i) => ({ name, posts: counts[i] }));
   }, [posts]);
 
-  const cargaPorResp = useMemo(() => {
-    return responsaveis.map((r) => ({
-      name: r.nome.split(" ")[0],
-      cards: cards.filter((c) => c.responsaveis.includes(r.id)).length,
-      cor: r.cor,
-    }));
+  // Carga POR RESPONSÁVEL — duas séries SEPARADAS, nunca somar
+  const cargaPosts = useMemo(() => {
+    return responsaveis
+      .map((r) => ({
+        name: r.nome.split(" ")[0],
+        cards: cards.filter((c) => c.responsaveis.includes(r.id)).length,
+        cor: r.cor,
+      }))
+      .filter((d) => d.cards > 0);
   }, [responsaveis, cards]);
+
+  const cargaDemandas = useMemo(() => {
+    return responsaveis
+      .map((r) => ({
+        name: r.nome.split(" ")[0],
+        demandas: demandas.filter((d) => getResponsaveisIds(d).includes(r.id)).length,
+        cor: r.cor,
+      }))
+      .filter((d) => d.demandas > 0);
+  }, [responsaveis, demandas]);
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
