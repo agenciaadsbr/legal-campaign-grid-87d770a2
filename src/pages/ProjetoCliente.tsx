@@ -59,6 +59,7 @@ export default function ProjetoCliente() {
   const { clientes, cards, responsaveis } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
   const cliente = clientes.find((c) => c.id === clienteId);
+  const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
 
   if (!cliente) {
     return (
