@@ -232,6 +232,7 @@ export function ClientesDemandasTable({
   }, [demandas, clientes, filtroBusca, filtroResp, filtroStatus, filtroPrio, filtroStatusGlobal]);
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="space-y-1.5">
 
       <Card>
