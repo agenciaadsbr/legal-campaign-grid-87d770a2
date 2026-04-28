@@ -215,8 +215,10 @@ export function ClientesDemandasTable({
         total: number;
         atrasadas: number;
         urgentes: number;
+        todasDemandas: Demanda[];
         demandasAtrasadas: Demanda[];
         demandasUrgentes: Demanda[];
+        contagemPorResp: Map<string, number>;
         temDemanda: boolean;
       }
     >();
@@ -237,8 +239,10 @@ export function ClientesDemandasTable({
         total: 0,
         atrasadas: 0,
         urgentes: 0,
+        todasDemandas: [],
         demandasAtrasadas: [],
         demandasUrgentes: [],
+        contagemPorResp: new Map<string, number>(),
         temDemanda: false,
       });
     });
@@ -256,12 +260,15 @@ export function ClientesDemandasTable({
         total: 0,
         atrasadas: 0,
         urgentes: 0,
+        todasDemandas: [] as Demanda[],
         demandasAtrasadas: [] as Demanda[],
         demandasUrgentes: [] as Demanda[],
+        contagemPorResp: new Map<string, number>(),
         temDemanda: false,
       };
       cur.total += 1;
       cur.temDemanda = true;
+      cur.todasDemandas.push(d);
       if (d.status === "Atrasado") {
         cur.atrasadas += 1;
         cur.demandasAtrasadas.push(d);
@@ -270,7 +277,10 @@ export function ClientesDemandasTable({
         cur.urgentes += 1;
         cur.demandasUrgentes.push(d);
       }
-      getResponsaveisIds(d).forEach((rid) => cur.responsaveisIds.add(rid));
+      getResponsaveisIds(d).forEach((rid) => {
+        cur.responsaveisIds.add(rid);
+        cur.contagemPorResp.set(rid, (cur.contagemPorResp.get(rid) ?? 0) + 1);
+      });
       if (new Date(d.updated_at) > new Date(cur.ultimaAtividade)) {
         cur.ultimaAtividade = d.updated_at;
       }
