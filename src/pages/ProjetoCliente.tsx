@@ -59,6 +59,7 @@ export default function ProjetoCliente() {
   const { clientes, cards, responsaveis } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
   const cliente = clientes.find((c) => c.id === clienteId);
+  const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
 
   if (!cliente) {
     return (
@@ -114,6 +115,9 @@ export default function ProjetoCliente() {
             </p>
           </div>
         </div>
+        <Button onClick={() => setNovaTarefaOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar Tarefa
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -184,6 +188,12 @@ export default function ProjetoCliente() {
           />
         </TabsContent>
       </Tabs>
+
+      <NovaDemandaDialog
+        open={novaTarefaOpen}
+        onOpenChange={setNovaTarefaOpen}
+        defaultClienteId={clienteId!}
+      />
     </div>
   );
 }
