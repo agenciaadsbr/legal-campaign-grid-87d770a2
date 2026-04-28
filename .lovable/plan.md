@@ -1,51 +1,64 @@
 ## Objetivo
 
-Adicionar tooltips informativos nas colunas **Total** e **Responsáveis das Demandas** da aba "Clientes" do módulo Demandas. Os tooltips das colunas **Atrasadas** e **Urgentes** já existem e funcionam — serão mantidos como estão.
+Eliminar a tela intermediária (Kanban simples do cliente) em **Clientes/Posts**. Ao clicar num cliente, abrir direto a tela **Projeto Completo**, com as abas reorganizadas e a Visão Geral exibindo apenas os painéis-resumo de Posts e Demandas Diárias lado a lado.
 
-## Escopo
+## Mudanças de navegação
 
-Editar apenas `src/components/demandas/ClientesDemandasTable.tsx`. Sem mudanças no backend, store, ou contadores.
+1. **Rota `/clientes/:clienteId`** (`src/App.tsx`): trocar o componente de `ClienteDetalhe` para `ProjetoCliente`. A rota `/clientes/:clienteId/projeto` continua funcionando (mesmo componente) para compatibilidade com links existentes (`Contratos.tsx`, `Alertas.tsx`, `ClientesGeralTable.tsx`, `Clientes.tsx`).
+2. **`ClienteDetalhe.tsx`**: deixar o arquivo no projeto (sem deletar, conforme pedido), mas remover do roteamento principal. Não fica mais acessível a partir do clique no cliente.
+3. Os links existentes que apontam para `/clientes/${id}` agora abrem direto o Projeto Completo — sem alterações nas tabelas.
 
-## Mudanças
+## Ajustes na tela Projeto Completo (`src/pages/ProjetoCliente.tsx`)
 
-### 1. Agregar dados extras por cliente (no `useMemo`)
+### Breadcrumb
+- Atualizar para: `Clientes / {Nome do Cliente} / Projeto Completo`.
+- Remover o botão "Voltar" que ia para `/clientes/:id` (rota antiga). "Voltar" passa a ir para `/clientes`.
 
-Estender o objeto agregador para também guardar:
-- `todasDemandas: Demanda[]` — todas as demandas filtradas do cliente
-- `demandasPorResponsavel: Map<string, Demanda[]>` — demandas atribuídas a cada responsável
+### Aba "Visão Geral" — simplificar
+A versão atual da Visão Geral repete o Kanban de Posts, o Kanban de Demandas e a Timeline. Reduzir para **apenas o resumo executivo**:
 
-Preenchido no mesmo loop `filtradas.forEach((d) => …)` que já existe.
+- Manter os 2 cards lado a lado (`grid md:grid-cols-2`) já existentes:
+  - **Painel Posts**: Total / Pendentes / Atrasados + AvatarStack dos responsáveis dos posts.
+  - **Painel Demandas Diárias**: Total / Pendentes / Atrasadas + AvatarStack dos responsáveis das demandas.
+- **Remover** desta aba: a seção `Posts` (PostsKanbanCliente), a seção `Demandas Diárias` (ProjetoKanban) e a seção `Atividades` (TimelineAtividades). Esses conteúdos passam a viver exclusivamente nas suas próprias abas.
 
-### 2. Tooltip na coluna "Total"
+### Aba "Posts"
+- Substituir o card placeholder atual ("Abrir Kanban de Posts" + ResumoPosts) pelo **Kanban completo do cliente**: renderizar `<PostsKanbanCliente />` diretamente, que já traz filtros, busca, meses, responsáveis e colunas (Planejamento, Criar, Revisar, Agendado, Postado, Atrasado).
+- Remover o botão "Abrir Kanban de Posts" (não há mais para onde ir).
 
-Envolver o número total em `<Tooltip>`:
-- Trigger: o `<span>` com o número (cursor-help, stopPropagation no clique).
-- Content: lista resumida usando o componente `DemandasTooltipList` já existente, com nova `variant="total"` (borda neutra `border-border`).
-- Título: `"X demanda cadastrada"` ou `"X demandas cadastradas"`.
-- Se `total === 0`: não renderizar tooltip (mantém o número simples).
+### Aba "Demandas"
+- Mantém como está hoje (`DemandasTab` com `ProjetoKanban` + botão Nova Demanda + dialogs).
 
-### 3. Tooltip nos avatares dos responsáveis
+### Aba "Atividades"
+- Mantém `AtividadesTab` (linha do tempo já consolida posts e demandas com identificação de origem via `AcaoIcone`).
 
-Substituir o `AvatarStack` simples por uma versão envolvendo cada avatar em um `Tooltip` individual:
-- Criar um wrapper local `ResponsaveisComTooltip` que renderiza avatares (mantendo o estilo "stack" via classes negativas de margem) e, em cada um, anexa um Tooltip com:
-  - Nome completo do responsável.
-  - Quantidade de demandas atribuídas a ele naquele cliente (`X demanda atribuída` / `X demandas atribuídas`).
-- Manter o limite visual `max={4}` com indicador `+N` (também com tooltip listando os nomes restantes).
+### Aba "Responsáveis" e "Relatórios"
+- Sem alteração.
 
-### 4. Reuso e consistência
+## Separação de dados (já correta, apenas garantir)
 
-- Continuar usando `TooltipProvider delayDuration={150}` que já envolve a tabela.
-- `TooltipContent` com `side="left"` (ou `top` para Total, evitando cortar pela borda direita) e `className="p-3"`.
-- Limite de 6 itens na lista (já implementado via `DemandasTooltipList`), com sufixo "… e mais N".
+- **Posts**: `cards.filter(c => c.cliente_id === id)` e `c.responsaveis`.
+- **Demandas**: `demandas.filter(d => d.cliente_id === id)` e `getResponsaveisIds(d)`.
+- Nenhuma mistura entre os dois conjuntos. `cliente.responsaveis` continua só informativo.
 
-## Fora de escopo
+## Detalhes técnicos
 
-- Coluna Atrasadas/Urgentes (já funcionando).
-- Ícones de alerta extras / "sem responsável" / "sem prazo" — não há badges desses na tabela atual; podem ser adicionados em ticket separado se solicitado.
-- Mobile/touch: o Radix Tooltip já suporta foco/touch básico; sem ajustes adicionais.
+Arquivos a editar:
+- `src/App.tsx` — trocar componente da rota `/clientes/:clienteId` para `ProjetoCliente`; manter import de `ClienteDetalhe` removido (ou deixar não usado). Manter rota `/clientes/:clienteId/projeto` apontando para `ProjetoCliente`.
+- `src/pages/ProjetoCliente.tsx`:
+  - Breadcrumb: remover botão Voltar antigo / ajustar texto para "Projeto Completo".
+  - `VisaoGeral`: deletar as 3 `<section>` extras (Posts kanban, Demandas kanban, Atividades) e os imports/estado relacionados que ficarem órfãos (`novaDemandaOpen`, `demandaSelecionada`, `NovaDemandaDialog`, `DemandaDetalheDialog`, `ProjetoKanban`, `PostsKanbanCliente`, `TimelineAtividades` se não usados em outro lugar do componente). `TimelineAtividades` continua sendo usada por `AtividadesTab`, então mantém.
+  - Aba `posts`: substituir conteúdo por `<PostsKanbanCliente />`. Remover `ResumoPosts` se não for reutilizado.
 
-## Validação
+Sem mudanças em banco de dados, stores, ou dados de posts/demandas/atividades.
 
-- Cliente com Total=2/Atrasadas=1/Urgentes=1: hover em Total mostra as 2; Atrasadas mostra 1; Urgentes mostra 1.
-- Cliente sem demandas: número "0" sem tooltip.
-- Hover em avatar: mostra nome + contagem do responsável naquele cliente.
+## Validação manual
+
+1. Em `/clientes`, clicar num cliente → abre direto `/clientes/:id` renderizando Projeto Completo.
+2. Não aparece mais o botão "Ver projeto completo".
+3. Aba Visão Geral mostra só os 2 painéis-resumo lado a lado.
+4. Aba Posts mostra o Kanban completo de posts.
+5. Aba Demandas mostra apenas o Kanban de demandas diárias.
+6. Aba Atividades mostra a timeline.
+7. Responsáveis de Posts e Demandas seguem separados.
+8. Links em `/contratos`, `/alertas` e tabela "Geral" continuam funcionando (vão direto para Projeto Completo).
