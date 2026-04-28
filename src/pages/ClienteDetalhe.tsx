@@ -1,6 +1,7 @@
 import { useParams, Link, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard } from "lucide-react";
 import { useCRM } from "@/store/crm";
+import { useDemandas, useDemandasBootstrap, getResponsaveisIds } from "@/store/demandas";
 import { AvatarStack } from "@/components/AvatarStack";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
