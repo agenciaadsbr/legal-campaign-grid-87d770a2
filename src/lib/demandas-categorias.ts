@@ -5,16 +5,22 @@ export type DemandaCategoria =
   | "TrafegoPago"
   | "Tecnologia"
   | "Suporte"
-  | "Personalizado";
+  | "Personalizado"
+  | "IAAtendimento"
+  | "Briefing"
+  | "Planejamento";
 
 export const CATEGORIA_LABEL: Record<DemandaCategoria, string> = {
   Designer: "Designer",
-  EditorVideo: "Editor de Vídeo",
-  LandingPage: "Landing Page",
+  EditorVideo: "Vídeo",
+  LandingPage: "Landing Page / Site",
   TrafegoPago: "Tráfego Pago",
   Tecnologia: "Tecnologia",
   Suporte: "Suporte",
-  Personalizado: "Personalizado",
+  Personalizado: "Urgência / Outro",
+  IAAtendimento: "IA / Atendimento",
+  Briefing: "Briefing",
+  Planejamento: "Planejamento",
 };
 
 export const CATEGORIA_SUBTIPOS: Record<DemandaCategoria, string[]> = {
@@ -26,25 +32,39 @@ export const CATEGORIA_SUBTIPOS: Record<DemandaCategoria, string[]> = {
     "Banner",
   ],
   EditorVideo: [
-    "Vídeo anúncio",
-    "Edição vídeo post",
+    "Vídeo para anúncio",
+    "Vídeo orgânico/feed",
+    "Vídeo enviado pelo cliente",
+    "Vídeo IA com imagem do cliente",
+    "Vídeo IA com personagem da agência",
     "Edição reels",
     "Corte vídeo cliente",
   ],
   LandingPage: [
+    "Lovable",
+    "Wix",
+    "WordPress",
     "Criar landing page",
     "Ajustar landing page",
-    "Revisar landing page",
+    "Correção de formulário",
+    "Ajuste de domínio",
+    "Pixel/conversão",
+    "Alteração texto/design",
   ],
   TrafegoPago: [
-    "Criar campanha Meta",
-    "Criar campanha Google",
+    "Meta Ads",
+    "Google Ads",
+    "Criar campanha",
+    "Ajustar campanha",
+    "Subir criativo",
+    "Corrigir anúncio",
+    "Revisar segmentação",
+    "Ajuste de conversão/pixel",
     "Otimizar campanha",
-    "Subir campanha",
     "Relatório",
     "Recarga saldo",
   ],
-  Tecnologia: ["CRM", "IA", "Integração", "Wix", "Sistema"],
+  Tecnologia: ["CRM", "Integração", "Wix", "Sistema"],
   Suporte: [
     "Ajuste cliente",
     "Alteração urgente",
@@ -53,6 +73,18 @@ export const CATEGORIA_SUBTIPOS: Record<DemandaCategoria, string[]> = {
     "Reunião apresentação",
   ],
   Personalizado: ["Outro"],
+  IAAtendimento: [
+    "Agente de IA",
+    "Automação WhatsApp",
+    "Integração",
+    "Ajuste de atendimento",
+    "Prompt",
+    "Fluxo",
+    "Botões",
+    "Mensagens automáticas",
+  ],
+  Briefing: ["Reunião inicial", "Atualização", "Revisão", "Outro"],
+  Planejamento: ["Mensal", "Trimestral", "Campanha", "Lançamento", "Outro"],
 };
 
 export const CATEGORIAS: DemandaCategoria[] = [
@@ -60,6 +92,9 @@ export const CATEGORIAS: DemandaCategoria[] = [
   "EditorVideo",
   "LandingPage",
   "TrafegoPago",
+  "IAAtendimento",
+  "Briefing",
+  "Planejamento",
   "Tecnologia",
   "Suporte",
   "Personalizado",

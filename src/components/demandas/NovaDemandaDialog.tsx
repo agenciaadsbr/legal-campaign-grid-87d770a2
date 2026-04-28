@@ -37,9 +37,29 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   defaultClienteId?: string;
+  defaultCategoria?: DemandaCategoria;
+  defaultSubtipo?: string;
+  /** Quando true, esconde o seletor de cliente (usa o defaultClienteId fixado). */
+  lockCliente?: boolean;
+  /** Quando true, esconde o seletor de categoria. */
+  lockCategoria?: boolean;
+  /** Título do modal. Default: "Nova Tarefa". */
+  titulo?: string;
+  /** Callback após criar com sucesso (recebe id e categoria). */
+  onCreated?: (id: string, categoria: DemandaCategoria) => void;
 }
 
-export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Props) {
+export function NovaDemandaDialog({
+  open,
+  onOpenChange,
+  defaultClienteId,
+  defaultCategoria,
+  defaultSubtipo,
+  lockCliente,
+  lockCategoria,
+  titulo: tituloModal,
+  onCreated,
+}: Props) {
   const { clientes, responsaveis, cards } = useCRM();
   const createDemanda = useDemandas((s) => s.createDemanda);
 
@@ -50,8 +70,16 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
   }, [open, defaultClienteId]);
 
   const [titulo, setTitulo] = useState("");
-  const [categoria, setCategoria] = useState<DemandaCategoria>("Designer");
-  const [subtipo, setSubtipo] = useState<string>("");
+  const [categoria, setCategoria] = useState<DemandaCategoria>(defaultCategoria ?? "Personalizado");
+  const [subtipo, setSubtipo] = useState<string>(defaultSubtipo ?? "");
+
+  useEffect(() => {
+    if (open) {
+      if (defaultCategoria) setCategoria(defaultCategoria);
+      if (defaultSubtipo !== undefined) setSubtipo(defaultSubtipo);
+    }
+  }, [open, defaultCategoria, defaultSubtipo]);
+
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>([]);
   const [respManualmenteAlterado, setRespManualmenteAlterado] = useState(false);
 
@@ -74,10 +102,10 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
   const [saving, setSaving] = useState(false);
 
   const reset = () => {
-    setClienteId("");
+    setClienteId(defaultClienteId ?? "");
     setTitulo("");
-    setCategoria("Designer");
-    setSubtipo("");
+    setCategoria(defaultCategoria ?? "Personalizado");
+    setSubtipo(defaultSubtipo ?? "");
     setResponsaveisIds([]);
     setRespManualmenteAlterado(false);
     setPrioridade("Media");
@@ -102,6 +130,7 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
     });
     setSaving(false);
     if (id) {
+      onCreated?.(id, categoria);
       reset();
       onOpenChange(false);
     }
@@ -118,38 +147,48 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
 
   const subtipos = CATEGORIA_SUBTIPOS[categoria] ?? [];
 
+  const showCliente = !lockCliente && !defaultClienteId;
+  const showCategoria = !lockCategoria;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Nova Demanda</DialogTitle>
+          <DialogTitle>{tituloModal ?? "Nova Tarefa"}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <Label>Cliente *</Label>
-            <Select value={cliente_id} onValueChange={setClienteId}>
-              <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-              <SelectContent>
-                {clientes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {showCliente && (
+            <div className="col-span-2">
+              <Label>Cliente *</Label>
+              <Select value={cliente_id} onValueChange={setClienteId}>
+                <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                <SelectContent>
+                  {clientes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {showCategoria && (
+            <div className="col-span-2">
+              <Label>Categoria *</Label>
+              <Select value={categoria} onValueChange={(v) => { setCategoria(v as DemandaCategoria); setSubtipo(""); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS.map((c) => (
+                    <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                A tarefa aparecerá apenas na aba <strong>{CATEGORIA_LABEL[categoria]}</strong>.
+              </p>
+            </div>
+          )}
           <div className="col-span-2">
             <Label>Título da tarefa *</Label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
-          </div>
-          <div>
-            <Label>Categoria</Label>
-            <Select value={categoria} onValueChange={(v) => { setCategoria(v as DemandaCategoria); setSubtipo(""); }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIAS.map((c) => (
-                  <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <div>
             <Label>Subtipo</Label>

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCRM } from "@/store/crm";
 import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useAtividades, useAtividadesBootstrap } from "@/store/atividades";
+import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao";
 import { PostsKanbanCliente } from "@/components/clientes/PostsKanbanCliente";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,9 +11,10 @@ import { AvatarStack } from "@/components/AvatarStack";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
-import { ProjetoKanban } from "@/components/demandas/ProjetoKanban";
 import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
-import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
+import { AreaTab } from "@/components/projeto/AreaTab";
+import { VisaoGeralCard } from "@/components/projeto/VisaoGeralCard";
+import { DocumentacaoTab } from "@/components/projeto/DocumentacaoTab";
 import {
   Select,
   SelectContent,
@@ -23,19 +25,24 @@ import {
 import {
   ArrowLeft,
   LayoutGrid,
-  ListChecks,
   Activity,
   Users,
   BarChart3,
-  AlertTriangle,
   FileText,
-  ClipboardList,
   Plus,
   MessageSquare,
   Paperclip,
   Play,
   CheckCircle2,
   ArrowRight,
+  Video,
+  Megaphone,
+  Globe,
+  Bot,
+  FolderOpen,
+  ClipboardList,
+  CalendarRange,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -49,17 +56,66 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { CATEGORIA_LABEL, DemandaCategoria } from "@/lib/demandas-categorias";
+
+// ===== Filtros canônicos por área =====
+const URGENCIA_OUTRO_CATS: DemandaCategoria[] = [
+  "Suporte",
+  "Personalizado",
+  "Designer",
+  "Tecnologia",
+];
+
+function filtrarPorArea(demandas: Demanda[], area: string): Demanda[] {
+  switch (area) {
+    case "videos":
+      return demandas.filter((d) => d.categoria === "EditorVideo");
+    case "trafego":
+      return demandas.filter((d) => d.categoria === "TrafegoPago");
+    case "lp":
+      return demandas.filter((d) => d.categoria === "LandingPage");
+    case "ia":
+      return demandas.filter((d) => d.categoria === "IAAtendimento");
+    case "briefing":
+      return demandas.filter((d) => d.categoria === "Briefing");
+    case "planejamento":
+      return demandas.filter((d) => d.categoria === "Planejamento");
+    case "urgencias":
+      return demandas.filter(
+        (d) => URGENCIA_OUTRO_CATS.includes(d.categoria) || d.prioridade === "Urgente",
+      );
+    default:
+      return demandas;
+  }
+}
+
+// Mapeia categoria -> aba
+function categoriaParaAba(cat: DemandaCategoria): string {
+  switch (cat) {
+    case "EditorVideo": return "videos";
+    case "TrafegoPago": return "trafego";
+    case "LandingPage": return "lp";
+    case "IAAtendimento": return "ia";
+    case "Briefing": return "briefing";
+    case "Planejamento": return "planejamento";
+    default: return "urgencias";
+  }
+}
 
 export default function ProjetoCliente() {
   const { clienteId } = useParams<{ clienteId: string }>();
   const navigate = useNavigate();
   useDemandasBootstrap();
   useAtividadesBootstrap(clienteId);
+  useDocumentacaoBootstrap();
 
   const { clientes, cards, responsaveis } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
+  const docs = useDocumentacao((s) => s.itens.filter((i) => i.cliente_id === clienteId));
   const cliente = clientes.find((c) => c.id === clienteId);
+  const [tab, setTab] = useState("visao");
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
+  const [novoDocOpen, setNovoDocOpen] = useState(false);
 
   if (!cliente) {
     return (
@@ -69,15 +125,6 @@ export default function ProjetoCliente() {
 
   const cardsCli = cards.filter((c) => c.cliente_id === clienteId);
   const demandasCli = demandas.filter((d) => d.cliente_id === clienteId);
-
-  // Responsáveis SEPARADOS por origem (Posts / Demandas) — nunca cliente.responsaveis
-  const respsPostsIds = new Set<string>();
-  cardsCli.forEach((c) => (c.responsaveis ?? []).forEach((r: string) => respsPostsIds.add(r)));
-  const respsPosts = responsaveis.filter((r) => respsPostsIds.has(r.id));
-
-  const respsDemandasIds = new Set<string>();
-  demandasCli.forEach((d) => getResponsaveisIds(d).forEach((r) => respsDemandasIds.add(r)));
-  const respsDemandas = responsaveis.filter((r) => respsDemandasIds.has(r.id));
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
@@ -111,7 +158,7 @@ export default function ProjetoCliente() {
               <StatusClienteBadge status={cliente.status_global} size="sm" />
             </div>
             <p className="text-xs text-muted-foreground">
-              Hub de projeto · posts, demandas, atividades e relatórios
+              Hub de projeto · tarefas organizadas por área
             </p>
           </div>
         </div>
@@ -121,35 +168,31 @@ export default function ProjetoCliente() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="visao">
-        <TabsList>
-          <TabsTrigger value="visao" className="gap-1">
-            <LayoutGrid className="h-3.5 w-3.5" /> Visão Geral
-          </TabsTrigger>
-          <TabsTrigger value="posts" className="gap-1">
-            <FileText className="h-3.5 w-3.5" /> Posts
-          </TabsTrigger>
-          <TabsTrigger value="demandas" className="gap-1">
-            <ClipboardList className="h-3.5 w-3.5" /> Demandas
-          </TabsTrigger>
-          <TabsTrigger value="atividades" className="gap-1">
-            <Activity className="h-3.5 w-3.5" /> Atividades
-          </TabsTrigger>
-          <TabsTrigger value="responsaveis" className="gap-1">
-            <Users className="h-3.5 w-3.5" /> Responsáveis
-          </TabsTrigger>
-          <TabsTrigger value="relatorios" className="gap-1">
-            <BarChart3 className="h-3.5 w-3.5" /> Relatórios
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={setTab}>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-max">
+            <TabsTrigger value="visao" className="gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
+            <TabsTrigger value="posts" className="gap-1"><FileText className="h-3.5 w-3.5" /> Posts</TabsTrigger>
+            <TabsTrigger value="videos" className="gap-1"><Video className="h-3.5 w-3.5" /> Vídeos</TabsTrigger>
+            <TabsTrigger value="trafego" className="gap-1"><Megaphone className="h-3.5 w-3.5" /> Tráfego Pago</TabsTrigger>
+            <TabsTrigger value="lp" className="gap-1"><Globe className="h-3.5 w-3.5" /> LP / Site</TabsTrigger>
+            <TabsTrigger value="ia" className="gap-1"><Bot className="h-3.5 w-3.5" /> IA / Atendimento</TabsTrigger>
+            <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Documentação</TabsTrigger>
+            <TabsTrigger value="briefing" className="gap-1"><ClipboardList className="h-3.5 w-3.5" /> Briefing</TabsTrigger>
+            <TabsTrigger value="planejamento" className="gap-1"><CalendarRange className="h-3.5 w-3.5" /> Planejamento</TabsTrigger>
+            <TabsTrigger value="atividades" className="gap-1"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
+            <TabsTrigger value="responsaveis" className="gap-1"><Users className="h-3.5 w-3.5" /> Responsáveis</TabsTrigger>
+            <TabsTrigger value="relatorios" className="gap-1"><BarChart3 className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ============== VISÃO GERAL ============== */}
         <TabsContent value="visao" className="mt-4">
           <VisaoGeral
-            cliente={cliente}
             cardsCli={cardsCli}
             demandasCli={demandasCli}
-            clienteId={clienteId!}
+            docsCli={docs}
+            onNavegar={setTab}
           />
         </TabsContent>
 
@@ -158,128 +201,250 @@ export default function ProjetoCliente() {
           <PostsKanbanCliente />
         </TabsContent>
 
-        {/* ============== DEMANDAS ============== */}
-        <TabsContent value="demandas" className="mt-4">
-          <DemandasTab clienteId={clienteId!} demandasCli={demandasCli} />
+        {/* ============== VÍDEOS ============== */}
+        <TabsContent value="videos" className="mt-4">
+          <AreaTab
+            titulo="Vídeos"
+            icone={Video}
+            clienteId={clienteId!}
+            demandas={filtrarPorArea(demandasCli, "videos")}
+            categoria="EditorVideo"
+          />
+        </TabsContent>
+
+        {/* ============== TRÁFEGO PAGO ============== */}
+        <TabsContent value="trafego" className="mt-4">
+          <AreaTab
+            titulo="Tráfego Pago"
+            icone={Megaphone}
+            clienteId={clienteId!}
+            demandas={filtrarPorArea(demandasCli, "trafego")}
+            categoria="TrafegoPago"
+          />
+        </TabsContent>
+
+        {/* ============== LP / SITE ============== */}
+        <TabsContent value="lp" className="mt-4">
+          <AreaTab
+            titulo="Landing Page / Site"
+            icone={Globe}
+            clienteId={clienteId!}
+            demandas={filtrarPorArea(demandasCli, "lp")}
+            categoria="LandingPage"
+          />
+        </TabsContent>
+
+        {/* ============== IA / ATENDIMENTO ============== */}
+        <TabsContent value="ia" className="mt-4">
+          <AreaTab
+            titulo="IA / Atendimento"
+            icone={Bot}
+            clienteId={clienteId!}
+            demandas={filtrarPorArea(demandasCli, "ia")}
+            categoria="IAAtendimento"
+          />
+        </TabsContent>
+
+        {/* ============== DOCUMENTAÇÃO E ACESSOS ============== */}
+        <TabsContent value="documentacao" className="mt-4">
+          <DocumentacaoTab
+            clienteId={clienteId!}
+            novoOpenExterno={novoDocOpen}
+            onNovoOpenChangeExterno={setNovoDocOpen}
+          />
+        </TabsContent>
+
+        {/* ============== BRIEFING ============== */}
+        <TabsContent value="briefing" className="mt-4">
+          <AreaTab
+            titulo="Briefing"
+            icone={ClipboardList}
+            clienteId={clienteId!}
+            demandas={filtrarPorArea(demandasCli, "briefing")}
+            categoria="Briefing"
+            emptyHint="Registre aqui o briefing do cliente: reunião inicial, atualizações e revisões."
+          />
+        </TabsContent>
+
+        {/* ============== PLANEJAMENTO ============== */}
+        <TabsContent value="planejamento" className="mt-4">
+          <AreaTab
+            titulo="Planejamento"
+            icone={CalendarRange}
+            clienteId={clienteId!}
+            demandas={filtrarPorArea(demandasCli, "planejamento")}
+            categoria="Planejamento"
+            emptyHint="Crie tarefas de planejamento mensal, trimestral, campanhas e lançamentos."
+          />
         </TabsContent>
 
         {/* ============== ATIVIDADES ============== */}
         <TabsContent value="atividades" className="mt-4">
-          <AtividadesTab clienteId={clienteId!} />
+          <AtividadesTab clienteId={clienteId!} demandasCli={demandasCli} />
         </TabsContent>
 
         {/* ============== RESPONSÁVEIS ============== */}
         <TabsContent value="responsaveis" className="mt-4">
-          <ResponsaveisTab
-            respsPosts={respsPosts}
-            respsDemandas={respsDemandas}
-            cardsCli={cardsCli}
-            demandasCli={demandasCli}
-          />
+          <ResponsaveisTab cardsCli={cardsCli} demandasCli={demandasCli} />
         </TabsContent>
 
         {/* ============== RELATÓRIOS ============== */}
         <TabsContent value="relatorios" className="mt-4">
-          <RelatoriosTab
-            cardsCli={cardsCli}
-            demandasCli={demandasCli}
-            respsPosts={respsPosts}
-            respsDemandas={respsDemandas}
-          />
+          <RelatoriosTab cardsCli={cardsCli} demandasCli={demandasCli} />
         </TabsContent>
       </Tabs>
 
+      {/* Modal global "Adicionar Tarefa" — cliente fixado, escolhe categoria */}
       <NovaDemandaDialog
         open={novaTarefaOpen}
         onOpenChange={setNovaTarefaOpen}
         defaultClienteId={clienteId!}
+        lockCliente
+        titulo="Nova Tarefa"
+        onCreated={(_id, categoria) => {
+          // Após criar, leva o usuário para a aba correspondente
+          setTab(categoriaParaAba(categoria));
+        }}
       />
     </div>
   );
 }
 
 // =====================================================
-// VISÃO GERAL
+// VISÃO GERAL — 9 cards compactos com "Ver detalhes"
 // =====================================================
 function VisaoGeral({
-  cliente,
   cardsCli,
   demandasCli,
-  clienteId,
+  docsCli,
+  onNavegar,
 }: {
-  cliente: any;
   cardsCli: any[];
   demandasCli: Demanda[];
-  clienteId: string;
+  docsCli: any[];
+  onNavegar: (tab: string) => void;
 }) {
   const { responsaveis } = useCRM();
 
-  // Métricas POSTS — só de cards
+  const respsDe = (lista: Demanda[]) => {
+    const ids = new Set<string>();
+    lista.forEach((d) => getResponsaveisIds(d).forEach((r) => ids.add(r)));
+    return responsaveis.filter((r) => ids.has(r.id));
+  };
+
+  // Posts (vem de cards)
   const postsTotal = cardsCli.length;
-  const postsPendentes = cardsCli.filter((c) => c.status_card !== "Postado").length;
-  const postsAtrasados = cardsCli.filter((c) => c.status_card === "Atrasado").length;
+  const postsPend = cardsCli.filter((c) => c.status_card !== "Postado").length;
+  const postsAtras = cardsCli.filter((c) => c.status_card === "Atrasado").length;
   const respsPostsIds = new Set<string>();
   cardsCli.forEach((c) => (c.responsaveis ?? []).forEach((r: string) => respsPostsIds.add(r)));
   const respsPosts = responsaveis.filter((r) => respsPostsIds.has(r.id));
 
-  // Métricas DEMANDAS — só de demandas
-  const demTotal = demandasCli.length;
-  const demPendentes = demandasCli.filter(
-    (d) => !["Concluido", "Entregue"].includes(d.status),
-  ).length;
-  const demAtrasadas = demandasCli.filter((d) => d.status === "Atrasado").length;
-  const respsDemIds = new Set<string>();
-  demandasCli.forEach((d) => getResponsaveisIds(d).forEach((r) => respsDemIds.add(r)));
-  const respsDem = responsaveis.filter((r) => respsDemIds.has(r.id));
+  const calcular = (lista: Demanda[]) => ({
+    total: lista.length,
+    pendentes: lista.filter((d) => !["Concluido", "Entregue"].includes(d.status)).length,
+    atrasadas: lista.filter((d) => d.status === "Atrasado").length,
+    resps: respsDe(lista),
+  });
+
+  const videos = calcular(filtrarPorArea(demandasCli, "videos"));
+  const trafego = calcular(filtrarPorArea(demandasCli, "trafego"));
+  const lp = calcular(filtrarPorArea(demandasCli, "lp"));
+  const ia = calcular(filtrarPorArea(demandasCli, "ia"));
+  const briefing = calcular(filtrarPorArea(demandasCli, "briefing"));
+  const planejamento = calcular(filtrarPorArea(demandasCli, "planejamento"));
+  const urgencias = calcular(filtrarPorArea(demandasCli, "urgencias"));
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Posts</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <Stat label="Total" value={postsTotal} />
-            <Stat label="Pendentes" value={postsPendentes} warn={postsPendentes > 0} />
-            <Stat label="Atrasados" value={postsAtrasados} danger={postsAtrasados > 0} />
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-muted-foreground">Responsáveis:</span>
-            {respsPosts.length > 0 ? (
-              <AvatarStack responsaveis={respsPosts} size="xs" max={6} />
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Demandas Diárias</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <Stat label="Total" value={demTotal} />
-            <Stat label="Pendentes" value={demPendentes} warn={demPendentes > 0} />
-            <Stat label="Atrasadas" value={demAtrasadas} danger={demAtrasadas > 0} />
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-muted-foreground">Responsáveis:</span>
-            {respsDem.length > 0 ? (
-              <AvatarStack responsaveis={respsDem} size="xs" max={6} />
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      <VisaoGeralCard
+        titulo="Posts"
+        icone={FileText}
+        total={postsTotal}
+        pendentes={postsPend}
+        atrasadas={postsAtras}
+        responsaveis={respsPosts}
+        onVerDetalhes={() => onNavegar("posts")}
+      />
+      <VisaoGeralCard
+        titulo="Vídeos"
+        icone={Video}
+        total={videos.total}
+        pendentes={videos.pendentes}
+        atrasadas={videos.atrasadas}
+        responsaveis={videos.resps}
+        onVerDetalhes={() => onNavegar("videos")}
+      />
+      <VisaoGeralCard
+        titulo="Tráfego Pago"
+        icone={Megaphone}
+        total={trafego.total}
+        pendentes={trafego.pendentes}
+        atrasadas={trafego.atrasadas}
+        responsaveis={trafego.resps}
+        onVerDetalhes={() => onNavegar("trafego")}
+      />
+      <VisaoGeralCard
+        titulo="LP / Site"
+        icone={Globe}
+        total={lp.total}
+        pendentes={lp.pendentes}
+        atrasadas={lp.atrasadas}
+        responsaveis={lp.resps}
+        onVerDetalhes={() => onNavegar("lp")}
+      />
+      <VisaoGeralCard
+        titulo="IA / Atendimento"
+        icone={Bot}
+        total={ia.total}
+        pendentes={ia.pendentes}
+        atrasadas={ia.atrasadas}
+        responsaveis={ia.resps}
+        onVerDetalhes={() => onNavegar("ia")}
+      />
+      <VisaoGeralCard
+        titulo="Documentação"
+        icone={FolderOpen}
+        total={docsCli.length}
+        pendentes={0}
+        atrasadas={0}
+        responsaveis={[]}
+        onVerDetalhes={() => onNavegar("documentacao")}
+      />
+      <VisaoGeralCard
+        titulo="Briefing"
+        icone={ClipboardList}
+        total={briefing.total}
+        pendentes={briefing.pendentes}
+        atrasadas={briefing.atrasadas}
+        responsaveis={briefing.resps}
+        onVerDetalhes={() => onNavegar("briefing")}
+      />
+      <VisaoGeralCard
+        titulo="Planejamento"
+        icone={CalendarRange}
+        total={planejamento.total}
+        pendentes={planejamento.pendentes}
+        atrasadas={planejamento.atrasadas}
+        responsaveis={planejamento.resps}
+        onVerDetalhes={() => onNavegar("planejamento")}
+      />
+      <VisaoGeralCard
+        titulo="Urgências / Outros"
+        icone={AlertTriangle}
+        total={urgencias.total}
+        pendentes={urgencias.pendentes}
+        atrasadas={urgencias.atrasadas}
+        responsaveis={urgencias.resps}
+        onVerDetalhes={() => onNavegar("urgencias" === "urgencias" ? "atividades" : "atividades")}
+      />
     </section>
   );
 }
 
+// =====================================================
+// Helpers visuais
+// =====================================================
 function AcaoIcone({ tipo, acao }: { tipo: string; acao: string }) {
   const cls = "h-3.5 w-3.5 shrink-0 mt-0.5";
   if (acao === "comentario") return <MessageSquare className={cn(cls, "text-blue-500")} />;
@@ -318,71 +483,28 @@ function Stat({
   );
 }
 
-function ResumoPosts({
-  cardsCli,
-  className,
-}: {
-  cardsCli: any[];
-  className?: string;
-}) {
-  const grupos = ["Planejamento", "Criar", "Revisar", "Agendado", "Postado", "Atrasado"];
-  return (
-    <div className={cn("grid grid-cols-2 md:grid-cols-6 gap-2", className)}>
-      {grupos.map((g) => {
-        const n = cardsCli.filter((c) => c.status_card === g).length;
-        return (
-          <Card key={g}>
-            <CardContent className="p-3">
-              <div className="text-[10px] uppercase text-muted-foreground">
-                {g}
-              </div>
-              <div className="text-xl font-bold">{n}</div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
+// =====================================================
+// ATIVIDADES — badge identifica área de origem
+// =====================================================
+function badgeAreaPorCategoria(cat: DemandaCategoria): { label: string; cls: string } {
+  switch (cat) {
+    case "EditorVideo": return { label: "VÍDEO", cls: "border-purple-500/40 text-purple-500" };
+    case "TrafegoPago": return { label: "TRÁFEGO", cls: "border-emerald-500/40 text-emerald-500" };
+    case "LandingPage": return { label: "LP", cls: "border-blue-500/40 text-blue-500" };
+    case "IAAtendimento": return { label: "IA", cls: "border-cyan-500/40 text-cyan-500" };
+    case "Briefing": return { label: "BRIEFING", cls: "border-amber-500/40 text-amber-500" };
+    case "Planejamento": return { label: "PLANEJ.", cls: "border-indigo-500/40 text-indigo-500" };
+    default: return { label: "URGÊNCIA", cls: "border-destructive/40 text-destructive" };
+  }
 }
 
-// =====================================================
-// DEMANDAS
-// =====================================================
-function DemandasTab({
+function AtividadesTab({
   clienteId,
   demandasCli,
 }: {
   clienteId: string;
   demandasCli: Demanda[];
 }) {
-  const [novaOpen, setNovaOpen] = useState(false);
-  const [selecionada, setSelecionada] = useState<Demanda | null>(null);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button size="sm" onClick={() => setNovaOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Nova Demanda
-        </Button>
-      </div>
-      <ProjetoKanban demandas={demandasCli} onOpen={setSelecionada} />
-      <NovaDemandaDialog
-        open={novaOpen}
-        onOpenChange={setNovaOpen}
-        defaultClienteId={clienteId}
-      />
-      <DemandaDetalheDialog
-        demanda={selecionada}
-        onOpenChange={(v) => !v && setSelecionada(null)}
-      />
-    </div>
-  );
-}
-
-// =====================================================
-// ATIVIDADES (timeline paginada — reutilizada na Visão Geral)
-// =====================================================
-function TimelineAtividades({ clienteId }: { clienteId: string }) {
   const itens = useAtividades((s) => s.porCliente[clienteId]);
   const loading = useAtividades((s) => s.loading[clienteId]);
   const hasMore = useAtividades((s) => s.hasMore[clienteId]);
@@ -390,6 +512,11 @@ function TimelineAtividades({ clienteId }: { clienteId: string }) {
   const { responsaveis } = useCRM();
 
   const lista = itens ?? [];
+  const demMap = useMemo(() => {
+    const m = new Map<string, Demanda>();
+    demandasCli.forEach((d) => m.set(d.id, d));
+    return m;
+  }, [demandasCli]);
 
   const grupos = useMemo(() => {
     const map = new Map<string, typeof lista>();
@@ -428,13 +555,22 @@ function TimelineAtividades({ clienteId }: { clienteId: string }) {
             <ul className="space-y-1.5 border-l-2 border-border pl-3 ml-1">
               {lista.map((a) => {
                 const autor = responsaveis.find((r) => r.id === a.usuario_id);
+                let badge: { label: string; cls: string };
+                if (a.tipo === "post") {
+                  badge = { label: "POST", cls: "border-primary/40 text-primary" };
+                } else {
+                  const dem = a.referencia_id ? demMap.get(a.referencia_id) : undefined;
+                  badge = dem
+                    ? badgeAreaPorCategoria(dem.categoria)
+                    : { label: "TAREFA", cls: "border-border text-muted-foreground" };
+                }
                 return (
                   <li key={a.id} className="flex items-start gap-2 text-xs">
                     <AcaoIcone tipo={a.tipo} acao={a.acao} />
                     <div className="flex-1">
                       <div>
-                        <Badge variant="outline" className="text-[9px] mr-1.5 h-4 px-1">
-                          {a.tipo === "post" ? "POST" : "DEMANDA"}
+                        <Badge variant="outline" className={cn("text-[9px] mr-1.5 h-4 px-1", badge.cls)}>
+                          {badge.label}
                         </Badge>
                         {a.descricao}
                       </div>
@@ -467,297 +603,226 @@ function TimelineAtividades({ clienteId }: { clienteId: string }) {
   );
 }
 
-function AtividadesTab({ clienteId }: { clienteId: string }) {
-  return <TimelineAtividades clienteId={clienteId} />;
-}
+// =====================================================
+// RESPONSÁVEIS — 8 seções (uma por área + Geral)
+// =====================================================
+const SECOES_RESP = [
+  { key: "posts", titulo: "Responsáveis dos Posts", icone: FileText },
+  { key: "videos", titulo: "Responsáveis dos Vídeos", icone: Video },
+  { key: "trafego", titulo: "Responsáveis do Tráfego", icone: Megaphone },
+  { key: "lp", titulo: "Responsáveis de LP / Site", icone: Globe },
+  { key: "ia", titulo: "Responsáveis de IA / Atendimento", icone: Bot },
+  { key: "briefing", titulo: "Responsáveis de Briefing", icone: ClipboardList },
+  { key: "planejamento", titulo: "Responsáveis de Planejamento", icone: CalendarRange },
+  { key: "urgencias", titulo: "Responsáveis Gerais / Urgências", icone: AlertTriangle },
+] as const;
 
-// =====================================================
-// RESPONSÁVEIS — duas seções separadas (Posts / Demandas)
-// =====================================================
 function ResponsaveisTab({
-  respsPosts,
-  respsDemandas,
   cardsCli,
   demandasCli,
 }: {
-  respsPosts: any[];
-  respsDemandas: any[];
   cardsCli: any[];
   demandasCli: Demanda[];
 }) {
-  const renderEmpty = (msg: string) => (
-    <Card>
-      <CardContent className="p-6 text-center text-sm text-muted-foreground">{msg}</CardContent>
-    </Card>
+  const { responsaveis } = useCRM();
+
+  const renderSecao = (
+    titulo: string,
+    Icone: any,
+    resps: any[],
+    countFn: (rid: string) => { total: number; abertos: number; atrasados: number },
+  ) => (
+    <section className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Icone className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold">{titulo}</h3>
+        <Badge variant="outline" className="text-[10px]">{resps.length}</Badge>
+      </div>
+      {resps.length === 0 ? (
+        <Card>
+          <CardContent className="p-4 text-center text-xs text-muted-foreground">
+            Nenhum responsável atribuído.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {resps.map((r) => {
+            const c = countFn(r.id);
+            return (
+              <Card key={r.id}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-9 w-9 rounded-full text-white text-xs font-semibold flex items-center justify-center"
+                      style={{ backgroundColor: r.cor }}
+                    >
+                      {r.nome.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">{r.nome}</div>
+                      <div className="text-[10px] text-muted-foreground">{r.email}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Stat label="Total" value={c.total} />
+                    <Stat label="Abertos" value={c.abertos} />
+                    <Stat label="Atrasados" value={c.atrasados} danger={c.atrasados > 0} />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
+
+  // Posts
+  const respsPostsIds = new Set<string>();
+  cardsCli.forEach((c) => (c.responsaveis ?? []).forEach((r: string) => respsPostsIds.add(r)));
+  const respsPosts = responsaveis.filter((r) => respsPostsIds.has(r.id));
+  const countPosts = (rid: string) => {
+    const meus = cardsCli.filter((c) => (c.responsaveis ?? []).includes(rid));
+    return {
+      total: meus.length,
+      abertos: meus.filter((c) => c.status_card !== "Postado").length,
+      atrasados: meus.filter((c) => c.status_card === "Atrasado").length,
+    };
+  };
+
+  const respsArea = (area: string) => {
+    const lista = filtrarPorArea(demandasCli, area);
+    const ids = new Set<string>();
+    lista.forEach((d) => getResponsaveisIds(d).forEach((r) => ids.add(r)));
+    return responsaveis.filter((r) => ids.has(r.id));
+  };
+  const countArea = (area: string) => (rid: string) => {
+    const meus = filtrarPorArea(demandasCli, area).filter((d) =>
+      getResponsaveisIds(d).includes(rid),
+    );
+    return {
+      total: meus.length,
+      abertos: meus.filter((d) => !["Concluido", "Entregue"].includes(d.status)).length,
+      atrasados: meus.filter((d) => d.status === "Atrasado").length,
+    };
+  };
 
   return (
     <div className="space-y-6">
-      {/* ====== Responsáveis dos Posts ====== */}
-      <section className="space-y-2">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Responsáveis dos Posts</h3>
-          <Badge variant="outline" className="text-[10px]">{respsPosts.length}</Badge>
-        </div>
-        {respsPosts.length === 0 ? (
-          renderEmpty("Nenhum responsável atribuído aos posts deste cliente.")
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {respsPosts.map((r) => {
-              const meusPosts = cardsCli.filter((c) => (c.responsaveis ?? []).includes(r.id));
-              const abertos = meusPosts.filter((c) => c.status_card !== "Postado").length;
-              const atras = meusPosts.filter((c) => c.status_card === "Atrasado").length;
-              return (
-                <Card key={r.id}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-9 w-9 rounded-full text-white text-xs font-semibold flex items-center justify-center"
-                        style={{ backgroundColor: r.cor }}
-                      >
-                        {r.nome.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{r.nome}</div>
-                        <div className="text-[10px] text-muted-foreground">{r.email}</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Stat label="Posts" value={meusPosts.length} />
-                      <Stat label="Abertos" value={abertos} />
-                      <Stat label="Atrasados" value={atras} danger={atras > 0} />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* ====== Responsáveis das Demandas ====== */}
-      <section className="space-y-2">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Responsáveis das Demandas</h3>
-          <Badge variant="outline" className="text-[10px]">{respsDemandas.length}</Badge>
-        </div>
-        {respsDemandas.length === 0 ? (
-          renderEmpty("Nenhum responsável atribuído às demandas deste cliente.")
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {respsDemandas.map((r) => {
-              const minhasDem = demandasCli.filter((d) => getResponsaveisIds(d).includes(r.id));
-              const abertas = minhasDem.filter((d) => !["Concluido", "Entregue"].includes(d.status)).length;
-              const atras = minhasDem.filter((d) => d.status === "Atrasado").length;
-              return (
-                <Card key={r.id}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-9 w-9 rounded-full text-white text-xs font-semibold flex items-center justify-center"
-                        style={{ backgroundColor: r.cor }}
-                      >
-                        {r.nome.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{r.nome}</div>
-                        <div className="text-[10px] text-muted-foreground">{r.email}</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Stat label="Demandas" value={minhasDem.length} />
-                      <Stat label="Abertas" value={abertas} />
-                      <Stat label="Atrasadas" value={atras} danger={atras > 0} />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      {renderSecao("Responsáveis dos Posts", FileText, respsPosts, countPosts)}
+      {SECOES_RESP.filter((s) => s.key !== "posts").map((s) =>
+        renderSecao(s.titulo, s.icone, respsArea(s.key), countArea(s.key)),
+      )}
     </div>
   );
 }
 
 // =====================================================
-// RELATÓRIOS — KPIs e gráfico SEPARADOS por origem
+// RELATÓRIOS — separados por área
 // =====================================================
+const AREAS_RELATORIO = [
+  { key: "posts", label: "Posts" },
+  { key: "videos", label: "Vídeos" },
+  { key: "trafego", label: "Tráfego" },
+  { key: "lp", label: "LP / Site" },
+  { key: "ia", label: "IA / Atend." },
+  { key: "briefing", label: "Briefing" },
+  { key: "planejamento", label: "Planej." },
+  { key: "urgencias", label: "Urgências" },
+] as const;
+
 function RelatoriosTab({
   cardsCli,
   demandasCli,
-  respsPosts,
-  respsDemandas,
 }: {
   cardsCli: any[];
   demandasCli: Demanda[];
-  respsPosts: any[];
-  respsDemandas: any[];
 }) {
-  // Origem do filtro de responsável: posts | demandas | ambos (separados)
-  const [origem, setOrigem] = useState<"ambos" | "posts" | "demandas">("ambos");
-  const [fResp, setFResp] = useState("todos");
-  const [fCat, setFCat] = useState("todas");
+  const [filtroArea, setFiltroArea] = useState<string>("tudo");
 
-  const cats = Array.from(new Set(demandasCli.map((d) => d.categoria)));
+  const dadosPosts = {
+    total: cardsCli.length,
+    concluidas: cardsCli.filter((c) => c.status_card === "Postado").length,
+    pendentes: cardsCli.filter((c) => !["Postado", "Atrasado"].includes(c.status_card)).length,
+    atrasadas: cardsCli.filter((c) => c.status_card === "Atrasado").length,
+  };
 
-  // Lista de responsáveis no seletor depende da origem
-  const respsParaFiltro =
-    origem === "posts" ? respsPosts : origem === "demandas" ? respsDemandas : [...respsPosts, ...respsDemandas.filter((r) => !respsPosts.some((p) => p.id === r.id))];
-
-  const cardsFilt = cardsCli.filter((c) => {
-    if (origem === "demandas") return false;
-    if (fResp !== "todos" && !(c.responsaveis ?? []).includes(fResp)) return false;
-    return true;
-  });
-  const demFilt = demandasCli.filter((d) => {
-    if (origem === "posts") return false;
-    if (fResp !== "todos" && !getResponsaveisIds(d).includes(fResp)) return false;
-    if (fCat !== "todas" && d.categoria !== fCat) return false;
-    return true;
+  const calc = (lista: Demanda[]) => ({
+    total: lista.length,
+    concluidas: lista.filter((d) => ["Concluido", "Entregue"].includes(d.status)).length,
+    pendentes: lista.filter((d) => !["Concluido", "Entregue", "Atrasado"].includes(d.status)).length,
+    atrasadas: lista.filter((d) => d.status === "Atrasado").length,
   });
 
-  // KPIs SEPARADOS — nunca somar
-  const postsTotal = cardsFilt.length;
-  const postsEntregues = cardsFilt.filter((c) => c.status_card === "Postado").length;
-  const postsAtrasos = cardsFilt.filter((c) => c.status_card === "Atrasado").length;
-  const postsPctAtraso = postsTotal > 0 ? Math.round((postsAtrasos / postsTotal) * 100) : 0;
-
-  const demTotal = demFilt.length;
-  const demEntregues = demFilt.filter((d) => ["Concluido", "Entregue"].includes(d.status)).length;
-  const demAtrasos = demFilt.filter((d) => d.status === "Atrasado").length;
-  const demPctAtraso = demTotal > 0 ? Math.round((demAtrasos / demTotal) * 100) : 0;
-
-  // Distribuição — duas séries (Posts / Demandas), nunca empilhadas
-  const distribuicaoPosts = respsPosts.map((r) => ({
-    nome: r.nome.split(" ")[0],
-    Posts: cardsFilt.filter((c) => (c.responsaveis ?? []).includes(r.id)).length,
+  const stats = AREAS_RELATORIO.map((a) => ({
+    key: a.key,
+    label: a.label,
+    ...(a.key === "posts" ? dadosPosts : calc(filtrarPorArea(demandasCli, a.key))),
   }));
-  const distribuicaoDem = respsDemandas.map((r) => ({
-    nome: r.nome.split(" ")[0],
-    Demandas: demFilt.filter((x) => getResponsaveisIds(x).includes(r.id)).length,
+
+  const visiveis = filtroArea === "tudo" ? stats : stats.filter((s) => s.key === filtroArea);
+
+  const chartData = visiveis.map((s) => ({
+    nome: s.label,
+    Concluídas: s.concluidas,
+    Pendentes: s.pendentes,
+    Atrasadas: s.atrasadas,
   }));
 
   return (
     <div className="space-y-3">
       <Card>
         <CardContent className="p-3 flex flex-wrap gap-2">
-          <Select value={origem} onValueChange={(v: any) => { setOrigem(v); setFResp("todos"); }}>
-            <SelectTrigger className="h-9 w-48">
-              <SelectValue placeholder="Origem" />
-            </SelectTrigger>
+          <Select value={filtroArea} onValueChange={setFiltroArea}>
+            <SelectTrigger className="h-9 w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="ambos">Ambos (separados)</SelectItem>
-              <SelectItem value="posts">Apenas Posts</SelectItem>
-              <SelectItem value="demandas">Apenas Demandas</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={fResp} onValueChange={setFResp}>
-            <SelectTrigger className="h-9 w-56">
-              <SelectValue placeholder="Responsável" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">
-                {origem === "posts" ? "Todos resp. dos posts" : origem === "demandas" ? "Todos resp. das demandas" : "Todos responsáveis"}
-              </SelectItem>
-              {respsParaFiltro.map((r) => (
-                <SelectItem key={r.id} value={r.id}>
-                  {r.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={fCat} onValueChange={setFCat}>
-            <SelectTrigger className="h-9 w-44">
-              <SelectValue placeholder="Categoria (demandas)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas categorias</SelectItem>
-              {cats.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+              <SelectItem value="tudo">Todas as áreas</SelectItem>
+              {AREAS_RELATORIO.map((a) => (
+                <SelectItem key={a.key} value={a.key}>{a.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </CardContent>
       </Card>
 
-      {/* KPIs em DUAS GRADES SEPARADAS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-semibold uppercase tracking-wide">Posts</span>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              <Stat label="Volume" value={postsTotal} />
-              <Stat label="Entregues" value={postsEntregues} />
-              <Stat label="Atrasos" value={postsAtrasos} danger={postsAtrasos > 0} />
-              <Stat label="% Atraso" value={postsPctAtraso} />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-semibold uppercase tracking-wide">Demandas Diárias</span>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              <Stat label="Volume" value={demTotal} />
-              <Stat label="Entregues" value={demEntregues} />
-              <Stat label="Atrasos" value={demAtrasos} danger={demAtrasos > 0} />
-              <Stat label="% Atraso" value={demPctAtraso} />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {visiveis.map((s) => (
+          <Card key={s.key}>
+            <CardContent className="p-3 space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wide">{s.label}</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Stat label="Total" value={s.total} />
+                <Stat label="Concluídas" value={s.concluidas} />
+                <Stat label="Pendentes" value={s.pendentes} warn={s.pendentes > 0} />
+                <Stat label="Atrasadas" value={s.atrasadas} danger={s.atrasadas > 0} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Distribuição — duas barras lado a lado */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-xs font-semibold mb-2 text-muted-foreground">
-              Carga — Responsáveis dos Posts
-            </div>
-            {distribuicaoPosts.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-4 text-center">Nenhum responsável.</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={distribuicaoPosts}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="nome" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="Posts" fill="hsl(var(--primary))" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-xs font-semibold mb-2 text-muted-foreground">
-              Carga — Responsáveis das Demandas
-            </div>
-            {distribuicaoDem.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-4 text-center">Nenhum responsável.</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={distribuicaoDem}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="nome" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="Demandas" fill="hsl(var(--status-renovacao))" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="text-xs font-semibold mb-2 text-muted-foreground">
+            Comparativo por área
+          </div>
+          {chartData.length === 0 ? (
+            <div className="text-xs text-muted-foreground py-4 text-center">Sem dados.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis dataKey="nome" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="Concluídas" fill="hsl(var(--status-postado))" />
+                <Bar dataKey="Pendentes" fill="hsl(var(--status-criar))" />
+                <Bar dataKey="Atrasadas" fill="hsl(var(--destructive))" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

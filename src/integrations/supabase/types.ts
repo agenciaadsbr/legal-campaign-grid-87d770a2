@@ -194,6 +194,48 @@ export type Database = {
         }
         Relationships: []
       }
+      cliente_documentacao: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          id: string
+          login: string | null
+          observacao: string | null
+          ordem: number
+          senha: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          id?: string
+          login?: string | null
+          observacao?: string | null
+          ordem?: number
+          senha?: string | null
+          tipo?: string
+          titulo: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          id?: string
+          login?: string | null
+          observacao?: string | null
+          ordem?: number
+          senha?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           campos_personalizados: Json
@@ -903,6 +945,9 @@ export type Database = {
         | "Tecnologia"
         | "Suporte"
         | "Personalizado"
+        | "IAAtendimento"
+        | "Briefing"
+        | "Planejamento"
       demanda_prioridade: "Baixa" | "Media" | "Alta" | "Urgente"
       demanda_status:
         | "Planejamento"
@@ -1075,6 +1120,9 @@ export const Constants = {
         "Tecnologia",
         "Suporte",
         "Personalizado",
+        "IAAtendimento",
+        "Briefing",
+        "Planejamento",
       ],
       demanda_prioridade: ["Baixa", "Media", "Alta", "Urgente"],
       demanda_status: [
