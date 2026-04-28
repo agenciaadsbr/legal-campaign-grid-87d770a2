@@ -111,7 +111,11 @@ export default function ProjetoCliente() {
 
   const { clientes, cards, responsaveis } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
-  const docs = useDocumentacao((s) => s.itens.filter((i) => i.cliente_id === clienteId));
+  const docsAll = useDocumentacao((s) => s.itens);
+  const docs = useMemo(
+    () => docsAll.filter((i) => i.cliente_id === clienteId),
+    [docsAll, clienteId],
+  );
   const cliente = clientes.find((c) => c.id === clienteId);
   const [tab, setTab] = useState("visao");
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
