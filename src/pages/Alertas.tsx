@@ -201,7 +201,12 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
             const cli = clientes.find((c) => c.id === a.cliente_id);
             return (
               <tr key={a.id} className="border-t hover:bg-accent/30">
-                <td className="px-4 py-2.5"><ColorBadge label={a.tipo_alerta.replace(/_/g, " ")} color={tipoCor[a.tipo_alerta]} /></td>
+                <td className="px-4 py-2.5">
+                  <ColorBadge
+                    label={a._tipoExibicao ?? a.tipo_alerta.replace(/_/g, " ")}
+                    color={a._corExibicao ?? tipoCor[a.tipo_alerta]}
+                  />
+                </td>
                 <td className="px-4 py-2.5"><Link to={`/clientes/${a.cliente_id}`} className="text-primary hover:underline">{cli?.nome_cliente}</Link></td>
                 <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.data_alerta).toLocaleDateString("pt-BR")}</td>
                 <td className="px-4 py-2.5">
