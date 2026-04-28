@@ -351,7 +351,11 @@ export function ClientesDemandasTable({
                       </TableCell>
                       <TableCell>
                         {respObjs.length > 0 ? (
-                          <AvatarStack responsaveis={respObjs} size="xs" max={4} />
+                          <ResponsaveisComTooltip
+                            responsaveis={respObjs}
+                            contagem={l.contagemPorResp}
+                            max={4}
+                          />
                         ) : (
                           <span className="text-muted-foreground text-[11px]">—</span>
                         )}
