@@ -15,10 +15,99 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { AvatarStack } from "@/components/AvatarStack";
 import { ArrowRight, AlertTriangle, Zap } from "lucide-react";
+import type { Demanda } from "@/store/demandas";
+
+function DemandasTooltipList({
+  titulo,
+  demandas,
+  responsaveis,
+  variant,
+}: {
+  titulo: string;
+  demandas: Demanda[];
+  responsaveis: { id: string; nome: string }[];
+  variant: "atrasadas" | "urgentes";
+}) {
+  const max = 6;
+  const visiveis = demandas.slice(0, max);
+  const restantes = demandas.length - visiveis.length;
+  const respMap = new Map(responsaveis.map((r) => [r.id, r.nome]));
+
+  return (
+    <div className="max-w-[340px] space-y-2">
+      <div className="text-xs font-semibold text-popover-foreground border-b border-border pb-1">
+        {demandas.length} {titulo}
+      </div>
+      <ul className="space-y-1.5">
+        {visiveis.map((d) => {
+          const respIds = (d.responsaveis_ids?.length
+            ? d.responsaveis_ids
+            : d.responsavel_id
+              ? [d.responsavel_id]
+              : []) as string[];
+          const respNomes = respIds
+            .map((id) => respMap.get(id))
+            .filter(Boolean)
+            .join(", ");
+          const dataLimite = d.data_limite
+            ? new Date(d.data_limite).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "2-digit",
+              })
+            : null;
+          const vencida =
+            d.data_limite && new Date(d.data_limite).getTime() < Date.now();
+          return (
+            <li
+              key={d.id}
+              className="text-[11px] leading-tight border-l-2 pl-2"
+              style={{
+                borderColor:
+                  variant === "atrasadas"
+                    ? "hsl(var(--destructive))"
+                    : "hsl(var(--primary))",
+              }}
+            >
+              <div className="font-medium text-popover-foreground truncate">
+                {d.titulo}
+              </div>
+              <div className="text-muted-foreground flex flex-wrap gap-x-2">
+                <span>{d.categoria}{d.subtipo ? ` · ${d.subtipo}` : ""}</span>
+                <span>· {d.status}</span>
+              </div>
+              {(dataLimite || respNomes) && (
+                <div className="text-muted-foreground flex flex-wrap gap-x-2">
+                  {dataLimite && (
+                    <span className={vencida ? "text-destructive font-medium" : ""}>
+                      Prazo: {dataLimite}
+                    </span>
+                  )}
+                  {respNomes && <span>· {respNomes}</span>}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {restantes > 0 && (
+        <div className="text-[11px] text-muted-foreground italic">
+          … e mais {restantes}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   filtroResp?: string;
