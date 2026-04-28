@@ -115,6 +115,9 @@ export default function ProjetoCliente() {
             </p>
           </div>
         </div>
+        <Button onClick={() => setNovaTarefaOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar Tarefa
+        </Button>
       </div>
 
       {/* Tabs */}
