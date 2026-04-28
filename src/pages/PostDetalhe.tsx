@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useCRM, StatusCard } from "@/store/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichTextView } from "@/components/RichTextView";
+import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralButton";
 
 // Status agora vêm de statusPostOptions (Configurações → Status de Posts)
 
@@ -54,6 +55,7 @@ const isImageUrl = (url: string, nome?: string) => {
 
 export default function PostDetalhe() {
   const { postId } = useParams();
+  const navigate = useNavigate();
   const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario, statusPostOptions } = useCRM();
   const { canWrite } = useAuth();
   const post = posts.find((p) => p.id === postId);
@@ -128,8 +130,19 @@ export default function PostDetalhe() {
     updatePost(post.id, { anexos: post.anexos.filter((a) => a.id !== id) });
   };
 
+  const voltarParaVisaoGeral = () => {
+    if (card?.cliente_id) {
+      navigate(`/clientes/${card.cliente_id}`);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/clientes");
+    }
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-3 animate-fade-in">
+      <VoltarVisaoGeralButton onClick={voltarParaVisaoGeral} />
       {/* Post do Mês — seção unificada */}
       <fieldset disabled={!canWrite} className="contents">
       <Card>
