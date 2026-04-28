@@ -85,7 +85,7 @@ export default function ProjetoCliente() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/clientes/${clienteId}`)}
+          onClick={() => navigate(`/clientes`)}
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
         </Button>
@@ -93,11 +93,9 @@ export default function ProjetoCliente() {
           Clientes
         </Link>
         <span>/</span>
-        <Link to={`/clientes/${clienteId}`} className="hover:underline">
-          {cliente.nome_cliente}
-        </Link>
+        <span className="hover:underline">{cliente.nome_cliente}</span>
         <span>/</span>
-        <span className="text-foreground font-medium">Projeto completo</span>
+        <span className="text-foreground font-medium">Projeto Completo</span>
       </div>
 
       {/* Header */}
