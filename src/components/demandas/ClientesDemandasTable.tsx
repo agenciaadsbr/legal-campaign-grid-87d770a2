@@ -393,5 +393,6 @@ export function ClientesDemandasTable({
         onOpenChange={(v) => !v && setHistoricoClienteId(null)}
       />
     </div>
+    </TooltipProvider>
   );
 }
