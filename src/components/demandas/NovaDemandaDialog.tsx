@@ -37,9 +37,29 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   defaultClienteId?: string;
+  defaultCategoria?: DemandaCategoria;
+  defaultSubtipo?: string;
+  /** Quando true, esconde o seletor de cliente (usa o defaultClienteId fixado). */
+  lockCliente?: boolean;
+  /** Quando true, esconde o seletor de categoria. */
+  lockCategoria?: boolean;
+  /** Título do modal. Default: "Nova Tarefa". */
+  titulo?: string;
+  /** Callback após criar com sucesso (recebe id e categoria). */
+  onCreated?: (id: string, categoria: DemandaCategoria) => void;
 }
 
-export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Props) {
+export function NovaDemandaDialog({
+  open,
+  onOpenChange,
+  defaultClienteId,
+  defaultCategoria,
+  defaultSubtipo,
+  lockCliente,
+  lockCategoria,
+  titulo: tituloModal,
+  onCreated,
+}: Props) {
   const { clientes, responsaveis, cards } = useCRM();
   const createDemanda = useDemandas((s) => s.createDemanda);
 
@@ -50,8 +70,16 @@ export function NovaDemandaDialog({ open, onOpenChange, defaultClienteId }: Prop
   }, [open, defaultClienteId]);
 
   const [titulo, setTitulo] = useState("");
-  const [categoria, setCategoria] = useState<DemandaCategoria>("Designer");
-  const [subtipo, setSubtipo] = useState<string>("");
+  const [categoria, setCategoria] = useState<DemandaCategoria>(defaultCategoria ?? "Personalizado");
+  const [subtipo, setSubtipo] = useState<string>(defaultSubtipo ?? "");
+
+  useEffect(() => {
+    if (open) {
+      if (defaultCategoria) setCategoria(defaultCategoria);
+      if (defaultSubtipo !== undefined) setSubtipo(defaultSubtipo);
+    }
+  }, [open, defaultCategoria, defaultSubtipo]);
+
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>([]);
   const [respManualmenteAlterado, setRespManualmenteAlterado] = useState(false);
 
