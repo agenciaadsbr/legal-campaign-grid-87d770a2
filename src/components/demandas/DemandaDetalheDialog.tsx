@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichTextView } from "@/components/RichTextView";
+import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralButton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -159,6 +160,10 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
     <Dialog open={!!demanda} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
         <fieldset disabled={!canWrite} className="contents">
+          {/* Voltar para Visão Geral */}
+          <div className="mb-2">
+            <VoltarVisaoGeralButton onClick={() => onOpenChange(false)} />
+          </div>
           {/* CARD 1 — Informações da Demanda */}
           <Card>
             <CardHeader className="pb-3">
