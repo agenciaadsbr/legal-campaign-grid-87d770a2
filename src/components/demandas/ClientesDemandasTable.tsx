@@ -36,8 +36,14 @@ function DemandasTooltipList({
   titulo: string;
   demandas: Demanda[];
   responsaveis: { id: string; nome: string }[];
-  variant: "atrasadas" | "urgentes";
+  variant: "atrasadas" | "urgentes" | "total";
 }) {
+  const borderColor =
+    variant === "atrasadas"
+      ? "hsl(var(--destructive))"
+      : variant === "urgentes"
+        ? "hsl(var(--primary))"
+        : "hsl(var(--border))";
   const max = 6;
   const visiveis = demandas.slice(0, max);
   const restantes = demandas.length - visiveis.length;
