@@ -1,4 +1,5 @@
 import { useCRM } from "@/store/crm";
+import { useDemandas, useDemandasBootstrap, getResponsaveisIds } from "@/store/demandas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Calendar, CheckCircle2, RefreshCw, Bell, Sparkles, Pause, UserCheck } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from "recharts";
@@ -22,7 +23,9 @@ function Kpi({ label, value, icon: Icon, accent }: { label: string; value: numbe
 }
 
 export default function Dashboard() {
+  useDemandasBootstrap();
   const { clientes, posts, alertas, cards, responsaveis } = useCRM();
+  const demandas = useDemandas((s) => s.demandas);
 
   const today = new Date().toISOString().slice(0, 10);
   const ativos = clientes.filter((c) => (c.status_global ?? "Onboarding") === "Ativo").length;
@@ -48,13 +51,26 @@ export default function Dashboard() {
     return months.map((name, i) => ({ name, posts: counts[i] }));
   }, [posts]);
 
-  const cargaPorResp = useMemo(() => {
-    return responsaveis.map((r) => ({
-      name: r.nome.split(" ")[0],
-      cards: cards.filter((c) => c.responsaveis.includes(r.id)).length,
-      cor: r.cor,
-    }));
+  // Carga POR RESPONSÁVEL — duas séries SEPARADAS, nunca somar
+  const cargaPosts = useMemo(() => {
+    return responsaveis
+      .map((r) => ({
+        name: r.nome.split(" ")[0],
+        cards: cards.filter((c) => c.responsaveis.includes(r.id)).length,
+        cor: r.cor,
+      }))
+      .filter((d) => d.cards > 0);
   }, [responsaveis, cards]);
+
+  const cargaDemandas = useMemo(() => {
+    return responsaveis
+      .map((r) => ({
+        name: r.nome.split(" ")[0],
+        demandas: demandas.filter((d) => getResponsaveisIds(d).includes(r.id)).length,
+        cor: r.cor,
+      }))
+      .filter((d) => d.demandas > 0);
+  }, [responsaveis, demandas]);
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -95,18 +111,44 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Carga por responsável</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Carga por responsável — Posts</CardTitle></CardHeader>
           <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={cargaPorResp}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))" }} />
-                <Legend />
-                <Bar dataKey="cards" name="Cards atribuídos" fill="hsl(var(--primary-glow))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {cargaPosts.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Sem dados</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={cargaPosts}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))" }} />
+                  <Legend />
+                  <Bar dataKey="cards" name="Posts atribuídos" fill="hsl(var(--primary-glow))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader><CardTitle className="text-base">Carga por responsável — Demandas Diárias</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            {cargaDemandas.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Sem dados</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={cargaDemandas}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--popover-foreground))" }} />
+                  <Legend />
+                  <Bar dataKey="demandas" name="Demandas atribuídas" fill="hsl(var(--status-renovacao))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>

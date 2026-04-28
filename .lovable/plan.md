@@ -1,93 +1,138 @@
-# Responsáveis operacionais: Posts e Demandas
 
-Substituir a coluna "Responsáveis do cliente" das tabelas pelas colunas agregadas a partir da operação real, e remover a edição/exibição do responsável geral do cliente da UI. O campo `clientes.responsaveis_ids` permanece no banco (reserva para reativação futura) mas para de ser lido/escrito pelo frontend.
+# Separação Global: Posts vs Demandas Diárias
 
-## O que muda visualmente
+Aplicar a regra "Posts são posts, Demandas são demandas, Cliente é só o cliente" em todo o sistema. Nada de somar contadores ou misturar responsáveis. O Projeto Completo apenas consolida — exibe lado a lado, nunca somando.
 
-- **Clientes/Posts** (`/clientes`): coluna **"Responsáveis dos Posts"** (união de `cards.responsaveis_ids` por cliente).
-- **Demandas** (`/demandas`): coluna **"Responsáveis das Demandas"** (união de `demandas.responsaveis_ids` por cliente).
-- Remover a coluna/célula "Responsáveis do cliente" e o componente `CelulaResponsaveis` de todas as telas (tabelas, detalhe do cliente, formulários de cadastro/edição de cliente).
-- Avatares atualizam automaticamente ao criar/alterar post ou demanda (realtime já existente nos stores).
+---
+
+## Princípios (válidos para qualquer painel)
+
+| Conceito | Fonte de verdade | NUNCA usar como fallback |
+|---|---|---|
+| Responsáveis dos Posts | `cards.responsaveis_ids` | demandas / cliente |
+| Responsáveis das Demandas | `demandas.responsaveis_ids` (com fallback legado para `responsavel_id`, via `getResponsaveisIds`) | cards / cliente |
+| Contador de Posts | `cards` (filtrado por cliente) | — |
+| Contador de Demandas | `demandas` (filtrado por cliente) | — |
+| Status do Post | `cards.status` | — |
+| Status da Demanda | `demandas.status` | — |
+
+`clientes.responsaveis_ids` permanece no banco (já oculto da UI), nunca usado como fallback.
+
+---
+
+## 1. Projeto Completo — `src/pages/ProjetoCliente.tsx`
+
+### 1.1 Visão Geral — adicionar bloco de KPIs separados (acima do Kanban de Posts)
+
+Dois cards lado a lado, claramente rotulados:
 
 ```text
-ANTES: [ Responsáveis do cliente ]   ← clientes.responsaveis_ids
-DEPOIS:
-  /clientes  → [ Responsáveis dos Posts ]      ← união de cards.responsaveis_ids
-  /demandas  → [ Responsáveis das Demandas ]   ← união de demandas.responsaveis_ids
+┌─ POSTS ─────────────────────┐  ┌─ DEMANDAS DIÁRIAS ──────────┐
+│ Total: N                    │  │ Total: N                    │
+│ Pendentes: N                │  │ Pendentes: N                │
+│ Atrasados: N                │  │ Atrasadas: N                │
+│ Responsáveis: [avatares]    │  │ Responsáveis: [avatares]    │
+└─────────────────────────────┘  └─────────────────────────────┘
 ```
 
-## Reativação futura (rota deixada pronta)
+- Pendentes (Posts) = `status ∉ {Postado}`
+- Atrasados (Posts) = `status === 'Atrasado'`
+- Pendentes (Demandas) = `status ∉ {Concluido, Entregue}`
+- Atrasadas (Demandas) = `status === 'Atrasado'`
+- Responsáveis dos Posts = união de `cards.responsaveis_ids` deste cliente
+- Responsáveis das Demandas = união de `getResponsaveisIds(d)` deste cliente
 
-- A coluna `clientes.responsaveis_ids` **não será removida do banco**.
-- Trigger `propagate_responsaveis_cliente` será mantida (inativa na prática, pois nada grava nela pela UI).
-- O componente `CelulaResponsaveis.tsx` será mantido no repositório, sem imports — pronto para religar no futuro.
-- Comentário `// FUTURO: responsável geral do cliente` nos pontos onde a coluna era exibida.
+### 1.2 Aba Responsáveis — reescrever
 
-## Múltiplos responsáveis em Demandas (item 5)
+Hoje usa `cliente.responsaveis` (responsável geral, proibido). Substituir por **duas seções separadas**:
 
-Migração de schema: `demandas.responsavel_id` → `demandas.responsaveis_ids uuid[]`.
+- **Responsáveis dos Posts** — cards apenas com métricas de posts (Posts, Posts abertos, Posts atrasados). Lista = união de `cards.responsaveis_ids` do cliente.
+- **Responsáveis das Demandas** — cards apenas com métricas de demandas (Demandas, Demandas abertas, Demandas atrasadas). Lista = união de `getResponsaveisIds` das demandas do cliente.
 
-- Adicionar `responsaveis_ids uuid[] not null default '{}'`.
-- Backfill: `responsaveis_ids = ARRAY[responsavel_id]` quando não nulo.
-- Atualizar trigger `log_historico_demanda` para logar mudanças no array.
-- Atualizar policy `auth_read_demandas` para `auth.uid() = ANY(responsaveis_ids)`.
-- Coluna antiga `responsavel_id` permanece nullable durante a transição (não usada pela UI; remover em migração futura).
+Uma mesma pessoa pode aparecer nas duas seções, com escopos diferentes — é desejado.
 
-## Arquivos afetados
+### 1.3 Aba Relatórios — separar contadores
 
-**Tabelas operacionais (nova coluna agregada):**
-- `src/components/clientes/ClientesGeralTable.tsx` — header → "Responsáveis dos Posts"; célula renderiza `AvatarStack` da união por cliente; remover `CelulaResponsaveis`.
-- `src/components/demandas/ClientesDemandasTable.tsx` — header → "Responsáveis das Demandas"; usar `responsaveis_ids` (array) na agregação e na exibição; remover `CelulaResponsaveis`.
+Substituir o filtro "Tipo (todos/posts/demandas)" por **duas grades de KPIs lado a lado** (Posts e Demandas), cada uma com Volume, Entregues, Atrasos, % Atraso. O gráfico "Distribuição por responsável" continua, mas com dois conjuntos:
+- Série **Posts**: barras só de quem está em `cards.responsaveis_ids`.
+- Série **Demandas**: barras só de quem está em `demandas.responsaveis_ids`.
 
-**Remover exibição/edição do responsável geral do cliente:**
-- `src/pages/Clientes.tsx` — remover filtro "Apenas minhas" baseado em cliente (já usa posts), remover qualquer chip de responsáveis do cliente.
-- `src/pages/ClienteDetalhe.tsx` — remover seção/edit de "Responsáveis" do cliente.
-- `src/pages/ProjetoCliente.tsx` — remover blocos que listam responsáveis do cliente.
-- Formulário de criar/editar cliente — remover o multi-select de responsáveis.
-- Não importar mais `CelulaResponsaveis` em nenhum arquivo (manter o componente no disco).
+Filtro de responsável passa a ter um seletor de origem: `Posts | Demandas | Ambos (separados)`.
 
-**Store + tipos (multi responsáveis em demandas):**
-- `src/store/demandas.ts` — `responsaveis_ids: string[]`; `assign(id, ids[])`; `createDemanda`/`updateDemanda` com array; suporte de leitura a `responsavel_id` legado (`ids = d.responsaveis_ids?.length ? d.responsaveis_ids : (d.responsavel_id ? [d.responsavel_id] : [])`).
+---
 
-**Diálogos e detalhe:**
-- `src/components/demandas/NovaDemandaDialog.tsx` — multi-select (popover com checkboxes); auto-fill por top-1 vira array `[id]`.
-- `src/components/demandas/DemandaRapidaDialog.tsx` — idem.
-- `src/components/demandas/DemandaDetalheDialog.tsx` — bloco de responsável vira multi-select com toggle.
-- `src/components/demandas/DemandCard.tsx` — `AvatarStack` em vez de avatar único.
+## 2. Cliente Detalhe — `src/pages/ClienteDetalhe.tsx`
 
-**Filtros:**
-- `src/pages/Demandas.tsx` — filtro `fResp` e "Apenas minhas" usando `includes`.
-- `src/pages/ProjetoDemandasCliente.tsx`, `src/pages/ProjetoCliente.tsx` — idem.
-- `src/components/demandas/RelatoriosDemandas.tsx` — contagem por responsável usando `includes`.
-- `src/pages/Alertas.tsx` — alerta "demanda urgente sem responsável" usa `responsaveis_ids.length === 0`.
+Substituir o bloco "Responsáveis" (que usa `cliente.responsaveis`) por **dois subtítulos**: "Responsáveis dos Posts" e "Responsáveis das Demandas", cada um com seu `AvatarStack` derivado das fontes corretas.
 
-**Backend (migração Supabase):**
-- ADD COLUMN `responsaveis_ids uuid[] not null default '{}'` em `demandas`.
-- Backfill a partir de `responsavel_id`.
-- Recriar trigger `log_historico_demanda` para logar mudança no array.
-- Atualizar policy `auth_read_demandas`.
+---
+
+## 3. Dashboard — `src/pages/Dashboard.tsx`
+
+- KPIs de posts continuam (renomear "Posts hoje/Agendados/Postados" para deixar claro que são Posts).
+- Adicionar **linha de KPIs de Demandas Diárias** logo abaixo: Demandas abertas, Demandas urgentes, Demandas atrasadas, Demandas em revisão, Demandas concluídas hoje (já existe em `DashboardDemandasSection`, garantir que a seção rotula claramente "Demandas Diárias").
+- Gráfico "Carga por responsável" hoje conta só `cards`. Renomear para **"Carga por responsável — Posts"** e adicionar gráfico equivalente **"Carga por responsável — Demandas"** usando `getResponsaveisIds`.
+
+---
+
+## 4. Relatórios — `src/pages/Relatorios.tsx`
+
+Já está separado em abas Posts/Demandas. Garantir que a aba Posts use só `cards` (ok hoje) e a aba Demandas use só `demandas`. Renomear título das abas para "Posts" e "Demandas Diárias" para reforçar.
+
+---
+
+## 5. Alertas — `src/pages/Alertas.tsx`
+
+Hoje alertas derivados de demandas reusam o tipo `Posts_Pendentes` / `Posts_Atrasados`, o que mistura semântica. Adicionar dois novos tipos lógicos só para exibição (rótulo/cor), sem migration:
+
+- `Demandas_Atrasadas` (badge `[DEMANDA]`, cor vermelha)
+- `Demandas_Sem_Responsavel` (badge `[DEMANDA]`, cor âmbar)
+
+Como são alertas derivados (não persistidos), basta um campo virtual `_tipoExibicao` na função `useAlertasDemandas` e adaptar o render do badge/cor sem alterar o enum do banco. Mensagens passam de "Posts_Pendentes" → labels claros: "DEMANDA — atrasada" / "DEMANDA — urgente sem responsável".
+
+---
+
+## 6. Filtros globais de responsável
+
+Em qualquer painel com filtro de responsável que cruza posts e demandas (Projeto Completo › Relatórios; Dashboard se aplicável), seguir o padrão:
+
+```text
+[Origem do responsável ▾]   [Responsável ▾]
+   ├─ Posts                    (lista única)
+   ├─ Demandas
+   └─ Ambos (separados)
+```
+
+- **Posts** → filtra apenas por `cards.responsaveis_ids`.
+- **Demandas** → filtra apenas por `demandas.responsaveis_ids` (via `getResponsaveisIds`).
+- **Ambos (separados)** → mostra duas séries/colunas paralelas, nunca soma.
+
+Painéis monotemáticos (página `/clientes` só posts, página `/demandas` só demandas) já estão corretos — manter como estão.
+
+---
+
+## 7. Garantias de não-mistura (checklist a aplicar nos componentes)
+
+- Nenhum `cliente.responsaveis` em UI operacional (apenas em telas administrativas, se reativadas no futuro).
+- Nenhum contador agrega `cards.length + demandas.length`.
+- Nenhum gráfico mistura série Posts e Demandas em uma única barra empilhada sem rótulo.
+- Toda label de coluna/seção usa "Responsáveis dos Posts" ou "Responsáveis das Demandas" — nunca "Responsáveis" sozinho em contexto operacional.
+
+---
 
 ## Detalhes técnicos
 
-**Agregação Posts:**
-```ts
-const respsPostsPorCliente = useMemo(() => {
-  const map = new Map<string, Set<string>>();
-  cards.forEach(c => {
-    const set = map.get(c.cliente_id) ?? new Set<string>();
-    (c.responsaveis ?? []).forEach(r => set.add(r));
-    map.set(c.cliente_id, set);
-  });
-  return map;
-}, [cards]);
-```
+**Helpers já existentes**:
+- `getResponsaveisIds(d)` em `src/store/demandas.ts` (cobre `responsaveis_ids` + fallback legado `responsavel_id`).
+- `respsPostsPorCliente` (padrão já usado em `ClientesGeralTable`) — reaproveitar lógica em ProjetoCliente.
 
-**Agregação Demandas:** mesma lógica trocando `cards` por `demandas` e iterando `d.responsaveis_ids ?? (d.responsavel_id ? [d.responsavel_id] : [])`.
+**Sem mudanças de schema**: tudo é refator de UI/agregação sobre os campos já existentes (`cards.responsaveis_ids`, `demandas.responsaveis_ids`, `demandas.responsavel_id` legado).
 
-**Reatividade:** `useCRM` e `useDemandasStore` já têm subscribe realtime — `useMemo` recalcula sozinho.
+**Sem novas migrations / sem novos tipos de DB**. Só ajustes em React/TS.
 
-## Não muda
-
-- Rotas, tabelas (`clientes`, `cards`, `demandas`), URLs, permissões.
-- Coluna `clientes.responsaveis_ids` continua no banco (reserva).
-- Componente `CelulaResponsaveis.tsx` continua no repositório (sem uso).
+**Arquivos editados**:
+- `src/pages/ProjetoCliente.tsx` (Visão Geral, Responsáveis, Relatórios)
+- `src/pages/ClienteDetalhe.tsx` (bloco responsáveis)
+- `src/pages/Dashboard.tsx` (KPIs e gráfico)
+- `src/pages/Relatorios.tsx` (renomeação de abas)
+- `src/pages/Alertas.tsx` (rótulos/cores dos alertas de demandas)

@@ -38,8 +38,8 @@ export function DashboardDemandasSection() {
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold">Demandas Operacionais</h2>
-        <p className="text-xs text-muted-foreground">Visão rápida das tarefas internas</p>
+        <h2 className="text-lg font-semibold">Demandas Diárias</h2>
+        <p className="text-xs text-muted-foreground">Visão rápida das tarefas internas — separado dos posts</p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <Kpi label="Abertas" value={kpis.abertas} icon={ListChecks} accent="hsl(var(--primary))" />
