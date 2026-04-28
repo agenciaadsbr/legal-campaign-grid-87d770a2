@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
-import { AvatarStack } from "@/components/AvatarStack";
+
 import { ArrowRight, AlertTriangle, Zap } from "lucide-react";
 import type { Demanda } from "@/store/demandas";
 
