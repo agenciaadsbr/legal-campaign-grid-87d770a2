@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCRM } from "@/store/crm";
 import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useAtividades, useAtividadesBootstrap } from "@/store/atividades";
@@ -117,7 +117,15 @@ export default function ProjetoCliente() {
     [docsAll, clienteId],
   );
   const cliente = clientes.find((c) => c.id === clienteId);
-  const [tab, setTab] = useState("visao");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => searchParams.get("tab") ?? "visao");
+  const handleTabChange = (v: string) => {
+    setTab(v);
+    const next = new URLSearchParams(searchParams);
+    if (v === "visao") next.delete("tab");
+    else next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
   const [novoDocOpen, setNovoDocOpen] = useState(false);
 
