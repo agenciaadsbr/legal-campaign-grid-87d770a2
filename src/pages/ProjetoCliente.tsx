@@ -204,7 +204,7 @@ export default function ProjetoCliente() {
             cardsCli={cardsCli}
             demandasCli={demandasCli}
             docsCli={docs}
-            onNavegar={setTab}
+            onNavegar={handleTabChange}
           />
         </TabsContent>
 
