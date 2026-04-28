@@ -208,11 +208,76 @@ function VisaoGeral({
   demandasCli: Demanda[];
   clienteId: string;
 }) {
+  const { responsaveis } = useCRM();
   const [novaDemandaOpen, setNovaDemandaOpen] = useState(false);
   const [demandaSelecionada, setDemandaSelecionada] = useState<Demanda | null>(null);
 
+  // Métricas POSTS — só de cards
+  const postsTotal = cardsCli.length;
+  const postsPendentes = cardsCli.filter((c) => c.status_card !== "Postado").length;
+  const postsAtrasados = cardsCli.filter((c) => c.status_card === "Atrasado").length;
+  const respsPostsIds = new Set<string>();
+  cardsCli.forEach((c) => (c.responsaveis ?? []).forEach((r: string) => respsPostsIds.add(r)));
+  const respsPosts = responsaveis.filter((r) => respsPostsIds.has(r.id));
+
+  // Métricas DEMANDAS — só de demandas
+  const demTotal = demandasCli.length;
+  const demPendentes = demandasCli.filter(
+    (d) => !["Concluido", "Entregue"].includes(d.status),
+  ).length;
+  const demAtrasadas = demandasCli.filter((d) => d.status === "Atrasado").length;
+  const respsDemIds = new Set<string>();
+  demandasCli.forEach((d) => getResponsaveisIds(d).forEach((r) => respsDemIds.add(r)));
+  const respsDem = responsaveis.filter((r) => respsDemIds.has(r.id));
+
   return (
     <div className="space-y-10">
+      {/* ============ KPIs SEPARADOS ============ */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Posts</h3>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Stat label="Total" value={postsTotal} />
+              <Stat label="Pendentes" value={postsPendentes} warn={postsPendentes > 0} />
+              <Stat label="Atrasados" value={postsAtrasados} danger={postsAtrasados > 0} />
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Responsáveis:</span>
+              {respsPosts.length > 0 ? (
+                <AvatarStack responsaveis={respsPosts} size="xs" max={6} />
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Demandas Diárias</h3>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Stat label="Total" value={demTotal} />
+              <Stat label="Pendentes" value={demPendentes} warn={demPendentes > 0} />
+              <Stat label="Atrasadas" value={demAtrasadas} danger={demAtrasadas > 0} />
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Responsáveis:</span>
+              {respsDem.length > 0 ? (
+                <AvatarStack responsaveis={respsDem} size="xs" max={6} />
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* ============ POSTS ============ */}
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -238,7 +303,7 @@ function VisaoGeral({
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Demandas
+              Demandas Diárias
             </h2>
             <p className="text-[11px] text-muted-foreground">
               Kanban completo de demandas deste cliente.
