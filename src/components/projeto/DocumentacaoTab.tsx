@@ -33,11 +33,16 @@ export function DocumentacaoTab({
   novoOpenExterno,
   onNovoOpenChangeExterno,
 }: Props) {
-  const itens = useDocumentacao((s) => s.itens.filter((i) => i.cliente_id === clienteId));
+  const todosItens = useDocumentacao((s) => s.itens);
   const remove = useDocumentacao((s) => s.remove);
   const [novoInternoOpen, setNovoInternoOpen] = useState(false);
   const [editing, setEditing] = useState<DocumentacaoItem | null>(null);
   const [revelarSenha, setRevelarSenha] = useState<Record<string, boolean>>({});
+
+  const itens = useMemo(
+    () => todosItens.filter((i) => i.cliente_id === clienteId),
+    [todosItens, clienteId],
+  );
 
   const novoOpen = novoOpenExterno ?? novoInternoOpen;
   const setNovoOpen = (v: boolean) => {
