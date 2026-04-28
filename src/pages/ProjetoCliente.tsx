@@ -281,6 +281,33 @@ function AcaoIcone({ tipo, acao }: { tipo: string; acao: string }) {
   return <ClipboardList className={cn(cls, "text-primary")} />;
 }
 
+function Stat({
+  label,
+  value,
+  danger,
+  warn,
+}: {
+  label: string;
+  value: number;
+  danger?: boolean;
+  warn?: boolean;
+}) {
+  return (
+    <div className="rounded-md bg-muted/40 px-2 py-1.5">
+      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
+      <div
+        className={cn(
+          "text-lg font-bold tabular-nums",
+          danger && "text-destructive",
+          warn && "text-amber-500",
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function ResumoPosts({
   cardsCli,
   className,
