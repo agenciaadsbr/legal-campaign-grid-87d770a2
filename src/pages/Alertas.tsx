@@ -23,7 +23,14 @@ const tipoCor: Record<TipoAlerta, string> = {
   Onboarding_Prazo_Vencido: "#ef4444",
 };
 
-type AlertaItem = Alerta & { _derivado?: boolean; _origem?: "POST" | "DEMANDA" | "ONBOARDING" };
+type AlertaItem = Alerta & {
+  _derivado?: boolean;
+  _origem?: "POST" | "DEMANDA" | "ONBOARDING";
+  /** Rótulo visual do tipo (sobrepõe tipo_alerta para alertas derivados, sem alterar enum DB) */
+  _tipoExibicao?: string;
+  /** Cor visual do badge */
+  _corExibicao?: string;
+};
 
 function useAlertasDemandas(): AlertaItem[] {
   useDemandasBootstrap();
@@ -35,13 +42,15 @@ function useAlertasDemandas(): AlertaItem[] {
         out.push({
           id: `demanda-atraso:${d.id}`,
           cliente_id: d.cliente_id,
-          tipo_alerta: "Posts_Atrasados" as TipoAlerta,
+          tipo_alerta: "Posts_Atrasados" as TipoAlerta, // tipo no DB (não usado para exibição)
           data_alerta: new Date().toISOString().slice(0, 10),
           mensagem: `${d.titulo} — atrasada`,
           status: "Pendente",
           created_at: d.updated_at,
           _derivado: true,
           _origem: "DEMANDA",
+          _tipoExibicao: "Demandas Atrasadas",
+          _corExibicao: "#ef4444",
         });
       }
       if (d.prioridade === "Urgente" && getResponsaveisIds(d).length === 0 && d.status !== "Concluido") {
@@ -55,6 +64,8 @@ function useAlertasDemandas(): AlertaItem[] {
           created_at: d.created_at,
           _derivado: true,
           _origem: "DEMANDA",
+          _tipoExibicao: "Demandas Sem Responsável",
+          _corExibicao: "#f59e0b",
         });
       }
     });
