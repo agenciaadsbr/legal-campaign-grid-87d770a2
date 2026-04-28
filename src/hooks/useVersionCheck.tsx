@@ -40,26 +40,47 @@ export function useVersionCheck() {
             "atual:",
             currentVersion.current
           );
-          toast("Nova versão disponível", {
+          const id = toast("Nova versão disponível", {
             description:
               "Atualize agora para ver as últimas funcionalidades.",
             duration: Infinity,
             action: {
               label: "Atualizar agora",
               onClick: async () => {
+                console.log("[CRM] Atualizar agora clicado");
+                try {
+                  toast.dismiss(id);
+                } catch {}
                 try {
                   if ("caches" in window) {
                     const keys = await caches.keys();
                     await Promise.all(keys.map((k) => caches.delete(k)));
                   }
+                } catch (e) {
+                  console.warn("[CRM] cache clear falhou", e);
+                }
+                try {
                   if ("serviceWorker" in navigator) {
                     const regs = await navigator.serviceWorker.getRegistrations();
                     await Promise.all(regs.map((r) => r.unregister()));
                   }
                 } catch (e) {
-                  console.warn("[CRM] cache clear falhou", e);
+                  console.warn("[CRM] sw unregister falhou", e);
                 }
-                window.location.reload();
+                try {
+                  window.location.reload();
+                } catch {
+                  window.location.href = window.location.href;
+                }
+              },
+            },
+            cancel: {
+              label: "Depois",
+              onClick: () => {
+                try {
+                  toast.dismiss(id);
+                } catch {}
+                notifiedRef.current = false;
               },
             },
           });
