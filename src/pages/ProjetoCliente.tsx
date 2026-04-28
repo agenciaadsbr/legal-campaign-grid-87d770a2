@@ -85,7 +85,7 @@ export default function ProjetoCliente() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/clientes/${clienteId}`)}
+          onClick={() => navigate(`/clientes`)}
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
         </Button>
@@ -93,11 +93,9 @@ export default function ProjetoCliente() {
           Clientes
         </Link>
         <span>/</span>
-        <Link to={`/clientes/${clienteId}`} className="hover:underline">
-          {cliente.nome_cliente}
-        </Link>
+        <span className="hover:underline">{cliente.nome_cliente}</span>
         <span>/</span>
-        <span className="text-foreground font-medium">Projeto completo</span>
+        <span className="text-foreground font-medium">Projeto Completo</span>
       </div>
 
       {/* Header */}
@@ -153,20 +151,7 @@ export default function ProjetoCliente() {
 
         {/* ============== POSTS ============== */}
         <TabsContent value="posts" className="mt-4">
-          <Card>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                O quadro de posts continua disponível no formato original.
-              </div>
-              <Button
-                size="sm"
-                onClick={() => navigate(`/clientes/${clienteId}`)}
-              >
-                Abrir Kanban de Posts <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </CardContent>
-          </Card>
-          <ResumoPosts cardsCli={cardsCli} className="mt-3" />
+          <PostsKanbanCliente />
         </TabsContent>
 
         {/* ============== DEMANDAS ============== */}
@@ -218,8 +203,6 @@ function VisaoGeral({
   clienteId: string;
 }) {
   const { responsaveis } = useCRM();
-  const [novaDemandaOpen, setNovaDemandaOpen] = useState(false);
-  const [demandaSelecionada, setDemandaSelecionada] = useState<Demanda | null>(null);
 
   // Métricas POSTS — só de cards
   const postsTotal = cardsCli.length;
@@ -240,116 +223,62 @@ function VisaoGeral({
   const respsDem = responsaveis.filter((r) => respsDemIds.has(r.id));
 
   return (
-    <div className="space-y-10">
-      {/* ============ KPIs SEPARADOS ============ */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold">Posts</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <Stat label="Total" value={postsTotal} />
-              <Stat label="Pendentes" value={postsPendentes} warn={postsPendentes > 0} />
-              <Stat label="Atrasados" value={postsAtrasados} danger={postsAtrasados > 0} />
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground">Responsáveis:</span>
-              {respsPosts.length > 0 ? (
-                <AvatarStack responsaveis={respsPosts} size="xs" max={6} />
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold">Demandas Diárias</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <Stat label="Total" value={demTotal} />
-              <Stat label="Pendentes" value={demPendentes} warn={demPendentes > 0} />
-              <Stat label="Atrasadas" value={demAtrasadas} danger={demAtrasadas > 0} />
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground">Responsáveis:</span>
-              {respsDem.length > 0 ? (
-                <AvatarStack responsaveis={respsDem} size="xs" max={6} />
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* ============ POSTS ============ */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Posts
-            </h2>
-            <p className="text-[11px] text-muted-foreground">
-              Kanban completo de posts deste cliente.
-            </p>
+    <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Posts</h3>
           </div>
-          <Badge variant="outline" className="text-[10px]">
-            {cardsCli.length} no total
-          </Badge>
-        </div>
-        <PostsKanbanCliente />
-      </section>
-
-      <div className="border-t border-border/60" />
-
-      {/* ============ DEMANDAS ============ */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Demandas Diárias
-            </h2>
-            <p className="text-[11px] text-muted-foreground">
-              Kanban completo de demandas deste cliente.
-            </p>
+          <div className="grid grid-cols-3 gap-2">
+            <Stat label="Total" value={postsTotal} />
+            <Stat label="Pendentes" value={postsPendentes} warn={postsPendentes > 0} />
+            <Stat label="Atrasados" value={postsAtrasados} danger={postsAtrasados > 0} />
           </div>
-          <Button size="sm" onClick={() => setNovaDemandaOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Nova Demanda
-          </Button>
-        </div>
-        <ProjetoKanban demandas={demandasCli} onOpen={setDemandaSelecionada} />
-        <NovaDemandaDialog
-          open={novaDemandaOpen}
-          onOpenChange={setNovaDemandaOpen}
-          defaultClienteId={clienteId}
-        />
-        <DemandaDetalheDialog
-          demanda={demandaSelecionada}
-          onOpenChange={(v) => !v && setDemandaSelecionada(null)}
-        />
-      </section>
-
-      <div className="border-t border-border/60" />
-
-      {/* ============ ATIVIDADES ============ */}
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Atividades
-          </h2>
-          <p className="text-[11px] text-muted-foreground">
-            Linha do tempo de tudo que acontece no projeto.
-          </p>
-        </div>
-        <TimelineAtividades clienteId={clienteId} />
-      </section>
-    </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Responsáveis:</span>
+            {respsPosts.length > 0 ? (
+              <AvatarStack responsaveis={respsPosts} size="xs" max={6} />
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Demandas Diárias</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <Stat label="Total" value={demTotal} />
+            <Stat label="Pendentes" value={demPendentes} warn={demPendentes > 0} />
+            <Stat label="Atrasadas" value={demAtrasadas} danger={demAtrasadas > 0} />
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Responsáveis:</span>
+            {respsDem.length > 0 ? (
+              <AvatarStack responsaveis={respsDem} size="xs" max={6} />
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </section>
   );
+}
+
+function AcaoIcone({ tipo, acao }: { tipo: string; acao: string }) {
+  const cls = "h-3.5 w-3.5 shrink-0 mt-0.5";
+  if (acao === "comentario") return <MessageSquare className={cn(cls, "text-blue-500")} />;
+  if (acao === "anexo") return <Paperclip className={cn(cls, "text-violet-500")} />;
+  if (acao === "iniciado") return <Play className={cn(cls, "text-amber-500")} />;
+  if (acao === "concluido") return <CheckCircle2 className={cn(cls, "text-emerald-500")} />;
+  if (acao === "status") return <ArrowRight className={cn(cls, "text-muted-foreground")} />;
+  if (tipo === "post") return <FileText className={cn(cls, "text-primary")} />;
+  return <ClipboardList className={cn(cls, "text-primary")} />;
 }
 
 function Stat({
@@ -377,17 +306,6 @@ function Stat({
       </div>
     </div>
   );
-}
-
-function AcaoIcone({ tipo, acao }: { tipo: string; acao: string }) {
-  const cls = "h-3.5 w-3.5 shrink-0 mt-0.5";
-  if (acao === "comentario") return <MessageSquare className={cn(cls, "text-blue-500")} />;
-  if (acao === "anexo") return <Paperclip className={cn(cls, "text-violet-500")} />;
-  if (acao === "iniciado") return <Play className={cn(cls, "text-amber-500")} />;
-  if (acao === "concluido") return <CheckCircle2 className={cn(cls, "text-emerald-500")} />;
-  if (acao === "status") return <ArrowRight className={cn(cls, "text-muted-foreground")} />;
-  if (tipo === "post") return <FileText className={cn(cls, "text-primary")} />;
-  return <ClipboardList className={cn(cls, "text-primary")} />;
 }
 
 function ResumoPosts({
