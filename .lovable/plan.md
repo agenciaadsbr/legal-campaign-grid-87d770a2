@@ -1,70 +1,34 @@
-## Objetivo
+## Correção
 
-Adicionar um botão padronizado **"← Voltar para Visão Geral"** no topo de cada card de detalhe de tarefa (todas as abas do Projeto Completo do cliente), permitindo retornar rapidamente ao Kanban da aba sem precisar clicar no X do dialog ou usar o breadcrumb.
+O botão **"Voltar para Visão Geral"** no detalhe do Post está enviando para a aba "Visão Geral" do hub. O correto é voltar para o **Kanban da aba de origem** (no caso do print, aba **Posts**).
 
-## Escopo
+No `DemandaDetalheDialog` (modal de Vídeos, Tráfego, LP, IA, Briefing, Planejamento) já está correto: o botão só fecha o modal e o usuário continua exatamente na aba que estava.
 
-Cobre os dois tipos de detalhe que existem no hub:
-
-1. **`DemandaDetalheDialog`** (modal) — usado em Vídeos, Tráfego Pago, LP/Site, IA/Atendimento, Briefing, Planejamento, Atividades, Demandas em geral.
-2. **`PostDetalhe`** (página `/posts/:postId`) — usado quando o usuário abre um card da aba **Posts**.
+O problema é só no `PostDetalhe`, que é uma página em rota separada (`/posts/:postId`) — ao voltar, ela cai no estado padrão do hub (`tab="visao"`).
 
 ## Mudanças
 
-### 1. `src/components/demandas/DemandaDetalheDialog.tsx`
-Adicionar uma barra fina no topo do `DialogContent`, antes do primeiro Card:
+### 1. `src/pages/PostDetalhe.tsx`
+Trocar a navegação do botão Voltar para incluir a aba de destino na URL:
 
-```text
-┌─ Dialog ──────────────────────────────────┐
-│ ← Voltar para Visão Geral            [X]  │
-├───────────────────────────────────────────┤
-│ TÍTULO DA TAREFA                          │
-│ ...                                        │
+```ts
+navigate(`/clientes/${card.cliente_id}?tab=posts`);
 ```
 
-- Botão `variant="ghost"` `size="sm"` com ícone `ArrowLeft`.
-- `onClick` chama `onOpenChange(false)` (fecha o dialog → usuário volta ao Kanban onde já estava).
-- Texto: "Voltar para Visão Geral".
+### 2. `src/pages/ProjetoCliente.tsx`
+Fazer a página respeitar o parâmetro `?tab=` da URL ao montar e manter a URL sincronizada quando o usuário troca de aba:
 
-### 2. `src/pages/PostDetalhe.tsx`
-No topo da página (acima ou abaixo do breadcrumb existente), adicionar o mesmo botão padronizado:
+- Ler `searchParams.get("tab")` para inicializar o estado `tab` (fallback `"visao"`).
+- No `onValueChange` das Tabs, atualizar a URL com `setSearchParams` (replace, sem empilhar histórico).
+- Se a aba for `"visao"`, remover o parâmetro para manter URL limpa.
 
-- Usa `useNavigate` + `useLocation` para fazer `navigate(-1)` quando houver histórico, com fallback para `/clientes/{clienteId}` (Projeto Completo, aba Posts).
-- Mesmo visual e label do dialog ("← Voltar para Visão Geral") para padronização.
+## Resultado
 
-### 3. Componente compartilhado `VoltarVisaoGeralButton`
-Criar `src/components/projeto/VoltarVisaoGeralButton.tsx` para garantir padronização visual:
-
-- Props: `onClick: () => void`, `className?: string`.
-- Renderiza `<Button variant="ghost" size="sm">` com `ArrowLeft` + texto.
-- Usa apenas tokens semânticos (`text-muted-foreground hover:text-foreground`).
-
-Reutilizado em ambos os arquivos acima.
+- Abrir um Post pela aba **Posts** → clicar **Voltar** → retorna direto ao Kanban de Posts (não mais à Visão Geral).
+- Abrir um card de Vídeo/Tráfego/etc. (modal) → clicar **Voltar** → fecha o modal e mantém a aba ativa (já funcionava).
+- Compartilhar/recarregar a URL `/clientes/:id?tab=trafego` agora abre direto na aba Tráfego Pago — bônus útil.
 
 ## Detalhes técnicos
 
-- Sem mudança no banco, sem mudança no `ProjetoKanban`, sem mudança nos cards do Kanban (`DemandCard`).
-- O X de fechar do dialog continua funcionando normalmente.
-- O breadcrumb existente do `PostDetalhe` não é removido — o botão é adicional, mais visível e padronizado.
-- Cores: somente tokens semânticos (memória do projeto exige isso).
-
-## Resultado visual
-
-```text
-DemandaDetalheDialog (Vídeos, Tráfego, LP, IA, Briefing, Planejamento):
-┌──────────────────────────────────────┐
-│ ← Voltar para Visão Geral       [X] │
-│ ──────────────────────────────────── │
-│  TÍTULO DA TAREFA                    │
-│  Criar Post                          │
-│  ...                                  │
-└──────────────────────────────────────┘
-
-PostDetalhe (aba Posts):
-Clientes/Posts › Alex Medeiros › Criar Post
-← Voltar para Visão Geral
-┌──────────────────────────────────────┐
-│  TÍTULO DA TAREFA                    │
-│  ...                                  │
-└──────────────────────────────────────┘
-```
+- Sem mudanças no banco, no `DemandaDetalheDialog` ou no `VoltarVisaoGeralButton`.
+- Sem efeitos colaterais nas demais abas — comportamento atual preservado quando não há `?tab=`.

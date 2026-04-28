@@ -131,8 +131,9 @@ export default function PostDetalhe() {
   };
 
   const voltarParaVisaoGeral = () => {
+    // Volta para o Kanban da aba Posts (não para a aba "Visão Geral" do hub).
     if (card?.cliente_id) {
-      navigate(`/clientes/${card.cliente_id}`);
+      navigate(`/clientes/${card.cliente_id}?tab=posts`);
     } else if (window.history.length > 1) {
       navigate(-1);
     } else {
