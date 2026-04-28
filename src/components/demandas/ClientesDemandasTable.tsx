@@ -15,10 +15,99 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { AvatarStack } from "@/components/AvatarStack";
 import { ArrowRight, AlertTriangle, Zap } from "lucide-react";
+import type { Demanda } from "@/store/demandas";
+
+function DemandasTooltipList({
+  titulo,
+  demandas,
+  responsaveis,
+  variant,
+}: {
+  titulo: string;
+  demandas: Demanda[];
+  responsaveis: { id: string; nome: string }[];
+  variant: "atrasadas" | "urgentes";
+}) {
+  const max = 6;
+  const visiveis = demandas.slice(0, max);
+  const restantes = demandas.length - visiveis.length;
+  const respMap = new Map(responsaveis.map((r) => [r.id, r.nome]));
+
+  return (
+    <div className="max-w-[340px] space-y-2">
+      <div className="text-xs font-semibold text-popover-foreground border-b border-border pb-1">
+        {demandas.length} {titulo}
+      </div>
+      <ul className="space-y-1.5">
+        {visiveis.map((d) => {
+          const respIds = (d.responsaveis_ids?.length
+            ? d.responsaveis_ids
+            : d.responsavel_id
+              ? [d.responsavel_id]
+              : []) as string[];
+          const respNomes = respIds
+            .map((id) => respMap.get(id))
+            .filter(Boolean)
+            .join(", ");
+          const dataLimite = d.data_limite
+            ? new Date(d.data_limite).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "2-digit",
+              })
+            : null;
+          const vencida =
+            d.data_limite && new Date(d.data_limite).getTime() < Date.now();
+          return (
+            <li
+              key={d.id}
+              className="text-[11px] leading-tight border-l-2 pl-2"
+              style={{
+                borderColor:
+                  variant === "atrasadas"
+                    ? "hsl(var(--destructive))"
+                    : "hsl(var(--primary))",
+              }}
+            >
+              <div className="font-medium text-popover-foreground truncate">
+                {d.titulo}
+              </div>
+              <div className="text-muted-foreground flex flex-wrap gap-x-2">
+                <span>{d.categoria}{d.subtipo ? ` · ${d.subtipo}` : ""}</span>
+                <span>· {d.status}</span>
+              </div>
+              {(dataLimite || respNomes) && (
+                <div className="text-muted-foreground flex flex-wrap gap-x-2">
+                  {dataLimite && (
+                    <span className={vencida ? "text-destructive font-medium" : ""}>
+                      Prazo: {dataLimite}
+                    </span>
+                  )}
+                  {respNomes && <span>· {respNomes}</span>}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {restantes > 0 && (
+        <div className="text-[11px] text-muted-foreground italic">
+          … e mais {restantes}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   filtroResp?: string;
@@ -63,6 +152,8 @@ export function ClientesDemandasTable({
         total: number;
         atrasadas: number;
         urgentes: number;
+        demandasAtrasadas: Demanda[];
+        demandasUrgentes: Demanda[];
         temDemanda: boolean;
       }
     >();
@@ -83,6 +174,8 @@ export function ClientesDemandasTable({
         total: 0,
         atrasadas: 0,
         urgentes: 0,
+        demandasAtrasadas: [],
+        demandasUrgentes: [],
         temDemanda: false,
       });
     });
@@ -100,12 +193,20 @@ export function ClientesDemandasTable({
         total: 0,
         atrasadas: 0,
         urgentes: 0,
+        demandasAtrasadas: [] as Demanda[],
+        demandasUrgentes: [] as Demanda[],
         temDemanda: false,
       };
       cur.total += 1;
       cur.temDemanda = true;
-      if (d.status === "Atrasado") cur.atrasadas += 1;
-      if (d.prioridade === "Urgente") cur.urgentes += 1;
+      if (d.status === "Atrasado") {
+        cur.atrasadas += 1;
+        cur.demandasAtrasadas.push(d);
+      }
+      if (d.prioridade === "Urgente") {
+        cur.urgentes += 1;
+        cur.demandasUrgentes.push(d);
+      }
       getResponsaveisIds(d).forEach((rid) => cur.responsaveisIds.add(rid));
       if (new Date(d.updated_at) > new Date(cur.ultimaAtividade)) {
         cur.ultimaAtividade = d.updated_at;
@@ -131,6 +232,7 @@ export function ClientesDemandasTable({
   }, [demandas, clientes, filtroBusca, filtroResp, filtroStatus, filtroPrio, filtroStatusGlobal]);
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="space-y-1.5">
 
       <Card>
@@ -215,20 +317,51 @@ export function ClientesDemandasTable({
                       </TableCell>
                       <TableCell className="text-center">
                         {l.atrasadas > 0 ? (
-                          <Badge variant="destructive" className="gap-1 h-5 px-1.5 text-xs">
-                            <AlertTriangle className="h-3 w-3" />
-                            {l.atrasadas}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="destructive"
+                                className="gap-1 h-5 px-1.5 text-xs cursor-help"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <AlertTriangle className="h-3 w-3" />
+                                {l.atrasadas}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="p-3">
+                              <DemandasTooltipList
+                                titulo={l.atrasadas === 1 ? "demanda atrasada" : "demandas atrasadas"}
+                                demandas={l.demandasAtrasadas}
+                                responsaveis={responsaveis}
+                                variant="atrasadas"
+                              />
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
                           <span className="text-xs text-muted-foreground">0</span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
                         {l.urgentes > 0 ? (
-                          <Badge className="gap-1 h-5 px-1.5 text-xs bg-status-renovacao text-white">
-                            <Zap className="h-3 w-3" />
-                            {l.urgentes}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                className="gap-1 h-5 px-1.5 text-xs bg-status-renovacao text-white cursor-help"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Zap className="h-3 w-3" />
+                                {l.urgentes}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="p-3">
+                              <DemandasTooltipList
+                                titulo={l.urgentes === 1 ? "demanda urgente" : "demandas urgentes"}
+                                demandas={l.demandasUrgentes}
+                                responsaveis={responsaveis}
+                                variant="urgentes"
+                              />
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
                           <span className="text-xs text-muted-foreground">0</span>
                         )}
@@ -260,5 +393,6 @@ export function ClientesDemandasTable({
         onOpenChange={(v) => !v && setHistoricoClienteId(null)}
       />
     </div>
+    </TooltipProvider>
   );
 }

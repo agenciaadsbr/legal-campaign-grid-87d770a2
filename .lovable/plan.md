@@ -1,59 +1,37 @@
-# Corrigir toast "Nova versão disponível"
+## Objetivo
 
-## Problema
+No módulo **Demandas**, aba **Clientes**, ao passar o mouse sobre os badges vermelhos **Atrasadas** e roxo **Urgentes** de cada linha, exibir um tooltip com a lista detalhada das demandas correspondentes daquele cliente.
 
-O toast aparece corretamente, mas ao clicar em **"Atualizar agora"** nada acontece e a mensagem não some. Causa raiz identificada em `src/hooks/useVersionCheck.tsx`:
+## O que será exibido no tooltip
 
-1. **Provider errado**: o `useVersionCheck` chama `toast(...)` do `sonner`, mas no `App.tsx` o `<Sonner />` está fora do `<BrowserRouter>` e renderizado, porém o hook é montado **antes** que o usuário esteja autenticado — ok, mas o problema real é o `action` em formato de objeto (`{ label, onClick }`). Esse formato funciona no sonner, porém quando o `onClick` é `async` e executa `window.location.reload()` depois de `await caches.delete(...)`, em alguns casos o toast permanece visível porque nunca é dispensado e o reload pode ser bloqueado se houver erro silencioso.
+Para cada demanda (atrasada ou urgente) do cliente, mostrar:
+- Título da demanda
+- Categoria / subtipo
+- Status atual
+- Data limite formatada (dd/mm/aa) — destacada se vencida
+- Responsáveis (nomes)
 
-2. **Toast não é dispensado** mesmo quando o reload funciona, e se algum `await` (ex.: `caches.keys()` em ambiente sem suporte) lança, a função aborta antes do `reload()`.
+Cabeçalho do tooltip: "X demanda(s) atrasada(s)" ou "X demanda(s) urgente(s)".
 
-3. **`duration: Infinity`** combinado com `notifiedRef.current = true` impede qualquer nova chance de fechar o toast manualmente — não há botão de "X" porque o sonner não mostra close por padrão.
+Se a lista for longa (>6 itens), mostrar os 6 primeiros + "… e mais N".
 
-## Correção
+## Implementação técnica
 
-Atualizar `src/hooks/useVersionCheck.tsx`:
+Arquivo: `src/components/demandas/ClientesDemandasTable.tsx`
 
-- Capturar o `id` retornado por `toast(...)` e chamar `toast.dismiss(id)` antes do reload, garantindo que a notificação suma imediatamente.
-- Envolver toda a lógica de limpeza em `try/catch` individuais (cache API e service worker separados) para que uma falha não impeça o `reload()`.
-- Forçar `window.location.reload()` em um `finally`, com fallback `window.location.href = window.location.href` caso reload seja bloqueado.
-- Adicionar `cancel: { label: "Depois" }` para o usuário poder fechar manualmente se quiser adiar.
-- Adicionar `console.log` no início do `onClick` para confirmar que o clique chega (diagnóstico).
+1. Já agregamos `total/atrasadas/urgentes` por cliente. Estender o agregador para guardar também as **listas** das demandas relevantes:
+   - `demandasAtrasadas: Demanda[]`
+   - `demandasUrgentes: Demanda[]`
 
-### Trecho técnico
+2. Envolver os badges de **Atrasadas** e **Urgentes** com `Tooltip` / `TooltipTrigger` / `TooltipContent` (de `@/components/ui/tooltip`, já existente no projeto). Garantir `TooltipProvider` no escopo (envolver a tabela com um único `TooltipProvider delayDuration={150}`).
 
-```ts
-const id = toast("Nova versão disponível", {
-  description: "Atualize agora para ver as últimas funcionalidades.",
-  duration: Infinity,
-  action: {
-    label: "Atualizar agora",
-    onClick: async () => {
-      console.log("[CRM] Atualizar agora clicado");
-      toast.dismiss(id);
-      try {
-        if ("caches" in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map((k) => caches.delete(k)));
-        }
-      } catch (e) { console.warn(e); }
-      try {
-        if ("serviceWorker" in navigator) {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map((r) => r.unregister()));
-        }
-      } catch (e) { console.warn(e); }
-      window.location.reload();
-    },
-  },
-  cancel: { label: "Depois", onClick: () => toast.dismiss(id) },
-});
-```
+3. Conteúdo do tooltip renderizado como uma pequena lista compacta usando tokens semânticos (`bg-popover`, `text-popover-foreground`, `border-border`) — sem cores hardcoded, respeitando o tema dark azul-escuro do projeto.
 
-## Arquivos alterados
+4. `e.stopPropagation()` no trigger para evitar conflito com o `onClick` da linha (navegação).
 
-- `src/hooks/useVersionCheck.tsx` — único arquivo afetado.
+5. Quando `atrasadas === 0` ou `urgentes === 0`, manter o "0" atual sem tooltip.
 
-## Resultado esperado
+## Fora de escopo
 
-Ao clicar em "Atualizar agora", o toast desaparece imediatamente, caches/SW são limpos (best-effort) e a página recarrega buscando o bundle novo. Se o usuário quiser adiar, pode clicar em "Depois" para fechar.
+- Não alterar lógica de filtros, navegação, ou estilos das demais colunas.
+- Não criar nova página ou rota.
