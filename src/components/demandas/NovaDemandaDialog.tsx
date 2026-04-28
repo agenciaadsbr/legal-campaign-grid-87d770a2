@@ -204,19 +204,6 @@ export function NovaDemandaDialog({
             )}
           </div>
           <div>
-            <Label>Subtipo</Label>
-            {categoria === "Personalizado" ? (
-              <Input value={subtipo} onChange={(e) => setSubtipo(e.target.value)} placeholder="Descreva" />
-            ) : (
-              <Select value={subtipo} onValueChange={setSubtipo}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {subtipos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          <div>
             <Label>Responsáveis da Demanda</Label>
             <Popover>
               <PopoverTrigger asChild>
