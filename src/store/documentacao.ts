@@ -75,6 +75,7 @@ export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: str
     { value: "material", label: "Outro material" },
   ],
   documentos: [
+    { value: "mensagem", label: "Mensagem completa" },
     { value: "briefing", label: "Briefing" },
     { value: "planejamento", label: "Planejamento" },
     { value: "contrato", label: "Contrato" },
