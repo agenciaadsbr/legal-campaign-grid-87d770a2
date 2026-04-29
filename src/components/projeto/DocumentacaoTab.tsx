@@ -1024,3 +1024,124 @@ function construirExportacaoTexto(nomeCliente: string, itens: DocumentacaoItem[]
 
   return linhas.join("\n");
 }
+
+// ============================================================
+// MENSAGEM DE ACESSOS — render estilo WhatsApp
+// ============================================================
+function MensagemAcessosCard({
+  item,
+  onEdit,
+}: {
+  item: DocumentacaoItem;
+  onEdit: () => void;
+}) {
+  const remove = useDocumentacao((s) => s.remove);
+  const conteudo = item.observacao ?? "";
+
+  const copiarTudo = () => {
+    navigator.clipboard.writeText(conteudo);
+    toast.success("Mensagem copiada");
+  };
+
+  return (
+    <Card className="border-border bg-card">
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <KeyRound className="h-4 w-4 text-primary shrink-0" />
+            <div className="text-sm font-medium truncate">{item.titulo}</div>
+            <Badge variant="outline" className="text-[10px]">Mensagem</Badge>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              onClick={copiarTudo}
+            >
+              <ClipboardCopy className="h-3.5 w-3.5 mr-1" /> Copiar tudo
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-destructive"
+              onClick={() => {
+                if (confirm("Remover esta mensagem de acessos?")) remove(item.id);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed whitespace-pre-wrap break-words">
+          {renderMensagemFormatada(conteudo)}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function renderMensagemFormatada(texto: string) {
+  const URL_RE = /(https?:\/\/[^\s)>\]]+)/gi;
+  const linhas = texto.split("\n");
+
+  return linhas.map((linha, idx) => {
+    const isLink = /^🔗/.test(linha.trim());
+    const loginMatch = linha.match(/^(\s*)(Login|E-?mail|Usu[áa]rio|User)\s*:\s*(.*)$/i);
+    const senhaMatch = linha.match(/^(\s*)(Senha|Password|Pass|Pwd)\s*:\s*(.*)$/i);
+
+    const renderInline = (s: string) => {
+      const partes = s.split(URL_RE);
+      return partes.map((p, i) => {
+        if (URL_RE.test(p)) {
+          // reset do regex global
+          URL_RE.lastIndex = 0;
+          const limpo = p.replace(/[.,);\]]+$/, "");
+          return (
+            <a
+              key={i}
+              href={limpo}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline break-all"
+            >
+              {limpo}
+            </a>
+          );
+        }
+        return <span key={i}>{p}</span>;
+      });
+    };
+
+    let conteudo: React.ReactNode;
+    if (loginMatch) {
+      conteudo = (
+        <>
+          <span className="font-semibold">Login: </span>
+          {renderInline(loginMatch[3])}
+        </>
+      );
+    } else if (senhaMatch) {
+      conteudo = (
+        <>
+          <span className="font-semibold">Senha: </span>
+          {renderInline(senhaMatch[3])}
+        </>
+      );
+    } else if (isLink) {
+      conteudo = <span className="font-semibold">{renderInline(linha)}</span>;
+    } else {
+      conteudo = renderInline(linha);
+    }
+
+    return (
+      <div key={idx} className={linha.trim() === "" ? "h-2" : undefined}>
+        {conteudo}
+      </div>
+    );
+  });
+}
+
