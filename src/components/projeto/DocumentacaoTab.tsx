@@ -715,12 +715,12 @@ function DocumentacaoLoteDialog({
   }, [open, bloco]);
 
   const itensDetectados = useMemo(
-    () => (isAcessos ? [] : parseLoteTexto(texto)),
-    [texto, isAcessos],
+    () => (isMensagemUnica ? [] : parseLoteTexto(texto)),
+    [texto, isMensagemUnica],
   );
 
   const submit = async () => {
-    if (isAcessos) {
+    if (isMensagemUnica) {
       const conteudo = texto.trim();
       if (!conteudo) {
         toast.error("Cole o conteúdo da mensagem antes de salvar.");
@@ -772,7 +772,7 @@ function DocumentacaoLoteDialog({
         <DialogHeader>
           <DialogTitle>Adicionar em lote — {DOC_BLOCO_LABEL[bloco]}</DialogTitle>
           <DialogDescription>
-            {isAcessos ? (
+            {isMensagemUnica ? (
               <>
                 Cole abaixo a mensagem completa (estilo WhatsApp) com todos os links,
                 logins e senhas. O conteúdo será salvo como um único item formatado,
@@ -791,7 +791,7 @@ function DocumentacaoLoteDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          {!isAcessos && (
+          {!isMensagemUnica && (
             <div>
               <Label>Tipo (aplicado a todos)</Label>
               <Select value={tipo} onValueChange={setTipo}>
@@ -812,8 +812,8 @@ function DocumentacaoLoteDialog({
           )}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label>{isAcessos ? "Mensagem completa" : "Itens"}</Label>
-              {!isAcessos && (
+              <Label>{isMensagemUnica ? "Mensagem completa" : "Itens"}</Label>
+              {!isMensagemUnica && (
                 <Badge variant="outline" className="text-[10px]">
                   {itensDetectados.length} item(ns) detectado(s)
                 </Badge>
@@ -824,7 +824,7 @@ function DocumentacaoLoteDialog({
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder={
-                isAcessos
+                isMensagemUnica
                   ? "Cole aqui a mensagem completa, ex:\n\nBoa tarde Drs.\n\nSegue abaixo as informações de acesso:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030"
                   : "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
               }
@@ -838,9 +838,9 @@ function DocumentacaoLoteDialog({
           </Button>
           <Button
             onClick={submit}
-            disabled={isAcessos ? !texto.trim() : itensDetectados.length === 0}
+            disabled={isMensagemUnica ? !texto.trim() : itensDetectados.length === 0}
           >
-            {isAcessos
+            {isMensagemUnica
               ? "Salvar mensagem"
               : `Adicionar todos (${itensDetectados.length})`}
           </Button>
