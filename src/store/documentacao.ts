@@ -58,6 +58,7 @@ export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: str
     { value: "outro", label: "Outros links" },
   ],
   reunioes: [
+    { value: "mensagem", label: "Mensagem completa" },
     { value: "reuniao_fechamento", label: "Reunião de fechamento" },
     { value: "reuniao_start", label: "Reunião de start" },
     { value: "reuniao_briefing", label: "Reunião de briefing" },
