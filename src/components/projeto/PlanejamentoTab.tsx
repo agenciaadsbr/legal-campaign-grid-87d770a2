@@ -181,13 +181,13 @@ export function PlanejamentoTab({
       <div ref={printRef} className="space-y-3 bg-background">
         {/* Card de progresso */}
         <Card>
-          <CardContent className="p-4 space-y-3">
+          <CardContent className="p-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div className="text-sm font-semibold">Progresso geral</div>
               <div className="text-2xl font-bold tabular-nums">{progresso.pct}%</div>
             </div>
             <Progress value={progresso.pct} className="h-2" />
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
               <Mini label="Total" value={progresso.total} />
               <Mini label="Concluídos" value={progresso.concluidos} accent="success" />
               <Mini label="Pendentes" value={progresso.pendentes} accent="warn" />
@@ -198,59 +198,61 @@ export function PlanejamentoTab({
           </CardContent>
         </Card>
 
-        {/* Blocos */}
-        {PLAN_BLOCOS.map((bloco) => {
-          const itensBloco = itens.filter((i) => i.bloco === bloco.key);
-          return (
-            <Collapsible
-              key={bloco.key}
-              open={openBlocos[bloco.key]}
-              onOpenChange={(v) =>
-                setOpenBlocos((s) => ({ ...s, [bloco.key]: v }))
-              }
-            >
-              <Card>
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-2 p-3 text-left hover:bg-accent/30"
-                  >
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform",
-                        !openBlocos[bloco.key] && "-rotate-90",
-                      )}
-                    />
-                    <span className="text-sm font-semibold flex-1">
-                      {bloco.label}
-                    </span>
-                    <Badge variant="outline" className="text-[10px]">
-                      {itensBloco.length}
-                    </Badge>
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="p-3 pt-0 space-y-4">
-                    {bloco.secoes.map((secao) => {
-                      const itensSecao = itensBloco
-                        .filter((i) => i.secao === secao.key)
-                        .sort((a, b) => a.ordem - b.ordem);
-                      return (
-                        <SecaoBlock
-                          key={secao.key}
-                          clienteId={clienteId}
-                          bloco={bloco.key}
-                          secao={secao}
-                          itens={itensSecao}
-                        />
-                      );
-                    })}
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          );
-        })}
+        {/* Blocos lado a lado (kanban-style) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+          {PLAN_BLOCOS.map((bloco) => {
+            const itensBloco = itens.filter((i) => i.bloco === bloco.key);
+            return (
+              <Collapsible
+                key={bloco.key}
+                open={openBlocos[bloco.key]}
+                onOpenChange={(v) =>
+                  setOpenBlocos((s) => ({ ...s, [bloco.key]: v }))
+                }
+              >
+                <Card className="overflow-hidden">
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2 p-2.5 text-left hover:bg-accent/30 border-b border-border"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform shrink-0",
+                          !openBlocos[bloco.key] && "-rotate-90",
+                        )}
+                      />
+                      <span className="text-sm font-semibold flex-1 truncate">
+                        {bloco.label}
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {itensBloco.length}
+                      </Badge>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="p-2.5 space-y-3">
+                      {bloco.secoes.map((secao) => {
+                        const itensSecao = itensBloco
+                          .filter((i) => i.secao === secao.key)
+                          .sort((a, b) => a.ordem - b.ordem);
+                        return (
+                          <SecaoBlock
+                            key={secao.key}
+                            clienteId={clienteId}
+                            bloco={bloco.key}
+                            secao={secao}
+                            itens={itensSecao}
+                          />
+                        );
+                      })}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            );
+          })}
+        </div>
       </div>
 
       <NovoItemDialog
