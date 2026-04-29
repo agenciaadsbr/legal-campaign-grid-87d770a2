@@ -699,20 +699,48 @@ function DocumentacaoLoteDialog({
   bloco: DocBloco;
 }) {
   const createBatch = useDocumentacao((s) => s.createBatch);
+  const create = useDocumentacao((s) => s.create);
   const tiposDisponiveis = TIPOS_POR_BLOCO[bloco] ?? [];
+  const isAcessos = bloco === "acessos";
   const [tipo, setTipo] = useState<string>(tiposDisponiveis[0]?.value ?? "outro");
   const [texto, setTexto] = useState("");
 
   useEffect(() => {
     if (open) {
-      setTipo(tiposDisponiveis[0]?.value ?? "outro");
+      setTipo(isAcessos ? "mensagem" : tiposDisponiveis[0]?.value ?? "outro");
       setTexto("");
     }
   }, [open, bloco]);
 
-  const itensDetectados = useMemo(() => parseLoteTexto(texto), [texto]);
+  const itensDetectados = useMemo(
+    () => (isAcessos ? [] : parseLoteTexto(texto)),
+    [texto, isAcessos],
+  );
 
   const submit = async () => {
+    if (isAcessos) {
+      const conteudo = texto.trim();
+      if (!conteudo) {
+        toast.error("Cole o conteúdo da mensagem antes de salvar.");
+        return;
+      }
+      await create({
+        cliente_id: clienteId,
+        bloco,
+        tipo: "mensagem",
+        titulo: "Mensagem de acessos",
+        url: null,
+        login: null,
+        senha: null,
+        observacao: conteudo,
+        data_evento: null,
+        enviado_por: null,
+        formato: null,
+      } as any);
+      onOpenChange(false);
+      return;
+    }
+
     if (itensDetectados.length === 0) {
       toast.error("Nenhum item detectado", {
         description: "Cole o texto com URLs e/ou Login/Senha, ou use o formato com |.",
@@ -742,44 +770,63 @@ function DocumentacaoLoteDialog({
         <DialogHeader>
           <DialogTitle>Adicionar em lote — {DOC_BLOCO_LABEL[bloco]}</DialogTitle>
           <DialogDescription>
-            Cole o texto livre (estilo WhatsApp/e-mail) — o sistema detecta automaticamente
-            cada item, URL, Login e Senha. Itens são separados por linha em branco.
-            <br />
-            Alternativa: uma linha por item com{" "}
-            <code>título | url | login | senha | observação</code>.
+            {isAcessos ? (
+              <>
+                Cole abaixo a mensagem completa (estilo WhatsApp) com todos os links,
+                logins e senhas. O conteúdo será salvo como um único item formatado,
+                preservando exatamente como você colou.
+              </>
+            ) : (
+              <>
+                Cole o texto livre (estilo WhatsApp/e-mail) — o sistema detecta
+                automaticamente cada item, URL, Login e Senha. Itens são separados por
+                linha em branco.
+                <br />
+                Alternativa: uma linha por item com{" "}
+                <code>título | url | login | senha | observação</code>.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label>Tipo (aplicado a todos)</Label>
-            <Select value={tipo} onValueChange={setTipo}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {tiposDisponiveis.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isAcessos && (
+            <div>
+              <Label>Tipo (aplicado a todos)</Label>
+              <Select value={tipo} onValueChange={setTipo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposDisponiveis
+                    .filter((t) => t.value !== "mensagem")
+                    .map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label>Itens</Label>
-              <Badge variant="outline" className="text-[10px]">
-                {itensDetectados.length} item(ns) detectado(s)
-              </Badge>
+              <Label>{isAcessos ? "Mensagem completa" : "Itens"}</Label>
+              {!isAcessos && (
+                <Badge variant="outline" className="text-[10px]">
+                  {itensDetectados.length} item(ns) detectado(s)
+                </Badge>
+              )}
             </div>
             <Textarea
-              rows={12}
+              rows={14}
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder={
-                "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
+                isAcessos
+                  ? "Cole aqui a mensagem completa, ex:\n\nBoa tarde Drs.\n\nSegue abaixo as informações de acesso:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030"
+                  : "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
               }
-              className="font-mono text-xs"
+              className="font-mono text-xs whitespace-pre-wrap"
             />
           </div>
         </div>
@@ -787,8 +834,13 @@ function DocumentacaoLoteDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={itensDetectados.length === 0}>
-            Adicionar todos ({itensDetectados.length})
+          <Button
+            onClick={submit}
+            disabled={isAcessos ? !texto.trim() : itensDetectados.length === 0}
+          >
+            {isAcessos
+              ? "Salvar mensagem"
+              : `Adicionar todos (${itensDetectados.length})`}
           </Button>
         </DialogFooter>
       </DialogContent>
