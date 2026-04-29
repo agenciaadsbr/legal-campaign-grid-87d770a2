@@ -47,6 +47,7 @@ import {
   Send,
   Files,
   StickyNote,
+  ClipboardCopy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -274,6 +275,21 @@ export function DocumentacaoTab({
                           onClick={() => setLoteState({ open: true, bloco })}
                         >
                           <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
+                        </Button>
+                      )}
+                      {bloco === "acessos" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          disabled={lista.length === 0}
+                          onClick={() => {
+                            const msg = construirMensagemAcessos(lista);
+                            navigator.clipboard.writeText(msg);
+                            toast.success("Mensagem copiada");
+                          }}
+                        >
+                          <ClipboardCopy className="h-3.5 w-3.5 mr-1" /> Copiar mensagem
                         </Button>
                       )}
                     </div>
@@ -681,28 +697,28 @@ function DocumentacaoLoteDialog({
     }
   }, [open, bloco]);
 
+  const itensDetectados = useMemo(() => parseLoteTexto(texto), [texto]);
+
   const submit = async () => {
-    const linhas = texto
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (linhas.length === 0) return;
-    const items = linhas.map((linha) => {
-      const partes = linha.split("|").map((p) => p.trim());
-      return {
-        cliente_id: clienteId,
-        bloco,
-        tipo,
-        titulo: partes[0] ?? linha,
-        url: partes[1] || null,
-        login: partes[2] || null,
-        senha: partes[3] || null,
-        observacao: partes[4] || null,
-        data_evento: null,
-        enviado_por: null,
-        formato: null,
-      };
-    });
+    if (itensDetectados.length === 0) {
+      toast.error("Nenhum item detectado", {
+        description: "Cole o texto com URLs e/ou Login/Senha, ou use o formato com |.",
+      });
+      return;
+    }
+    const items = itensDetectados.map((p) => ({
+      cliente_id: clienteId,
+      bloco,
+      tipo,
+      titulo: p.titulo,
+      url: p.url,
+      login: p.login,
+      senha: p.senha,
+      observacao: p.observacao,
+      data_evento: null,
+      enviado_por: null,
+      formato: null,
+    }));
     await createBatch(items as any);
     onOpenChange(false);
   };
@@ -713,9 +729,11 @@ function DocumentacaoLoteDialog({
         <DialogHeader>
           <DialogTitle>Adicionar em lote — {DOC_BLOCO_LABEL[bloco]}</DialogTitle>
           <DialogDescription>
-            Cole uma linha por item. Use <code>|</code> para separar campos:
+            Cole o texto livre (estilo WhatsApp/e-mail) — o sistema detecta automaticamente
+            cada item, URL, Login e Senha. Itens são separados por linha em branco.
             <br />
-            <code>título | url | login | senha | observação</code>
+            Alternativa: uma linha por item com{" "}
+            <code>título | url | login | senha | observação</code>.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -735,12 +753,19 @@ function DocumentacaoLoteDialog({
             </Select>
           </div>
           <div>
-            <Label>Itens</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Itens</Label>
+              <Badge variant="outline" className="text-[10px]">
+                {itensDetectados.length} item(ns) detectado(s)
+              </Badge>
+            </div>
             <Textarea
-              rows={10}
+              rows={12}
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder={"Drive Cliente | https://drive.google.com/...\nSite | https://...\n..."}
+              placeholder={
+                "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
+              }
               className="font-mono text-xs"
             />
           </div>
@@ -749,13 +774,155 @@ function DocumentacaoLoteDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={!texto.trim()}>
-            Adicionar todos
+          <Button onClick={submit} disabled={itensDetectados.length === 0}>
+            Adicionar todos ({itensDetectados.length})
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+// ============================================================
+// PARSER DE LOTE (formato livre + formato com |)
+// ============================================================
+type LoteItem = {
+  titulo: string;
+  url: string | null;
+  login: string | null;
+  senha: string | null;
+  observacao: string | null;
+};
+
+function parseLoteTexto(texto: string): LoteItem[] {
+  const txt = (texto ?? "").trim();
+  if (!txt) return [];
+
+  const linhasNaoVazias = txt.split("\n").filter((l) => l.trim());
+
+  // Formato simples (uma linha por item com |)
+  const usaPipe = linhasNaoVazias.some((l) => l.includes("|"));
+  if (usaPipe) {
+    return linhasNaoVazias
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((linha) => {
+        const partes = linha.split("|").map((p) => p.trim());
+        return {
+          titulo: partes[0] || linha,
+          url: partes[1] || null,
+          login: partes[2] || null,
+          senha: partes[3] || null,
+          observacao: partes[4] || null,
+        };
+      });
+  }
+
+  // Formato livre: blocos separados por linha em branco
+  const blocos = txt
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  const URL_RE = /https?:\/\/[^\s)>\]]+/i;
+  const LOGIN_RE = /^\s*(?:login|e-?mail|usu[áa]rio|user)\s*[:\-]\s*(.+)$/im;
+  const SENHA_RE = /^\s*(?:senha|password|pass|pwd)\s*[:\-]\s*(.+)$/im;
+  const EMOJI_RE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu;
+
+  const limparTitulo = (s: string) =>
+    s
+      .replace(EMOJI_RE, "")
+      .replace(/^[\s\-•*▶►]+/, "")
+      .replace(/[:：]\s*$/, "")
+      .trim();
+
+  const itens: LoteItem[] = [];
+
+  for (const bloco of blocos) {
+    const linhas = bloco.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (linhas.length === 0) continue;
+
+    let url: string | null = null;
+    let login: string | null = null;
+    let senha: string | null = null;
+    const obsLinhas: string[] = [];
+    let tituloCandidato = "";
+
+    for (const linha of linhas) {
+      const matchUrl = linha.match(URL_RE);
+      const matchLogin = linha.match(LOGIN_RE);
+      const matchSenha = linha.match(SENHA_RE);
+
+      if (matchLogin) {
+        login = matchLogin[1].trim();
+        continue;
+      }
+      if (matchSenha) {
+        senha = matchSenha[1].trim();
+        continue;
+      }
+      if (matchUrl) {
+        if (!url) {
+          url = matchUrl[0].replace(/[.,);\]]+$/, "");
+        }
+        // Se a linha é SÓ a URL, não usa como título
+        const semUrl = linha.replace(matchUrl[0], "").trim();
+        if (semUrl) {
+          if (!tituloCandidato) tituloCandidato = limparTitulo(semUrl);
+          else obsLinhas.push(semUrl);
+        }
+        continue;
+      }
+      if (!tituloCandidato) {
+        tituloCandidato = limparTitulo(linha);
+      } else {
+        obsLinhas.push(linha);
+      }
+    }
+
+    // Bloco sem URL e sem credenciais → provavelmente saudação, descarta
+    if (!url && !login && !senha) continue;
+
+    let titulo = tituloCandidato;
+    if (!titulo) {
+      if (url) {
+        try {
+          titulo = new URL(url).hostname.replace(/^www\./, "");
+        } catch {
+          titulo = url;
+        }
+      } else {
+        titulo = "Acesso";
+      }
+    }
+
+    itens.push({
+      titulo,
+      url,
+      login,
+      senha,
+      observacao: obsLinhas.length ? obsLinhas.join("\n") : null,
+    });
+  }
+
+  return itens;
+}
+
+// ============================================================
+// MENSAGEM FORMATADA DE ACESSOS (para copiar)
+// ============================================================
+function construirMensagemAcessos(lista: DocumentacaoItem[]): string {
+  if (!lista.length) return "";
+  const partes: string[] = ["Segue abaixo as informações de acesso:", ""];
+  lista.forEach((it) => {
+    partes.push(`🔗 ${it.titulo}`);
+    if (it.url) partes.push(it.url);
+    if (it.login) partes.push(`Login: ${it.login}`);
+    if (it.senha) partes.push(`Senha: ${it.senha}`);
+    if (it.observacao) partes.push(it.observacao);
+    partes.push("");
+  });
+  return partes.join("\n").trimEnd();
 }
 
 // ============================================================
