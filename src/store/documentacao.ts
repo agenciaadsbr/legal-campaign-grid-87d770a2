@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export type DocBloco = "acessos" | "links" | "reunioes" | "materiais" | "documentos" | "observacoes";
+export type DocBloco = "acessos" | "links" | "reunioes" | "materiais" | "documentos";
 
 export const DOC_BLOCO_LABEL: Record<DocBloco, string> = {
   acessos: "Acessos",
@@ -11,7 +11,6 @@ export const DOC_BLOCO_LABEL: Record<DocBloco, string> = {
   reunioes: "Reuniões",
   materiais: "Materiais enviados ao cliente",
   documentos: "Documentos",
-  observacoes: "Observações",
 };
 
 export const DOC_BLOCOS: DocBloco[] = [
@@ -20,7 +19,6 @@ export const DOC_BLOCOS: DocBloco[] = [
   "reunioes",
   "materiais",
   "documentos",
-  "observacoes",
 ];
 
 // Tipos por bloco
@@ -84,7 +82,6 @@ export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: str
     { value: "complementar", label: "Arquivos complementares" },
     { value: "outro", label: "Outros documentos" },
   ],
-  observacoes: [{ value: "outro", label: "Observação" }],
 };
 
 export const DOC_TIPO_LABEL: Record<string, string> = (() => {
