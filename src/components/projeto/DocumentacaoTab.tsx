@@ -1164,9 +1164,13 @@ function construirExportacaoTexto(nomeCliente: string, itens: DocumentacaoItem[]
 function MensagemAcessosCard({
   item,
   onEdit,
+  selected,
+  onToggleSelect,
 }: {
   item: DocumentacaoItem;
   onEdit: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const remove = useDocumentacao((s) => s.remove);
   const conteudo = item.observacao ?? "";
@@ -1177,10 +1181,17 @@ function MensagemAcessosCard({
   };
 
   return (
-    <Card className="border-border bg-card">
+    <Card className={cn("border-border bg-card", selected && "ring-1 ring-primary border-primary/50")}>
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
+            {onToggleSelect && (
+              <Checkbox
+                checked={!!selected}
+                onCheckedChange={onToggleSelect}
+                aria-label="Selecionar item"
+              />
+            )}
             <KeyRound className="h-4 w-4 text-primary shrink-0" />
             <div className="text-sm font-medium truncate">{item.titulo}</div>
             <Badge variant="outline" className="text-[10px]">Mensagem</Badge>
