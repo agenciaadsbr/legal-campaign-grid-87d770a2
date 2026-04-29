@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -284,7 +284,10 @@ export function DocumentacaoTab({
                           className="h-7 px-2 text-xs"
                           disabled={lista.length === 0}
                           onClick={() => {
-                            const msg = construirMensagemAcessos(lista);
+                            const itemMsg = lista.find((i) => i.tipo === "mensagem");
+                            const msg = itemMsg?.observacao
+                              ? itemMsg.observacao
+                              : construirMensagemAcessos(lista);
                             navigator.clipboard.writeText(msg);
                             toast.success("Mensagem copiada");
                           }}
@@ -299,15 +302,25 @@ export function DocumentacaoTab({
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-2">
-                        {lista.map((it) => (
-                          <ItemCard
-                            key={it.id}
-                            item={it}
-                            onEdit={() =>
-                              setDialogState({ open: true, bloco, item: it })
-                            }
-                          />
-                        ))}
+                        {lista.map((it) =>
+                          bloco === "acessos" && it.tipo === "mensagem" ? (
+                            <MensagemAcessosCard
+                              key={it.id}
+                              item={it}
+                              onEdit={() =>
+                                setDialogState({ open: true, bloco, item: it })
+                              }
+                            />
+                          ) : (
+                            <ItemCard
+                              key={it.id}
+                              item={it}
+                              onEdit={() =>
+                                setDialogState({ open: true, bloco, item: it })
+                              }
+                            />
+                          ),
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -686,20 +699,48 @@ function DocumentacaoLoteDialog({
   bloco: DocBloco;
 }) {
   const createBatch = useDocumentacao((s) => s.createBatch);
+  const create = useDocumentacao((s) => s.create);
   const tiposDisponiveis = TIPOS_POR_BLOCO[bloco] ?? [];
+  const isAcessos = bloco === "acessos";
   const [tipo, setTipo] = useState<string>(tiposDisponiveis[0]?.value ?? "outro");
   const [texto, setTexto] = useState("");
 
   useEffect(() => {
     if (open) {
-      setTipo(tiposDisponiveis[0]?.value ?? "outro");
+      setTipo(isAcessos ? "mensagem" : tiposDisponiveis[0]?.value ?? "outro");
       setTexto("");
     }
   }, [open, bloco]);
 
-  const itensDetectados = useMemo(() => parseLoteTexto(texto), [texto]);
+  const itensDetectados = useMemo(
+    () => (isAcessos ? [] : parseLoteTexto(texto)),
+    [texto, isAcessos],
+  );
 
   const submit = async () => {
+    if (isAcessos) {
+      const conteudo = texto.trim();
+      if (!conteudo) {
+        toast.error("Cole o conteúdo da mensagem antes de salvar.");
+        return;
+      }
+      await create({
+        cliente_id: clienteId,
+        bloco,
+        tipo: "mensagem",
+        titulo: "Mensagem de acessos",
+        url: null,
+        login: null,
+        senha: null,
+        observacao: conteudo,
+        data_evento: null,
+        enviado_por: null,
+        formato: null,
+      } as any);
+      onOpenChange(false);
+      return;
+    }
+
     if (itensDetectados.length === 0) {
       toast.error("Nenhum item detectado", {
         description: "Cole o texto com URLs e/ou Login/Senha, ou use o formato com |.",
@@ -729,44 +770,63 @@ function DocumentacaoLoteDialog({
         <DialogHeader>
           <DialogTitle>Adicionar em lote — {DOC_BLOCO_LABEL[bloco]}</DialogTitle>
           <DialogDescription>
-            Cole o texto livre (estilo WhatsApp/e-mail) — o sistema detecta automaticamente
-            cada item, URL, Login e Senha. Itens são separados por linha em branco.
-            <br />
-            Alternativa: uma linha por item com{" "}
-            <code>título | url | login | senha | observação</code>.
+            {isAcessos ? (
+              <>
+                Cole abaixo a mensagem completa (estilo WhatsApp) com todos os links,
+                logins e senhas. O conteúdo será salvo como um único item formatado,
+                preservando exatamente como você colou.
+              </>
+            ) : (
+              <>
+                Cole o texto livre (estilo WhatsApp/e-mail) — o sistema detecta
+                automaticamente cada item, URL, Login e Senha. Itens são separados por
+                linha em branco.
+                <br />
+                Alternativa: uma linha por item com{" "}
+                <code>título | url | login | senha | observação</code>.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label>Tipo (aplicado a todos)</Label>
-            <Select value={tipo} onValueChange={setTipo}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {tiposDisponiveis.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isAcessos && (
+            <div>
+              <Label>Tipo (aplicado a todos)</Label>
+              <Select value={tipo} onValueChange={setTipo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposDisponiveis
+                    .filter((t) => t.value !== "mensagem")
+                    .map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label>Itens</Label>
-              <Badge variant="outline" className="text-[10px]">
-                {itensDetectados.length} item(ns) detectado(s)
-              </Badge>
+              <Label>{isAcessos ? "Mensagem completa" : "Itens"}</Label>
+              {!isAcessos && (
+                <Badge variant="outline" className="text-[10px]">
+                  {itensDetectados.length} item(ns) detectado(s)
+                </Badge>
+              )}
             </div>
             <Textarea
-              rows={12}
+              rows={14}
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder={
-                "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
+                isAcessos
+                  ? "Cole aqui a mensagem completa, ex:\n\nBoa tarde Drs.\n\nSegue abaixo as informações de acesso:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030"
+                  : "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
               }
-              className="font-mono text-xs"
+              className="font-mono text-xs whitespace-pre-wrap"
             />
           </div>
         </div>
@@ -774,8 +834,13 @@ function DocumentacaoLoteDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={itensDetectados.length === 0}>
-            Adicionar todos ({itensDetectados.length})
+          <Button
+            onClick={submit}
+            disabled={isAcessos ? !texto.trim() : itensDetectados.length === 0}
+          >
+            {isAcessos
+              ? "Salvar mensagem"
+              : `Adicionar todos (${itensDetectados.length})`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -959,3 +1024,124 @@ function construirExportacaoTexto(nomeCliente: string, itens: DocumentacaoItem[]
 
   return linhas.join("\n");
 }
+
+// ============================================================
+// MENSAGEM DE ACESSOS — render estilo WhatsApp
+// ============================================================
+function MensagemAcessosCard({
+  item,
+  onEdit,
+}: {
+  item: DocumentacaoItem;
+  onEdit: () => void;
+}) {
+  const remove = useDocumentacao((s) => s.remove);
+  const conteudo = item.observacao ?? "";
+
+  const copiarTudo = () => {
+    navigator.clipboard.writeText(conteudo);
+    toast.success("Mensagem copiada");
+  };
+
+  return (
+    <Card className="border-border bg-card">
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <KeyRound className="h-4 w-4 text-primary shrink-0" />
+            <div className="text-sm font-medium truncate">{item.titulo}</div>
+            <Badge variant="outline" className="text-[10px]">Mensagem</Badge>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              onClick={copiarTudo}
+            >
+              <ClipboardCopy className="h-3.5 w-3.5 mr-1" /> Copiar tudo
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-destructive"
+              onClick={() => {
+                if (confirm("Remover esta mensagem de acessos?")) remove(item.id);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed whitespace-pre-wrap break-words">
+          {renderMensagemFormatada(conteudo)}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function renderMensagemFormatada(texto: string) {
+  const URL_RE = /(https?:\/\/[^\s)>\]]+)/gi;
+  const linhas = texto.split("\n");
+
+  return linhas.map((linha, idx) => {
+    const isLink = /^🔗/.test(linha.trim());
+    const loginMatch = linha.match(/^(\s*)(Login|E-?mail|Usu[áa]rio|User)\s*:\s*(.*)$/i);
+    const senhaMatch = linha.match(/^(\s*)(Senha|Password|Pass|Pwd)\s*:\s*(.*)$/i);
+
+    const renderInline = (s: string) => {
+      const partes = s.split(URL_RE);
+      return partes.map((p, i) => {
+        if (URL_RE.test(p)) {
+          // reset do regex global
+          URL_RE.lastIndex = 0;
+          const limpo = p.replace(/[.,);\]]+$/, "");
+          return (
+            <a
+              key={i}
+              href={limpo}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline break-all"
+            >
+              {limpo}
+            </a>
+          );
+        }
+        return <span key={i}>{p}</span>;
+      });
+    };
+
+    let conteudo: ReactNode;
+    if (loginMatch) {
+      conteudo = (
+        <>
+          <span className="font-semibold">Login: </span>
+          {renderInline(loginMatch[3])}
+        </>
+      );
+    } else if (senhaMatch) {
+      conteudo = (
+        <>
+          <span className="font-semibold">Senha: </span>
+          {renderInline(senhaMatch[3])}
+        </>
+      );
+    } else if (isLink) {
+      conteudo = <span className="font-semibold">{renderInline(linha)}</span>;
+    } else {
+      conteudo = renderInline(linha);
+    }
+
+    return (
+      <div key={idx} className={linha.trim() === "" ? "h-2" : undefined}>
+        {conteudo}
+      </div>
+    );
+  });
+}
+
