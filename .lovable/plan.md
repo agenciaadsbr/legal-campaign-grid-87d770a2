@@ -1,47 +1,15 @@
-## Objetivo
-Otimizar o kanban da aba **Posts** (`PostsKanbanCliente.tsx`) para:
-1. Reduzir o tamanho/espaçamento dos cards (visual mais compacto, parecido com o screenshot).
-2. Limitar a exibição a **8 cards por coluna** com paginação.
-3. Adicionar **scroll interno em cada coluna** (altura fixa) para a página principal não rolar tanto.
-4. Manter todas as informações atuais (título, "Post Mês X · Semana Y", prazo, avatares, urgência, badge de status, botão "Iniciar tarefa").
+## Confirmação
+Sim, está duplicado. Na aba **Visão Geral** o cabeçalho mostra um botão "Adicionar Tarefa" (`src/pages/ProjetoCliente.tsx`, linha 150) que dispara exatamente a mesma ação (`setNovaTarefaOpen(true)`) do botão recém-adicionado dentro da aba **Posts** (ao lado do "Buscar por título…"). Como o usuário inicia em Visão Geral e logo abre Posts pra adicionar tarefa, o de Visão Geral fica redundante.
 
-## Mudanças em `src/components/clientes/PostsKanbanCliente.tsx`
+## Mudança
+Em `src/pages/ProjetoCliente.tsx`, dentro do `headerBtn` (linhas 145-151), adicionar:
 
-### 1. Card mais compacto (`CardItem`)
-- Padding `p-3` → `p-2.5`, `mb-2` → `mb-1.5`.
-- Título: manter `text-sm` mas `line-clamp-2` (já é) e reduzir gap interno (`gap-1.5` mantido).
-- Subtítulo "Post Mês … · Semana …": `text-[10px]` mantido, `mt-0.5` → `mt-1` (respiro mínimo) e `text-muted-foreground`.
-- Linha prazo + avatares: `mt-2` → `mt-1.5`.
-- Botão "Iniciar tarefa": `mt-2 h-7` → `mt-1.5 h-7` (mantém clicabilidade).
-- Badge de status (quando não-Planejamento): `mt-2` → `mt-1.5`.
-- Resultado: cards visualmente próximos ao screenshot enviado, com menos espaço vertical desperdiçado.
+```ts
+if (tab === "visao") return null;
+```
 
-### 2. Coluna com altura fixa + scroll interno (`Coluna`)
-- Trocar `min-w-[260px]` por `w-[270px] shrink-0` para colunas de largura consistente (igual ao screenshot).
-- Wrapper interno da lista (`<div className="min-h-[100px]">`) substituído por um container com:
-  - Altura máxima fixa: `max-h-[calc(100vh-260px)]` (ajusta ao header/filtros).
-  - `overflow-y-auto scrollbar-thin pr-1` para barra de rolagem própria.
-- Adicionar contador "X de Y" ao lado do `StatusBadge` quando houver paginação.
-
-### 3. Paginação de 8 cards por coluna
-- Estado local `paginas: Record<StatusCard, number>` no componente `PostsKanbanCliente` (default 1 por coluna).
-- Constante `CARDS_POR_PAGINA = 8`.
-- Em `Coluna`, receber props `pagina`, `onPaginaChange` e `total`. Calcular `slice((pagina-1)*8, pagina*8)`.
-- Rodapé da coluna (dentro do scroll-area, sticky no final ou logo abaixo da lista): controles compactos
-  - `‹  Página X / N  ›` usando `Button variant="ghost" size="icon" className="h-6 w-6"`.
-  - Só renderizar se `total > 8`.
-- Reset da página da coluna para 1 quando filtros mudarem (`useEffect` que zera `paginas` ao mudar `filtroMes/filtroResps/filtroSomente/busca`).
-
-### 4. Drop-zone permanece funcional
-- O `useDroppable` continua na raiz da `Coluna`; o `overflow-y-auto` é em um filho, então o drop dentro da área visível segue funcionando. Não muda a lógica de DnD.
-
-## Detalhes técnicos
-- `CARDS_POR_PAGINA = 8` declarado no topo do arquivo.
-- `paginas` tipado `Partial<Record<string, number>>` (status como string para evitar fricção de tipos).
-- Helper `getPagina(status)` retorna `paginas[status] ?? 1`.
-- Ao paginar, o scroll interno volta ao topo via `ref` no container scrollável (opcional; `scrollTop=0` no callback de mudança de página).
-- Manter classes `scrollbar-thin` (já usada no arquivo).
+Isso faz o cabeçalho da Visão Geral não renderizar nenhum botão (o `{headerBtn && …}` na linha 198 já trata o caso `null`). Demais abas (Vídeos, Tráfego, LP/Site, IA, Atividades, Responsáveis, Relatórios) continuam mostrando "Adicionar Tarefa" no header normalmente.
 
 ## Fora de escopo
-- Não alterar `ProjetoKanban` (Demandas) nem outros kanbans.
-- Não alterar dados nem store.
+- Não mexer no botão da aba Posts.
+- Não alterar o modal `NovaTarefaDialog` nem o estado `novaTarefaOpen`.
