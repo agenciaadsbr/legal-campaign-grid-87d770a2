@@ -161,7 +161,7 @@ export default function ProjetoCliente() {
   const demandasCli = demandas.filter((d) => d.cliente_id === clienteId);
 
   return (
-    <div className="p-6 space-y-4 animate-fade-in">
+    <div className={cn("p-6 space-y-4 animate-fade-in", tab === "posts" && "flex flex-col h-full min-h-0 overflow-hidden")}>
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 text-sm text-muted-foreground">
         <Button
@@ -204,7 +204,7 @@ export default function ProjetoCliente() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={tab} onValueChange={handleTabChange}>
+      <Tabs value={tab} onValueChange={handleTabChange} className={cn(tab === "posts" && "flex-1 min-h-0 flex flex-col")}>
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-max">
             <TabsTrigger value="visao" className="gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
@@ -233,7 +233,7 @@ export default function ProjetoCliente() {
         </TabsContent>
 
         {/* ============== POSTS ============== */}
-        <TabsContent value="posts" className="mt-4">
+        <TabsContent value="posts" className="mt-4 flex-1 min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col">
           <PostsKanbanCliente onAdicionarTarefa={() => setNovaTarefaOpen(true)} />
         </TabsContent>
 
