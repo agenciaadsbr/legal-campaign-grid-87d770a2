@@ -194,10 +194,41 @@ export type Database = {
         }
         Relationships: []
       }
-      cliente_documentacao: {
+      cliente_briefing: {
         Row: {
+          atualizado_por: string | null
+          blocos: Json
           cliente_id: string
           created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          atualizado_por?: string | null
+          blocos?: Json
+          cliente_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          atualizado_por?: string | null
+          blocos?: Json
+          cliente_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cliente_documentacao: {
+        Row: {
+          bloco: string
+          cliente_id: string
+          created_at: string
+          data_evento: string | null
+          enviado_por: string | null
+          formato: string | null
           id: string
           login: string | null
           observacao: string | null
@@ -209,8 +240,12 @@ export type Database = {
           url: string | null
         }
         Insert: {
+          bloco?: string
           cliente_id: string
           created_at?: string
+          data_evento?: string | null
+          enviado_por?: string | null
+          formato?: string | null
           id?: string
           login?: string | null
           observacao?: string | null
@@ -222,8 +257,12 @@ export type Database = {
           url?: string | null
         }
         Update: {
+          bloco?: string
           cliente_id?: string
           created_at?: string
+          data_evento?: string | null
+          enviado_por?: string | null
+          formato?: string | null
           id?: string
           login?: string | null
           observacao?: string | null
@@ -233,6 +272,60 @@ export type Database = {
           titulo?: string
           updated_at?: string
           url?: string | null
+        }
+        Relationships: []
+      }
+      cliente_planejamento_itens: {
+        Row: {
+          bloco: string
+          cliente_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          observacao: string | null
+          ordem: number
+          prazo: string | null
+          prioridade: string
+          responsavel_id: string | null
+          secao: string
+          situacao: string
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          bloco: string
+          cliente_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          observacao?: string | null
+          ordem?: number
+          prazo?: string | null
+          prioridade?: string
+          responsavel_id?: string | null
+          secao?: string
+          situacao?: string
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          bloco?: string
+          cliente_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          observacao?: string | null
+          ordem?: number
+          prazo?: string | null
+          prioridade?: string
+          responsavel_id?: string | null
+          secao?: string
+          situacao?: string
+          status?: string
+          titulo?: string
+          updated_at?: string
         }
         Relationships: []
       }
