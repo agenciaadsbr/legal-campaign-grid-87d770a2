@@ -146,6 +146,7 @@ export default function ProjetoCliente() {
     if (tab === "documentacao") return { label: "Adicionar documentação", onClick: () => setNovoDocOpen(true) };
     if (tab === "briefing") return { label: "Editar briefing", onClick: () => setEditarBriefingTrigger(true) };
     if (tab === "planejamento") return { label: "Adicionar item", onClick: () => setNovoPlanOpen(true) };
+    if (tab === "posts") return null; // botão movido para dentro da aba Posts (ao lado do filtro de busca)
     return { label: "Adicionar Tarefa", onClick: () => setNovaTarefaOpen(true) };
   })();
 
@@ -194,9 +195,11 @@ export default function ProjetoCliente() {
             </p>
           </div>
         </div>
-        <Button onClick={headerBtn.onClick}>
-          <Plus className="h-4 w-4 mr-1" /> {headerBtn.label}
-        </Button>
+        {headerBtn && (
+          <Button onClick={headerBtn.onClick}>
+            <Plus className="h-4 w-4 mr-1" /> {headerBtn.label}
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -230,7 +233,7 @@ export default function ProjetoCliente() {
 
         {/* ============== POSTS ============== */}
         <TabsContent value="posts" className="mt-4">
-          <PostsKanbanCliente />
+          <PostsKanbanCliente onAdicionarTarefa={() => setNovaTarefaOpen(true)} />
         </TabsContent>
 
         {/* ============== VÍDEOS ============== */}

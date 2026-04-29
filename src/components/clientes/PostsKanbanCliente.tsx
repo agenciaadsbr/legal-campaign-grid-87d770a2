@@ -26,7 +26,7 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { IniciarTarefaDialog } from "@/components/IniciarTarefaDialog";
@@ -285,7 +285,7 @@ function Coluna({
   );
 }
 
-export function PostsKanbanCliente() {
+export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: () => void } = {}) {
   const { clienteId } = useParams();
   const { cards, moveCard, contratos, statusPostOptions, responsaveis } = useCRM();
   const { canWrite } = useAuth();
@@ -439,6 +439,12 @@ export function PostsKanbanCliente() {
             className="h-9 pl-8 text-sm"
           />
         </div>
+
+        {canWrite && onAdicionarTarefa && (
+          <Button onClick={onAdicionarTarefa} size="sm" className="h-9">
+            <Plus className="h-4 w-4 mr-1" /> Adicionar Tarefa
+          </Button>
+        )}
       </div>
 
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
