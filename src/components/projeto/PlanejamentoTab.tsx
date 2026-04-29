@@ -306,22 +306,8 @@ function SecaoBlock({
   itens: PlanItem[];
 }) {
   const create = usePlanejamento((s) => s.create);
-  const reorder = usePlanejamento((s) => s.reorder);
   const [adicionando, setAdicionando] = useState(false);
   const [novoTitulo, setNovoTitulo] = useState("");
-
-  const moverCima = async (idx: number) => {
-    if (idx === 0) return;
-    const ids = itens.map((i) => i.id);
-    [ids[idx - 1], ids[idx]] = [ids[idx], ids[idx - 1]];
-    await reorder(clienteId, bloco, secao.key, ids);
-  };
-  const moverBaixo = async (idx: number) => {
-    if (idx === itens.length - 1) return;
-    const ids = itens.map((i) => i.id);
-    [ids[idx + 1], ids[idx]] = [ids[idx], ids[idx + 1]];
-    await reorder(clienteId, bloco, secao.key, ids);
-  };
 
   const adicionar = async () => {
     if (!novoTitulo.trim()) return;
