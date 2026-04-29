@@ -112,13 +112,20 @@ export default function ProjetoCliente() {
   useDemandasBootstrap();
   useAtividadesBootstrap(clienteId);
   useDocumentacaoBootstrap();
+  useBriefingBootstrap();
+  usePlanejamentoBootstrap();
 
   const { clientes, cards, responsaveis } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
   const docsAll = useDocumentacao((s) => s.itens);
+  const planAll = usePlanejamento((s) => s.itens);
   const docs = useMemo(
     () => docsAll.filter((i) => i.cliente_id === clienteId),
     [docsAll, clienteId],
+  );
+  const planCli = useMemo(
+    () => planAll.filter((i) => i.cliente_id === clienteId),
+    [planAll, clienteId],
   );
   const cliente = clientes.find((c) => c.id === clienteId);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -132,6 +139,15 @@ export default function ProjetoCliente() {
   };
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
   const [novoDocOpen, setNovoDocOpen] = useState(false);
+  const [novoPlanOpen, setNovoPlanOpen] = useState(false);
+  const [editarBriefingTrigger, setEditarBriefingTrigger] = useState(false);
+
+  const headerBtn = (() => {
+    if (tab === "documentacao") return { label: "Adicionar documentação", onClick: () => setNovoDocOpen(true) };
+    if (tab === "briefing") return { label: "Editar briefing", onClick: () => setEditarBriefingTrigger(true) };
+    if (tab === "planejamento") return { label: "Adicionar item", onClick: () => setNovoPlanOpen(true) };
+    return { label: "Adicionar Tarefa", onClick: () => setNovaTarefaOpen(true) };
+  })();
 
   if (!cliente) {
     return (
@@ -178,8 +194,8 @@ export default function ProjetoCliente() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setNovaTarefaOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Adicionar Tarefa
+        <Button onClick={headerBtn.onClick}>
+          <Plus className="h-4 w-4 mr-1" /> {headerBtn.label}
         </Button>
       </div>
 
