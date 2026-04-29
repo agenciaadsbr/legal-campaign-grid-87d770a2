@@ -1,6 +1,9 @@
 import { useParams, Link } from "react-router-dom";
 import { useCRM, StatusCard, Card as CardT } from "@/store/crm";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const CARDS_POR_PAGINA = 8;
 import { AvatarStack } from "@/components/AvatarStack";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
@@ -104,7 +107,7 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
       {...attributes}
       {...listeners}
       className={cn(
-        "group relative bg-card border rounded-lg p-3 mb-2 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:shadow-sm transition-all",
+        "group relative bg-card border rounded-lg p-2.5 mb-1.5 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:shadow-sm transition-all",
         isUrgent && "border-l-2 border-l-amber-500",
         isAtrasadoStatus && "border-l-2 border-l-red-500",
         isDragging && "opacity-40",
@@ -166,11 +169,11 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
         </div>
       </div>
 
-      <div className="text-[10px] text-muted-foreground mt-0.5">
+      <div className="text-[10px] text-muted-foreground mt-1">
         Post Mês {card.mes_referencia} · Semana {card.numero_semana}
       </div>
 
-      <div className="flex items-center justify-between mt-2 gap-2">
+      <div className="flex items-center justify-between mt-1.5 gap-2">
         <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
           <PrazoIcon className="h-3 w-3" />
           <span className={cn(prazoState === "overdue" && "font-semibold")}>{prazoLabel}</span>
@@ -185,12 +188,12 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
           variant="default"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={handleIniciar}
-          className="mt-2 w-full h-7 text-xs gap-1.5"
+          className="mt-1.5 w-full h-7 text-xs gap-1.5"
         >
           <Play className="h-3 w-3" /> Iniciar tarefa
         </Button>
       ) : (
-        <div className="mt-2 flex justify-end">
+        <div className="mt-1.5 flex justify-end">
           <StatusBadge status={card.status_card} />
         </div>
       )}
@@ -201,29 +204,83 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
   return <Link to={`posts/${post.id}`}>{inner}</Link>;
 }
 
-function Coluna({ status, cards, onIniciar }: { status: StatusCard; cards: CardT[]; onIniciar: (id: string) => void }) {
+function Coluna({
+  status,
+  cards,
+  onIniciar,
+  pagina,
+  onPaginaChange,
+}: {
+  status: StatusCard;
+  cards: CardT[];
+  onIniciar: (id: string) => void;
+  pagina: number;
+  onPaginaChange: (p: number) => void;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const isAtrasado = status === "Atrasado";
+  const total = cards.length;
+  const totalPaginas = Math.max(1, Math.ceil(total / CARDS_POR_PAGINA));
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const inicio = (paginaAtual - 1) * CARDS_POR_PAGINA;
+  const visiveis = cards.slice(inicio, inicio + CARDS_POR_PAGINA);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const goTo = (p: number) => {
+    onPaginaChange(p);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  };
+
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 min-w-[260px] bg-muted/30 rounded-lg p-2 transition-colors",
+        "w-[270px] shrink-0 bg-muted/30 rounded-lg p-2 transition-colors flex flex-col",
         isOver && "bg-accent/40 ring-2 ring-primary/30",
-        isAtrasado && cards.length > 0 && "ring-1 ring-red-500/30",
+        isAtrasado && total > 0 && "ring-1 ring-red-500/30",
       )}
     >
       <div className="flex items-center justify-between px-1 py-1.5 mb-2">
         <div className="flex items-center gap-2">
           <StatusBadge status={status} />
-          <span className={cn("text-xs", isAtrasado && cards.length > 0 ? "text-red-500 font-semibold" : "text-muted-foreground")}>
-            {cards.length}
+          <span className={cn("text-xs", isAtrasado && total > 0 ? "text-red-500 font-semibold" : "text-muted-foreground")}>
+            {total}
           </span>
         </div>
       </div>
-      <div className="min-h-[100px]">
-        {cards.map((c) => <CardItem key={c.id} card={c} onIniciar={onIniciar} />)}
+      <div
+        ref={scrollRef}
+        className="overflow-y-auto scrollbar-thin pr-1 max-h-[calc(100vh-260px)] min-h-[100px]"
+      >
+        {visiveis.map((c) => <CardItem key={c.id} card={c} onIniciar={onIniciar} />)}
       </div>
+      {total > CARDS_POR_PAGINA && (
+        <div className="flex items-center justify-between gap-1 mt-2 px-1 pt-1.5 border-t border-border/50">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            disabled={paginaAtual <= 1}
+            onClick={() => goTo(paginaAtual - 1)}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <span className="text-[10px] text-muted-foreground">
+            Página {paginaAtual} / {totalPaginas}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            disabled={paginaAtual >= totalPaginas}
+            onClick={() => goTo(paginaAtual + 1)}
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -240,6 +297,11 @@ export function PostsKanbanCliente() {
   const [filtroResps, setFiltroResps] = useState<string[]>([]);
   const [filtroSomente, setFiltroSomente] = useState<"todos" | "atrasados" | "hoje" | "semana">("todos");
   const [busca, setBusca] = useState("");
+  const [paginas, setPaginas] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setPaginas({});
+  }, [filtroMes, filtroResps, filtroSomente, busca, clienteId]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -382,7 +444,14 @@ export function PostsKanbanCliente() {
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex gap-3 overflow-x-auto scrollbar-thin pb-3">
           {colunas.map((s) => (
-            <Coluna key={s} status={s} cards={cardsCliente.filter((c) => c.status_card === s)} onIniciar={abrirIniciar} />
+            <Coluna
+              key={s}
+              status={s}
+              cards={cardsCliente.filter((c) => c.status_card === s)}
+              onIniciar={abrirIniciar}
+              pagina={paginas[s] ?? 1}
+              onPaginaChange={(p) => setPaginas((prev) => ({ ...prev, [s]: p }))}
+            />
           ))}
         </div>
         <DragOverlay>
