@@ -288,25 +288,19 @@ export default function ProjetoCliente() {
 
         {/* ============== BRIEFING ============== */}
         <TabsContent value="briefing" className="mt-4">
-          <AreaTab
-            titulo="Briefing"
-            icone={ClipboardList}
+          <BriefingTab
             clienteId={clienteId!}
-            demandas={filtrarPorArea(demandasCli, "briefing")}
-            categoria="Briefing"
-            emptyHint="Registre aqui o briefing do cliente: reunião inicial, atualizações e revisões."
+            modoEdicaoExterno={editarBriefingTrigger}
+            onModoEdicaoChange={setEditarBriefingTrigger}
           />
         </TabsContent>
 
         {/* ============== PLANEJAMENTO ============== */}
         <TabsContent value="planejamento" className="mt-4">
-          <AreaTab
-            titulo="Planejamento"
-            icone={CalendarRange}
+          <PlanejamentoTab
             clienteId={clienteId!}
-            demandas={filtrarPorArea(demandasCli, "planejamento")}
-            categoria="Planejamento"
-            emptyHint="Crie tarefas de planejamento mensal, trimestral, campanhas e lançamentos."
+            novoOpenExterno={novoPlanOpen}
+            onNovoOpenChangeExterno={setNovoPlanOpen}
           />
         </TabsContent>
 
