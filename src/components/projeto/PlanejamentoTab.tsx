@@ -23,9 +23,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Copy as CopyIcon,
-  ArrowUp,
-  ArrowDown,
   Save,
   X,
   FileText,
@@ -360,15 +357,8 @@ function SecaoBlock({
             Nenhum item nesta seção.
           </div>
         )}
-        {itens.map((it, idx) => (
-          <ItemRow
-            key={it.id}
-            item={it}
-            onMoverCima={() => moverCima(idx)}
-            onMoverBaixo={() => moverBaixo(idx)}
-            podeMoverCima={idx > 0}
-            podeMoverBaixo={idx < itens.length - 1}
-          />
+        {itens.map((it) => (
+          <ItemRow key={it.id} item={it} />
         ))}
         {adicionando && (
           <div className="flex items-center gap-1 px-1 py-1">
@@ -412,20 +402,11 @@ function SecaoBlock({
 // ============================================================
 function ItemRow({
   item,
-  onMoverCima,
-  onMoverBaixo,
-  podeMoverCima,
-  podeMoverBaixo,
 }: {
   item: PlanItem;
-  onMoverCima: () => void;
-  onMoverBaixo: () => void;
-  podeMoverCima: boolean;
-  podeMoverBaixo: boolean;
 }) {
   const update = usePlanejamento((s) => s.update);
   const remove = usePlanejamento((s) => s.remove);
-  const duplicar = usePlanejamento((s) => s.duplicar);
   const { responsaveis } = useCRM();
 
   const [expand, setExpand] = useState(false);
@@ -501,39 +482,10 @@ function ItemRow({
             size="icon"
             variant="ghost"
             className="h-5 w-5"
-            onClick={onMoverCima}
-            disabled={!podeMoverCima}
-            title="Mover para cima"
-          >
-            <ArrowUp className="h-3 w-3" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5"
-            onClick={onMoverBaixo}
-            disabled={!podeMoverBaixo}
-            title="Mover para baixo"
-          >
-            <ArrowDown className="h-3 w-3" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5"
             onClick={() => setExpand((e) => !e)}
             title="Editar"
           >
             <Pencil className="h-3 w-3" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5"
-            onClick={() => duplicar(item.id)}
-            title="Duplicar"
-          >
-            <CopyIcon className="h-3 w-3" />
           </Button>
           <Button
             size="icon"
