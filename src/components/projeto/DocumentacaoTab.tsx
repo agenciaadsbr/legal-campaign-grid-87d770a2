@@ -730,7 +730,7 @@ function DocumentacaoLoteDialog({
         cliente_id: clienteId,
         bloco,
         tipo: "mensagem",
-        titulo: "Mensagem de acessos",
+        titulo: bloco === "materiais" ? "Materiais enviados ao cliente" : "Mensagem de acessos",
         url: null,
         login: null,
         senha: null,
