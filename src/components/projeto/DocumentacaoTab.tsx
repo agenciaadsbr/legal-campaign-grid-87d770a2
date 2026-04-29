@@ -216,8 +216,11 @@ export function DocumentacaoTab({
       </div>
 
       {/* Conteúdo (também usado para exportar PNG) */}
-      <div id="documentacao-export-root" className="space-y-3">
-        <div className="hidden print:block text-lg font-semibold">
+      <div
+        id="documentacao-export-root"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start"
+      >
+        <div className="hidden print:block text-lg font-semibold col-span-full">
           Documentação e Acessos — {cliente?.nome_cliente}
         </div>
         {DOC_BLOCOS.map((bloco) => {
@@ -279,7 +282,7 @@ export function DocumentacaoTab({
                         Nenhum item neste bloco.
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-2">
                         {lista.map((it) => (
                           <ItemCard
                             key={it.id}
