@@ -480,9 +480,13 @@ export function DocumentacaoTab({
 function ItemCard({
   item,
   onEdit,
+  selected,
+  onToggleSelect,
 }: {
   item: DocumentacaoItem;
   onEdit: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const remove = useDocumentacao((s) => s.remove);
   const [showSenha, setShowSenha] = useState(false);
@@ -497,9 +501,17 @@ function ItemCard({
     item.tipo;
 
   return (
-    <Card className="border-border">
+    <Card className={cn("border-border", selected && "ring-1 ring-primary border-primary/50")}>
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
+          {onToggleSelect && (
+            <Checkbox
+              checked={!!selected}
+              onCheckedChange={onToggleSelect}
+              className="mt-1"
+              aria-label="Selecionar item"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="text-sm font-medium truncate">{item.titulo}</div>
