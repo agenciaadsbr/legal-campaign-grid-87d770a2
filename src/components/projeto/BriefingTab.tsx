@@ -1,36 +1,72 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { RichTextEditor } from "@/components/RichTextEditor";
-import { RichTextView } from "@/components/RichTextView";
-import {
-  BRIEFING_BLOCOS,
-  useBriefing,
-} from "@/store/briefing";
+import { Textarea } from "@/components/ui/textarea";
+import { useBriefing } from "@/store/briefing";
 import { useCRM } from "@/store/crm";
 import {
   Pencil,
   Save,
   Copy,
   FileText,
-  FileDown,
-  Image as ImageIcon,
   X,
   ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  downloadPdfFromText,
-  downloadPngFromNode,
-  downloadTxt,
-  safeFilename,
-} from "./exportUtils";
+import { downloadTxt, safeFilename } from "./exportUtils";
 
 interface Props {
   clienteId: string;
   modoEdicaoExterno?: boolean;
   onModoEdicaoChange?: (v: boolean) => void;
+}
+
+const PLACEHOLDER = `Cole aqui o briefing completo do cliente. Exemplo:
+
+🔗 Resumo geral:
+Cliente atua no ramo de...
+
+🔗 Público-alvo:
+Mulheres entre 30-50 anos...
+
+🔗 Links importantes:
+https://exemplo.com
+`;
+
+// Renderiza texto plano em JSX estilo WhatsApp:
+// - URLs viram links clicáveis
+// - Linhas iniciadas com 🔗 ficam em negrito
+function renderMensagemFormatada(texto: string) {
+  const linhas = texto.split("\n");
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+  return linhas.map((linha, idx) => {
+    const isHeader = linha.trim().startsWith("🔗");
+    const partes = linha.split(urlRegex);
+    const conteudo = partes.map((p, i) =>
+      urlRegex.test(p) ? (
+        <a
+          key={i}
+          href={p}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline break-all"
+        >
+          {p}
+        </a>
+      ) : (
+        <span key={i}>{p}</span>
+      ),
+    );
+    return (
+      <div
+        key={idx}
+        className={isHeader ? "font-semibold text-foreground mt-2" : ""}
+      >
+        {linha.length === 0 ? "\u00A0" : conteudo}
+      </div>
+    );
+  });
 }
 
 export function BriefingTab({
@@ -45,23 +81,24 @@ export function BriefingTab({
   const saveBlocos = useBriefing((s) => s.saveBlocos);
 
   const doc = docs[clienteId];
+  const documento = (doc?.blocos ?? {})["documento"] ?? "";
 
   useEffect(() => {
     getOrInit(clienteId);
   }, [clienteId, getOrInit]);
 
   const [editando, setEditando] = useState(false);
-  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState("");
   const [salvando, setSalvando] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (modoEdicaoExterno) {
-      setDraft(doc?.blocos ?? {});
+      setDraft(documento);
       setEditando(true);
       onModoEdicaoChange?.(false);
     }
-  }, [modoEdicaoExterno, doc, onModoEdicaoChange]);
+  }, [modoEdicaoExterno, documento, onModoEdicaoChange]);
 
   const responsavelNome = useMemo(() => {
     const r = responsaveis.find((r) => r.id === doc?.atualizado_por);
@@ -69,63 +106,28 @@ export function BriefingTab({
   }, [doc, responsaveis]);
 
   const entrarEdicao = () => {
-    setDraft(doc?.blocos ?? {});
+    setDraft(documento);
     setEditando(true);
   };
   const cancelar = () => {
     setEditando(false);
-    setDraft({});
+    setDraft("");
   };
   const salvar = async () => {
     setSalvando(true);
-    await saveBlocos(clienteId, draft);
+    await saveBlocos(clienteId, { documento: draft });
     setSalvando(false);
     setEditando(false);
   };
 
-  const construirTexto = () => {
-    const blocos = doc?.blocos ?? {};
-    const linhas: string[] = [];
-    linhas.push(`Briefing — ${cliente?.nome_cliente ?? ""}`);
-    if (doc?.updated_at)
-      linhas.push(
-        `Última atualização: ${new Date(doc.updated_at).toLocaleString("pt-BR")}`,
-      );
-    linhas.push("");
-    BRIEFING_BLOCOS.forEach((b) => {
-      const v = (blocos[b.key] ?? "").replace(/<[^>]+>/g, "").trim();
-      if (!v) return;
-      linhas.push(b.label);
-      linhas.push("-".repeat(48));
-      linhas.push(v);
-      linhas.push("");
-    });
-    return linhas.join("\n");
-  };
-
   const exportarTxt = () => {
-    downloadTxt(`briefing_${safeFilename(cliente?.nome_cliente ?? "cliente")}`, construirTexto());
-  };
-  const exportarPdf = () => {
-    downloadPdfFromText(
-      `briefing_${safeFilename(cliente?.nome_cliente ?? "cliente")}.pdf`,
-      `Briefing — ${cliente?.nome_cliente ?? ""}`,
-      construirTexto(),
+    downloadTxt(
+      `briefing_${safeFilename(cliente?.nome_cliente ?? "cliente")}`,
+      documento,
     );
   };
-  const exportarPng = async () => {
-    if (!printRef.current) return;
-    try {
-      await downloadPngFromNode(
-        `briefing_${safeFilename(cliente?.nome_cliente ?? "cliente")}.png`,
-        printRef.current,
-      );
-    } catch (e: any) {
-      toast.error("Erro ao gerar imagem", { description: e?.message });
-    }
-  };
   const copiar = async () => {
-    await navigator.clipboard.writeText(construirTexto());
+    await navigator.clipboard.writeText(documento);
     toast.success("Briefing copiado");
   };
 
@@ -140,15 +142,26 @@ export function BriefingTab({
               ? new Date(doc.updated_at).toLocaleString("pt-BR")
               : "—"}
           </span>
-          {" • "}Por <span className="text-foreground font-medium">{responsavelNome}</span>
+          {" • "}Por{" "}
+          <span className="text-foreground font-medium">{responsavelNome}</span>
         </div>
         <div className="ml-auto flex items-center gap-1">
           {!editando ? (
             <>
-              <Button variant="outline" size="sm" onClick={copiar}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copiar}
+                disabled={!documento}
+              >
                 <Copy className="h-4 w-4 mr-1" /> Copiar
               </Button>
-              <Button variant="outline" size="sm" onClick={exportarTxt}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportarTxt}
+                disabled={!documento}
+              >
                 <FileText className="h-4 w-4 mr-1" /> TXT
               </Button>
               <Button size="sm" onClick={entrarEdicao}>
@@ -171,7 +184,7 @@ export function BriefingTab({
 
       <div ref={printRef} className="bg-background">
         <Card>
-          <CardContent className="p-6 space-y-6">
+          <CardContent className="p-6 space-y-4">
             <div className="border-b border-border pb-3">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-5 w-5 text-primary" />
@@ -180,44 +193,28 @@ export function BriefingTab({
                 </h2>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Documento interno consolidado do cliente.
+                Documento único do cliente. Cole o briefing completo no formato
+                que preferir.
               </p>
             </div>
 
-            {BRIEFING_BLOCOS.map((b) => {
-              const valor = editando
-                ? draft[b.key] ?? ""
-                : (doc?.blocos ?? {})[b.key] ?? "";
-              const vazioLeitura = !editando && !valor;
-              return (
-                <section key={b.key} className="space-y-1.5">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    {b.label}
-                    {!editando && valor && (
-                      <Badge variant="outline" className="text-[9px]">
-                        preenchido
-                      </Badge>
-                    )}
-                  </h3>
-                  {editando ? (
-                    <RichTextEditor
-                      value={valor}
-                      onChange={(html) =>
-                        setDraft((d) => ({ ...d, [b.key]: html }))
-                      }
-                      placeholder={`Escreva sobre ${b.label.toLowerCase()}...`}
-                      minHeight="80px"
-                    />
-                  ) : vazioLeitura ? (
-                    <p className="text-xs text-muted-foreground italic">
-                      Sem informação cadastrada.
-                    </p>
-                  ) : (
-                    <RichTextView content={valor} />
-                  )}
-                </section>
-              );
-            })}
+            {editando ? (
+              <Textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={PLACEHOLDER}
+                className="min-h-[480px] font-mono text-sm whitespace-pre-wrap"
+              />
+            ) : documento ? (
+              <div className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed">
+                {renderMensagemFormatada(documento)}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                Nenhum briefing cadastrado. Clique em{" "}
+                <strong>Editar briefing</strong> para adicionar.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
