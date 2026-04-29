@@ -203,10 +203,10 @@ export function BriefingTab({
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder={PLACEHOLDER}
-                className="min-h-[480px] font-mono text-sm whitespace-pre-wrap"
+                className="h-[600px] font-mono text-sm whitespace-pre-wrap"
               />
             ) : documento ? (
-              <div className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed">
+              <div className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                 {renderMensagemFormatada(documento)}
               </div>
             ) : (
