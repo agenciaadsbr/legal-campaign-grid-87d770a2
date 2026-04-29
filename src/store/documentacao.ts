@@ -43,6 +43,7 @@ export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: str
     { value: "outro", label: "Outro" },
   ],
   links: [
+    { value: "mensagem", label: "Mensagem completa" },
     { value: "drive", label: "Drive do cliente" },
     { value: "pasta", label: "Pasta de materiais" },
     { value: "site", label: "Site" },
