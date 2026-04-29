@@ -365,7 +365,7 @@ export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: 
       : `${filtroResps.length} responsáveis`;
 
   return (
-    <div className="flex flex-col gap-3 h-full min-h-0 overflow-hidden">
+    <div className="flex flex-col gap-3 h-[calc(100vh-220px)] overflow-hidden">
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={filtroMes} onValueChange={setFiltroMes}>
           <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
