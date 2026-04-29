@@ -161,7 +161,7 @@ export default function ProjetoCliente() {
   const demandasCli = demandas.filter((d) => d.cliente_id === clienteId);
 
   return (
-    <div className="p-6 space-y-4 animate-fade-in">
+    <div className="p-6 space-y-4 animate-fade-in min-w-0">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 text-sm text-muted-foreground">
         <Button
