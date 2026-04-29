@@ -1,26 +1,66 @@
 ## Objetivo
 
-Na aba **Documentação**, alterar o layout dos blocos (Acessos, Links, Reuniões, Materiais, Documentos, Observações) para que fiquem dispostos lado a lado em colunas (como o destaque vermelho na imagem de referência), em vez de empilhados verticalmente.
+Permitir colar texto solto (estilo WhatsApp/e-mail) no "Adicionar em lote" da Documentação e gerar automaticamente um item por acesso/link. Adicionar botão para copiar a "mensagem completa" formatada do bloco Acessos depois de salvo.
 
-## Mudanças
+## 1. Parser inteligente em `DocumentacaoLoteDialog`
 
-**Arquivo:** `src/components/projeto/DocumentacaoTab.tsx`
+Arquivo: `src/components/projeto/DocumentacaoTab.tsx` (função `DocumentacaoLoteDialog`).
 
-1. Substituir o container atual dos blocos (`<div id="documentacao-export-root" className="space-y-3">`) por um **grid responsivo**:
-   - Mobile (`<768px`): 1 coluna (empilhado)
-   - Tablet (`md`): 2 colunas
-   - Desktop (`lg+`): 3 ou 4 colunas (a definir conforme melhor caimento — proposta inicial: **3 colunas em `lg`, 4 em `xl`**)
-   - Cada `Collapsible`/`Card` de bloco vira uma célula do grid.
+### UI
+- Manter o `<Textarea>` com 10 linhas e o select de "Tipo (aplicado a todos)".
+- Atualizar a `DialogDescription` para explicar os dois formatos suportados:
+  - **Formato simples**: uma linha por item com `título | url | login | senha | observação` (continua funcionando).
+  - **Formato livre (novo)**: cole o texto como veio do WhatsApp/e-mail. O sistema detecta automaticamente cada bloco (separado por linha em branco), procurando título, URL, Login: e Senha:.
+- Adicionar abaixo do textarea um pequeno preview ("X itens detectados") em tempo real (badge), para o usuário ver antes de salvar.
+- Botão principal: "Adicionar todos (X)".
 
-2. Ajustes finos:
-   - Remover `space-y-3` (substituído por `gap-3` do grid).
-   - Garantir que os Cards tenham altura independente (sem forçar mesma altura) para não criar espaço vazio.
-   - A grade interna de itens dentro de cada bloco passa de `md:grid-cols-2` para **1 coluna**, já que cada bloco agora é mais estreito.
+### Lógica de parsing (nova função `parseLoteTexto`)
+Heurística aplicada ao texto bruto:
 
-3. O cabeçalho (toolbar de busca/filtro/exportar/adicionar) permanece igual, ocupando toda a largura acima do grid.
+1. **Detectar formato simples**: se ALGUMA linha não vazia contém `|`, usa o parser atual (linha-a-linha por `|`).
+2. **Senão, parser livre**:
+   - Quebrar o texto em "blocos" separados por linha em branco (`\n\s*\n`).
+   - Para cada bloco, extrair:
+     - **URL**: primeiro match de regex `https?://\S+` (limpa pontuação final `.,);`).
+     - **Login**: regex `/^\s*(?:login|e-?mail|usu[áa]rio)\s*[:\-]\s*(.+)$/im`.
+     - **Senha**: regex `/^\s*(?:senha|password|pass)\s*[:\-]\s*(.+)$/im`.
+     - **Título**: primeira linha não vazia do bloco, removendo emojis comuns (🔗, 🔑, ✅, ▶, 📎) e dois-pontos finais. Se a primeira linha for só a URL, usa o domínio (ex: `dashboard.adsbr.com.br`) ou o tipo selecionado + nº como fallback.
+     - **Observação**: linhas restantes do bloco que não foram URL/Login/Senha/título.
+   - Descartar blocos vazios (sem URL nem Login nem Senha nem título "real" — ex: saudações como "Boa tarde Drs...").
+3. Resultado: `Array<{ titulo, url, login, senha, observacao }>` que alimenta `createBatch` com `cliente_id`, `bloco`, `tipo`.
 
-4. Nada muda em `BriefingTab`, `PlanejamentoTab` nem na exportação TXT — apenas layout visual da Documentação.
+### Comportamento extra
+- Se o parser livre detectar 0 itens, mostrar toast de erro com instrução, sem fechar o dialog.
+- Recalcular o preview ao digitar (useMemo sobre `texto`).
 
-## Resultado esperado
+## 2. Botão "Copiar mensagem" no bloco Acessos
 
-Os 6 blocos passam a se distribuir em uma grade horizontal, aproveitando a largura da tela em telas grandes, semelhante às colunas destacadas em vermelho na imagem enviada.
+Arquivo: `src/components/projeto/DocumentacaoTab.tsx` (renderização de cada bloco em `DOC_BLOCOS.map`).
+
+- Apenas para `bloco === "acessos"`, adicionar na linha de botões (ao lado de "Adicionar item" / "Adicionar em lote") um botão `Copiar mensagem` (ícone `ClipboardCopy`), desabilitado quando a lista do bloco estiver vazia.
+- Ao clicar:
+  - Gerar texto formatado a partir de `lista` (acessos do cliente):
+    ```
+    Boa tarde! Segue abaixo as informações de acesso:
+
+    🔗 {titulo}
+    {url}
+    Login: {login}
+    Senha: {senha}
+
+    🔗 {titulo 2}
+    ...
+    ```
+  - Cada item separado por linha em branco. Campos ausentes são omitidos.
+  - `navigator.clipboard.writeText(texto)` + `toast.success("Mensagem copiada")`.
+- Nova helper local `construirMensagemAcessos(lista: DocumentacaoItem[]): string`.
+
+## 3. Itens fora de escopo
+
+- Não mexer em outros blocos (Links, Reuniões, etc.) — botão "Copiar mensagem" só em Acessos.
+- Não alterar `ItemCard`, store, schema, RLS ou exportação TXT.
+- Não criar novos componentes/arquivos — tudo dentro de `DocumentacaoTab.tsx`.
+
+## Arquivos alterados
+
+- `src/components/projeto/DocumentacaoTab.tsx`
