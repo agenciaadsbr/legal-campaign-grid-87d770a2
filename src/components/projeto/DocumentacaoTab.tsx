@@ -992,6 +992,21 @@ function construirMensagemAcessos(lista: DocumentacaoItem[]): string {
   return partes.join("\n").trimEnd();
 }
 
+function construirMensagemMateriais(lista: DocumentacaoItem[]): string {
+  if (!lista.length) return "";
+  const partes: string[] = ["Segue abaixo os materiais enviados:", ""];
+  lista.forEach((it) => {
+    partes.push(`🔗 ${it.titulo}`);
+    if (it.url) partes.push(it.url);
+    if (it.formato) partes.push(`Formato: ${it.formato}`);
+    if (it.data_evento)
+      partes.push(`Data: ${new Date(it.data_evento).toLocaleDateString("pt-BR")}`);
+    if (it.observacao) partes.push(it.observacao);
+    partes.push("");
+  });
+  return partes.join("\n").trimEnd();
+}
+
 // ============================================================
 // EXPORT
 // ============================================================
