@@ -1,105 +1,45 @@
 ## Objetivo
 
-Corrigir o "Adicionar em lote" do bloco **Acessos** para que o texto colado seja salvo como **um único item** e exibido **exatamente igual ao print do WhatsApp** (com 🔗, links clicáveis, Login/Senha em texto plano), além de migrar os acessos já cadastrados para esse novo formato.
+Adicionar à seção **"Materiais enviados ao cliente"** (bloco `materiais`) o mesmo padrão de "Mensagem completa" estilo WhatsApp já existente em **"Acessos"**: o usuário cola um texto livre (como uma mensagem de WhatsApp), e ele é salvo como um único item formatado, renderizado preservando quebras de linha, links clicáveis e linhas com 🔗 destacadas.
 
----
+A funcionalidade atual de cadastrar materiais individualmente (com formato, data, link) continua funcionando lado a lado.
 
-## Mudanças
+## Escopo / Mudanças
 
-### 1. Novo tipo de item: "Mensagem completa"
+Alterações concentradas em **`src/components/projeto/DocumentacaoTab.tsx`** e **`src/store/documentacao.ts`**.
 
-No bloco `acessos` passa a existir um item especial identificado por `tipo = "mensagem"` (novo valor adicionado em `TIPOS_POR_BLOCO.acessos` no `src/store/documentacao.ts`).
+### 1. `src/store/documentacao.ts`
+- Adicionar tipo `{ value: "mensagem", label: "Mensagem completa" }` no topo do array `TIPOS_POR_BLOCO.materiais` (igual ao que já existe em `acessos`).
 
-- O texto colado é salvo **inteiro** no campo `observacao` (preserva quebras de linha, emojis e formatação).
-- `titulo` recebe um valor padrão: `"Mensagem de acessos"` (editável).
-- `url`, `login`, `senha` ficam `null`.
+### 2. `src/components/projeto/DocumentacaoTab.tsx`
 
-### 2. Reescrita do "Adicionar em lote" — apenas para Acessos
-
-No `DocumentacaoLoteDialog` (`src/components/projeto/DocumentacaoTab.tsx`):
-
-- Quando `bloco === "acessos"`:
-  - Remove o parser que quebra em vários itens (`parseLoteTexto`) e o badge "X itens detectados".
-  - Mostra uma textarea grande com placeholder do formato WhatsApp.
-  - Ao salvar, cria **1 único item** (`tipo: "mensagem"`, `observacao: <texto colado>`).
-- Para os demais blocos (links, materiais, etc.), o comportamento antigo de lote permanece.
-
-### 3. Renderização idêntica ao print do WhatsApp
-
-Novo componente `MensagemAcessosCard` para itens com `tipo === "mensagem"`:
-
-- Cabeçalho com ícone azul + título e badge "Mensagem".
-- Botão **"Copiar tudo"** (copia `observacao` para o clipboard).
-- Botões editar/excluir.
-- Corpo renderiza o texto preservando quebras de linha (`whitespace-pre-wrap`) e:
-  - Detecta URLs (`https?://...`) e transforma em **links clicáveis azuis sublinhados**.
-  - Linhas iniciadas por 🔗 ganham destaque em negrito.
-  - Linhas `Login:` / `Senha:` ficam com label em negrito + valor em texto plano (sem máscara, conforme solicitado).
-
-Esse card substitui completamente os "cards individuais" no bloco Acessos quando o item é do tipo mensagem.
-
-### 4. Migração dos acessos antigos
-
-Migration SQL única que, para cada `cliente_id` que tenha itens no bloco `acessos`:
-
-1. Constrói uma string formatada estilo WhatsApp concatenando os itens existentes:
-   ```
-   🔗 <titulo>:
-   <url>
-   Login: <login>
-   Senha: <senha>
-   ```
-2. Insere **um novo registro** em `cliente_documentacao` com `bloco='acessos'`, `tipo='mensagem'`, `titulo='Mensagem de acessos'`, `observacao=<string montada>`, `ordem=0`.
-3. **Apaga** os registros antigos do bloco `acessos` daquele cliente.
-
-Tudo dentro de uma função PL/pgSQL executada uma vez na migration.
-
-### 5. Botão "Copiar mensagem" do bloco
-
-O botão "Copiar mensagem" no toolbar do bloco Acessos passa a:
-- Se existir um item `tipo === "mensagem"`, copia direto a `observacao` dele (texto fiel ao WhatsApp).
-- Caso contrário, mantém o `construirMensagemAcessos` antigo como fallback.
-
----
-
-## Detalhes técnicos
-
-**Arquivos editados:**
-- `src/store/documentacao.ts` — adiciona `{ value: "mensagem", label: "Mensagem completa" }` em `TIPOS_POR_BLOCO.acessos` e em `DOC_TIPO_LABEL`.
-- `src/components/projeto/DocumentacaoTab.tsx`:
-  - `DocumentacaoLoteDialog` ramificado por bloco (acessos = textarea simples → 1 item; demais = parser atual).
-  - Render do bloco `acessos`: para itens `tipo === "mensagem"` usa `MensagemAcessosCard`; demais (legados, se houver) seguem o card atual.
-  - Novo helper `renderMensagemFormatada(texto)` que converte texto plano em JSX com URLs clicáveis e linhas 🔗/Login/Senha estilizadas.
-
-**Migration SQL (nova):**
-```sql
--- Migra acessos antigos para o novo formato "mensagem"
-DO $$
-DECLARE r RECORD; msg TEXT; item RECORD;
-BEGIN
-  FOR r IN SELECT DISTINCT cliente_id FROM cliente_documentacao WHERE bloco='acessos'
-  LOOP
-    msg := '';
-    FOR item IN
-      SELECT * FROM cliente_documentacao
-      WHERE cliente_id = r.cliente_id AND bloco='acessos'
-      ORDER BY ordem, created_at
-    LOOP
-      msg := msg || E'\n🔗 ' || COALESCE(item.titulo,'') || E':\n';
-      IF item.url IS NOT NULL THEN msg := msg || item.url || E'\n'; END IF;
-      IF item.login IS NOT NULL THEN msg := msg || 'Login: ' || item.login || E'\n'; END IF;
-      IF item.senha IS NOT NULL THEN msg := msg || 'Senha: ' || item.senha || E'\n'; END IF;
-    END LOOP;
-
-    IF length(trim(msg)) > 0 THEN
-      INSERT INTO cliente_documentacao (cliente_id, bloco, tipo, titulo, observacao, ordem)
-      VALUES (r.cliente_id, 'acessos', 'mensagem', 'Mensagem de acessos', trim(msg), 0);
-
-      DELETE FROM cliente_documentacao
-      WHERE cliente_id = r.cliente_id AND bloco='acessos' AND tipo <> 'mensagem';
-    END IF;
-  END LOOP;
-END $$;
+**Render do bloco materiais** (loop `lista.map` em ~linha 305): adicionar a mesma condicional usada em acessos para renderizar o card especial:
 ```
+bloco === "materiais" && it.tipo === "mensagem"
+  ? <MensagemAcessosCard ... />
+  : <ItemCard ... />
+```
+Renomear/reutilizar o componente `MensagemAcessosCard` como `MensagemDocumentoCard` (genérico) — ou simplesmente continuar usando-o para ambos os blocos, já que o render é idêntico (whitespace-pre-wrap + links + linhas 🔗).
 
-**Sem impacto em:** Briefing, Planejamento, demais blocos da Documentação (Links, Reuniões, Materiais, Documentos, Observações).
+**Header de ações do bloco materiais** (~linha 280): habilitar o botão "Copiar mensagem" também quando `bloco === "materiais"`, usando a mesma lógica:
+- Se existir um item com `tipo === "mensagem"`, copia seu `observacao`.
+- Caso contrário, monta uma mensagem a partir dos itens existentes (função `construirMensagemMateriais`, análoga a `construirMensagemAcessos`, listando título + link + formato + data + observação).
+
+**`DocumentacaoLoteDialog`** (~linha 690): tratar `materiais` igual a `acessos` na flag de "mensagem única":
+- Substituir `const isAcessos = bloco === "acessos"` por `const isMensagemUnica = bloco === "acessos" || bloco === "materiais"`.
+- Quando `isMensagemUnica` for verdadeiro, salvar como 1 item único: `tipo: "mensagem"`, `titulo: "Mensagem de materiais"` (para materiais) ou "Mensagem de acessos" (para acessos), e o conteúdo no `observacao`.
+- Ajustar textos/placeholders do dialog para referenciar "materiais enviados" no caso `materiais`.
+
+**Botão "Adicionar em lote"** já aparece no bloco `materiais` (a guarda atual é `bloco !== "observacoes"`), então nada a fazer ali — mas o rótulo do botão pode ser ajustado para "Adicionar mensagem completa" quando `bloco === "materiais" || bloco === "acessos"` para refletir melhor o uso.
+
+### 3. Banco de dados
+**Nenhuma migração necessária.** A tabela `cliente_documentacao` já tem `tipo text` livre e `observacao text`, e o bloco `materiais` já é suportado. Apenas armazenamos um novo valor de `tipo` ("mensagem") dentro do bloco existente.
+
+## Comportamento final
+
+Na coluna **"Materiais enviados ao cliente"** o usuário verá:
+- Botão **"+ Adicionar item"** (cria um material individual com formato/data — igual hoje).
+- Botão **"Adicionar mensagem completa"** (abre dialog com textarea grande, salva como 1 item único formatado em estilo WhatsApp).
+- Botão **"Copiar mensagem"** (copia a mensagem completa salva, ou monta uma a partir dos itens individuais).
+- Itens do tipo "mensagem" são exibidos no card grande estilo WhatsApp (mesmo visual do print de acessos), com botões Copiar / Editar / Excluir.
+- Itens individuais continuam aparecendo como cards compactos normais.

@@ -65,6 +65,7 @@ export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: str
     { value: "reuniao", label: "Outras reuniões" },
   ],
   materiais: [
+    { value: "mensagem", label: "Mensagem completa" },
     { value: "boas_vindas", label: "Material de Boas-Vindas ADS BR" },
     { value: "treinamento", label: "Treinamento Comercial (Loom)" },
     { value: "script", label: "Script de Atendimento" },
