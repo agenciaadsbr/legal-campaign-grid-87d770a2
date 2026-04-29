@@ -4,6 +4,8 @@ import { useCRM } from "@/store/crm";
 import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useAtividades, useAtividadesBootstrap } from "@/store/atividades";
 import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao";
+import { useBriefingBootstrap } from "@/store/briefing";
+import { usePlanejamentoBootstrap, usePlanejamento, calcularProgresso } from "@/store/planejamento";
 import { PostsKanbanCliente } from "@/components/clientes/PostsKanbanCliente";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +17,8 @@ import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
 import { AreaTab } from "@/components/projeto/AreaTab";
 import { VisaoGeralCard } from "@/components/projeto/VisaoGeralCard";
 import { DocumentacaoTab } from "@/components/projeto/DocumentacaoTab";
+import { BriefingTab } from "@/components/projeto/BriefingTab";
+import { PlanejamentoTab } from "@/components/projeto/PlanejamentoTab";
 import {
   Select,
   SelectContent,
