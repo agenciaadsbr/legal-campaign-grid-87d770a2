@@ -76,7 +76,7 @@ export default function Dashboard() {
     <div className="p-6 space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Visão geral do CRM Jurídico</p>
+        <p className="text-sm text-muted-foreground">Visão geral do Dash Tasks</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

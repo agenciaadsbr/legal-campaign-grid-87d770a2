@@ -1,34 +1,34 @@
-## Correção
+## Renomear sistema para "Dash Tasks"
 
-O botão **"Voltar para Visão Geral"** no detalhe do Post está enviando para a aba "Visão Geral" do hub. O correto é voltar para o **Kanban da aba de origem** (no caso do print, aba **Posts**).
+### Contexto sobre o banco de dados
+Verifiquei o schema do Supabase e **não existe nenhuma tabela ou coluna que armazene o nome do sistema** ("CRM Jurídico"). O nome aparece apenas como texto fixo no frontend (sidebar, título da aba do navegador, página de login, dashboard e metadados SEO). Portanto, **não há migração de banco a ser feita** — toda a alteração é em arquivos do código.
 
-No `DemandaDetalheDialog` (modal de Vídeos, Tráfego, LP, IA, Briefing, Planejamento) já está correto: o botão só fecha o modal e o usuário continua exatamente na aba que estava.
+Se no futuro você quiser que o nome do sistema seja configurável dinamicamente (ex.: tabela `app_settings`), posso criar isso em uma etapa separada. Hoje não é necessário.
 
-O problema é só no `PostDetalhe`, que é uma página em rota separada (`/posts/:postId`) — ao voltar, ela cai no estado padrão do hub (`tab="visao"`).
+### Arquivos a alterar
 
-## Mudanças
+1. **`index.html`** — atualizar título da aba, `meta description`, `meta author`, `og:title`, `twitter:title`, `og:description`, `twitter:description`:
+   - Título: `Dash Tasks — Gestão de Tarefas e Conteúdo`
+   - Author: `Dash Tasks`
+   - Descrição: `Dash Tasks: gestão completa de clientes, demandas, Kanban, posts e alertas em um só lugar.`
 
-### 1. `src/pages/PostDetalhe.tsx`
-Trocar a navegação do botão Voltar para incluir a aba de destino na URL:
+2. **`src/components/AppSidebar.tsx`** (linha 51-52) — texto do header da sidebar:
+   - `CRM Jurídico` → `Dash Tasks`
+   - Subtítulo `Marketing & Conteúdo` → `Gestão de Tarefas` (mantendo o estilo)
 
-```ts
-navigate(`/clientes/${card.cliente_id}?tab=posts`);
-```
+3. **`src/pages/Auth.tsx`** (linha 45) — `CardTitle` da tela de login:
+   - `CRM Jurídico` → `Dash Tasks`
 
-### 2. `src/pages/ProjetoCliente.tsx`
-Fazer a página respeitar o parâmetro `?tab=` da URL ao montar e manter a URL sincronizada quando o usuário troca de aba:
+4. **`src/pages/Dashboard.tsx`** (linha 79) — subtítulo:
+   - `Visão geral do CRM Jurídico` → `Visão geral do Dash Tasks`
 
-- Ler `searchParams.get("tab")` para inicializar o estado `tab` (fallback `"visao"`).
-- No `onValueChange` das Tabs, atualizar a URL com `setSearchParams` (replace, sem empilhar histórico).
-- Se a aba for `"visao"`, remover o parâmetro para manter URL limpa.
+### O que NÃO será alterado (para evitar quebrar código)
+- Identificadores técnicos internos como o store `useCRM`, `useCRMBootstrap` e o arquivo `src/store/crm.ts` — são nomes de variáveis/módulos sem impacto visual e renomeá-los exigiria refatoração ampla sem benefício para o usuário.
+- A categoria `"CRM"` em `src/lib/demandas-categorias.ts` (linha 67) — é uma palavra-chave de busca de subtipo de demanda na categoria "Tecnologia", não se refere ao nome do sistema.
+- A frase `"Seu acesso ao CRM da Ads BR"` em `EquipeAcessosManager.tsx` (mensagem de WhatsApp) — refere-se a uma marca externa diferente. **Pergunto abaixo se devo alterar.**
 
-## Resultado
+### Atualização de memória
+Atualizarei `mem://index.md` para substituir a referência "CRM Jurídico" por "Dash Tasks".
 
-- Abrir um Post pela aba **Posts** → clicar **Voltar** → retorna direto ao Kanban de Posts (não mais à Visão Geral).
-- Abrir um card de Vídeo/Tráfego/etc. (modal) → clicar **Voltar** → fecha o modal e mantém a aba ativa (já funcionava).
-- Compartilhar/recarregar a URL `/clientes/:id?tab=trafego` agora abre direto na aba Tráfego Pago — bônus útil.
-
-## Detalhes técnicos
-
-- Sem mudanças no banco, no `DemandaDetalheDialog` ou no `VoltarVisaoGeralButton`.
-- Sem efeitos colaterais nas demais abas — comportamento atual preservado quando não há `?tab=`.
+### Pergunta antes de executar
+A mensagem automática de boas-vindas via WhatsApp diz: _"Seu acesso ao CRM da Ads BR"_. Devo trocar para _"Seu acesso ao Dash Tasks"_? (Posso confirmar ao executar; se não responder, mantenho como está.)

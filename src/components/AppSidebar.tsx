@@ -48,8 +48,8 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <div className="text-sm font-semibold text-sidebar-foreground">CRM Jurídico</div>
-              <div className="text-[10px] text-sidebar-foreground/60">Marketing & Conteúdo</div>
+              <div className="text-sm font-semibold text-sidebar-foreground">Dash Tasks</div>
+              <div className="text-[10px] text-sidebar-foreground/60">Gestão de Tarefas</div>
             </div>
           )}
         </div>

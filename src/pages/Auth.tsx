@@ -42,7 +42,7 @@ export default function Auth() {
           <div className="mx-auto h-12 w-12 rounded-md bg-primary flex items-center justify-center mb-2">
             <Scale className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle>CRM Jurídico</CardTitle>
+          <CardTitle>Dash Tasks</CardTitle>
           <CardDescription>Acesse sua conta para continuar</CardDescription>
         </CardHeader>
         <CardContent>
