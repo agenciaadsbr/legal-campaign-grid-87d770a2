@@ -1,48 +1,65 @@
-## Objetivo
+## Problema
 
-Aplicar o mesmo padrão visual da "Mensagem completa" (caixa interna com borda, fundo suave e barra de rolagem própria) aos cards individuais dos blocos **Links importantes, Reuniões, Documentos e Observações** dentro da aba **Documentação**, para que observações longas não estiquem o card nem a página.
+Na aba **Documentação**, ao usar **"Adicionar em lote"** nos cards **Documentos**, **Links importantes** e **Reuniões**, o contador mostra sempre `0 item(ns) detectado(s)` e o botão **"Adicionar todos"** fica desabilitado — nada é salvo.
 
-## Situação atual
+### Causa raiz (confirmada no código)
 
-- A lista de itens de cada bloco já tem scroll interno (`max-h-[420px] overflow-y-auto`) — mantida como está.
-- O `MensagemAcessosCard` (usado em Acessos / Materiais) já tem a caixa interna scrollável (`max-h-[320px]`, scrollbar custom) — referência visual.
-- O `ItemCard` (usado em Links, Reuniões, Documentos, Observações) renderiza `item.observacao` em uma `<div>` simples (linhas 524-528), sem limite de altura nem caixa visual. Textos grandes esticam o card.
+A função `parseLoteTexto` em `src/components/projeto/DocumentacaoTab.tsx` (linhas 980–1092) foi escrita assumindo que cada item é um **bloco de acesso** (URL + login + senha). Dois pontos a corrigir:
 
-## Mudança proposta
+1. **Linha 1067**: `if (!url && !login && !senha) continue;` — descarta qualquer bloco que não tenha URL nem credenciais. Como Documentos, Reuniões e (parcialmente) Links são apenas títulos/anotações sem login/senha, todos os blocos são jogados fora.
+2. **Linhas 1004–1008**: blocos são separados **apenas por linha em branco** (`\n\s*\n`). Em listas coladas como bullets contínuos (sem linha em branco entre eles, como o briefing do screenshot) tudo vira **1 único bloco**, que depois é descartado pelo motivo acima.
 
-Apenas em `src/components/projeto/DocumentacaoTab.tsx`, no componente `ItemCard` (linhas ~524-528).
+Resultado: parser detecta 0 itens → `createBatch` nunca é chamado → nada é salvo.
 
-Trocar o bloco atual:
+## Correção
 
-```tsx
-{item.observacao && (
-  <div className="text-[11px] text-muted-foreground border-t border-border pt-1.5 whitespace-pre-wrap">
-    {item.observacao}
-  </div>
-)}
+Tornar o parser sensível ao **bloco** (`DocBloco`) que está sendo importado, com regras adequadas a cada tipo:
+
+### 1. Passar `bloco` para o parser
+
+Alterar a assinatura para `parseLoteTexto(texto, bloco)` e propagar nas chamadas (`useMemo` em `DocumentacaoLoteDialog`).
+
+### 2. Modo "lista simples" para Documentos, Links e Reuniões
+
+Quando o bloco for `documentos`, `links`, `reunioes` ou `observacoes` **e** o texto **não usar o formato com `|`** **e** **não houver linhas em branco** dividindo blocos (ou o texto for predominantemente bullets), tratar **cada linha não-vazia** como um item:
+
+- `titulo` = a linha inteira limpa (remove `•`, `-`, `*`, emojis no início, `:` no final)
+- `url` = primeira URL encontrada na linha (se houver), via `URL_RE`
+- `login`, `senha`, `observacao` = `null`
+- Linhas que sejam apenas saudações triviais (`Bom dia`, `Boa tarde`, `Olá`, etc.) podem ser mantidas, já que o usuário escolheu colar a lista — preferir **não filtrar** para evitar perdas silenciosas.
+
+### 3. Manter modo "blocos com URL/credenciais" só onde faz sentido
+
+- Para `acessos` e `materiais` o diálogo já usa `isMensagemUnica` (mensagem única, não chama o parser) — sem alteração.
+- O modo atual (blocos separados por linha em branco com URL/login/senha) continua disponível como **fallback**: se o texto contém múltiplos blocos separados por linha em branco **e** algum deles tem URL/credenciais, usa-se o parser atual (relaxando a linha 1067 para também aceitar blocos só com título quando o bloco for `documentos`/`links`/`reunioes`/`observacoes`).
+
+### 4. Relaxar o filtro da linha 1067
+
+Substituir `if (!url && !login && !senha) continue;` por:
+
+```ts
+const isListaLivre = bloco === "documentos" || bloco === "links" || bloco === "reunioes" || bloco === "observacoes";
+if (!url && !login && !senha && !isListaLivre) continue;
+// para listas livres: só descarta se o título também estiver vazio
+if (isListaLivre && !tituloCandidato && !url) continue;
 ```
 
-por uma caixa interna no mesmo padrão visual do `MensagemAcessosCard`:
+### 5. Atualizar placeholder do textarea
 
-- Container com `border border-border`, `rounded-md`, `bg-muted/30`, padding `p-2.5`.
-- `max-h-[200px]` + `overflow-y-auto` para scroll interno (altura menor que o card de Mensagem porque aqui é uma observação secundária dentro de um card já compacto).
-- Scrollbar customizada com tokens semânticos:
-  - `[&::-webkit-scrollbar]:w-1.5`
-  - `[&::-webkit-scrollbar-track]:bg-transparent`
-  - `[&::-webkit-scrollbar-thumb]:bg-border`
-  - `[&::-webkit-scrollbar-thumb]:rounded-full`
-  - `hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40`
-- Mantém `whitespace-pre-wrap break-words` para preservar quebras e quebrar URLs longas.
-- Tipografia `text-[11px] text-muted-foreground leading-relaxed`.
+Para Documentos / Links / Reuniões, mostrar exemplo realista (uma linha por item), por exemplo:
 
-Como o `ItemCard` é usado por todos os blocos exceto Acessos/Materiais (que usam o `MensagemAcessosCard`), essa única alteração já cobre Links importantes, Reuniões, Documentos e Observações automaticamente.
+```
+Briefing
+Planejamento de mídia Q1
+Contrato assinado
+https://drive.google.com/...
+```
 
-## Fora do escopo
+### Resultado esperado
 
-- Acessos e Materiais (já usam `MensagemAcessosCard` com o padrão).
-- Outras abas (Briefing, Planejamento, Área).
-- Mudanças de store, schema ou layout do bloco/lista.
+- Colar uma lista de bullets/linhas em **Documentos**, **Links importantes** ou **Reuniões** → contador mostra N itens → `Adicionar todos (N)` habilitado → `createBatch` salva todos com o tipo selecionado no Select "Tipo (aplicado a todos)".
+- Comportamento atual de **Acessos** (mensagem única) e do formato `título | url | login | senha | obs` permanece inalterado.
 
-## Arquivos afetados
+## Arquivo afetado
 
-- `src/components/projeto/DocumentacaoTab.tsx` (apenas o trecho da observação dentro de `ItemCard`).
+- `src/components/projeto/DocumentacaoTab.tsx` (apenas — alterações em `DocumentacaoLoteDialog` e `parseLoteTexto`).
