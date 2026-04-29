@@ -277,6 +277,21 @@ export function DocumentacaoTab({
                           <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
                         </Button>
                       )}
+                      {bloco === "acessos" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          disabled={lista.length === 0}
+                          onClick={() => {
+                            const msg = construirMensagemAcessos(lista);
+                            navigator.clipboard.writeText(msg);
+                            toast.success("Mensagem copiada");
+                          }}
+                        >
+                          <ClipboardCopy className="h-3.5 w-3.5 mr-1" /> Copiar mensagem
+                        </Button>
+                      )}
                     </div>
                     {lista.length === 0 ? (
                       <div className="text-xs text-muted-foreground italic px-2 py-3">
