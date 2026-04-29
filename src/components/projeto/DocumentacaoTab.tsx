@@ -206,12 +206,6 @@ export function DocumentacaoTab({
           <Button variant="outline" size="sm" onClick={exportarTxt}>
             <FileText className="h-4 w-4 mr-1" /> TXT
           </Button>
-          <Button variant="outline" size="sm" onClick={exportarPdf}>
-            <FileDown className="h-4 w-4 mr-1" /> PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportarPng}>
-            <ImageIcon className="h-4 w-4 mr-1" /> PNG
-          </Button>
           <Button
             size="sm"
             onClick={() => setSeletorBlocoOpen(true)}
