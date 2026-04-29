@@ -703,13 +703,13 @@ function DocumentacaoLoteDialog({
   const createBatch = useDocumentacao((s) => s.createBatch);
   const create = useDocumentacao((s) => s.create);
   const tiposDisponiveis = TIPOS_POR_BLOCO[bloco] ?? [];
-  const isAcessos = bloco === "acessos";
+  const isMensagemUnica = bloco === "acessos" || bloco === "materiais";
   const [tipo, setTipo] = useState<string>(tiposDisponiveis[0]?.value ?? "outro");
   const [texto, setTexto] = useState("");
 
   useEffect(() => {
     if (open) {
-      setTipo(isAcessos ? "mensagem" : tiposDisponiveis[0]?.value ?? "outro");
+      setTipo(isMensagemUnica ? "mensagem" : tiposDisponiveis[0]?.value ?? "outro");
       setTexto("");
     }
   }, [open, bloco]);
