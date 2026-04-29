@@ -277,7 +277,7 @@ export function DocumentacaoTab({
                           <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
                         </Button>
                       )}
-                      {bloco === "acessos" && (
+                      {(bloco === "acessos" || bloco === "materiais") && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -287,7 +287,9 @@ export function DocumentacaoTab({
                             const itemMsg = lista.find((i) => i.tipo === "mensagem");
                             const msg = itemMsg?.observacao
                               ? itemMsg.observacao
-                              : construirMensagemAcessos(lista);
+                              : bloco === "acessos"
+                                ? construirMensagemAcessos(lista)
+                                : construirMensagemMateriais(lista);
                             navigator.clipboard.writeText(msg);
                             toast.success("Mensagem copiada");
                           }}
@@ -303,7 +305,7 @@ export function DocumentacaoTab({
                     ) : (
                       <div className="grid grid-cols-1 gap-2">
                         {lista.map((it) =>
-                          bloco === "acessos" && it.tipo === "mensagem" ? (
+                          (bloco === "acessos" || bloco === "materiais") && it.tipo === "mensagem" ? (
                             <MensagemAcessosCard
                               key={it.id}
                               item={it}
@@ -701,24 +703,24 @@ function DocumentacaoLoteDialog({
   const createBatch = useDocumentacao((s) => s.createBatch);
   const create = useDocumentacao((s) => s.create);
   const tiposDisponiveis = TIPOS_POR_BLOCO[bloco] ?? [];
-  const isAcessos = bloco === "acessos";
+  const isMensagemUnica = bloco === "acessos" || bloco === "materiais";
   const [tipo, setTipo] = useState<string>(tiposDisponiveis[0]?.value ?? "outro");
   const [texto, setTexto] = useState("");
 
   useEffect(() => {
     if (open) {
-      setTipo(isAcessos ? "mensagem" : tiposDisponiveis[0]?.value ?? "outro");
+      setTipo(isMensagemUnica ? "mensagem" : tiposDisponiveis[0]?.value ?? "outro");
       setTexto("");
     }
   }, [open, bloco]);
 
   const itensDetectados = useMemo(
-    () => (isAcessos ? [] : parseLoteTexto(texto)),
-    [texto, isAcessos],
+    () => (isMensagemUnica ? [] : parseLoteTexto(texto)),
+    [texto, isMensagemUnica],
   );
 
   const submit = async () => {
-    if (isAcessos) {
+    if (isMensagemUnica) {
       const conteudo = texto.trim();
       if (!conteudo) {
         toast.error("Cole o conteúdo da mensagem antes de salvar.");
@@ -728,7 +730,7 @@ function DocumentacaoLoteDialog({
         cliente_id: clienteId,
         bloco,
         tipo: "mensagem",
-        titulo: "Mensagem de acessos",
+        titulo: bloco === "materiais" ? "Materiais enviados ao cliente" : "Mensagem de acessos",
         url: null,
         login: null,
         senha: null,
@@ -770,7 +772,7 @@ function DocumentacaoLoteDialog({
         <DialogHeader>
           <DialogTitle>Adicionar em lote — {DOC_BLOCO_LABEL[bloco]}</DialogTitle>
           <DialogDescription>
-            {isAcessos ? (
+            {isMensagemUnica ? (
               <>
                 Cole abaixo a mensagem completa (estilo WhatsApp) com todos os links,
                 logins e senhas. O conteúdo será salvo como um único item formatado,
@@ -789,7 +791,7 @@ function DocumentacaoLoteDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          {!isAcessos && (
+          {!isMensagemUnica && (
             <div>
               <Label>Tipo (aplicado a todos)</Label>
               <Select value={tipo} onValueChange={setTipo}>
@@ -810,8 +812,8 @@ function DocumentacaoLoteDialog({
           )}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label>{isAcessos ? "Mensagem completa" : "Itens"}</Label>
-              {!isAcessos && (
+              <Label>{isMensagemUnica ? "Mensagem completa" : "Itens"}</Label>
+              {!isMensagemUnica && (
                 <Badge variant="outline" className="text-[10px]">
                   {itensDetectados.length} item(ns) detectado(s)
                 </Badge>
@@ -822,7 +824,7 @@ function DocumentacaoLoteDialog({
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder={
-                isAcessos
+                isMensagemUnica
                   ? "Cole aqui a mensagem completa, ex:\n\nBoa tarde Drs.\n\nSegue abaixo as informações de acesso:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030"
                   : "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
               }
@@ -836,9 +838,9 @@ function DocumentacaoLoteDialog({
           </Button>
           <Button
             onClick={submit}
-            disabled={isAcessos ? !texto.trim() : itensDetectados.length === 0}
+            disabled={isMensagemUnica ? !texto.trim() : itensDetectados.length === 0}
           >
-            {isAcessos
+            {isMensagemUnica
               ? "Salvar mensagem"
               : `Adicionar todos (${itensDetectados.length})`}
           </Button>
@@ -984,6 +986,21 @@ function construirMensagemAcessos(lista: DocumentacaoItem[]): string {
     if (it.url) partes.push(it.url);
     if (it.login) partes.push(`Login: ${it.login}`);
     if (it.senha) partes.push(`Senha: ${it.senha}`);
+    if (it.observacao) partes.push(it.observacao);
+    partes.push("");
+  });
+  return partes.join("\n").trimEnd();
+}
+
+function construirMensagemMateriais(lista: DocumentacaoItem[]): string {
+  if (!lista.length) return "";
+  const partes: string[] = ["Segue abaixo os materiais enviados:", ""];
+  lista.forEach((it) => {
+    partes.push(`🔗 ${it.titulo}`);
+    if (it.url) partes.push(it.url);
+    if (it.formato) partes.push(`Formato: ${it.formato}`);
+    if (it.data_evento)
+      partes.push(`Data: ${new Date(it.data_evento).toLocaleDateString("pt-BR")}`);
     if (it.observacao) partes.push(it.observacao);
     partes.push("");
   });
