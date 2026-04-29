@@ -117,6 +117,45 @@ export function DocumentacaoTab({
     open: false,
     bloco: "acessos",
   });
+  const removeItem = useDocumentacao((s) => s.remove);
+  const [selecionados, setSelecionados] = useState<Record<DocBloco, Set<string>>>({
+    acessos: new Set(),
+    links: new Set(),
+    reunioes: new Set(),
+    materiais: new Set(),
+    documentos: new Set(),
+    observacoes: new Set(),
+  });
+
+  const toggleSelecionado = (bloco: DocBloco, id: string) => {
+    setSelecionados((s) => {
+      const novo = new Set(s[bloco]);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return { ...s, [bloco]: novo };
+    });
+  };
+
+  const toggleTodos = (bloco: DocBloco, ids: string[]) => {
+    setSelecionados((s) => {
+      const atual = s[bloco];
+      const todosMarcados = ids.length > 0 && ids.every((id) => atual.has(id));
+      return { ...s, [bloco]: todosMarcados ? new Set() : new Set(ids) };
+    });
+  };
+
+  const limparSelecao = (bloco: DocBloco) => {
+    setSelecionados((s) => ({ ...s, [bloco]: new Set() }));
+  };
+
+  const excluirSelecionados = async (bloco: DocBloco) => {
+    const ids = Array.from(selecionados[bloco]);
+    if (ids.length === 0) return;
+    if (!confirm(`Excluir ${ids.length} ${ids.length === 1 ? "item" : "itens"} selecionado(s)?`)) return;
+    await Promise.all(ids.map((id) => removeItem(id)));
+    limparSelecao(bloco);
+    toast.success(`${ids.length} ${ids.length === 1 ? "item excluído" : "itens excluídos"}`);
+  };
 
   // Quando dispara externamente, abre o seletor de bloco
   const [seletorBlocoOpen, setSeletorBlocoOpen] = useState(false);
