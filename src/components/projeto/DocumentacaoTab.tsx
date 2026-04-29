@@ -47,7 +47,6 @@ import {
   Video,
   Send,
   Files,
-  StickyNote,
   ClipboardCopy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
