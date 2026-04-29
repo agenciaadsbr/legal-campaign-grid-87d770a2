@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
@@ -116,6 +117,45 @@ export function DocumentacaoTab({
     open: false,
     bloco: "acessos",
   });
+  const removeItem = useDocumentacao((s) => s.remove);
+  const [selecionados, setSelecionados] = useState<Record<DocBloco, Set<string>>>({
+    acessos: new Set(),
+    links: new Set(),
+    reunioes: new Set(),
+    materiais: new Set(),
+    documentos: new Set(),
+    observacoes: new Set(),
+  });
+
+  const toggleSelecionado = (bloco: DocBloco, id: string) => {
+    setSelecionados((s) => {
+      const novo = new Set(s[bloco]);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return { ...s, [bloco]: novo };
+    });
+  };
+
+  const toggleTodos = (bloco: DocBloco, ids: string[]) => {
+    setSelecionados((s) => {
+      const atual = s[bloco];
+      const todosMarcados = ids.length > 0 && ids.every((id) => atual.has(id));
+      return { ...s, [bloco]: todosMarcados ? new Set() : new Set(ids) };
+    });
+  };
+
+  const limparSelecao = (bloco: DocBloco) => {
+    setSelecionados((s) => ({ ...s, [bloco]: new Set() }));
+  };
+
+  const excluirSelecionados = async (bloco: DocBloco) => {
+    const ids = Array.from(selecionados[bloco]);
+    if (ids.length === 0) return;
+    if (!confirm(`Excluir ${ids.length} ${ids.length === 1 ? "item" : "itens"} selecionado(s)?`)) return;
+    await Promise.all(ids.map((id) => removeItem(id)));
+    limparSelecao(bloco);
+    toast.success(`${ids.length} ${ids.length === 1 ? "item excluído" : "itens excluídos"}`);
+  };
 
   // Quando dispara externamente, abre o seletor de bloco
   const [seletorBlocoOpen, setSeletorBlocoOpen] = useState(false);
@@ -298,6 +338,44 @@ export function DocumentacaoTab({
                         </Button>
                       )}
                     </div>
+                    {lista.length > 0 && (() => {
+                      const ids = lista.map((i) => i.id);
+                      const sel = selecionados[bloco];
+                      const qtd = ids.filter((id) => sel.has(id)).length;
+                      const todosMarcados = qtd > 0 && qtd === ids.length;
+                      return (
+                        <div className="flex items-center gap-2 px-1 pb-1 border-b border-border/60">
+                          <Checkbox
+                            checked={todosMarcados ? true : qtd > 0 ? "indeterminate" : false}
+                            onCheckedChange={() => toggleTodos(bloco, ids)}
+                            aria-label="Selecionar todos"
+                          />
+                          <span className="text-[11px] text-muted-foreground">
+                            {qtd > 0 ? `${qtd} selecionado(s)` : "Selecionar todos"}
+                          </span>
+                          {qtd > 0 && (
+                            <div className="ml-auto flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => limparSelecao(bloco)}
+                              >
+                                Limpar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => excluirSelecionados(bloco)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir ({qtd})
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {lista.length === 0 ? (
                       <div className="text-xs text-muted-foreground italic px-2 py-3">
                         Nenhum item neste bloco.
@@ -318,6 +396,8 @@ export function DocumentacaoTab({
                             <MensagemAcessosCard
                               key={it.id}
                               item={it}
+                              selected={selecionados[bloco].has(it.id)}
+                              onToggleSelect={() => toggleSelecionado(bloco, it.id)}
                               onEdit={() =>
                                 setDialogState({ open: true, bloco, item: it })
                               }
@@ -326,6 +406,8 @@ export function DocumentacaoTab({
                             <ItemCard
                               key={it.id}
                               item={it}
+                              selected={selecionados[bloco].has(it.id)}
+                              onToggleSelect={() => toggleSelecionado(bloco, it.id)}
                               onEdit={() =>
                                 setDialogState({ open: true, bloco, item: it })
                               }
@@ -398,9 +480,13 @@ export function DocumentacaoTab({
 function ItemCard({
   item,
   onEdit,
+  selected,
+  onToggleSelect,
 }: {
   item: DocumentacaoItem;
   onEdit: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const remove = useDocumentacao((s) => s.remove);
   const [showSenha, setShowSenha] = useState(false);
@@ -415,9 +501,17 @@ function ItemCard({
     item.tipo;
 
   return (
-    <Card className="border-border">
+    <Card className={cn("border-border", selected && "ring-1 ring-primary border-primary/50")}>
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
+          {onToggleSelect && (
+            <Checkbox
+              checked={!!selected}
+              onCheckedChange={onToggleSelect}
+              className="mt-1"
+              aria-label="Selecionar item"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="text-sm font-medium truncate">{item.titulo}</div>
@@ -1070,9 +1164,13 @@ function construirExportacaoTexto(nomeCliente: string, itens: DocumentacaoItem[]
 function MensagemAcessosCard({
   item,
   onEdit,
+  selected,
+  onToggleSelect,
 }: {
   item: DocumentacaoItem;
   onEdit: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const remove = useDocumentacao((s) => s.remove);
   const conteudo = item.observacao ?? "";
@@ -1083,10 +1181,17 @@ function MensagemAcessosCard({
   };
 
   return (
-    <Card className="border-border bg-card">
+    <Card className={cn("border-border bg-card", selected && "ring-1 ring-primary border-primary/50")}>
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
+            {onToggleSelect && (
+              <Checkbox
+                checked={!!selected}
+                onCheckedChange={onToggleSelect}
+                aria-label="Selecionar item"
+              />
+            )}
             <KeyRound className="h-4 w-4 text-primary shrink-0" />
             <div className="text-sm font-medium truncate">{item.titulo}</div>
             <Badge variant="outline" className="text-[10px]">Mensagem</Badge>
