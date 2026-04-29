@@ -43,6 +43,7 @@ export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: str
     { value: "outro", label: "Outro" },
   ],
   links: [
+    { value: "mensagem", label: "Mensagem completa" },
     { value: "drive", label: "Drive do cliente" },
     { value: "pasta", label: "Pasta de materiais" },
     { value: "site", label: "Site" },
@@ -57,6 +58,7 @@ export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: str
     { value: "outro", label: "Outros links" },
   ],
   reunioes: [
+    { value: "mensagem", label: "Mensagem completa" },
     { value: "reuniao_fechamento", label: "Reunião de fechamento" },
     { value: "reuniao_start", label: "Reunião de start" },
     { value: "reuniao_briefing", label: "Reunião de briefing" },
@@ -73,6 +75,7 @@ export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: str
     { value: "material", label: "Outro material" },
   ],
   documentos: [
+    { value: "mensagem", label: "Mensagem completa" },
     { value: "briefing", label: "Briefing" },
     { value: "planejamento", label: "Planejamento" },
     { value: "contrato", label: "Contrato" },

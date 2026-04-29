@@ -392,7 +392,11 @@ export function DocumentacaoTab({
                         )}
                       >
                         {lista.map((it) =>
-                          (bloco === "acessos" || bloco === "materiais") && it.tipo === "mensagem" ? (
+                          (bloco === "acessos" ||
+                            bloco === "materiais" ||
+                            bloco === "links" ||
+                            bloco === "reunioes" ||
+                            bloco === "documentos") && it.tipo === "mensagem" ? (
                             <MensagemAcessosCard
                               key={it.id}
                               item={it}
@@ -819,13 +823,30 @@ function DocumentacaoLoteDialog({
   const createBatch = useDocumentacao((s) => s.createBatch);
   const create = useDocumentacao((s) => s.create);
   const tiposDisponiveis = TIPOS_POR_BLOCO[bloco] ?? [];
-  const isMensagemUnica = bloco === "acessos" || bloco === "materiais";
+  const isMensagemFixo = bloco === "acessos" || bloco === "materiais";
+  const podeAlternarModo =
+    bloco === "documentos" || bloco === "links" || bloco === "reunioes";
+  const [modoLote, setModoLote] = useState<"mensagem" | "lista">("mensagem");
   const [tipo, setTipo] = useState<string>(tiposDisponiveis[0]?.value ?? "outro");
   const [texto, setTexto] = useState("");
 
+  // Modo efetivo: acessos/materiais sempre mensagem; nos 3 novos blocos depende do toggle; demais (observacoes) = lista
+  const modoEfetivo: "mensagem" | "lista" = isMensagemFixo
+    ? "mensagem"
+    : podeAlternarModo
+      ? modoLote
+      : "lista";
+  const isMensagemUnica = modoEfetivo === "mensagem";
+
   useEffect(() => {
     if (open) {
-      setTipo(isMensagemUnica ? "mensagem" : tiposDisponiveis[0]?.value ?? "outro");
+      setModoLote("mensagem");
+      const tipoInicial = isMensagemFixo || podeAlternarModo ? "mensagem" : tiposDisponiveis[0]?.value ?? "outro";
+      setTipo(
+        tipoInicial === "mensagem"
+          ? tiposDisponiveis.find((t) => t.value !== "mensagem")?.value ?? "outro"
+          : tipoInicial,
+      );
       setTexto("");
     }
   }, [open, bloco]);
@@ -841,6 +862,15 @@ function DocumentacaoLoteDialog({
     bloco === "reunioes" ||
     bloco === "observacoes";
 
+  const tituloMensagemPadrao: Record<DocBloco, string> = {
+    acessos: "Mensagem de acessos",
+    materiais: "Materiais enviados ao cliente",
+    documentos: "Mensagem de documentos",
+    links: "Mensagem de links importantes",
+    reunioes: "Mensagem de reuniões",
+    observacoes: "Observação",
+  };
+
   const submit = async () => {
     if (isMensagemUnica) {
       const conteudo = texto.trim();
@@ -852,7 +882,7 @@ function DocumentacaoLoteDialog({
         cliente_id: clienteId,
         bloco,
         tipo: "mensagem",
-        titulo: bloco === "materiais" ? "Materiais enviados ao cliente" : "Mensagem de acessos",
+        titulo: tituloMensagemPadrao[bloco],
         url: null,
         login: null,
         senha: null,
@@ -896,15 +926,14 @@ function DocumentacaoLoteDialog({
           <DialogDescription>
             {isMensagemUnica ? (
               <>
-                Cole abaixo a mensagem completa (estilo WhatsApp) com todos os links,
-                logins e senhas. O conteúdo será salvo como um único item formatado,
-                preservando exatamente como você colou.
+                Cole abaixo a mensagem completa (estilo WhatsApp). O conteúdo será
+                salvo como um único item formatado, preservando exatamente como você
+                colou.
               </>
             ) : (
               <>
-                Cole o texto livre (estilo WhatsApp/e-mail) — o sistema detecta
-                automaticamente cada item, URL, Login e Senha. Itens são separados por
-                linha em branco.
+                Cole o texto livre — o sistema detecta automaticamente cada item, URL,
+                Login e Senha. Itens são separados por linha em branco.
                 <br />
                 Alternativa: uma linha por item com{" "}
                 <code>título | url | login | senha | observação</code>.
@@ -913,6 +942,28 @@ function DocumentacaoLoteDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
+          {podeAlternarModo && (
+            <div className="flex items-center gap-1 p-1 rounded-md bg-muted w-fit">
+              <Button
+                type="button"
+                size="sm"
+                variant={modoLote === "mensagem" ? "default" : "ghost"}
+                className="h-7 px-3 text-xs"
+                onClick={() => setModoLote("mensagem")}
+              >
+                Mensagem completa
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={modoLote === "lista" ? "default" : "ghost"}
+                className="h-7 px-3 text-xs"
+                onClick={() => setModoLote("lista")}
+              >
+                Lista de itens
+              </Button>
+            </div>
+          )}
           {!isMensagemUnica && (
             <div>
               <Label>Tipo (aplicado a todos)</Label>
@@ -947,7 +998,7 @@ function DocumentacaoLoteDialog({
               onChange={(e) => setTexto(e.target.value)}
               placeholder={
                 isMensagemUnica
-                  ? "Cole aqui a mensagem completa, ex:\n\nBoa tarde Drs.\n\nSegue abaixo as informações de acesso:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030"
+                  ? "Cole aqui a mensagem completa, ex:\n\nBoa tarde Drs.\n\nSegue abaixo as informações:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030"
                   : isListaLivre
                   ? "Cole uma lista — uma linha por item, ex:\n\nBriefing\nPlanejamento de mídia Q1\nContrato assinado\nhttps://drive.google.com/...\n\nOu use blocos com URL/observações separados por linha em branco."
                   : "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
