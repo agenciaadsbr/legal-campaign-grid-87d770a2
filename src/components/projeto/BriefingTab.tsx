@@ -122,7 +122,7 @@ export function BriefingTab({
 
   const exportarTxt = () => {
     downloadTxt(
-      `briefing_${safeFilename(cliente?.nome ?? "cliente")}`,
+      `briefing_${safeFilename(cliente?.nome_cliente ?? "cliente")}`,
       documento,
     );
   };
@@ -189,7 +189,7 @@ export function BriefingTab({
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-5 w-5 text-primary" />
                 <h2 className="text-xl font-bold">
-                  Briefing — {cliente?.nome}
+                  Briefing — {cliente?.nome_cliente}
                 </h2>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
