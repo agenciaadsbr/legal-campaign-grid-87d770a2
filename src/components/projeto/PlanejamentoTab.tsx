@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Circle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -122,10 +122,10 @@ export function PlanejamentoTab({
         itensS.forEach((it) => {
           const marca =
             it.status === "concluido"
-              ? "[x]"
+              ? "✓"
               : isItemAtrasado(it)
-                ? "[!]"
-                : "[ ]";
+                ? "⚠"
+                : "☐";
           linhas.push(`  ${marca} ${it.titulo}`);
           if (it.prazo)
             linhas.push(
@@ -211,27 +211,27 @@ export function PlanejamentoTab({
                 }
               >
                 <Card className="overflow-hidden">
-                  <CollapsibleTrigger asChild>
+                <CollapsibleTrigger asChild>
                     <button
                       type="button"
-                      className="w-full flex items-center gap-2 p-2.5 text-left hover:bg-accent/30 border-b border-border"
+                      className="w-full flex items-center gap-2 p-2 text-left hover:bg-accent/30 border-b border-border"
                     >
                       <ChevronDown
                         className={cn(
-                          "h-4 w-4 transition-transform shrink-0",
+                          "h-3.5 w-3.5 transition-transform shrink-0",
                           !openBlocos[bloco.key] && "-rotate-90",
                         )}
                       />
-                      <span className="text-sm font-semibold flex-1 truncate">
+                      <span className="text-xs font-semibold flex-1 truncate">
                         {bloco.label}
                       </span>
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">
                         {itensBloco.length}
                       </Badge>
                     </button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <CardContent className="p-2.5 space-y-3">
+                    <CardContent className="p-2 space-y-2">
                       {bloco.secoes.map((secao) => {
                         const itensSecao = itensBloco
                           .filter((i) => i.secao === secao.key)
@@ -340,16 +340,15 @@ function SecaoBlock({
   };
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <div className="flex items-center gap-1.5">
-        <span className="text-base">{secao.icone}</span>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h4 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           {secao.label}
         </h4>
         <Button
           size="sm"
           variant="ghost"
-          className="h-6 px-1.5 text-[11px] ml-auto"
+          className="h-5 px-1 text-[10px] ml-auto"
           onClick={() => setAdicionando(true)}
         >
           <Plus className="h-3 w-3 mr-0.5" /> item
@@ -450,17 +449,24 @@ function ItemRow({
         item.situacao === "nao_aplicavel" && "opacity-60",
       )}
     >
-      <div className="flex items-start gap-2 p-2">
-        <Checkbox
-          checked={efetivoConcluido}
-          onCheckedChange={toggleConcluido}
-          className="mt-0.5"
-        />
+      <div className="flex items-start gap-1.5 px-1.5 py-1">
+        <button
+          type="button"
+          onClick={toggleConcluido}
+          title={efetivoConcluido ? "Marcar como pendente" : "Marcar como feito"}
+          className="mt-0.5 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {efetivoConcluido ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 fill-emerald-500/20" />
+          ) : (
+            <Circle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+          )}
+        </button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span
               className={cn(
-                "text-sm",
+                "text-[12px] leading-tight",
                 efetivoConcluido && "line-through text-muted-foreground",
               )}
             >
@@ -468,24 +474,24 @@ function ItemRow({
             </span>
             <SituacaoBadge value={item.situacao} />
             {atrasado && (
-              <Badge variant="destructive" className="text-[9px]">
-                <AlertTriangle className="h-2.5 w-2.5 mr-0.5" /> atrasado
+              <Badge variant="destructive" className="text-[9px] h-4 px-1 py-0">
+                <AlertTriangle className="h-2 w-2 mr-0.5" /> atrasado
               </Badge>
             )}
             {item.prazo && (
-              <Badge variant="outline" className="text-[9px]">
-                <Clock className="h-2.5 w-2.5 mr-0.5" />
+              <Badge variant="outline" className="text-[9px] h-4 px-1 py-0">
+                <Clock className="h-2 w-2 mr-0.5" />
                 {new Date(item.prazo).toLocaleDateString("pt-BR")}
               </Badge>
             )}
             {responsavel && (
-              <Badge variant="secondary" className="text-[9px]">
+              <Badge variant="secondary" className="text-[9px] h-4 px-1 py-0">
                 {responsavel.nome}
               </Badge>
             )}
           </div>
           {item.descricao && (
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[10px] text-muted-foreground mt-0.5">
               {item.descricao}
             </p>
           )}
@@ -494,7 +500,7 @@ function ItemRow({
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6"
+            className="h-5 w-5"
             onClick={onMoverCima}
             disabled={!podeMoverCima}
             title="Mover para cima"
@@ -504,7 +510,7 @@ function ItemRow({
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6"
+            className="h-5 w-5"
             onClick={onMoverBaixo}
             disabled={!podeMoverBaixo}
             title="Mover para baixo"
@@ -514,7 +520,7 @@ function ItemRow({
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6"
+            className="h-5 w-5"
             onClick={() => setExpand((e) => !e)}
             title="Editar"
           >
@@ -523,7 +529,7 @@ function ItemRow({
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6"
+            className="h-5 w-5"
             onClick={() => duplicar(item.id)}
             title="Duplicar"
           >
@@ -532,7 +538,7 @@ function ItemRow({
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6 text-destructive hover:text-destructive"
+            className="h-5 w-5 text-destructive hover:text-destructive"
             onClick={() => {
               if (confirm(`Remover "${item.titulo}"?`)) remove(item.id);
             }}
