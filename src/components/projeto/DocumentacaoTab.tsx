@@ -1116,7 +1116,7 @@ function renderMensagemFormatada(texto: string) {
       });
     };
 
-    let conteudo: React.ReactNode;
+    let conteudo: ReactNode;
     if (loginMatch) {
       conteudo = (
         <>
