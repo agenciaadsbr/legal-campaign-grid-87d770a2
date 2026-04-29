@@ -831,9 +831,15 @@ function DocumentacaoLoteDialog({
   }, [open, bloco]);
 
   const itensDetectados = useMemo(
-    () => (isMensagemUnica ? [] : parseLoteTexto(texto)),
-    [texto, isMensagemUnica],
+    () => (isMensagemUnica ? [] : parseLoteTexto(texto, bloco)),
+    [texto, isMensagemUnica, bloco],
   );
+
+  const isListaLivre =
+    bloco === "documentos" ||
+    bloco === "links" ||
+    bloco === "reunioes" ||
+    bloco === "observacoes";
 
   const submit = async () => {
     if (isMensagemUnica) {
