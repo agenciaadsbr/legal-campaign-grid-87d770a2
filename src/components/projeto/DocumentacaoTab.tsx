@@ -277,7 +277,7 @@ export function DocumentacaoTab({
                           <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
                         </Button>
                       )}
-                      {bloco === "acessos" && (
+                      {(bloco === "acessos" || bloco === "materiais") && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -287,7 +287,9 @@ export function DocumentacaoTab({
                             const itemMsg = lista.find((i) => i.tipo === "mensagem");
                             const msg = itemMsg?.observacao
                               ? itemMsg.observacao
-                              : construirMensagemAcessos(lista);
+                              : bloco === "acessos"
+                                ? construirMensagemAcessos(lista)
+                                : construirMensagemMateriais(lista);
                             navigator.clipboard.writeText(msg);
                             toast.success("Mensagem copiada");
                           }}
