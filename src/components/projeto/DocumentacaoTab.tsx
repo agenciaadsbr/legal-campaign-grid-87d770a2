@@ -338,6 +338,44 @@ export function DocumentacaoTab({
                         </Button>
                       )}
                     </div>
+                    {lista.length > 0 && (() => {
+                      const ids = lista.map((i) => i.id);
+                      const sel = selecionados[bloco];
+                      const qtd = ids.filter((id) => sel.has(id)).length;
+                      const todosMarcados = qtd > 0 && qtd === ids.length;
+                      return (
+                        <div className="flex items-center gap-2 px-1 pb-1 border-b border-border/60">
+                          <Checkbox
+                            checked={todosMarcados ? true : qtd > 0 ? "indeterminate" : false}
+                            onCheckedChange={() => toggleTodos(bloco, ids)}
+                            aria-label="Selecionar todos"
+                          />
+                          <span className="text-[11px] text-muted-foreground">
+                            {qtd > 0 ? `${qtd} selecionado(s)` : "Selecionar todos"}
+                          </span>
+                          {qtd > 0 && (
+                            <div className="ml-auto flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => limparSelecao(bloco)}
+                              >
+                                Limpar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => excluirSelecionados(bloco)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir ({qtd})
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {lista.length === 0 ? (
                       <div className="text-xs text-muted-foreground italic px-2 py-3">
                         Nenhum item neste bloco.
@@ -358,6 +396,8 @@ export function DocumentacaoTab({
                             <MensagemAcessosCard
                               key={it.id}
                               item={it}
+                              selected={selecionados[bloco].has(it.id)}
+                              onToggleSelect={() => toggleSelecionado(bloco, it.id)}
                               onEdit={() =>
                                 setDialogState({ open: true, bloco, item: it })
                               }
@@ -366,6 +406,8 @@ export function DocumentacaoTab({
                             <ItemCard
                               key={it.id}
                               item={it}
+                              selected={selecionados[bloco].has(it.id)}
+                              onToggleSelect={() => toggleSelecionado(bloco, it.id)}
                               onEdit={() =>
                                 setDialogState({ open: true, bloco, item: it })
                               }
