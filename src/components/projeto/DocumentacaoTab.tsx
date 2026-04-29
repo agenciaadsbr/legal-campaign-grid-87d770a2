@@ -392,7 +392,11 @@ export function DocumentacaoTab({
                         )}
                       >
                         {lista.map((it) =>
-                          (bloco === "acessos" || bloco === "materiais") && it.tipo === "mensagem" ? (
+                          (bloco === "acessos" ||
+                            bloco === "materiais" ||
+                            bloco === "links" ||
+                            bloco === "reunioes" ||
+                            bloco === "documentos") && it.tipo === "mensagem" ? (
                             <MensagemAcessosCard
                               key={it.id}
                               item={it}
