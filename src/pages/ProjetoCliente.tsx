@@ -147,6 +147,7 @@ export default function ProjetoCliente() {
     if (tab === "briefing") return { label: "Editar briefing", onClick: () => setEditarBriefingTrigger(true) };
     if (tab === "planejamento") return { label: "Adicionar item", onClick: () => setNovoPlanOpen(true) };
     if (tab === "posts") return null; // botão movido para dentro da aba Posts (ao lado do filtro de busca)
+    if (tab === "visao") return null; // sem botão na Visão Geral (evita duplicação com a aba Posts)
     return { label: "Adicionar Tarefa", onClick: () => setNovaTarefaOpen(true) };
   })();
 
