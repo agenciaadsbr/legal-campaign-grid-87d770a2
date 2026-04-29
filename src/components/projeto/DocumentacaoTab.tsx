@@ -825,7 +825,7 @@ function DocumentacaoLoteDialog({
   const [tipo, setTipo] = useState<string>(tiposDisponiveis[0]?.value ?? "outro");
   const [texto, setTexto] = useState("");
 
-  // Modo efetivo: acessos/materiais sempre mensagem; nos 3 novos blocos depende do toggle; demais (observacoes) = lista
+  // Modo efetivo: acessos/materiais sempre mensagem; nos 3 novos blocos depende do toggle
   const modoEfetivo: "mensagem" | "lista" = isMensagemFixo
     ? "mensagem"
     : podeAlternarModo
@@ -1036,8 +1036,7 @@ function parseLoteTexto(texto: string, bloco?: DocBloco): LoteItem[] {
   const isListaLivre =
     bloco === "documentos" ||
     bloco === "links" ||
-    bloco === "reunioes" ||
-    bloco === "observacoes";
+    bloco === "reunioes";
 
   const linhasNaoVazias = txt.split("\n").filter((l) => l.trim());
 
