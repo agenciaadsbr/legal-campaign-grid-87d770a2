@@ -522,8 +522,21 @@ function ItemCard({
         )}
 
         {item.observacao && (
-          <div className="text-[11px] text-muted-foreground border-t border-border pt-1.5 whitespace-pre-wrap">
-            {item.observacao}
+          <div className="border-t border-border pt-1.5">
+            <div
+              className={cn(
+                "rounded-md border border-border bg-muted/30 p-2.5",
+                "text-[11px] text-muted-foreground leading-relaxed whitespace-pre-wrap break-words",
+                "max-h-[200px] overflow-y-auto",
+                "[&::-webkit-scrollbar]:w-1.5",
+                "[&::-webkit-scrollbar-track]:bg-transparent",
+                "[&::-webkit-scrollbar-thumb]:bg-border",
+                "[&::-webkit-scrollbar-thumb]:rounded-full",
+                "hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
+              )}
+            >
+              {item.observacao}
+            </div>
           </div>
         )}
       </CardContent>

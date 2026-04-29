@@ -1,37 +1,48 @@
 ## Objetivo
 
-Replicar na aba **Briefing** o mesmo comportamento aplicado na aba **Documentação**: quando o conteúdo do briefing for muito longo, o card deve ter uma barra de rolagem interna própria, sem empurrar a altura da página.
+Aplicar o mesmo padrão visual da "Mensagem completa" (caixa interna com borda, fundo suave e barra de rolagem própria) aos cards individuais dos blocos **Links importantes, Reuniões, Documentos e Observações** dentro da aba **Documentação**, para que observações longas não estiquem o card nem a página.
 
-## O que muda
+## Situação atual
 
-Apenas `src/components/projeto/BriefingTab.tsx`. Sem migrações, sem alterações de store.
+- A lista de itens de cada bloco já tem scroll interno (`max-h-[420px] overflow-y-auto`) — mantida como está.
+- O `MensagemAcessosCard` (usado em Acessos / Materiais) já tem a caixa interna scrollável (`max-h-[320px]`, scrollbar custom) — referência visual.
+- O `ItemCard` (usado em Links, Reuniões, Documentos, Observações) renderiza `item.observacao` em uma `<div>` simples (linhas 524-528), sem limite de altura nem caixa visual. Textos grandes esticam o card.
 
-### 1. Scroll interno no modo visualização
+## Mudança proposta
 
-A `<div>` que renderiza `renderMensagemFormatada(documento)` (atualmente com `whitespace-pre-wrap break-words leading-relaxed`) recebe:
+Apenas em `src/components/projeto/DocumentacaoTab.tsx`, no componente `ItemCard` (linhas ~524-528).
 
-- `max-h-[600px]`
-- `overflow-y-auto`
-- `pr-2` (espaço para a barra não colar no texto)
-- scrollbar discreta com tokens semânticos: `[&::-webkit-scrollbar]:w-1.5`, `[&::-webkit-scrollbar-thumb]:bg-border`, `[&::-webkit-scrollbar-thumb]:rounded-full`, `[&::-webkit-scrollbar-track]:bg-transparent`
+Trocar o bloco atual:
 
-O header do card (título "Briefing — {cliente}" + descrição) e a toolbar superior (Copiar / TXT / Editar) ficam **fora** do container scrollável, funcionando como header fixo — igual ao padrão da aba Documentação.
+```tsx
+{item.observacao && (
+  <div className="text-[11px] text-muted-foreground border-t border-border pt-1.5 whitespace-pre-wrap">
+    {item.observacao}
+  </div>
+)}
+```
 
-### 2. Modo edição
+por uma caixa interna no mesmo padrão visual do `MensagemAcessosCard`:
 
-A `<Textarea>` já possui `min-h-[480px]` e rolagem nativa do próprio textarea. Para manter consistência e impedir crescimento exagerado, trocar `min-h-[480px]` por `h-[600px]` (altura fixa, com scroll interno do textarea).
+- Container com `border border-border`, `rounded-md`, `bg-muted/30`, padding `p-2.5`.
+- `max-h-[200px]` + `overflow-y-auto` para scroll interno (altura menor que o card de Mensagem porque aqui é uma observação secundária dentro de um card já compacto).
+- Scrollbar customizada com tokens semânticos:
+  - `[&::-webkit-scrollbar]:w-1.5`
+  - `[&::-webkit-scrollbar-track]:bg-transparent`
+  - `[&::-webkit-scrollbar-thumb]:bg-border`
+  - `[&::-webkit-scrollbar-thumb]:rounded-full`
+  - `hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40`
+- Mantém `whitespace-pre-wrap break-words` para preservar quebras e quebrar URLs longas.
+- Tipografia `text-[11px] text-muted-foreground leading-relaxed`.
 
-### 3. Detalhes visuais
-
-- Manter tokens semânticos do tema (`border-border`, `bg-card`, `text-foreground`) — nada hardcoded.
-- Mantém compatibilidade com tema claro/escuro (azul escuro profundo no dark).
-- Em telas menores o limite continua válido — o card permanece scrollável internamente.
-
-## Arquivos afetados
-
-- `src/components/projeto/BriefingTab.tsx` (apenas classes utilitárias em 2 pontos: div de visualização e Textarea de edição)
+Como o `ItemCard` é usado por todos os blocos exceto Acessos/Materiais (que usam o `MensagemAcessosCard`), essa única alteração já cobre Links importantes, Reuniões, Documentos e Observações automaticamente.
 
 ## Fora do escopo
 
-- Outras abas (Documentação já foi feita; Planejamento/Área não foram pedidas).
-- Mudanças de store, schema ou layout estrutural do card.
+- Acessos e Materiais (já usam `MensagemAcessosCard` com o padrão).
+- Outras abas (Briefing, Planejamento, Área).
+- Mudanças de store, schema ou layout do bloco/lista.
+
+## Arquivos afetados
+
+- `src/components/projeto/DocumentacaoTab.tsx` (apenas o trecho da observação dentro de `ItemCard`).
