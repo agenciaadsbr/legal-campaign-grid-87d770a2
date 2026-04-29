@@ -74,7 +74,6 @@ const BLOCO_ICON: Record<DocBloco, any> = {
   reunioes: Video,
   materiais: Send,
   documentos: Files,
-  observacoes: StickyNote,
 };
 
 interface Props {
@@ -106,7 +105,6 @@ export function DocumentacaoTab({
     reunioes: true,
     materiais: true,
     documentos: true,
-    observacoes: true,
   });
   const [dialogState, setDialogState] = useState<{
     open: boolean;
@@ -124,7 +122,6 @@ export function DocumentacaoTab({
     reunioes: new Set(),
     materiais: new Set(),
     documentos: new Set(),
-    observacoes: new Set(),
   });
 
   const toggleSelecionado = (bloco: DocBloco, id: string) => {
@@ -307,16 +304,14 @@ export function DocumentacaoTab({
                       >
                         <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar item
                       </Button>
-                      {bloco !== "observacoes" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => setLoteState({ open: true, bloco })}
-                        >
-                          <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setLoteState({ open: true, bloco })}
+                      >
+                        <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
+                      </Button>
                       {(bloco === "acessos" || bloco === "materiais") && (
                         <Button
                           size="sm"
@@ -859,8 +854,7 @@ function DocumentacaoLoteDialog({
   const isListaLivre =
     bloco === "documentos" ||
     bloco === "links" ||
-    bloco === "reunioes" ||
-    bloco === "observacoes";
+    bloco === "reunioes";
 
   const tituloMensagemPadrao: Record<DocBloco, string> = {
     acessos: "Mensagem de acessos",
@@ -868,7 +862,6 @@ function DocumentacaoLoteDialog({
     documentos: "Mensagem de documentos",
     links: "Mensagem de links importantes",
     reunioes: "Mensagem de reuniões",
-    observacoes: "Observação",
   };
 
   const submit = async () => {
@@ -1084,7 +1077,7 @@ function parseLoteTexto(texto: string, bloco?: DocBloco): LoteItem[] {
     .map((b) => b.trim())
     .filter(Boolean);
 
-  // ---- Lista livre (Documentos / Links / Reuniões / Observações) ----
+  // ---- Lista livre (Documentos / Links / Reuniões) ----
   // Se for um bloco de lista livre e não houver separadores em branco
   // OU os blocos forem majoritariamente linhas únicas (estilo bullets),
   // tratar cada linha não-vazia como um item.
