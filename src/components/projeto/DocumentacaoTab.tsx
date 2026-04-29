@@ -305,7 +305,7 @@ export function DocumentacaoTab({
                     ) : (
                       <div className="grid grid-cols-1 gap-2">
                         {lista.map((it) =>
-                          bloco === "acessos" && it.tipo === "mensagem" ? (
+                          (bloco === "acessos" || bloco === "materiais") && it.tipo === "mensagem" ? (
                             <MensagemAcessosCard
                               key={it.id}
                               item={it}
