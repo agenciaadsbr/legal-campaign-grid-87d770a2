@@ -985,9 +985,15 @@ type LoteItem = {
   observacao: string | null;
 };
 
-function parseLoteTexto(texto: string): LoteItem[] {
+function parseLoteTexto(texto: string, bloco?: DocBloco): LoteItem[] {
   const txt = (texto ?? "").trim();
   if (!txt) return [];
+
+  const isListaLivre =
+    bloco === "documentos" ||
+    bloco === "links" ||
+    bloco === "reunioes" ||
+    bloco === "observacoes";
 
   const linhasNaoVazias = txt.split("\n").filter((l) => l.trim());
 
@@ -1009,12 +1015,6 @@ function parseLoteTexto(texto: string): LoteItem[] {
       });
   }
 
-  // Formato livre: blocos separados por linha em branco
-  const blocos = txt
-    .split(/\n\s*\n/)
-    .map((b) => b.trim())
-    .filter(Boolean);
-
   const URL_RE = /https?:\/\/[^\s)>\]]+/i;
   const LOGIN_RE = /^\s*(?:login|e-?mail|usu[áa]rio|user)\s*[:\-]\s*(.+)$/im;
   const SENHA_RE = /^\s*(?:senha|password|pass|pwd)\s*[:\-]\s*(.+)$/im;
@@ -1027,10 +1027,57 @@ function parseLoteTexto(texto: string): LoteItem[] {
       .replace(/[:：]\s*$/, "")
       .trim();
 
+  // Detecta blocos separados por linha em branco
+  const blocos = txt
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  // ---- Lista livre (Documentos / Links / Reuniões / Observações) ----
+  // Se for um bloco de lista livre e não houver separadores em branco
+  // OU os blocos forem majoritariamente linhas únicas (estilo bullets),
+  // tratar cada linha não-vazia como um item.
+  if (isListaLivre) {
+    const semSeparadores = blocos.length <= 1;
+    const bullets =
+      linhasNaoVazias.filter((l) => /^[\s]*[•\-*▶►]/.test(l)).length >=
+      Math.max(2, Math.ceil(linhasNaoVazias.length / 2));
+
+    const semCredenciais = !linhasNaoVazias.some(
+      (l) => LOGIN_RE.test(l) || SENHA_RE.test(l),
+    );
+
+    if ((semSeparadores || bullets) && semCredenciais) {
+      return linhasNaoVazias
+        .map((linha) => {
+          const matchUrl = linha.match(URL_RE);
+          const url = matchUrl ? matchUrl[0].replace(/[.,);\]]+$/, "") : null;
+          let titulo = limparTitulo(linha.replace(URL_RE, "").trim());
+          if (!titulo && url) {
+            try {
+              titulo = new URL(url).hostname.replace(/^www\./, "");
+            } catch {
+              titulo = url;
+            }
+          }
+          if (!titulo && !url) return null;
+          return {
+            titulo: titulo || (url ?? ""),
+            url,
+            login: null,
+            senha: null,
+            observacao: null,
+          } as LoteItem;
+        })
+        .filter((x): x is LoteItem => x !== null);
+    }
+  }
+
+  // ---- Modo blocos (separados por linha em branco) ----
   const itens: LoteItem[] = [];
 
-  for (const bloco of blocos) {
-    const linhas = bloco.split("\n").map((l) => l.trim()).filter(Boolean);
+  for (const blocoTxt of blocos) {
+    const linhas = blocoTxt.split("\n").map((l) => l.trim()).filter(Boolean);
     if (linhas.length === 0) continue;
 
     let url: string | null = null;
@@ -1056,7 +1103,6 @@ function parseLoteTexto(texto: string): LoteItem[] {
         if (!url) {
           url = matchUrl[0].replace(/[.,);\]]+$/, "");
         }
-        // Se a linha é SÓ a URL, não usa como título
         const semUrl = linha.replace(matchUrl[0], "").trim();
         if (semUrl) {
           if (!tituloCandidato) tituloCandidato = limparTitulo(semUrl);
@@ -1071,8 +1117,12 @@ function parseLoteTexto(texto: string): LoteItem[] {
       }
     }
 
-    // Bloco sem URL e sem credenciais → provavelmente saudação, descarta
-    if (!url && !login && !senha) continue;
+    // Para listas livres aceita blocos só com título/observação.
+    // Para acessos/materiais mantém regra antiga (precisa URL ou credencial).
+    if (!url && !login && !senha) {
+      if (!isListaLivre) continue;
+      if (!tituloCandidato && obsLinhas.length === 0) continue;
+    }
 
     let titulo = tituloCandidato;
     if (!titulo) {
@@ -1083,7 +1133,7 @@ function parseLoteTexto(texto: string): LoteItem[] {
           titulo = url;
         }
       } else {
-        titulo = "Acesso";
+        titulo = obsLinhas[0] ?? "Item";
       }
     }
 
