@@ -284,7 +284,10 @@ export function DocumentacaoTab({
                           className="h-7 px-2 text-xs"
                           disabled={lista.length === 0}
                           onClick={() => {
-                            const msg = construirMensagemAcessos(lista);
+                            const itemMsg = lista.find((i) => i.tipo === "mensagem");
+                            const msg = itemMsg?.observacao
+                              ? itemMsg.observacao
+                              : construirMensagemAcessos(lista);
                             navigator.clipboard.writeText(msg);
                             toast.success("Mensagem copiada");
                           }}
@@ -299,15 +302,25 @@ export function DocumentacaoTab({
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-2">
-                        {lista.map((it) => (
-                          <ItemCard
-                            key={it.id}
-                            item={it}
-                            onEdit={() =>
-                              setDialogState({ open: true, bloco, item: it })
-                            }
-                          />
-                        ))}
+                        {lista.map((it) =>
+                          bloco === "acessos" && it.tipo === "mensagem" ? (
+                            <MensagemAcessosCard
+                              key={it.id}
+                              item={it}
+                              onEdit={() =>
+                                setDialogState({ open: true, bloco, item: it })
+                              }
+                            />
+                          ) : (
+                            <ItemCard
+                              key={it.id}
+                              item={it}
+                              onEdit={() =>
+                                setDialogState({ open: true, bloco, item: it })
+                              }
+                            />
+                          ),
+                        )}
                       </div>
                     )}
                   </CardContent>
