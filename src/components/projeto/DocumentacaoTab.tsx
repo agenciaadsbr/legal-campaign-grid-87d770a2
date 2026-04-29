@@ -948,6 +948,8 @@ function DocumentacaoLoteDialog({
               placeholder={
                 isMensagemUnica
                   ? "Cole aqui a mensagem completa, ex:\n\nBoa tarde Drs.\n\nSegue abaixo as informações de acesso:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030"
+                  : isListaLivre
+                  ? "Cole uma lista — uma linha por item, ex:\n\nBriefing\nPlanejamento de mídia Q1\nContrato assinado\nhttps://drive.google.com/...\n\nOu use blocos com URL/observações separados por linha em branco."
                   : "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
               }
               className="font-mono text-xs whitespace-pre-wrap"
