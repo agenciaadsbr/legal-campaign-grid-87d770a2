@@ -297,6 +297,11 @@ export function PostsKanbanCliente() {
   const [filtroResps, setFiltroResps] = useState<string[]>([]);
   const [filtroSomente, setFiltroSomente] = useState<"todos" | "atrasados" | "hoje" | "semana">("todos");
   const [busca, setBusca] = useState("");
+  const [paginas, setPaginas] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setPaginas({});
+  }, [filtroMes, filtroResps, filtroSomente, busca, clienteId]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -439,7 +444,14 @@ export function PostsKanbanCliente() {
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex gap-3 overflow-x-auto scrollbar-thin pb-3">
           {colunas.map((s) => (
-            <Coluna key={s} status={s} cards={cardsCliente.filter((c) => c.status_card === s)} onIniciar={abrirIniciar} />
+            <Coluna
+              key={s}
+              status={s}
+              cards={cardsCliente.filter((c) => c.status_card === s)}
+              onIniciar={abrirIniciar}
+              pagina={paginas[s] ?? 1}
+              onPaginaChange={(p) => setPaginas((prev) => ({ ...prev, [s]: p }))}
+            />
           ))}
         </div>
         <DragOverlay>
