@@ -26,6 +26,7 @@ export const DOC_BLOCOS: DocBloco[] = [
 // Tipos por bloco
 export const TIPOS_POR_BLOCO: Record<DocBloco, Array<{ value: string; label: string }>> = {
   acessos: [
+    { value: "mensagem", label: "Mensagem completa" },
     { value: "gmail", label: "Gmail" },
     { value: "google_ads", label: "Google Ads" },
     { value: "meta_business", label: "Meta Business" },
