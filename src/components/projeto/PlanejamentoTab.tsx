@@ -115,7 +115,7 @@ export function PlanejamentoTab({
           .filter((i) => i.secao === s.key)
           .sort((a, c) => a.ordem - c.ordem);
         if (itensS.length === 0) return;
-        linhas.push(`${s.icone} ${s.label}`);
+        linhas.push(s.label);
         itensS.forEach((it) => {
           const marca =
             it.status === "concluido"
