@@ -235,7 +235,7 @@ function Coluna({
     <div
       ref={setNodeRef}
       className={cn(
-        "w-[270px] shrink-0 bg-muted/30 rounded-lg p-2 transition-colors flex flex-col",
+        "w-[270px] shrink-0 bg-muted/30 rounded-lg p-2 transition-colors flex flex-col h-full",
         isOver && "bg-accent/40 ring-2 ring-primary/30",
         isAtrasado && total > 0 && "ring-1 ring-red-500/30",
       )}
@@ -250,7 +250,7 @@ function Coluna({
       </div>
       <div
         ref={scrollRef}
-        className="overflow-y-auto scrollbar-thin pr-1 max-h-[calc(100vh-260px)] min-h-[100px]"
+        className="overflow-y-auto scrollbar-thin pr-1 flex-1 min-h-0"
       >
         {visiveis.map((c) => <CardItem key={c.id} card={c} onIniciar={onIniciar} />)}
       </div>
@@ -365,7 +365,7 @@ export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: 
       : `${filtroResps.length} responsáveis`;
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3 h-[calc(100vh-220px)] overflow-hidden">
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={filtroMes} onValueChange={setFiltroMes}>
           <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
@@ -448,7 +448,7 @@ export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: 
       </div>
 
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
-        <div className="flex gap-3 overflow-x-auto scrollbar-thin pb-3">
+        <div className="flex gap-3 overflow-x-auto overflow-y-hidden scrollbar-thin pb-2 flex-1 min-h-0">
           {colunas.map((s) => (
             <Coluna
               key={s}
