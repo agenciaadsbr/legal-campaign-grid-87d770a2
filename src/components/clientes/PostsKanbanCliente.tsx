@@ -26,7 +26,7 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { IniciarTarefaDialog } from "@/components/IniciarTarefaDialog";
