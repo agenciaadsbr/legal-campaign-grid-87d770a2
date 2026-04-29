@@ -4,6 +4,8 @@ import { useCRM } from "@/store/crm";
 import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useAtividades, useAtividadesBootstrap } from "@/store/atividades";
 import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao";
+import { useBriefingBootstrap } from "@/store/briefing";
+import { usePlanejamentoBootstrap, usePlanejamento, calcularProgresso } from "@/store/planejamento";
 import { PostsKanbanCliente } from "@/components/clientes/PostsKanbanCliente";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +17,8 @@ import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
 import { AreaTab } from "@/components/projeto/AreaTab";
 import { VisaoGeralCard } from "@/components/projeto/VisaoGeralCard";
 import { DocumentacaoTab } from "@/components/projeto/DocumentacaoTab";
+import { BriefingTab } from "@/components/projeto/BriefingTab";
+import { PlanejamentoTab } from "@/components/projeto/PlanejamentoTab";
 import {
   Select,
   SelectContent,
@@ -108,13 +112,20 @@ export default function ProjetoCliente() {
   useDemandasBootstrap();
   useAtividadesBootstrap(clienteId);
   useDocumentacaoBootstrap();
+  useBriefingBootstrap();
+  usePlanejamentoBootstrap();
 
   const { clientes, cards, responsaveis } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
   const docsAll = useDocumentacao((s) => s.itens);
+  const planAll = usePlanejamento((s) => s.itens);
   const docs = useMemo(
     () => docsAll.filter((i) => i.cliente_id === clienteId),
     [docsAll, clienteId],
+  );
+  const planCli = useMemo(
+    () => planAll.filter((i) => i.cliente_id === clienteId),
+    [planAll, clienteId],
   );
   const cliente = clientes.find((c) => c.id === clienteId);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -128,6 +139,15 @@ export default function ProjetoCliente() {
   };
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
   const [novoDocOpen, setNovoDocOpen] = useState(false);
+  const [novoPlanOpen, setNovoPlanOpen] = useState(false);
+  const [editarBriefingTrigger, setEditarBriefingTrigger] = useState(false);
+
+  const headerBtn = (() => {
+    if (tab === "documentacao") return { label: "Adicionar documentação", onClick: () => setNovoDocOpen(true) };
+    if (tab === "briefing") return { label: "Editar briefing", onClick: () => setEditarBriefingTrigger(true) };
+    if (tab === "planejamento") return { label: "Adicionar item", onClick: () => setNovoPlanOpen(true) };
+    return { label: "Adicionar Tarefa", onClick: () => setNovaTarefaOpen(true) };
+  })();
 
   if (!cliente) {
     return (
@@ -174,8 +194,8 @@ export default function ProjetoCliente() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setNovaTarefaOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Adicionar Tarefa
+        <Button onClick={headerBtn.onClick}>
+          <Plus className="h-4 w-4 mr-1" /> {headerBtn.label}
         </Button>
       </div>
 
@@ -268,25 +288,19 @@ export default function ProjetoCliente() {
 
         {/* ============== BRIEFING ============== */}
         <TabsContent value="briefing" className="mt-4">
-          <AreaTab
-            titulo="Briefing"
-            icone={ClipboardList}
+          <BriefingTab
             clienteId={clienteId!}
-            demandas={filtrarPorArea(demandasCli, "briefing")}
-            categoria="Briefing"
-            emptyHint="Registre aqui o briefing do cliente: reunião inicial, atualizações e revisões."
+            modoEdicaoExterno={editarBriefingTrigger}
+            onModoEdicaoChange={setEditarBriefingTrigger}
           />
         </TabsContent>
 
         {/* ============== PLANEJAMENTO ============== */}
         <TabsContent value="planejamento" className="mt-4">
-          <AreaTab
-            titulo="Planejamento"
-            icone={CalendarRange}
+          <PlanejamentoTab
             clienteId={clienteId!}
-            demandas={filtrarPorArea(demandasCli, "planejamento")}
-            categoria="Planejamento"
-            emptyHint="Crie tarefas de planejamento mensal, trimestral, campanhas e lançamentos."
+            novoOpenExterno={novoPlanOpen}
+            onNovoOpenChangeExterno={setNovoPlanOpen}
           />
         </TabsContent>
 
