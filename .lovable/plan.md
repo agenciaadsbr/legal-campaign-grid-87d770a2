@@ -1,45 +1,46 @@
 ## Objetivo
 
-Adicionar à seção **"Materiais enviados ao cliente"** (bloco `materiais`) o mesmo padrão de "Mensagem completa" estilo WhatsApp já existente em **"Acessos"**: o usuário cola um texto livre (como uma mensagem de WhatsApp), e ele é salvo como um único item formatado, renderizado preservando quebras de linha, links clicáveis e linhas com 🔗 destacadas.
+Na aba **Documentação**, quando um bloco (Acessos, Materiais, Documentos, etc.) tiver muito conteúdo — especialmente as "Mensagens completas" do Acessos/Materiais com textos longos — o card está crescendo verticalmente e empurrando a altura da página inteira.
 
-A funcionalidade atual de cadastrar materiais individualmente (com formato, data, link) continua funcionando lado a lado.
+Vamos limitar a altura interna do conteúdo de cada card e adicionar uma **barra de rolagem própria dentro do card**, semelhante à coluna "Finalizados" mostrada na imagem de referência (lista interna scrollável, header fixo).
 
-## Escopo / Mudanças
+## O que muda
 
-Alterações concentradas em **`src/components/projeto/DocumentacaoTab.tsx`** e **`src/store/documentacao.ts`**.
+Apenas o arquivo `src/components/projeto/DocumentacaoTab.tsx`. Sem migrações, sem alterações de store.
 
-### 1. `src/store/documentacao.ts`
-- Adicionar tipo `{ value: "mensagem", label: "Mensagem completa" }` no topo do array `TIPOS_POR_BLOCO.materiais` (igual ao que já existe em `acessos`).
+### 1. Scroll interno do bloco (todos os cards da grid)
 
-### 2. `src/components/projeto/DocumentacaoTab.tsx`
+No `<CollapsibleContent>` de cada bloco (linhas ~259-329), envolver a lista de itens (`grid grid-cols-1 gap-2`) num container com:
 
-**Render do bloco materiais** (loop `lista.map` em ~linha 305): adicionar a mesma condicional usada em acessos para renderizar o card especial:
-```
-bloco === "materiais" && it.tipo === "mensagem"
-  ? <MensagemAcessosCard ... />
-  : <ItemCard ... />
-```
-Renomear/reutilizar o componente `MensagemAcessosCard` como `MensagemDocumentoCard` (genérico) — ou simplesmente continuar usando-o para ambos os blocos, já que o render é idêntico (whitespace-pre-wrap + links + linhas 🔗).
+- `max-h-[420px]` (altura confortável para ~3-4 cards em telas grandes)
+- `overflow-y-auto`
+- `pr-1` (espaço para a barra de rolagem não colar no conteúdo)
+- classes utilitárias para deixar a scrollbar mais discreta no tema escuro (`scrollbar-thin` via tailwind arbitrary, ou estilo custom usando `[&::-webkit-scrollbar]:w-1.5` etc., usando tokens semânticos `bg-border` para o thumb)
 
-**Header de ações do bloco materiais** (~linha 280): habilitar o botão "Copiar mensagem" também quando `bloco === "materiais"`, usando a mesma lógica:
-- Se existir um item com `tipo === "mensagem"`, copia seu `observacao`.
-- Caso contrário, monta uma mensagem a partir dos itens existentes (função `construirMensagemMateriais`, análoga a `construirMensagemAcessos`, listando título + link + formato + data + observação).
+A toolbar interna do bloco (botões "Adicionar item", "Adicionar em lote", "Copiar mensagem") **fica fora** do container scrollável, funcionando como header fixo do card — igual ao topo "Finalizados" na imagem.
 
-**`DocumentacaoLoteDialog`** (~linha 690): tratar `materiais` igual a `acessos` na flag de "mensagem única":
-- Substituir `const isAcessos = bloco === "acessos"` por `const isMensagemUnica = bloco === "acessos" || bloco === "materiais"`.
-- Quando `isMensagemUnica` for verdadeiro, salvar como 1 item único: `tipo: "mensagem"`, `titulo: "Mensagem de materiais"` (para materiais) ou "Mensagem de acessos" (para acessos), e o conteúdo no `observacao`.
-- Ajustar textos/placeholders do dialog para referenciar "materiais enviados" no caso `materiais`.
+### 2. Scroll interno da Mensagem completa (MensagemAcessosCard)
 
-**Botão "Adicionar em lote"** já aparece no bloco `materiais` (a guarda atual é `bloco !== "observacoes"`), então nada a fazer ali — mas o rótulo do botão pode ser ajustado para "Adicionar mensagem completa" quando `bloco === "materiais" || bloco === "acessos"` para refletir melhor o uso.
+Na `MensagemAcessosCard` (linhas ~1063-1101), a `<div>` que renderiza o texto formatado (linha 1096) também recebe limite de altura:
 
-### 3. Banco de dados
-**Nenhuma migração necessária.** A tabela `cliente_documentacao` já tem `tipo text` livre e `observacao text`, e o bloco `materiais` já é suportado. Apenas armazenamos um novo valor de `tipo` ("mensagem") dentro do bloco existente.
+- `max-h-[320px]`
+- `overflow-y-auto`
+- mesmas classes de scrollbar discreta
 
-## Comportamento final
+Assim, mesmo se a mensagem completa for muito longa (caso típico do bloco Acessos / Materiais com vários sites), o card mantém altura controlada e o usuário rola dentro dele.
 
-Na coluna **"Materiais enviados ao cliente"** o usuário verá:
-- Botão **"+ Adicionar item"** (cria um material individual com formato/data — igual hoje).
-- Botão **"Adicionar mensagem completa"** (abre dialog com textarea grande, salva como 1 item único formatado em estilo WhatsApp).
-- Botão **"Copiar mensagem"** (copia a mensagem completa salva, ou monta uma a partir dos itens individuais).
-- Itens do tipo "mensagem" são exibidos no card grande estilo WhatsApp (mesmo visual do print de acessos), com botões Copiar / Editar / Excluir.
-- Itens individuais continuam aparecendo como cards compactos normais.
+### 3. Detalhes visuais
+
+- Manter o `Collapsible` funcionando — o `max-height` só se aplica quando o bloco está aberto.
+- Usar tokens semânticos do tema (`border-border`, `bg-card`, `bg-muted/30`) já presentes no componente. Nada de cores hardcoded.
+- Em telas pequenas (mobile) os limites continuam válidos — o card ainda fica scrollável internamente.
+
+## Arquivos afetados
+
+- `src/components/projeto/DocumentacaoTab.tsx` (apenas classes utilitárias adicionadas em 2 pontos)
+
+## Fora do escopo
+
+- Briefing, Planejamento e outras abas (não foi pedido).
+- Mudança no esquema de dados ou store.
+- Mudança na altura/layout dos cards individuais (`ItemCard`) — apenas a lista que os contém ganha scroll.

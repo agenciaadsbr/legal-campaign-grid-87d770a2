@@ -303,7 +303,16 @@ export function DocumentacaoTab({
                         Nenhum item neste bloco.
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 gap-2">
+                      <div
+                        className={cn(
+                          "grid grid-cols-1 gap-2 max-h-[420px] overflow-y-auto pr-1",
+                          "[&::-webkit-scrollbar]:w-1.5",
+                          "[&::-webkit-scrollbar-track]:bg-transparent",
+                          "[&::-webkit-scrollbar-thumb]:bg-border",
+                          "[&::-webkit-scrollbar-thumb]:rounded-full",
+                          "hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
+                        )}
+                      >
                         {lista.map((it) =>
                           (bloco === "acessos" || bloco === "materiais") && it.tipo === "mensagem" ? (
                             <MensagemAcessosCard
@@ -1093,7 +1102,17 @@ function MensagemAcessosCard({
             </Button>
           </div>
         </div>
-        <div className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed whitespace-pre-wrap break-words">
+        <div
+          className={cn(
+            "rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed whitespace-pre-wrap break-words",
+            "max-h-[320px] overflow-y-auto",
+            "[&::-webkit-scrollbar]:w-1.5",
+            "[&::-webkit-scrollbar-track]:bg-transparent",
+            "[&::-webkit-scrollbar-thumb]:bg-border",
+            "[&::-webkit-scrollbar-thumb]:rounded-full",
+            "hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
+          )}
+        >
           {renderMensagemFormatada(conteudo)}
         </div>
       </CardContent>
