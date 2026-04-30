@@ -53,9 +53,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { ClientesGeralTable } from "@/components/clientes/ClientesGeralTable";
 import { StatusClienteBadge, STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { calcularMetricasCliente, type NivelSaude } from "@/lib/cliente-saude";
-import { useDemandas } from "@/store/demandas";
-import { Activity, AlertTriangle, CalendarClock, Users } from "lucide-react";
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const { responsaveis, addResponsavel } = useCRM();
@@ -1222,56 +1219,8 @@ function FiltrosTopo({
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  icon: Icon,
-  tone = "default",
-  onClick,
-  active = false,
-}: {
-  label: string;
-  value: string;
-  icon: any;
-  tone?: "default" | "emerald" | "amber" | "destructive";
-  onClick?: () => void;
-  active?: boolean;
-}) {
-  const toneClasses = {
-    default: "text-muted-foreground",
-    emerald: "text-emerald-600 dark:text-emerald-400",
-    amber: "text-amber-600 dark:text-amber-400",
-    destructive: "text-destructive",
-  }[tone];
-  const interactive = !!onClick;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!interactive}
-      className={cn(
-        "rounded-lg border bg-card px-3 py-2 text-left transition-all",
-        interactive && "hover:bg-accent hover:border-primary/40 cursor-pointer",
-        !interactive && "cursor-default",
-        active && "border-primary ring-1 ring-primary/30",
-      )}
-    >
-      <div className="flex items-center gap-1.5">
-        <Icon className={cn("h-3.5 w-3.5", toneClasses)} />
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-          {label}
-        </span>
-      </div>
-      <div className={cn("text-lg font-bold tabular-nums leading-tight mt-0.5", toneClasses)}>
-        {value}
-      </div>
-    </button>
-  );
-}
-
 export default function Clientes() {
-  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos, comentarios, contratos } = useCRM();
-  const demandas = useDemandas((s) => s.demandas);
+  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos } = useCRM();
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
   const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
@@ -1292,19 +1241,8 @@ export default function Clientes() {
     "todos" | "30" | "90" | "vencido"
   >("todos");
 
-  // Filtro de saúde
-  const [filtroSaude, setFiltroSaude] = useState<NivelSaude[]>([]);
-
   // Ordenação e densidade
-  type ClientesSortKey =
-    | "cliente"
-    | "status"
-    | "saude"
-    | "entrega"
-    | "atividade"
-    | "nicho"
-    | "periodo";
-  const [sortKey, setSortKey] = useState<ClientesSortKey>(
+  const [sortKey, setSortKey] = useState<"cliente" | "status" | "nicho" | "periodo">(
     () => (localStorage.getItem("dashtasks.clientes.sort.key") as any) ?? "cliente",
   );
   const [sortDir, setSortDir] = useState<"asc" | "desc">(
@@ -1345,7 +1283,6 @@ export default function Clientes() {
     setFiltroStatusGlobal("todos");
     setFiltroNichos([]);
     setFiltroPeriodoContrato("todos");
-    setFiltroSaude([]);
   };
 
   const algumFiltroAtivo =
@@ -1354,37 +1291,7 @@ export default function Clientes() {
     apenasMinhas ||
     filtroStatusGlobal !== "todos" ||
     filtroNichos.length > 0 ||
-    filtroPeriodoContrato !== "todos" ||
-    filtroSaude.length > 0;
-
-  // KPIs agregados da carteira (cliente como um todo, não filtrado)
-  const kpisCarteira = useMemo(() => {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    let ativos = 0;
-    let emRisco = 0;
-    let vencendo30 = 0;
-    clientes.forEach((cli) => {
-      const status = cli.status_global ?? "Onboarding";
-      if (status === "Ativo" || status === "Onboarding") ativos += 1;
-      const contrato = contratos.find((c) => c.cliente_id === cli.id);
-      const m = calcularMetricasCliente({
-        cliente: cli,
-        cards,
-        demandas,
-        comentarios,
-        contratoTotalPosts: contrato?.total_posts ?? null,
-        hoje,
-      });
-      if (m.saude.nivel !== "ok") emRisco += 1;
-      if (cli.data_fim_contrato) {
-        const fim = new Date(cli.data_fim_contrato);
-        const dias = Math.floor((fim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-        if (dias >= 0 && dias <= 30) vencendo30 += 1;
-      }
-    });
-    return { ativos, emRisco, vencendo30 };
-  }, [clientes, cards, demandas, comentarios, contratos]);
+    filtroPeriodoContrato !== "todos";
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
@@ -1625,52 +1532,6 @@ export default function Clientes() {
                 </PopoverContent>
               </Popover>
 
-              {/* Saúde */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
-                    <Activity className="h-3.5 w-3.5" />
-                    <span className="text-xs">Saúde</span>
-                    {filtroSaude.length > 0 && (
-                      <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
-                        {filtroSaude.length}
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48 p-2" align="start">
-                  <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Nível de saúde</div>
-                  {([
-                    { v: "critico" as NivelSaude, label: "Crítico", dot: "bg-destructive" },
-                    { v: "atencao" as NivelSaude, label: "Atenção", dot: "bg-amber-500" },
-                    { v: "ok" as NivelSaude, label: "Ok", dot: "bg-emerald-500" },
-                  ]).map((opt) => {
-                    const checked = filtroSaude.includes(opt.v);
-                    return (
-                      <button
-                        type="button"
-                        key={opt.v}
-                        onClick={() =>
-                          setFiltroSaude(
-                            checked
-                              ? filtroSaude.filter((v) => v !== opt.v)
-                              : [...filtroSaude, opt.v],
-                          )
-                        }
-                        className={cn(
-                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
-                          checked && "bg-accent",
-                        )}
-                      >
-                        <Checkbox checked={checked} />
-                        <span className={cn("h-2 w-2 rounded-full", opt.dot)} />
-                        <span>{opt.label}</span>
-                      </button>
-                    );
-                  })}
-                </PopoverContent>
-              </Popover>
-
               {/* Período do contrato */}
               <Select
                 value={filtroPeriodoContrato}
@@ -1735,58 +1596,24 @@ export default function Clientes() {
 
 
       {visao === "clientes" ? (
-        <>
-          {/* KPIs da carteira — clicáveis para filtrar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <KpiCard
-              label="Clientes ativos"
-              value={kpisCarteira.ativos.toString()}
-              icon={Users}
-              tone="default"
-              onClick={() => setFiltroStatusGlobal("Ativo")}
-              active={filtroStatusGlobal === "Ativo"}
-            />
-            <KpiCard
-              label="Em risco"
-              value={kpisCarteira.emRisco.toString()}
-              icon={AlertTriangle}
-              tone={kpisCarteira.emRisco > 0 ? "destructive" : "default"}
-              onClick={() => {
-                const isActive = filtroSaude.length === 2 && filtroSaude.includes("critico") && filtroSaude.includes("atencao");
-                setFiltroSaude(isActive ? [] : ["critico", "atencao"]);
-              }}
-              active={filtroSaude.length === 2 && filtroSaude.includes("critico") && filtroSaude.includes("atencao")}
-            />
-            <KpiCard
-              label="Contratos vencendo 30d"
-              value={kpisCarteira.vencendo30.toString()}
-              icon={CalendarClock}
-              tone={kpisCarteira.vencendo30 > 0 ? "amber" : "default"}
-              onClick={() => setFiltroPeriodoContrato(filtroPeriodoContrato === "30" ? "todos" : "30")}
-              active={filtroPeriodoContrato === "30"}
-            />
-          </div>
-
-          <ClientesGeralTable
-            filtroBusca={busca}
-            filtroResponsaveis={filtroResponsaveis}
-            apenasMinhas={apenasMinhas}
-            currentUserId={currentUserId}
-            filtroStatusGlobal={filtroStatusGlobal}
-            filtroNichos={filtroNichos}
-            filtroPeriodoContrato={filtroPeriodoContrato}
-            filtroSaude={filtroSaude}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSortChange={handleSortChange}
-            density={density}
-            onAbrirHistorico={setHistoricoClienteId}
-            acoesSlot={(clienteId) => {
-              const cli = clientes.find((c) => c.id === clienteId);
-              return cli ? <AcoesCliente cliente={cli} /> : null;
-            }}
-          />
-        </>
+        <ClientesGeralTable
+          filtroBusca={busca}
+          filtroResponsaveis={filtroResponsaveis}
+          apenasMinhas={apenasMinhas}
+          currentUserId={currentUserId}
+          filtroStatusGlobal={filtroStatusGlobal}
+          filtroNichos={filtroNichos}
+          filtroPeriodoContrato={filtroPeriodoContrato}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
+          density={density}
+          onAbrirHistorico={setHistoricoClienteId}
+          acoesSlot={(clienteId) => {
+            const cli = clientes.find((c) => c.id === clienteId);
+            return cli ? <AcoesCliente cliente={cli} /> : null;
+          }}
+        />
       ) : (
       <div className="border rounded-lg bg-card overflow-hidden">
         <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-160px)]">

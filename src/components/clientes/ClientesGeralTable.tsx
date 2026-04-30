@@ -21,25 +21,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  AlertTriangle,
+  Zap,
+  CalendarClock,
+  Hourglass,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  calcularMetricasCliente,
-  formatarAtividade,
-  type NivelSaude,
-} from "@/lib/cliente-saude";
 
-export type SortKey =
-  | "cliente"
-  | "status"
-  | "saude"
-  | "entrega"
-  | "atividade"
-  | "nicho"
-  | "periodo";
+export type SortKey = "cliente" | "status" | "nicho" | "periodo";
 export type SortDir = "asc" | "desc";
 export type Density = "compacto" | "confortavel";
 export type FiltroPeriodoContrato = "todos" | "30" | "90" | "vencido";
@@ -52,7 +44,6 @@ interface Props {
   filtroStatusGlobal?: string;
   filtroNichos?: string[];
   filtroPeriodoContrato?: FiltroPeriodoContrato;
-  filtroSaude?: NivelSaude[];
   sortKey?: SortKey;
   sortDir?: SortDir;
   onSortChange?: (key: SortKey) => void;
@@ -66,12 +57,6 @@ const STATUS_ORDER: Record<string, number> = {
   Ativo: 1,
   Pausado: 2,
   Encerrado: 3,
-};
-
-const SAUDE_ORDER: Record<NivelSaude, number> = {
-  critico: 0,
-  atencao: 1,
-  ok: 2,
 };
 
 function diffDays(from: Date, to: Date) {
@@ -112,81 +97,6 @@ function SortHeader({
   );
 }
 
-function SaudePill({
-  nivel,
-  motivos,
-}: {
-  nivel: NivelSaude;
-  motivos: string[];
-}) {
-  const cfg =
-    nivel === "ok"
-      ? { dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", label: "Ok" }
-      : nivel === "atencao"
-        ? { dot: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", label: "Atenção" }
-        : { dot: "bg-destructive", text: "text-destructive", bg: "bg-destructive/10", label: "Crítico" };
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 h-5 px-1.5 rounded-full text-[10px] font-semibold",
-            cfg.bg,
-            cfg.text,
-          )}
-        >
-          <span className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)} />
-          {cfg.label}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-[240px]">
-        <ul className="text-[11px] space-y-0.5">
-          {motivos.map((m, i) => (
-            <li key={i}>• {m}</li>
-          ))}
-        </ul>
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function EntregaMes({ feitos, meta }: { feitos: number; meta: number }) {
-  if (meta === 0) {
-    return <span className="text-[11px] text-muted-foreground">—</span>;
-  }
-  const pct = Math.min(100, Math.round((feitos / meta) * 100));
-  const hoje = new Date();
-  const passouMetade = hoje.getDate() > 15;
-  const cor =
-    pct >= 80
-      ? "bg-emerald-500"
-      : pct >= 40
-        ? "bg-amber-500"
-        : passouMetade
-          ? "bg-destructive"
-          : "bg-muted-foreground/40";
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="flex items-center gap-1.5 min-w-[80px]">
-          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-            <div
-              className={cn("h-full rounded-full transition-all", cor)}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <span className="text-[10px] tabular-nums text-muted-foreground whitespace-nowrap">
-            {feitos}/{meta}
-          </span>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent>
-        {feitos} de {meta} posts entregues no mês ({pct}%)
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
 export function ClientesGeralTable({
   filtroBusca = "",
   filtroResponsaveis = [],
@@ -195,7 +105,6 @@ export function ClientesGeralTable({
   filtroStatusGlobal = "todos",
   filtroNichos = [],
   filtroPeriodoContrato = "todos",
-  filtroSaude = [],
   sortKey = "cliente",
   sortDir = "asc",
   onSortChange,
@@ -203,30 +112,8 @@ export function ClientesGeralTable({
   onAbrirHistorico,
   acoesSlot,
 }: Props) {
-  const { clientes, cards, contratos, nichos, responsaveis, comentarios } = useCRM();
+  const { clientes, cards, contratos, nichos } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
-
-  // Pré-calcular métricas por cliente (saúde, entrega, atividade) — uma vez por render
-  const metricasPorCliente = useMemo(() => {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const map = new Map<string, ReturnType<typeof calcularMetricasCliente>>();
-    clientes.forEach((cli) => {
-      const contrato = contratos.find((c) => c.cliente_id === cli.id);
-      map.set(
-        cli.id,
-        calcularMetricasCliente({
-          cliente: cli,
-          cards,
-          demandas,
-          comentarios,
-          contratoTotalPosts: contrato?.total_posts ?? null,
-          hoje,
-        }),
-      );
-    });
-    return map;
-  }, [clientes, cards, demandas, comentarios, contratos]);
 
   const linhas = useMemo(() => {
     const termo = filtroBusca.trim().toLowerCase();
@@ -234,12 +121,14 @@ export function ClientesGeralTable({
     hoje.setHours(0, 0, 0, 0);
 
     let lista = clientes.filter((c) => {
+      // Status global
       if (
         filtroStatusGlobal !== "todos" &&
         (c.status_global ?? "Onboarding") !== filtroStatusGlobal
       )
         return false;
 
+      // Responsáveis do cliente
       const respsCliente = c.responsaveis ?? [];
       if (filtroResponsaveis.length > 0) {
         if (!filtroResponsaveis.some((r) => respsCliente.includes(r))) return false;
@@ -248,10 +137,12 @@ export function ClientesGeralTable({
         if (!respsCliente.includes(currentUserId)) return false;
       }
 
+      // Nicho
       if (filtroNichos.length > 0) {
         if (!c.nicho || !filtroNichos.includes(c.nicho)) return false;
       }
 
+      // Período do contrato
       if (filtroPeriodoContrato !== "todos") {
         if (!c.data_fim_contrato) return false;
         const fim = new Date(c.data_fim_contrato);
@@ -261,11 +152,7 @@ export function ClientesGeralTable({
         if (filtroPeriodoContrato === "90" && (dias < 0 || dias > 90)) return false;
       }
 
-      if (filtroSaude.length > 0) {
-        const m = metricasPorCliente.get(c.id);
-        if (!m || !filtroSaude.includes(m.saude.nivel)) return false;
-      }
-
+      // Busca textual
       if (termo) {
         return (
           c.nome_cliente.toLowerCase().includes(termo) ||
@@ -276,6 +163,7 @@ export function ClientesGeralTable({
       return true;
     });
 
+    // Ordenação
     const cmp = (a: typeof clientes[number], b: typeof clientes[number]) => {
       let v = 0;
       if (sortKey === "cliente") {
@@ -290,20 +178,6 @@ export function ClientesGeralTable({
         const da = a.data_inicio_contrato ? new Date(a.data_inicio_contrato).getTime() : 0;
         const db = b.data_inicio_contrato ? new Date(b.data_inicio_contrato).getTime() : 0;
         v = da - db;
-      } else if (sortKey === "saude") {
-        const ma = metricasPorCliente.get(a.id)?.saude.nivel ?? "ok";
-        const mb = metricasPorCliente.get(b.id)?.saude.nivel ?? "ok";
-        v = SAUDE_ORDER[ma] - SAUDE_ORDER[mb];
-      } else if (sortKey === "entrega") {
-        const ma = metricasPorCliente.get(a.id);
-        const mb = metricasPorCliente.get(b.id);
-        const pa = ma && ma.entregaMesMeta > 0 ? ma.entregaMesFeitos / ma.entregaMesMeta : -1;
-        const pb = mb && mb.entregaMesMeta > 0 ? mb.entregaMesFeitos / mb.entregaMesMeta : -1;
-        v = pa - pb;
-      } else if (sortKey === "atividade") {
-        const ta = metricasPorCliente.get(a.id)?.ultimaAtividadeMs ?? 0;
-        const tb = metricasPorCliente.get(b.id)?.ultimaAtividadeMs ?? 0;
-        v = ta - tb;
       }
       return sortDir === "asc" ? v : -v;
     };
@@ -318,10 +192,8 @@ export function ClientesGeralTable({
     filtroStatusGlobal,
     filtroNichos,
     filtroPeriodoContrato,
-    filtroSaude,
     sortKey,
     sortDir,
-    metricasPorCliente,
   ]);
 
   const denseTh =
@@ -368,34 +240,8 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      <TableHead>
-                        <SortHeader
-                          label="Saúde"
-                          sortKey="saude"
-                          current={sortKey}
-                          dir={sortDir}
-                          onSortChange={onSortChange}
-                        />
-                      </TableHead>
-                      <TableHead className="min-w-[120px]">
-                        <SortHeader
-                          label="Entrega do mês"
-                          sortKey="entrega"
-                          current={sortKey}
-                          dir={sortDir}
-                          onSortChange={onSortChange}
-                        />
-                      </TableHead>
-                      <TableHead>
-                        <SortHeader
-                          label="Atividade"
-                          sortKey="atividade"
-                          current={sortKey}
-                          dir={sortDir}
-                          onSortChange={onSortChange}
-                        />
-                      </TableHead>
-                      <TableHead className="max-w-[180px]">
+                      <TableHead>Responsáveis</TableHead>
+                      <TableHead className="min-w-[180px]">
                         Último comentário
                       </TableHead>
                       <TableHead>
@@ -409,7 +255,7 @@ export function ClientesGeralTable({
                       </TableHead>
                       <TableHead>
                         <SortHeader
-                          label="Contrato"
+                          label="Período do contrato"
                           sortKey="periodo"
                           current={sortKey}
                           dir={sortDir}
@@ -423,11 +269,41 @@ export function ClientesGeralTable({
                   </TableHeader>
                   <TableBody>
                     {linhas.map((cliente, idx) => {
-                      const metricas = metricasPorCliente.get(cliente.id);
-                      const respsCli = responsaveis.filter((r) =>
-                        (cliente.responsaveis ?? []).includes(r.id),
+                      const cardsCli = cards.filter((k) => k.cliente_id === cliente.id);
+                      const postsAtrasados = cardsCli.filter(
+                        (k) => k.status_card === "Atrasado",
+                      ).length;
+
+                      const demandasCli = demandas.filter(
+                        (d) => d.cliente_id === cliente.id,
                       );
+                      const demAtrasadas = demandasCli.filter(
+                        (d) => d.status === "Atrasado",
+                      ).length;
+                      const demUrgentes = demandasCli.filter(
+                        (d) => d.prioridade === "Urgente",
+                      ).length;
+
+                      // Indicadores de contrato / onboarding
+                      const hoje = new Date();
+                      hoje.setHours(0, 0, 0, 0);
+                      let contratoVenceEm: number | null = null;
+                      if (cliente.data_fim_contrato) {
+                        const fim = new Date(cliente.data_fim_contrato);
+                        const d = diffDays(hoje, fim);
+                        if (d >= 0 && d <= 15) contratoVenceEm = d;
+                      }
+                      let onboardingAtrasado = false;
+                      if (
+                        (cliente.status_global ?? "Onboarding") === "Onboarding" &&
+                        cliente.prazo_onboarding
+                      ) {
+                        const prazo = new Date(cliente.prazo_onboarding);
+                        if (diffDays(hoje, prazo) < 0) onboardingAtrasado = true;
+                      }
+
                       const nichoOpt = nichos.find((n) => n.label === cliente.nicho);
+
                       const contrato = contratos.find((c) => c.cliente_id === cliente.id);
                       const fimContrato =
                         cliente.data_fim_contrato ?? contrato?.data_fim ?? null;
@@ -435,23 +311,86 @@ export function ClientesGeralTable({
                         cliente.data_inicio_contrato ?? contrato?.data_inicio ?? null;
 
                       return (
-                        <TableRow key={cliente.id} className="hover:bg-accent/30">
+                        <TableRow
+                          key={cliente.id}
+                          className="hover:bg-accent/30"
+                        >
                           <TableCell className="text-xs text-muted-foreground tabular-nums w-10">
                             {idx + 1}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-1.5">
                               <Link
                                 to={`/clientes/${cliente.id}`}
                                 className="text-primary text-xs font-medium hover:underline truncate"
                               >
                                 {cliente.nome_cliente}
                               </Link>
-                              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                                <CelulaResponsaveis
-                                  clienteId={cliente.id}
-                                  ids={cliente.responsaveis ?? []}
-                                />
+                              {/* Indicadores rápidos de saúde */}
+                              <div className="flex items-center gap-1">
+                                {postsAtrasados > 0 && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center gap-0.5 h-4 px-1 rounded bg-destructive/15 text-destructive text-[10px] font-semibold tabular-nums">
+                                        <AlertTriangle className="h-2.5 w-2.5" />
+                                        {postsAtrasados}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {postsAtrasados} post{postsAtrasados > 1 ? "s" : ""} atrasado{postsAtrasados > 1 ? "s" : ""}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {demAtrasadas > 0 && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center gap-0.5 h-4 px-1 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-semibold tabular-nums">
+                                        <Hourglass className="h-2.5 w-2.5" />
+                                        {demAtrasadas}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {demAtrasadas} demanda{demAtrasadas > 1 ? "s" : ""} atrasada{demAtrasadas > 1 ? "s" : ""}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {demUrgentes > 0 && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center gap-0.5 h-4 px-1 rounded bg-primary/15 text-primary text-[10px] font-semibold tabular-nums">
+                                        <Zap className="h-2.5 w-2.5" />
+                                        {demUrgentes}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {demUrgentes} demanda{demUrgentes > 1 ? "s" : ""} urgente{demUrgentes > 1 ? "s" : ""}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {contratoVenceEm !== null && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center h-4 w-4 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                                        <CalendarClock className="h-2.5 w-2.5 mx-auto" />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {contratoVenceEm === 0
+                                        ? "Contrato vence hoje"
+                                        : `Contrato vence em ${contratoVenceEm} dia${contratoVenceEm > 1 ? "s" : ""}`}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {onboardingAtrasado && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center h-4 px-1 rounded bg-destructive/15 text-destructive text-[10px] font-semibold">
+                                        Onb.
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Onboarding com prazo vencido</TooltipContent>
+                                  </Tooltip>
+                                )}
                               </div>
                             </div>
                           </TableCell>
@@ -459,23 +398,10 @@ export function ClientesGeralTable({
                             <StatusClienteBadge status={cliente.status_global} />
                           </TableCell>
                           <TableCell>
-                            {metricas && (
-                              <SaudePill
-                                nivel={metricas.saude.nivel}
-                                motivos={metricas.saude.motivos}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {metricas && (
-                              <EntregaMes
-                                feitos={metricas.entregaMesFeitos}
-                                meta={metricas.entregaMesMeta}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-[11px] text-muted-foreground tabular-nums">
-                            {formatarAtividade(metricas?.ultimaAtividadeMs ?? null)}
+                            <CelulaResponsaveis
+                              clienteId={cliente.id}
+                              ids={cliente.responsaveis ?? []}
+                            />
                           </TableCell>
                           <TableCell className="text-xs">
                             <button
@@ -484,7 +410,7 @@ export function ClientesGeralTable({
                                 e.stopPropagation();
                                 onAbrirHistorico?.(cliente.id);
                               }}
-                              className="text-left truncate max-w-[160px] block hover:text-primary"
+                              className="text-left truncate max-w-[220px] hover:text-primary"
                               title={cliente.ultimo_comentario}
                             >
                               {cliente.ultimo_comentario || (
