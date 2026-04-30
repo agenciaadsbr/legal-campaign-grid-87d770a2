@@ -1,89 +1,87 @@
-## Atualização do painel geral de Clientes
+# Métricas comparativas no painel geral de Clientes
 
-Mantendo o layout em tabela e as colunas que você listou — **Cliente, Status, Responsáveis, Último comentário, Nicho, Período do contrato** — vamos enxugar o que sobra hoje (Posts, Demandas, Observações), trocar o significado da coluna de responsáveis e adicionar três melhorias de uso: indicadores rápidos, filtros mais úteis e ordenação/densidade.
+Foco: trazer para a tabela geral as **métricas que só fazem sentido comparando clientes lado a lado** — coisas que hoje obrigam a entrar em cada projeto pra descobrir, e que são exatamente o que dá visão de gestão de carteira.
 
-### O que muda visualmente
+## Princípio
+
+Tudo que é "olhar um cliente em profundidade" continua dentro do Projeto Completo. O painel geral vira uma **tela de triagem**: em 5 segundos você sabe quem precisa de atenção, quem está saudável, quem está rendendo mais e quem está esfriando.
+
+## Mudanças na tabela
+
+### 1. Remover coluna "Responsáveis" como coluna fixa
+Vira um stack de avatares pequeno (`xs`, max 2) **colado ao nome do cliente**. Continua clicável (popover do `CelulaResponsaveis` para reatribuir). Libera espaço sem perder a funcionalidade.
+
+### 2. Nova coluna: "Saúde" (consolidada)
+Um único pill colorido que resume tudo:
+- 🟢 **Ok** — sem atrasos, contrato ativo, onboarding em dia
+- 🟡 **Atenção** — 1+ demanda atrasada OU contrato vencendo em ≤30 dias OU sem atividade há 7-14 dias
+- 🔴 **Crítico** — posts atrasados OU 3+ demandas atrasadas OU contrato vencido OU onboarding com prazo vencido OU sem atividade há 14+ dias
+
+Tooltip detalha os motivos. Os ícones soltos de hoje (AlertTriangle, Hourglass, Zap, CalendarClock) somem da linha — informação muda do "ruído visual" pro tooltip do pill.
+
+### 3. Nova coluna: "Entrega do mês"
+Mini barra de progresso `6/12` baseada em:
+- Numerador: cards do mês corrente com `status_card === "Postado"`
+- Denominador: `total_posts` do contrato ativo (ou total de cards do mês se não houver contrato)
+
+Cores: verde (≥80%), âmbar (40-80%), vermelho (<40%) **e** o mês já passou da metade.
+
+### 4. Nova coluna: "Atividade" (frescor)
+Texto curto: `há 2 dias`, `há 3 sem`, `nunca`. Calculado pelo `MAX(updated_at)` entre comentários do cliente, demandas, cards e posts. Deixa óbvio quem está esfriando.
+
+Ordenável — clicar ordena os mais frios no topo.
+
+### 5. Nova coluna: "MRR / Plano"
+Mostra `R$ 3.500 · Mensal` (formatado em pt-BR). Vem de `cliente.valor_venda` + `cliente.plano`. 
+- Permite **ordenar por receita** — você vê quem dá mais dinheiro e cruza com saúde.
+- Aparece só se `valor_venda` existir, senão `—`.
+
+Ordenável.
+
+### 6. Coluna "Nicho" e "Período do contrato": mantidas
+São os filtros estruturais. Sem mudança.
+
+### 7. Coluna "Último comentário": mantida mas reduzida
+Vira mais estreita (max 160px) já que agora "Atividade" responde *quando* foi a última coisa.
+
+## Layout final da tabela
 
 ```text
-┌──┬─────────────┬────────┬──────────────┬──────────────────┬──────────┬──────────────────────┬─────┐
-│# │ Cliente  ●●●│ Status │ Responsáveis │ Último comentário│ Nicho    │ Período do contrato  │ Açõs│
-├──┼─────────────┼────────┼──────────────┼──────────────────┼──────────┼──────────────────────┼─────┤
-│ 1│ AGF Adv.  ⚠ │ Ativo  │ 👤👤         │ "ip concluída…"  │ TRABALH. │ 26/04 → 26/07 (3m)   │ ✏ 🗑│
-└──┴─────────────┴────────┴──────────────┴──────────────────┴──────────┴──────────────────────┴─────┘
+# | Cliente (avatares xs) | Status | Saúde | Entrega mês | Atividade | MRR/Plano | Último coment. | Nicho | Contrato
 ```
 
-- Colunas removidas: **Posts**, **Demandas**, **Observações** (a info continua viva dentro do Projeto Completo do cliente).
-- Ao lado do nome do cliente passa a aparecer um **cluster discreto de indicadores** (ver abaixo).
-- Cabeçalhos viram **clicáveis** para ordenar.
-- Toggle de **densidade** (Compacto / Confortável) ao lado do botão "Colunas".
+## Mudanças no topo da página
 
-### 1. Coluna Responsáveis — agora "Responsáveis do cliente"
+### KPIs agregados (faixa fina acima da tabela)
+4 cards minúsculos com totais da carteira filtrada:
+- **Clientes ativos** (count)
+- **MRR total** (soma de `valor_venda` dos ativos)
+- **Em risco** (count com Saúde 🟡 ou 🔴)
+- **Contratos vencendo em 30d** (count)
 
-- Substitui o cálculo atual (união dos responsáveis dos cards de posts) pelo campo `cliente.responsaveis` já existente.
-- Reaproveita o componente pronto `src/components/clientes/CelulaResponsaveis.tsx` — clicar abre popover com checkboxes e persiste via `updateCliente`.
-- Cabeçalho passa a ser apenas **"Responsáveis"**.
-- Filtro "Filtrar por responsável do post" no topo passa a se chamar **"Filtrar por responsável"** e usa `cliente.responsaveis` (alinhado com a coluna).
+Cada card é clicável e aplica o filtro correspondente (ex: clicar em "Em risco" filtra só esses).
 
-### 2. Indicadores rápidos de saúde (badges discretos ao lado do nome)
+### Novo filtro: "Saúde"
+Multi-select `Ok / Atenção / Crítico`. Combina com os filtros existentes.
 
-Pequenos ícones com tooltip — só aparecem quando há algo a sinalizar:
+## Detalhes técnicos
 
-| Ícone | Significado | Tooltip |
-|---|---|---|
-| 🔴 número | Posts atrasados (`status_card === "Atrasado"`) | "N posts atrasados" |
-| 🟠 número | Demandas atrasadas (`demanda.status === "Atrasado"`) | "N demandas atrasadas" |
-| ⚡ número | Demandas urgentes (`prioridade === "Urgente"`) | "N demandas urgentes" |
-| 📅 | Contrato vence em ≤ 15 dias | "Contrato vence em X dias" |
-| 🆕 | Cliente em Onboarding com prazo vencido | "Onboarding atrasado" |
+**Arquivos a editar:**
+- `src/components/clientes/ClientesGeralTable.tsx` — recolocar colunas, calcular Saúde, Entrega do mês, Atividade, MRR
+- `src/pages/Clientes.tsx` — adicionar faixa de KPIs, filtro de Saúde
 
-Cluster fica imediatamente após o nome, com hover destacando. Não voltam como colunas — ocupam ~60px ao lado do título.
+**Cálculo de Saúde** — função pura `calcularSaude(cliente, cards, demandas, comentarios)` que retorna `{ nivel: 'ok'|'atencao'|'critico', motivos: string[] }`. Reutilizável em ordenação e filtro.
 
-### 3. Filtros melhores no topo
+**Cálculo de Atividade** — função `ultimaAtividade(clienteId)` que pega o `MAX` entre `comentarios.created_at`, `demandas.updated_at`, `cards.updated_at`, `posts.updated_at` filtrados por cliente. Memoizado por `clienteId` no `useMemo` da tabela.
 
-Barra reorganizada em uma linha (com wrap em telas menores):
+**Entrega do mês** — `cards.filter(c => c.cliente_id === id && c.status === 'Postado' && mesmo mês corrente).length` sobre `contrato.total_posts || cardsDoMes.length`.
 
-- **Busca** (mantém — já filtra nome/nicho/observações).
-- **Status** (mantém — Onboarding/Ativo/Pausado/Encerrado).
-- **Responsável** (multi-select, sobre `cliente.responsaveis`).
-- **Nicho** (novo — multi-select, lê de `nichos`).
-- **Período do contrato** (novo — opções: "Vence em 30 dias", "Vence em 90 dias", "Já vencido", "Todos").
-- **Minhas tarefas** (mantém o toggle "apenas onde sou responsável").
-- Botão **"Limpar filtros"** aparece quando algum filtro ≠ default.
-- Contador "X de Y clientes" ao lado do título reflete os filtros ativos.
+**Ordenação** — adicionar `SortKey` para `saude`, `entrega`, `atividade`, `mrr`. Mantém os atuais.
 
-### 4. Ordenação por coluna + densidade
+**Sem mudanças no banco.** Tudo derivado dos dados que já existem (`clientes.valor_venda`, `clientes.plano`, `cards`, `demandas`, `comentarios`, `contratos`).
 
-- Colunas ordenáveis: Cliente, Status, Nicho, Período (data início).
-- Click no header alterna asc/desc; setinha aparece na ativa. Estado guardado em `localStorage` por usuário (`dashtasks.clientes.sort`).
-- Toggle **densidade**: "Compacto" (atual) ↔ "Confortável" (linhas 36→44px, padding maior). Persistido em `localStorage` (`dashtasks.clientes.density`).
+## O que NÃO entra (para manter o painel enxuto)
 
-### Detalhes técnicos
-
-**Arquivos editados:**
-
-1. `src/components/clientes/ClientesGeralTable.tsx`
-   - Remover colunas/células: Posts, Demandas, Observações.
-   - Trocar coluna "Responsáveis dos Posts" por `<CelulaResponsaveis clienteId={cliente.id} ids={cliente.responsaveis ?? []} />`.
-   - Remover memo `respsPostsPorCliente`; filtros de responsável passam a olhar `cliente.responsaveis`.
-   - Computar `indicadores` por cliente (postsAtrasados, demAtrasadas, demUrgentes, contratoVencendo, onboardingVencido) e renderizar cluster ao lado do `Link`.
-   - Aceitar novas props: `sortKey`, `sortDir`, `onSortChange`, `density`, `filtroNicho?: string[]`, `filtroPeriodoContrato?: "30" | "90" | "vencido" | "todos"`.
-   - Headers ordenáveis viram `<button>` com ícone `ChevronsUpDown` / `ChevronUp` / `ChevronDown`.
-   - Tabela aplica classes condicionais a partir de `density` ("Compacto" mantém `[&_th]:h-7 [&_td]:py-1`; "Confortável" usa `h-10`/`py-2`).
-
-2. `src/pages/Clientes.tsx`
-   - Renomear filtro "Filtrar por responsável do post" → "Filtrar por responsável" (e referência interna).
-   - Adicionar selects de **Nicho** e **Período do contrato** na barra superior.
-   - Adicionar botão "Limpar filtros".
-   - Adicionar toggle de densidade (`ToggleGroup` com Compacto/Confortável) próximo ao botão "Colunas".
-   - Estado `sort` + `density` persistidos via `localStorage` com hooks simples (`useState` + `useEffect`).
-   - Atualizar contador no header para refletir lista filtrada.
-   - Passar todas as props novas para `<ClientesGeralTable />`.
-
-**Sem alterações** em store, schema Supabase, rotas, ou em outras telas que reusam a tabela (props novas são opcionais e mantêm fallback ao comportamento atual).
-
-### Resultado
-
-- Painel mais limpo focado nas 6 colunas que você definiu.
-- Saúde do cliente continua visível, mas como sinal compacto.
-- Filtros cobrem os campos que realmente importam (status, responsável, nicho, contrato).
-- Cabeçalhos ordenáveis + densidade ajustável tornam a navegação por 43+ clientes muito mais rápida.
+- NPS / satisfação — não existe no schema, fora de escopo.
+- Detalhamento de quais demandas estão atrasadas — isso é trabalho do projeto do cliente.
+- Histórico de MRR ao longo do tempo — isso é Relatórios, não painel geral.
