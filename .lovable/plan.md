@@ -1,22 +1,21 @@
-## Renomear "Clientes/Posts" → "Clientes" nos textos restantes
+## Remover tela legada `ProjetoDemandasCliente`
 
-A renomeação anterior cobriu apenas o item da sidebar. Faltam três locais visíveis ao usuário (breadcrumb do header, título da página e breadcrumb da página de demandas do cliente).
+A tela `/demandas/cliente/:clienteId` é resquício do antigo item "Demandas" da sidebar. O fluxo oficial agora vive em `/clientes/:clienteId` (aba Demandas dentro do Projeto Completo). Vamos eliminar o código morto e redirecionar links antigos para o novo destino.
 
-### Alterações
+### Mudanças
 
-1. **`src/components/AppLayout.tsx`** (linha 20) — breadcrumb do topo
-   - De: `crumbs.push({ label: "Clientes/Posts", to: "/clientes" });`
-   - Para: `crumbs.push({ label: "Clientes", to: "/clientes" });`
+**1. `src/App.tsx`**
+- Remover `import ProjetoDemandasCliente from "./pages/ProjetoDemandasCliente"`.
+- Remover a rota `<Route path="/demandas/cliente/:clienteId" .../>`.
 
-2. **`src/pages/Clientes.tsx`** (linha 1368) — título `<h1>` da página
-   - De: `<h1 className="text-xl font-bold leading-tight">Clientes/Posts</h1>`
-   - Para: `<h1 className="text-xl font-bold leading-tight">Clientes</h1>`
+**2. `src/pages/ProjetoDemandasCliente.tsx`**
+- Deletar o arquivo.
 
-3. **`src/pages/ProjetoDemandasCliente.tsx`** (linha 77) — breadcrumb interno
-   - De: `<span>Clientes/Posts</span>`
-   - Para: `<span>Clientes</span>`
+**3. `src/components/demandas/ClientesDemandasTable.tsx`** (2 ocorrências, linhas 343 e 473)
+- Trocar `navigate(\`/demandas/cliente/${l.cliente_id}\`)` por `navigate(\`/clientes/${l.cliente_id}\`)`, para que cliques na tabela de demandas por cliente abram o Projeto Completo já com as abas (incluindo Demandas) disponíveis.
 
-### O que NÃO muda
-- Rota `/clientes` permanece.
-- Comentário interno na linha 1254 de `Clientes.tsx` é mantido (não é visível ao usuário).
-- Nenhuma alteração de lógica, apenas texto.
+### Resultado
+- Um arquivo a menos (≈130 linhas de código morto removidas).
+- Rota legada eliminada — sem links órfãos.
+- Tabela de demandas por cliente passa a navegar para a tela canônica do cliente.
+- Nenhum impacto em dados, store ou lógica de demandas (tudo continua em `useDemandas`).

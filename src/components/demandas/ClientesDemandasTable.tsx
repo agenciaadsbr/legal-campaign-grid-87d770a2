@@ -340,7 +340,7 @@ export function ClientesDemandasTable({
                     <TableRow
                       key={l.cliente_id}
                       className="cursor-pointer"
-                      onClick={() => navigate(`/demandas/cliente/${l.cliente_id}`)}
+                      onClick={() => navigate(`/clientes/${l.cliente_id}`)}
                     >
                       <TableCell className="text-xs text-muted-foreground tabular-nums w-10">
                         {idx + 1}
@@ -470,7 +470,7 @@ export function ClientesDemandasTable({
                           className="h-6 px-2 text-xs"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/demandas/cliente/${l.cliente_id}`);
+                            navigate(`/clientes/${l.cliente_id}`);
                           }}
                         >
                           Abrir <ArrowRight className="h-3 w-3 ml-1" />
