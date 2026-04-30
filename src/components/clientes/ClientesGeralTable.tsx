@@ -350,7 +350,7 @@ export function ClientesGeralTable({
                                       </span>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      {demAtrasadas} demanda{demAtrasadas > 1 ? "s" : ""} atrasada{demAtrasadas > 1 ? "s" : ""}
+                                      {demAtrasadas} Tarefa{demAtrasadas > 1 ? "s" : ""} atrasada{demAtrasadas > 1 ? "s" : ""}
                                     </TooltipContent>
                                   </Tooltip>
                                 )}
@@ -363,7 +363,7 @@ export function ClientesGeralTable({
                                       </span>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      {demUrgentes} demanda{demUrgentes > 1 ? "s" : ""} urgente{demUrgentes > 1 ? "s" : ""}
+                                      {demUrgentes} Tarefa{demUrgentes > 1 ? "s" : ""} urgente{demUrgentes > 1 ? "s" : ""}
                                     </TooltipContent>
                                   </Tooltip>
                                 )}
