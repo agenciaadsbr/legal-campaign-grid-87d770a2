@@ -142,10 +142,38 @@ export function IniciarTarefaDialog({ open, onOpenChange, cardId }: Props) {
             </div>
           </div>
 
-          <div>
-            <Label className="text-xs">Prazo de criação</Label>
-            <Input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Prazo de criação</Label>
+              <Input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Formato do post</Label>
+              <Select value={formato || "none"} onValueChange={(v) => setFormato(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Não definido —</SelectItem>
+                  {FORMATOS_POST.map((f) => (
+                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {isCarrossel && (
+            <div>
+              <Label className="text-xs">Quantidade de slides</Label>
+              <Input
+                type="number"
+                min={2}
+                max={20}
+                value={qtdSlides}
+                onChange={(e) => setQtdSlides(e.target.value)}
+                placeholder="Ex: 8"
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>
