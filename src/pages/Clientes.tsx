@@ -1693,24 +1693,64 @@ export default function Clientes() {
 
 
       {visao === "clientes" ? (
-        <ClientesGeralTable
-          filtroBusca={busca}
-          filtroResponsaveis={filtroResponsaveis}
-          apenasMinhas={apenasMinhas}
-          currentUserId={currentUserId}
-          filtroStatusGlobal={filtroStatusGlobal}
-          filtroNichos={filtroNichos}
-          filtroPeriodoContrato={filtroPeriodoContrato}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          onSortChange={handleSortChange}
-          density={density}
-          onAbrirHistorico={setHistoricoClienteId}
-          acoesSlot={(clienteId) => {
-            const cli = clientes.find((c) => c.id === clienteId);
-            return cli ? <AcoesCliente cliente={cli} /> : null;
-          }}
-        />
+        <>
+          {/* KPIs da carteira — clicáveis para filtrar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <KpiCard
+              label="Clientes ativos"
+              value={kpisCarteira.ativos.toString()}
+              icon={Users}
+              tone="default"
+              onClick={() => setFiltroStatusGlobal("Ativo")}
+              active={filtroStatusGlobal === "Ativo"}
+            />
+            <KpiCard
+              label="MRR total"
+              value={formatarMRR(kpisCarteira.mrr)}
+              icon={DollarSign}
+              tone="emerald"
+            />
+            <KpiCard
+              label="Em risco"
+              value={kpisCarteira.emRisco.toString()}
+              icon={AlertTriangle}
+              tone={kpisCarteira.emRisco > 0 ? "destructive" : "default"}
+              onClick={() => {
+                const isActive = filtroSaude.length === 2 && filtroSaude.includes("critico") && filtroSaude.includes("atencao");
+                setFiltroSaude(isActive ? [] : ["critico", "atencao"]);
+              }}
+              active={filtroSaude.length === 2 && filtroSaude.includes("critico") && filtroSaude.includes("atencao")}
+            />
+            <KpiCard
+              label="Contratos vencendo 30d"
+              value={kpisCarteira.vencendo30.toString()}
+              icon={CalendarClock}
+              tone={kpisCarteira.vencendo30 > 0 ? "amber" : "default"}
+              onClick={() => setFiltroPeriodoContrato(filtroPeriodoContrato === "30" ? "todos" : "30")}
+              active={filtroPeriodoContrato === "30"}
+            />
+          </div>
+
+          <ClientesGeralTable
+            filtroBusca={busca}
+            filtroResponsaveis={filtroResponsaveis}
+            apenasMinhas={apenasMinhas}
+            currentUserId={currentUserId}
+            filtroStatusGlobal={filtroStatusGlobal}
+            filtroNichos={filtroNichos}
+            filtroPeriodoContrato={filtroPeriodoContrato}
+            filtroSaude={filtroSaude}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSortChange={handleSortChange}
+            density={density}
+            onAbrirHistorico={setHistoricoClienteId}
+            acoesSlot={(clienteId) => {
+              const cli = clientes.find((c) => c.id === clienteId);
+              return cli ? <AcoesCliente cliente={cli} /> : null;
+            }}
+          />
+        </>
       ) : (
       <div className="border rounded-lg bg-card overflow-hidden">
         <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-160px)]">
