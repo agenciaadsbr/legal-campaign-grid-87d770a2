@@ -1737,7 +1737,7 @@ export default function Clientes() {
       {visao === "clientes" ? (
         <>
           {/* KPIs da carteira — clicáveis para filtrar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <KpiCard
               label="Clientes ativos"
               value={kpisCarteira.ativos.toString()}
@@ -1745,12 +1745,6 @@ export default function Clientes() {
               tone="default"
               onClick={() => setFiltroStatusGlobal("Ativo")}
               active={filtroStatusGlobal === "Ativo"}
-            />
-            <KpiCard
-              label="MRR total"
-              value={formatarMRR(kpisCarteira.mrr)}
-              icon={DollarSign}
-              tone="emerald"
             />
             <KpiCard
               label="Em risco"
