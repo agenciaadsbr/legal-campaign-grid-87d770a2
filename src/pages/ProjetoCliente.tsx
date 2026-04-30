@@ -16,6 +16,7 @@ import { StatusClienteBadge } from "@/components/StatusClienteBadge";
 import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
 import { AreaTab } from "@/components/projeto/AreaTab";
 import { VisaoGeralCard } from "@/components/projeto/VisaoGeralCard";
+import { VisaoGeralLista, type VisaoGeralItem } from "@/components/projeto/VisaoGeralLista";
 import { DocumentacaoTab } from "@/components/projeto/DocumentacaoTab";
 import { BriefingTab } from "@/components/projeto/BriefingTab";
 import { PlanejamentoTab } from "@/components/projeto/PlanejamentoTab";
@@ -29,6 +30,7 @@ import {
 import {
   ArrowLeft,
   LayoutGrid,
+  List,
   Activity,
   Users,
   BarChart3,
@@ -372,6 +374,7 @@ function VisaoGeral({
   onNavegar: (tab: string) => void;
 }) {
   const { responsaveis } = useCRM();
+  const [modo, setModo] = useState<"lista" | "grid">("lista");
 
   const respsDe = (lista: Demanda[]) => {
     const ids = new Set<string>();
@@ -402,90 +405,58 @@ function VisaoGeral({
   const planejamento = calcular(filtrarPorArea(demandasCli, "planejamento"));
   const urgencias = calcular(filtrarPorArea(demandasCli, "urgencias"));
 
+  const itens: VisaoGeralItem[] = [
+    { key: "posts", titulo: "Posts", icone: FileText, total: postsTotal, pendentes: postsPend, atrasadas: postsAtras, responsaveis: respsPosts, onVerDetalhes: () => onNavegar("posts") },
+    { key: "videos", titulo: "Vídeos", icone: Video, total: videos.total, pendentes: videos.pendentes, atrasadas: videos.atrasadas, responsaveis: videos.resps, onVerDetalhes: () => onNavegar("videos") },
+    { key: "trafego", titulo: "Tráfego Pago", icone: Megaphone, total: trafego.total, pendentes: trafego.pendentes, atrasadas: trafego.atrasadas, responsaveis: trafego.resps, onVerDetalhes: () => onNavegar("trafego") },
+    { key: "lp", titulo: "LP / Site", icone: Globe, total: lp.total, pendentes: lp.pendentes, atrasadas: lp.atrasadas, responsaveis: lp.resps, onVerDetalhes: () => onNavegar("lp") },
+    { key: "ia", titulo: "IA / Atendimento", icone: Bot, total: ia.total, pendentes: ia.pendentes, atrasadas: ia.atrasadas, responsaveis: ia.resps, onVerDetalhes: () => onNavegar("ia") },
+    { key: "documentacao", titulo: "Documentação", icone: FolderOpen, total: docsCli.length, pendentes: 0, atrasadas: 0, responsaveis: [], onVerDetalhes: () => onNavegar("documentacao") },
+    { key: "briefing", titulo: "Briefing", icone: ClipboardList, total: briefing.total, pendentes: briefing.pendentes, atrasadas: briefing.atrasadas, responsaveis: briefing.resps, onVerDetalhes: () => onNavegar("briefing") },
+    { key: "planejamento", titulo: "Planejamento", icone: CalendarRange, total: planejamento.total, pendentes: planejamento.pendentes, atrasadas: planejamento.atrasadas, responsaveis: planejamento.resps, onVerDetalhes: () => onNavegar("planejamento") },
+    { key: "urgencias", titulo: "Urgências / Outros", icone: AlertTriangle, total: urgencias.total, pendentes: urgencias.pendentes, atrasadas: urgencias.atrasadas, responsaveis: urgencias.resps, onVerDetalhes: () => onNavegar("urgencias") },
+  ];
+
   return (
-    <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-      <VisaoGeralCard
-        titulo="Posts"
-        icone={FileText}
-        total={postsTotal}
-        pendentes={postsPend}
-        atrasadas={postsAtras}
-        responsaveis={respsPosts}
-        onVerDetalhes={() => onNavegar("posts")}
-      />
-      <VisaoGeralCard
-        titulo="Vídeos"
-        icone={Video}
-        total={videos.total}
-        pendentes={videos.pendentes}
-        atrasadas={videos.atrasadas}
-        responsaveis={videos.resps}
-        onVerDetalhes={() => onNavegar("videos")}
-      />
-      <VisaoGeralCard
-        titulo="Tráfego Pago"
-        icone={Megaphone}
-        total={trafego.total}
-        pendentes={trafego.pendentes}
-        atrasadas={trafego.atrasadas}
-        responsaveis={trafego.resps}
-        onVerDetalhes={() => onNavegar("trafego")}
-      />
-      <VisaoGeralCard
-        titulo="LP / Site"
-        icone={Globe}
-        total={lp.total}
-        pendentes={lp.pendentes}
-        atrasadas={lp.atrasadas}
-        responsaveis={lp.resps}
-        onVerDetalhes={() => onNavegar("lp")}
-      />
-      <VisaoGeralCard
-        titulo="IA / Atendimento"
-        icone={Bot}
-        total={ia.total}
-        pendentes={ia.pendentes}
-        atrasadas={ia.atrasadas}
-        responsaveis={ia.resps}
-        onVerDetalhes={() => onNavegar("ia")}
-      />
-      <VisaoGeralCard
-        titulo="Documentação"
-        icone={FolderOpen}
-        total={docsCli.length}
-        pendentes={0}
-        atrasadas={0}
-        responsaveis={[]}
-        onVerDetalhes={() => onNavegar("documentacao")}
-      />
-      <VisaoGeralCard
-        titulo="Briefing"
-        icone={ClipboardList}
-        total={briefing.total}
-        pendentes={briefing.pendentes}
-        atrasadas={briefing.atrasadas}
-        responsaveis={briefing.resps}
-        onVerDetalhes={() => onNavegar("briefing")}
-      />
-      <VisaoGeralCard
-        titulo="Planejamento"
-        icone={CalendarRange}
-        total={planejamento.total}
-        pendentes={planejamento.pendentes}
-        atrasadas={planejamento.atrasadas}
-        responsaveis={planejamento.resps}
-        onVerDetalhes={() => onNavegar("planejamento")}
-      />
-      <VisaoGeralCard
-        titulo="Urgências / Outros"
-        icone={AlertTriangle}
-        total={urgencias.total}
-        pendentes={urgencias.pendentes}
-        atrasadas={urgencias.atrasadas}
-        responsaveis={urgencias.resps}
-        onVerDetalhes={() => onNavegar("urgencias")}
-      />
-    </section>
+    <div className="space-y-3">
+      <div className="flex items-center justify-end gap-1">
+        <Button
+          variant={modo === "lista" ? "default" : "outline"}
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={() => setModo("lista")}
+        >
+          <List className="h-3.5 w-3.5" /> Lista
+        </Button>
+        <Button
+          variant={modo === "grid" ? "default" : "outline"}
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={() => setModo("grid")}
+        >
+          <LayoutGrid className="h-3.5 w-3.5" /> Grade
+        </Button>
+      </div>
+
+      {modo === "lista" ? (
+        <VisaoGeralLista itens={itens} />
+      ) : (
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {itens.map((it) => (
+            <VisaoGeralCard
+              key={it.key}
+              titulo={it.titulo}
+              icone={it.icone}
+              total={it.total}
+              pendentes={it.pendentes}
+              atrasadas={it.atrasadas}
+              responsaveis={it.responsaveis}
+              onVerDetalhes={it.onVerDetalhes}
+            />
+          ))}
+        </section>
+      )}
+    </div>
   );
 }
 

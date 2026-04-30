@@ -169,8 +169,13 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
         </div>
       </div>
 
-      <div className="text-[10px] text-muted-foreground mt-1">
-        Post Mês {card.mes_referencia} · Semana {card.numero_semana}
+      <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+        <span>Post Mês {card.mes_referencia} · Semana {card.numero_semana}</span>
+        {card.formato && (
+          <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+            {card.formato}{card.formato === "Carrossel" && card.qtd_slides ? ` · ${card.qtd_slides} slides` : ""}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center justify-between mt-1.5 gap-2">

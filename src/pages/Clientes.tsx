@@ -448,12 +448,15 @@ function EditarClienteDialog({
   const [form, setForm] = useState({
     nome_cliente: cliente?.nome_cliente ?? "",
     nicho: cliente?.nicho ?? "",
+    nicho_extra: cliente?.nicho_extra ?? "",
     status_cliente: cliente?.status_cliente ?? "Ativo",
     status_global: (cliente?.status_global ?? "Onboarding") as any,
     prazo_onboarding: (cliente?.prazo_onboarding ?? "") as string,
     data_inicio_contrato: cliente?.data_inicio_contrato ?? "",
     duracao_meses: calcMeses(cliente?.data_inicio_contrato, cliente?.data_fim_contrato),
     data_fim_contrato: cliente?.data_fim_contrato ?? "",
+    plano: (cliente?.plano ?? inferirPlano(calcMeses(cliente?.data_inicio_contrato, cliente?.data_fim_contrato))) as PlanoNominal,
+    valor_venda: (cliente?.valor_venda != null ? String(cliente.valor_venda) : "") as string,
     responsaveis: cliente?.responsaveis ?? [],
     observacoes: cliente?.observacoes ?? "",
   });
@@ -461,7 +464,18 @@ function EditarClienteDialog({
   const setInicio = (v: string) =>
     setForm((f) => ({ ...f, data_inicio_contrato: v, data_fim_contrato: calcFim(v, f.duracao_meses) }));
   const setMeses = (m: number) =>
-    setForm((f) => ({ ...f, duracao_meses: m, data_fim_contrato: calcFim(f.data_inicio_contrato, m) }));
+    setForm((f) => ({ ...f, duracao_meses: m, data_fim_contrato: calcFim(f.data_inicio_contrato, m), plano: inferirPlano(m) }));
+  const setPlano = (p: PlanoNominal) =>
+    setForm((f) => {
+      const meses = PLANO_MESES[p];
+      if (meses === null) return { ...f, plano: p };
+      return {
+        ...f,
+        plano: p,
+        duracao_meses: meses,
+        data_fim_contrato: calcFim(f.data_inicio_contrato, meses),
+      };
+    });
 
   const submit = async () => {
     if (!form.nome_cliente.trim()) {
@@ -469,10 +483,11 @@ function EditarClienteDialog({
       return;
     }
     try {
-      const { duracao_meses, prazo_onboarding, ...patch } = form;
+      const { duracao_meses, prazo_onboarding, valor_venda, ...patch } = form;
       await updateCliente(cliente.id, {
         ...(patch as any),
         prazo_onboarding: prazo_onboarding || null,
+        valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
       });
       toast.success("Cliente atualizado");
       onOpenChange(false);
@@ -514,6 +529,36 @@ function EditarClienteDialog({
                   <SelectItem value="Encerrado">Encerrado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Nicho extra (opcional)</Label>
+            <Input
+              value={form.nicho_extra}
+              onChange={(e) => setForm({ ...form, nicho_extra: e.target.value })}
+              placeholder="Ex.: Bancário, Trabalhista..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Plano</Label>
+              <Select value={form.plano} onValueChange={(v) => setPlano(v as PlanoNominal)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PLANOS_NOMINAIS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Valor de venda (R$)</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={form.valor_venda}
+                onChange={(e) => setForm({ ...form, valor_venda: e.target.value })}
+                placeholder="0,00"
+              />
             </div>
           </div>
           <div>
