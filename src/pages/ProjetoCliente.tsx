@@ -32,7 +32,7 @@ import {
   LayoutGrid,
   List,
   Activity,
-  Users,
+  
   BarChart3,
   FileText,
   Plus,
@@ -224,7 +224,6 @@ export default function ProjetoCliente() {
             <TabsTrigger value="briefing" className="gap-1"><ClipboardList className="h-3.5 w-3.5" /> Briefing</TabsTrigger>
             <TabsTrigger value="planejamento" className="gap-1"><CalendarRange className="h-3.5 w-3.5" /> Planejamento</TabsTrigger>
             <TabsTrigger value="atividades" className="gap-1"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
-            <TabsTrigger value="responsaveis" className="gap-1"><Users className="h-3.5 w-3.5" /> Responsáveis</TabsTrigger>
             <TabsTrigger value="relatorios" className="gap-1"><BarChart3 className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
           </TabsList>
         </div>
@@ -330,11 +329,6 @@ export default function ProjetoCliente() {
         {/* ============== ATIVIDADES ============== */}
         <TabsContent value="atividades" className="mt-4">
           <AtividadesTab clienteId={clienteId!} demandasCli={demandasCli} />
-        </TabsContent>
-
-        {/* ============== RESPONSÁVEIS ============== */}
-        <TabsContent value="responsaveis" className="mt-4">
-          <ResponsaveisTab cardsCli={cardsCli} demandasCli={demandasCli} />
         </TabsContent>
 
         {/* ============== RELATÓRIOS ============== */}
@@ -618,120 +612,6 @@ function AtividadesTab({
         )}
       </CardContent>
     </Card>
-  );
-}
-
-// =====================================================
-// RESPONSÁVEIS — 8 seções (uma por área + Geral)
-// =====================================================
-const SECOES_RESP = [
-  { key: "posts", titulo: "Responsáveis dos Posts", icone: FileText },
-  { key: "videos", titulo: "Responsáveis dos Vídeos", icone: Video },
-  { key: "trafego", titulo: "Responsáveis do Tráfego", icone: Megaphone },
-  { key: "lp", titulo: "Responsáveis de LP / Site", icone: Globe },
-  { key: "ia", titulo: "Responsáveis de IA / Atendimento", icone: Bot },
-  { key: "briefing", titulo: "Responsáveis de Briefing", icone: ClipboardList },
-  { key: "planejamento", titulo: "Responsáveis de Planejamento", icone: CalendarRange },
-  { key: "urgencias", titulo: "Responsáveis Gerais / Urgências", icone: AlertTriangle },
-] as const;
-
-function ResponsaveisTab({
-  cardsCli,
-  demandasCli,
-}: {
-  cardsCli: any[];
-  demandasCli: Demanda[];
-}) {
-  const { responsaveis } = useCRM();
-
-  const renderSecao = (
-    titulo: string,
-    Icone: any,
-    resps: any[],
-    countFn: (rid: string) => { total: number; abertos: number; atrasados: number },
-  ) => (
-    <section className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Icone className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold">{titulo}</h3>
-        <Badge variant="outline" className="text-[10px]">{resps.length}</Badge>
-      </div>
-      {resps.length === 0 ? (
-        <Card>
-          <CardContent className="p-4 text-center text-xs text-muted-foreground">
-            Nenhum responsável atribuído.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {resps.map((r) => {
-            const c = countFn(r.id);
-            return (
-              <Card key={r.id}>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-9 w-9 rounded-full text-white text-xs font-semibold flex items-center justify-center"
-                      style={{ backgroundColor: r.cor }}
-                    >
-                      {r.nome.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">{r.nome}</div>
-                      <div className="text-[10px] text-muted-foreground">{r.email}</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Stat label="Total" value={c.total} />
-                    <Stat label="Abertos" value={c.abertos} />
-                    <Stat label="Atrasados" value={c.atrasados} danger={c.atrasados > 0} />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-
-  // Posts
-  const respsPostsIds = new Set<string>();
-  cardsCli.forEach((c) => (c.responsaveis ?? []).forEach((r: string) => respsPostsIds.add(r)));
-  const respsPosts = responsaveis.filter((r) => respsPostsIds.has(r.id));
-  const countPosts = (rid: string) => {
-    const meus = cardsCli.filter((c) => (c.responsaveis ?? []).includes(rid));
-    return {
-      total: meus.length,
-      abertos: meus.filter((c) => c.status_card !== "Postado").length,
-      atrasados: meus.filter((c) => c.status_card === "Atrasado").length,
-    };
-  };
-
-  const respsArea = (area: string) => {
-    const lista = filtrarPorArea(demandasCli, area);
-    const ids = new Set<string>();
-    lista.forEach((d) => getResponsaveisIds(d).forEach((r) => ids.add(r)));
-    return responsaveis.filter((r) => ids.has(r.id));
-  };
-  const countArea = (area: string) => (rid: string) => {
-    const meus = filtrarPorArea(demandasCli, area).filter((d) =>
-      getResponsaveisIds(d).includes(rid),
-    );
-    return {
-      total: meus.length,
-      abertos: meus.filter((d) => !["Concluido", "Entregue"].includes(d.status)).length,
-      atrasados: meus.filter((d) => d.status === "Atrasado").length,
-    };
-  };
-
-  return (
-    <div className="space-y-6">
-      {renderSecao("Responsáveis dos Posts", FileText, respsPosts, countPosts)}
-      {SECOES_RESP.filter((s) => s.key !== "posts").map((s) =>
-        renderSecao(s.titulo, s.icone, respsArea(s.key), countArea(s.key)),
-      )}
-    </div>
   );
 }
 
