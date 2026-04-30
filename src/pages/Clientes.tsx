@@ -1235,6 +1235,23 @@ export default function Clientes() {
     () => (localStorage.getItem("clientes:visao") as any) ?? "clientes",
   );
 
+  // Novos filtros (visão Clientes)
+  const [filtroNichos, setFiltroNichos] = useState<string[]>([]);
+  const [filtroPeriodoContrato, setFiltroPeriodoContrato] = useState<
+    "todos" | "30" | "90" | "vencido"
+  >("todos");
+
+  // Ordenação e densidade
+  const [sortKey, setSortKey] = useState<"cliente" | "status" | "nicho" | "periodo">(
+    () => (localStorage.getItem("dashtasks.clientes.sort.key") as any) ?? "cliente",
+  );
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(
+    () => (localStorage.getItem("dashtasks.clientes.sort.dir") as any) ?? "asc",
+  );
+  const [density, setDensity] = useState<"compacto" | "confortavel">(
+    () => (localStorage.getItem("dashtasks.clientes.density") as any) ?? "compacto",
+  );
+
   // Persistência das preferências do usuário
   useEffect(() => {
     localStorage.setItem("clientes:visao", visao);
@@ -1242,6 +1259,39 @@ export default function Clientes() {
   useEffect(() => {
     localStorage.setItem("clientes:filtroStatusGlobal", filtroStatusGlobal);
   }, [filtroStatusGlobal]);
+  useEffect(() => {
+    localStorage.setItem("dashtasks.clientes.sort.key", sortKey);
+    localStorage.setItem("dashtasks.clientes.sort.dir", sortDir);
+  }, [sortKey, sortDir]);
+  useEffect(() => {
+    localStorage.setItem("dashtasks.clientes.density", density);
+  }, [density]);
+
+  const handleSortChange = (k: typeof sortKey) => {
+    if (k === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(k);
+      setSortDir("asc");
+    }
+  };
+
+  const limparFiltros = () => {
+    setBusca("");
+    setFiltroResponsaveis([]);
+    setApenasMinhas(false);
+    setFiltroStatusGlobal("todos");
+    setFiltroNichos([]);
+    setFiltroPeriodoContrato("todos");
+  };
+
+  const algumFiltroAtivo =
+    busca.trim() !== "" ||
+    filtroResponsaveis.length > 0 ||
+    apenasMinhas ||
+    filtroStatusGlobal !== "todos" ||
+    filtroNichos.length > 0 ||
+    filtroPeriodoContrato !== "todos";
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
