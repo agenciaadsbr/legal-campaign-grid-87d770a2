@@ -85,6 +85,8 @@ export interface Card {
   responsaveis: string[];
   data_agendada?: string | null;
   is_urgent?: boolean;
+  formato?: string | null;
+  qtd_slides?: number | null;
   created_at: string;
 }
 
@@ -198,7 +200,7 @@ interface State {
   updatePost: (id: string, patch: Partial<Post>) => Promise<void>;
   iniciarTarefa: (
     cardId: string,
-    payload: { responsaveis: string[]; data_agendada?: string | null; titulo?: string; descricao?: string | null },
+    payload: { responsaveis: string[]; data_agendada?: string | null; titulo?: string; descricao?: string | null; formato?: string | null; qtd_slides?: number | null },
   ) => Promise<void>;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
@@ -361,6 +363,8 @@ function mapCard(row: any): Card {
     responsaveis: row.responsaveis_ids ?? [],
     data_agendada: row.data_agendada ?? null,
     is_urgent: row.is_urgent ?? false,
+    formato: row.formato ?? null,
+    qtd_slides: row.qtd_slides ?? null,
     created_at: row.created_at,
   };
 }
@@ -700,6 +704,8 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
     if ((patch as any).data_agendada !== undefined) dbPatch.data_agendada = (patch as any).data_agendada;
     if ((patch as any).is_urgent !== undefined) dbPatch.is_urgent = (patch as any).is_urgent;
+    if ((patch as any).formato !== undefined) dbPatch.formato = (patch as any).formato;
+    if ((patch as any).qtd_slides !== undefined) dbPatch.qtd_slides = (patch as any).qtd_slides;
     await supabase.from("cards").update(dbPatch).eq("id", id);
     await get()._loadAll();
   },
@@ -714,7 +720,7 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
   },
 
-  iniciarTarefa: async (cardId, { responsaveis, data_agendada, titulo, descricao }) => {
+  iniciarTarefa: async (cardId, { responsaveis, data_agendada, titulo, descricao, formato, qtd_slides }) => {
     const card = get().cards.find((c) => c.id === cardId);
     if (!card) {
       toast.error("Card não encontrado");
@@ -727,6 +733,8 @@ export const useCRM = create<State>()((set, get) => ({
     if (data_agendada !== undefined) dbPatch.data_agendada = data_agendada;
     if (titulo !== undefined && titulo.trim()) dbPatch.titulo = titulo.trim();
     if (descricao !== undefined) dbPatch.descricao = descricao;
+    if (formato !== undefined) dbPatch.formato = formato;
+    if (qtd_slides !== undefined) dbPatch.qtd_slides = qtd_slides;
     const { error } = await supabase.from("cards").update(dbPatch).eq("id", cardId);
     if (error) {
       toast.error(`Falha ao iniciar tarefa: ${error.message}`);
