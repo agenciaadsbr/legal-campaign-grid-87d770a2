@@ -282,6 +282,18 @@ export default function ProjetoCliente() {
           />
         </TabsContent>
 
+        {/* ============== URGÊNCIAS / OUTROS ============== */}
+        <TabsContent value="urgencias" className="mt-4">
+          <AreaTab
+            titulo="Urgências"
+            icone={AlertTriangle}
+            clienteId={clienteId!}
+            demandas={filtrarPorArea(demandasCli, "urgencias")}
+            categoria="Personalizado"
+            emptyHint="Nenhuma urgência registrada para este cliente."
+          />
+        </TabsContent>
+
         {/* ============== DOCUMENTAÇÃO E ACESSOS ============== */}
         <TabsContent value="documentacao" className="mt-4">
           <DocumentacaoTab
