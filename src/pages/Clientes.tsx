@@ -1220,7 +1220,7 @@ function FiltrosTopo({
 }
 
 export default function Clientes() {
-  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis } = useCRM();
+  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos } = useCRM();
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
   const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
