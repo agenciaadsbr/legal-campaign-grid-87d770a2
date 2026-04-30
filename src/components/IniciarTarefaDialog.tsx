@@ -5,10 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCRM } from "@/store/crm";
 import { cn } from "@/lib/utils";
 import { Play } from "lucide-react";
 import { toast } from "sonner";
+
+const FORMATOS_POST = ["Carrossel", "Imagem única", "Reels", "Story", "Vídeo"] as const;
 
 interface Props {
   open: boolean;
@@ -27,6 +30,8 @@ export function IniciarTarefaDialog({ open, onOpenChange, cardId }: Props) {
   const [descricao, setDescricao] = useState("");
   const [selResp, setSelResp] = useState<string[]>([]);
   const [prazo, setPrazo] = useState("");
+  const [formato, setFormato] = useState<string>("");
+  const [qtdSlides, setQtdSlides] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -35,12 +40,16 @@ export function IniciarTarefaDialog({ open, onOpenChange, cardId }: Props) {
       setDescricao(card.descricao ?? "");
       setSelResp(card.responsaveis ?? []);
       setPrazo(card.data_agendada ? card.data_agendada.slice(0, 10) : "");
+      setFormato(card.formato ?? "");
+      setQtdSlides(card.qtd_slides != null ? String(card.qtd_slides) : "");
     }
   }, [open, card]);
 
   const toggleResp = (id: string) => {
     setSelResp((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
+
+  const isCarrossel = formato === "Carrossel";
 
   const confirmar = async () => {
     if (!cardId) return;
@@ -54,6 +63,8 @@ export function IniciarTarefaDialog({ open, onOpenChange, cardId }: Props) {
       data_agendada: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
       titulo: titulo.trim(),
       descricao: descricao.trim() || null,
+      formato: formato || null,
+      qtd_slides: isCarrossel && qtdSlides ? Number(qtdSlides) : null,
     });
     setSaving(false);
     onOpenChange(false);
