@@ -1269,7 +1269,7 @@ function KpiCard({
   );
 }
 
-
+export default function Clientes() {
   const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos, comentarios, contratos } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
   const { canWrite, isAdmin } = useAuth();
