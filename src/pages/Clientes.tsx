@@ -532,6 +532,36 @@ function EditarClienteDialog({
             </div>
           </div>
           <div>
+            <Label>Nicho extra (opcional)</Label>
+            <Input
+              value={form.nicho_extra}
+              onChange={(e) => setForm({ ...form, nicho_extra: e.target.value })}
+              placeholder="Ex.: Bancário, Trabalhista..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Plano</Label>
+              <Select value={form.plano} onValueChange={(v) => setPlano(v as PlanoNominal)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PLANOS_NOMINAIS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Valor de venda (R$)</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={form.valor_venda}
+                onChange={(e) => setForm({ ...form, valor_venda: e.target.value })}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+          <div>
             <Label>Prazo de onboarding</Label>
             <Input
               type="date"
