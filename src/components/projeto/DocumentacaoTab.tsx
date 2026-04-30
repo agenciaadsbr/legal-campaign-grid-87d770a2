@@ -299,14 +299,6 @@ export function DocumentacaoTab({
                         size="sm"
                         variant="ghost"
                         className="h-7 px-2 text-xs"
-                        onClick={() => setDialogState({ open: true, bloco, item: null })}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar item
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs"
                         onClick={() => setLoteState({ open: true, bloco })}
                       >
                         <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
