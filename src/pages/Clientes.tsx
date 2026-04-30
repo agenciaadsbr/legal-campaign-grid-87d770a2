@@ -1602,6 +1602,12 @@ export default function Clientes() {
           apenasMinhas={apenasMinhas}
           currentUserId={currentUserId}
           filtroStatusGlobal={filtroStatusGlobal}
+          filtroNichos={filtroNichos}
+          filtroPeriodoContrato={filtroPeriodoContrato}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
+          density={density}
           onAbrirHistorico={setHistoricoClienteId}
           acoesSlot={(clienteId) => {
             const cli = clientes.find((c) => c.id === clienteId);
