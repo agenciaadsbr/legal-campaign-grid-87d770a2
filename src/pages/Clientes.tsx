@@ -1299,6 +1299,7 @@ export default function Clientes() {
     setFiltroStatusGlobal("todos");
     setFiltroNichos([]);
     setFiltroPeriodoContrato("todos");
+    setFiltroSaude([]);
   };
 
   const algumFiltroAtivo =
@@ -1307,7 +1308,41 @@ export default function Clientes() {
     apenasMinhas ||
     filtroStatusGlobal !== "todos" ||
     filtroNichos.length > 0 ||
-    filtroPeriodoContrato !== "todos";
+    filtroPeriodoContrato !== "todos" ||
+    filtroSaude.length > 0;
+
+  // KPIs agregados da carteira (cliente como um todo, não filtrado)
+  const kpisCarteira = useMemo(() => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    let ativos = 0;
+    let mrr = 0;
+    let emRisco = 0;
+    let vencendo30 = 0;
+    clientes.forEach((cli) => {
+      const status = cli.status_global ?? "Onboarding";
+      if (status === "Ativo" || status === "Onboarding") ativos += 1;
+      if ((status === "Ativo" || status === "Onboarding") && cli.valor_venda) {
+        mrr += Number(cli.valor_venda) || 0;
+      }
+      const contrato = contratos.find((c) => c.cliente_id === cli.id);
+      const m = calcularMetricasCliente({
+        cliente: cli,
+        cards,
+        demandas,
+        comentarios,
+        contratoTotalPosts: contrato?.total_posts ?? null,
+        hoje,
+      });
+      if (m.saude.nivel !== "ok") emRisco += 1;
+      if (cli.data_fim_contrato) {
+        const fim = new Date(cli.data_fim_contrato);
+        const dias = Math.floor((fim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+        if (dias >= 0 && dias <= 30) vencendo30 += 1;
+      }
+    });
+    return { ativos, mrr, emRisco, vencendo30 };
+  }, [clientes, cards, demandas, comentarios, contratos]);
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
