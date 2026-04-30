@@ -523,6 +523,9 @@ export const useCRM = create<State>()((set, get) => ({
         responsaveis_ids: data.responsaveis ?? [],
         descricao: data.observacoes ?? "",
         campos_personalizados: {},
+        plano: (data as any).plano ?? null,
+        valor_venda: (data as any).valor_venda ?? null,
+        nicho_extra: (data as any).nicho_extra ?? null,
       } as any)
       .select()
       .single();
