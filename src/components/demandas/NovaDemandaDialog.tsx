@@ -190,19 +190,25 @@ export function NovaDemandaDialog({
             <Label>Título da tarefa *</Label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
           </div>
-          <div>
-            <Label>Subtipo</Label>
-            {categoria === "Personalizado" ? (
-              <Input value={subtipo} onChange={(e) => setSubtipo(e.target.value)} placeholder="Descreva" />
-            ) : (
-              <Select value={subtipo} onValueChange={setSubtipo}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {subtipos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+          {categoria === "EditorVideo" ? (
+            <div className="col-span-2">
+              <VideoSubtipoCascade value={subtipo} onChange={setSubtipo} />
+            </div>
+          ) : (
+            <div>
+              <Label>Subtipo</Label>
+              {categoria === "Personalizado" ? (
+                <Input value={subtipo} onChange={(e) => setSubtipo(e.target.value)} placeholder="Descreva" />
+              ) : (
+                <Select value={subtipo} onValueChange={setSubtipo}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {subtipos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
           <div>
             <Label>Responsáveis da Demanda</Label>
             <Popover>
