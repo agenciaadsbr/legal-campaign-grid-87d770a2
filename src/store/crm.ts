@@ -287,6 +287,9 @@ function mapCliente(
     created_at: row.created_at,
     custom: row.campos_personalizados ?? {},
     primary_status: row.primary_status ?? "Criar",
+    plano: row.plano ?? null,
+    valor_venda: row.valor_venda ?? null,
+    nicho_extra: row.nicho_extra ?? null,
   };
 }
 
