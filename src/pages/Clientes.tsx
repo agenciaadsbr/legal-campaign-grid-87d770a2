@@ -1416,7 +1416,11 @@ export default function Clientes() {
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-xl font-bold leading-tight">Clientes</h1>
-            <p className="text-xs text-muted-foreground">{clientes.length} clientes</p>
+            <p className="text-xs text-muted-foreground">
+              {visao === "clientes" && algumFiltroAtivo
+                ? `Filtros ativos · ${clientes.length} clientes no total`
+                : `${clientes.length} clientes`}
+            </p>
           </div>
           <ToggleGroup
             type="single"
