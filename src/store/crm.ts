@@ -42,6 +42,8 @@ export interface Cliente {
   id: string;
   nome_cliente: string;
   nicho: string;
+  /** Nicho secundário/extra opcional. */
+  nicho_extra?: string | null;
   status_cliente: StatusCliente;
   /** Status global do ciclo de vida (Onboarding/Ativo/Pausado/Encerrado) — independente de `status_cliente` */
   status_global: StatusClienteGlobal;
@@ -56,6 +58,10 @@ export interface Cliente {
   created_at: string;
   custom: Record<string, any>;
   primary_status?: string;
+  /** Plano nominal contratado: Mensal | Trimestral | Semestral | Anual | Personalizado */
+  plano?: string | null;
+  /** Valor de venda do contrato (R$). */
+  valor_venda?: number | null;
 }
 
 export interface Contrato {
