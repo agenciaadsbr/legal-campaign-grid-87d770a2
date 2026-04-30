@@ -479,7 +479,7 @@ function VisaoGeral({
         pendentes={urgencias.pendentes}
         atrasadas={urgencias.atrasadas}
         responsaveis={urgencias.resps}
-        onVerDetalhes={() => onNavegar("urgencias" === "urgencias" ? "atividades" : "atividades")}
+        onVerDetalhes={() => onNavegar("urgencias")}
       />
     </section>
   );
