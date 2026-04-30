@@ -53,6 +53,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { ClientesGeralTable } from "@/components/clientes/ClientesGeralTable";
 import { StatusClienteBadge, STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { calcularMetricasCliente, formatarMRR, type NivelSaude } from "@/lib/cliente-saude";
+import { useDemandas } from "@/store/demandas";
+import { Activity, AlertTriangle, CalendarClock, DollarSign, Users } from "lucide-react";
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const { responsaveis, addResponsavel } = useCRM();
