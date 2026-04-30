@@ -1223,7 +1223,8 @@ function FiltrosTopo({
 }
 
 export default function Clientes() {
-  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos } = useCRM();
+  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos, comentarios, contratos } = useCRM();
+  const demandas = useDemandas((s) => s.demandas);
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
   const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
@@ -1244,8 +1245,20 @@ export default function Clientes() {
     "todos" | "30" | "90" | "vencido"
   >("todos");
 
+  // Filtro de saúde
+  const [filtroSaude, setFiltroSaude] = useState<NivelSaude[]>([]);
+
   // Ordenação e densidade
-  const [sortKey, setSortKey] = useState<"cliente" | "status" | "nicho" | "periodo">(
+  type ClientesSortKey =
+    | "cliente"
+    | "status"
+    | "saude"
+    | "entrega"
+    | "atividade"
+    | "mrr"
+    | "nicho"
+    | "periodo";
+  const [sortKey, setSortKey] = useState<ClientesSortKey>(
     () => (localStorage.getItem("dashtasks.clientes.sort.key") as any) ?? "cliente",
   );
   const [sortDir, setSortDir] = useState<"asc" | "desc">(
