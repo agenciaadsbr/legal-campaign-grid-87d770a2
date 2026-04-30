@@ -102,6 +102,10 @@ function categoriaParaAba(cat: DemandaCategoria): string {
     case "IAAtendimento": return "ia";
     case "Briefing": return "briefing";
     case "Planejamento": return "planejamento";
+    case "Personalizado":
+    case "Suporte":
+    case "Designer":      // legado
+    case "Tecnologia":    // legado
     default: return "urgencias";
   }
 }
