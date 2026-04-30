@@ -126,12 +126,15 @@ function NovoClienteDialog() {
   const initialForm = () => ({
     nome_cliente: "",
     nicho: nichos[0]?.label ?? "",
+    nicho_extra: "",
     status_cliente: "Ativo" as any,
     status_global: "Onboarding" as any,
     prazo_onboarding: "" as string,
     data_inicio_contrato: hojeISO,
     duracao_meses: 3,
     data_fim_contrato: calcFim(hojeISO, 3),
+    plano: "Trimestral" as PlanoNominal,
+    valor_venda: "" as string,
     responsaveis: [] as string[],
     observacoes: "",
   });
@@ -142,6 +145,18 @@ function NovoClienteDialog() {
 
   const setMeses = (m: number) =>
     setForm((f) => ({ ...f, duracao_meses: m, data_fim_contrato: calcFim(f.data_inicio_contrato, m) }));
+
+  const setPlano = (p: PlanoNominal) =>
+    setForm((f) => {
+      const meses = PLANO_MESES[p];
+      if (meses === null) return { ...f, plano: p };
+      return {
+        ...f,
+        plano: p,
+        duracao_meses: meses,
+        data_fim_contrato: calcFim(f.data_inicio_contrato, meses),
+      };
+    });
 
   const totalCards = form.duracao_meses * 4;
   const isEdit = createdId !== null;
