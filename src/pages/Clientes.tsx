@@ -223,10 +223,11 @@ function NovoClienteDialog() {
     }
     setSaving(true);
     try {
-      const { duracao_meses, prazo_onboarding, ...patch } = form;
+      const { duracao_meses, prazo_onboarding, valor_venda, ...patch } = form;
       await updateCliente(createdId, {
         ...(patch as any),
         prazo_onboarding: prazo_onboarding || null,
+        valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
       });
       toast.success("Alterações salvas");
     } catch (e: any) {
