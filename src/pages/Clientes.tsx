@@ -198,11 +198,12 @@ function NovoClienteDialog() {
     }
     setSaving(true);
     try {
-      const { duracao_meses, prazo_onboarding, status_global, ...rest } = form;
+      const { duracao_meses, prazo_onboarding, status_global, valor_venda, ...rest } = form;
       const payload = {
         ...rest,
         status_global,
         prazo_onboarding: prazo_onboarding || null,
+        valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
       };
       const id = await addCliente(payload as any);
       setCreatedId(id);
