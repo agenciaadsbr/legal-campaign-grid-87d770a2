@@ -29,7 +29,6 @@ import { cn } from "@/lib/utils";
 import {
   calcularMetricasCliente,
   formatarAtividade,
-  formatarMRR,
   type NivelSaude,
 } from "@/lib/cliente-saude";
 
@@ -39,7 +38,6 @@ export type SortKey =
   | "saude"
   | "entrega"
   | "atividade"
-  | "mrr"
   | "nicho"
   | "periodo";
 export type SortDir = "asc" | "desc";
@@ -306,10 +304,6 @@ export function ClientesGeralTable({
         const ta = metricasPorCliente.get(a.id)?.ultimaAtividadeMs ?? 0;
         const tb = metricasPorCliente.get(b.id)?.ultimaAtividadeMs ?? 0;
         v = ta - tb;
-      } else if (sortKey === "mrr") {
-        const va = a.valor_venda ?? -1;
-        const vb = b.valor_venda ?? -1;
-        v = va - vb;
       }
       return sortDir === "asc" ? v : -v;
     };
@@ -401,15 +395,6 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      <TableHead>
-                        <SortHeader
-                          label="MRR / Plano"
-                          sortKey="mrr"
-                          current={sortKey}
-                          dir={sortDir}
-                          onSortChange={onSortChange}
-                        />
-                      </TableHead>
                       <TableHead className="max-w-[180px]">
                         Último comentário
                       </TableHead>
@@ -491,18 +476,6 @@ export function ClientesGeralTable({
                           </TableCell>
                           <TableCell className="text-[11px] text-muted-foreground tabular-nums">
                             {formatarAtividade(metricas?.ultimaAtividadeMs ?? null)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col leading-tight">
-                              <span className="text-xs font-medium tabular-nums">
-                                {formatarMRR(cliente.valor_venda)}
-                              </span>
-                              {cliente.plano && (
-                                <span className="text-[10px] text-muted-foreground">
-                                  {cliente.plano}
-                                </span>
-                              )}
-                            </div>
                           </TableCell>
                           <TableCell className="text-xs">
                             <button

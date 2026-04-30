@@ -53,9 +53,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { ClientesGeralTable } from "@/components/clientes/ClientesGeralTable";
 import { StatusClienteBadge, STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { calcularMetricasCliente, formatarMRR, type NivelSaude } from "@/lib/cliente-saude";
+import { calcularMetricasCliente, type NivelSaude } from "@/lib/cliente-saude";
 import { useDemandas } from "@/store/demandas";
-import { Activity, AlertTriangle, CalendarClock, DollarSign, Users } from "lucide-react";
+import { Activity, AlertTriangle, CalendarClock, Users } from "lucide-react";
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const { responsaveis, addResponsavel } = useCRM();
@@ -1302,7 +1302,6 @@ export default function Clientes() {
     | "saude"
     | "entrega"
     | "atividade"
-    | "mrr"
     | "nicho"
     | "periodo";
   const [sortKey, setSortKey] = useState<ClientesSortKey>(
@@ -1363,15 +1362,11 @@ export default function Clientes() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     let ativos = 0;
-    let mrr = 0;
     let emRisco = 0;
     let vencendo30 = 0;
     clientes.forEach((cli) => {
       const status = cli.status_global ?? "Onboarding";
       if (status === "Ativo" || status === "Onboarding") ativos += 1;
-      if ((status === "Ativo" || status === "Onboarding") && cli.valor_venda) {
-        mrr += Number(cli.valor_venda) || 0;
-      }
       const contrato = contratos.find((c) => c.cliente_id === cli.id);
       const m = calcularMetricasCliente({
         cliente: cli,
@@ -1388,7 +1383,7 @@ export default function Clientes() {
         if (dias >= 0 && dias <= 30) vencendo30 += 1;
       }
     });
-    return { ativos, mrr, emRisco, vencendo30 };
+    return { ativos, emRisco, vencendo30 };
   }, [clientes, cards, demandas, comentarios, contratos]);
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
@@ -1742,7 +1737,7 @@ export default function Clientes() {
       {visao === "clientes" ? (
         <>
           {/* KPIs da carteira — clicáveis para filtrar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <KpiCard
               label="Clientes ativos"
               value={kpisCarteira.ativos.toString()}
@@ -1750,12 +1745,6 @@ export default function Clientes() {
               tone="default"
               onClick={() => setFiltroStatusGlobal("Ativo")}
               active={filtroStatusGlobal === "Ativo"}
-            />
-            <KpiCard
-              label="MRR total"
-              value={formatarMRR(kpisCarteira.mrr)}
-              icon={DollarSign}
-              tone="emerald"
             />
             <KpiCard
               label="Em risco"
