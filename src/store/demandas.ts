@@ -99,6 +99,18 @@ interface State {
   approveDemanda: (id: string, aprovado_por: string) => Promise<void>;
 }
 
+/**
+ * Mapeia categorias descontinuadas para as categorias atuais (apenas em runtime,
+ * sem alterar o banco). Conforme reunião de ajustes:
+ * - Designer    → Personalizado (Urgência/Outro)
+ * - Tecnologia  → IAAtendimento
+ */
+function migrarCategoria(cat: any): any {
+  if (cat === "Designer") return "Personalizado";
+  if (cat === "Tecnologia") return "IAAtendimento";
+  return cat;
+}
+
 function normalizeDemanda(row: any): Demanda {
   const responsaveis_ids: string[] = Array.isArray(row.responsaveis_ids)
     ? row.responsaveis_ids
@@ -107,6 +119,7 @@ function normalizeDemanda(row: any): Demanda {
       : [];
   return {
     ...row,
+    categoria: migrarCategoria(row.categoria),
     responsaveis_ids,
     responsavel_id: row.responsavel_id ?? null,
   } as Demanda;
