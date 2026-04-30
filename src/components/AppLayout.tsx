@@ -17,7 +17,7 @@ function useBreadcrumbs() {
     const crumbs: { label: string; to?: string }[] = [];
     if (parts.length === 0) return [{ label: "Dashboard" }];
     if (parts[0] === "clientes") {
-      crumbs.push({ label: "Clientes/Posts", to: "/clientes" });
+      crumbs.push({ label: "Clientes", to: "/clientes" });
       if (parts[1]) {
         const cliente = clientes.find((c) => c.id === parts[1]);
         crumbs.push({ label: cliente?.nome_cliente ?? "Cliente", to: `/clientes/${parts[1]}` });

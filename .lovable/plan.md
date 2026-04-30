@@ -1,14 +1,22 @@
-## Renomear item do menu lateral
+## Renomear "Clientes/Posts" → "Clientes" nos textos restantes
 
-Alteração mínima, 1 arquivo, 1 linha.
+A renomeação anterior cobriu apenas o item da sidebar. Faltam três locais visíveis ao usuário (breadcrumb do header, título da página e breadcrumb da página de demandas do cliente).
 
-### Arquivo
-`src/components/AppSidebar.tsx` (linha 20)
+### Alterações
 
-- De: `{ title: "Clientes/Posts", url: "/clientes", icon: Users },`
-- Para: `{ title: "Clientes", url: "/clientes", icon: Users },`
+1. **`src/components/AppLayout.tsx`** (linha 20) — breadcrumb do topo
+   - De: `crumbs.push({ label: "Clientes/Posts", to: "/clientes" });`
+   - Para: `crumbs.push({ label: "Clientes", to: "/clientes" });`
+
+2. **`src/pages/Clientes.tsx`** (linha 1368) — título `<h1>` da página
+   - De: `<h1 className="text-xl font-bold leading-tight">Clientes/Posts</h1>`
+   - Para: `<h1 className="text-xl font-bold leading-tight">Clientes</h1>`
+
+3. **`src/pages/ProjetoDemandasCliente.tsx`** (linha 77) — breadcrumb interno
+   - De: `<span>Clientes/Posts</span>`
+   - Para: `<span>Clientes</span>`
 
 ### O que NÃO muda
-- Rota `/clientes` permanece igual — nenhum link interno quebra.
-- Página `Clientes.tsx` e abas internas do cliente (Posts, Visão Geral, Urgências, etc.) intactas.
-- Tooltip do menu colapsado passa a mostrar "Clientes" automaticamente.
+- Rota `/clientes` permanece.
+- Comentário interno na linha 1254 de `Clientes.tsx` é mantido (não é visível ao usuário).
+- Nenhuma alteração de lógica, apenas texto.
