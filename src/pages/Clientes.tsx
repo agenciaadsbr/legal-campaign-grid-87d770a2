@@ -110,6 +110,26 @@ function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v
   );
 }
 
+// Planos comerciais — usados nos diálogos de cliente
+type PlanoNominal = "Mensal" | "Trimestral" | "Semestral" | "Anual" | "Personalizado";
+const PLANOS_NOMINAIS: PlanoNominal[] = ["Mensal", "Trimestral", "Semestral", "Anual", "Personalizado"];
+const PLANO_MESES: Record<PlanoNominal, number | null> = {
+  Mensal: 1,
+  Trimestral: 3,
+  Semestral: 6,
+  Anual: 12,
+  Personalizado: null, // mantém input manual
+};
+
+// Util: deduzir plano nominal a partir da duração
+function inferirPlano(meses: number): PlanoNominal {
+  if (meses === 1) return "Mensal";
+  if (meses === 3) return "Trimestral";
+  if (meses === 6) return "Semestral";
+  if (meses === 12) return "Anual";
+  return "Personalizado";
+}
+
 function NovoClienteDialog() {
   const { addCliente, updateCliente, deleteCliente, nichos, statusOptions } = useCRM();
   const { isAdmin } = useAuth();
