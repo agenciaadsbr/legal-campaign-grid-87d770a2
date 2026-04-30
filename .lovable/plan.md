@@ -1,26 +1,23 @@
 ## Objetivo
 
-Remover a aba **Responsáveis** do Projeto Completo do cliente, pois ela exibe as mesmas informações (responsáveis por área com Total / Abertos / Atrasados) que já estão presentes na aba **Visão Geral**.
+Trocar o texto dos tooltips dos indicadores rápidos da tabela de Clientes para usar a palavra **"Tarefa"** em vez de **"demanda"**, mantendo todo o resto (ícones, cores, contagens) igual.
 
-## Alterações em `src/pages/ProjetoCliente.tsx`
+## Alteração em `src/components/clientes/ClientesGeralTable.tsx`
 
-1. **Remover o `TabsTrigger` da aba** (linha 227):
-   - Apagar `<TabsTrigger value="responsaveis" ...>Responsáveis</TabsTrigger>`.
+Na coluna **Cliente**, dentro dos badges de saúde:
 
-2. **Remover o `TabsContent` da aba** (linhas 335–338):
-   - Apagar o bloco `<TabsContent value="responsaveis">...<ResponsaveisTab .../></TabsContent>`.
+1. **Tooltip do indicador ⌛ (atrasadas)** — linha 353
+   - De: `{demAtrasadas} demanda{...} atrasada{...}`
+   - Para: `{demAtrasadas} Tarefa{demAtrasadas > 1 ? "s" : ""} atrasada{demAtrasadas > 1 ? "s" : ""}`
 
-3. **Limpar código órfão**:
-   - Remover o componente interno `ResponsaveisTab` (definido a partir da linha 638) e seu array auxiliar `SECOES_RESPONSAVEIS` (linhas 627–636), já que não serão mais usados.
-   - Remover imports que ficarem sem uso após a limpeza (verificar `Users` do lucide-react e quaisquer helpers usados apenas dentro de `ResponsaveisTab`).
+2. **Tooltip do indicador ⚡ (urgentes)** — linha 366
+   - De: `{demUrgentes} demanda{...} urgente{...}`
+   - Para: `{demUrgentes} Tarefa{demUrgentes > 1 ? "s" : ""} urgente{demUrgentes > 1 ? "s" : ""}`
 
-4. **Fallback de rota de aba**:
-   - Verificar se há lógica que define `responsaveis` como aba padrão ou que faz `setTab("responsaveis")`. Caso exista, redirecionar para `"visao"`.
-
-5. **Bump de versão**: atualizar `public/version.json`.
+Os demais tooltips (posts atrasados, vencimento de contrato, onboarding) permanecem inalterados.
 
 ## Validação
 
-- A barra de abas continua rolável e mostra: Visão Geral, Posts, Vídeos, Tráfego Pago, LP/Site, IA/Atendimento, Urgências, Documentação, Briefing, Planejamento, Atividades, Relatórios.
-- Visão Geral continua exibindo os cards de responsáveis por área (comportamento inalterado).
-- Sem warnings de imports não utilizados.
+- Hover no badge ⌛ amarelo mostra: `2 Tarefas atrasadas` (ou `1 Tarefa atrasada`).
+- Hover no badge ⚡ azul mostra: `1 Tarefa urgente` (ou `3 Tarefas urgentes`).
+- Bump de `public/version.json`.
