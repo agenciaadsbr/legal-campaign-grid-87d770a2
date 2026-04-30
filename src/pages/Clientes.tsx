@@ -1222,7 +1222,54 @@ function FiltrosTopo({
   );
 }
 
-export default function Clientes() {
+function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  tone = "default",
+  onClick,
+  active = false,
+}: {
+  label: string;
+  value: string;
+  icon: any;
+  tone?: "default" | "emerald" | "amber" | "destructive";
+  onClick?: () => void;
+  active?: boolean;
+}) {
+  const toneClasses = {
+    default: "text-muted-foreground",
+    emerald: "text-emerald-600 dark:text-emerald-400",
+    amber: "text-amber-600 dark:text-amber-400",
+    destructive: "text-destructive",
+  }[tone];
+  const interactive = !!onClick;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!interactive}
+      className={cn(
+        "rounded-lg border bg-card px-3 py-2 text-left transition-all",
+        interactive && "hover:bg-accent hover:border-primary/40 cursor-pointer",
+        !interactive && "cursor-default",
+        active && "border-primary ring-1 ring-primary/30",
+      )}
+    >
+      <div className="flex items-center gap-1.5">
+        <Icon className={cn("h-3.5 w-3.5", toneClasses)} />
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+          {label}
+        </span>
+      </div>
+      <div className={cn("text-lg font-bold tabular-nums leading-tight mt-0.5", toneClasses)}>
+        {value}
+      </div>
+    </button>
+  );
+}
+
+
   const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos, comentarios, contratos } = useCRM();
   const demandas = useDemandas((s) => s.demandas);
   const { canWrite, isAdmin } = useAuth();
