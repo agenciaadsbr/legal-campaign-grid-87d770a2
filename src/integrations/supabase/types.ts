@@ -132,9 +132,11 @@ export type Database = {
           created_at: string
           data_agendada: string | null
           descricao: string | null
+          formato: string | null
           id: string
           is_urgent: boolean
           posicao: number
+          qtd_slides: number | null
           responsaveis_ids: string[]
           status: string
           titulo: string
@@ -145,9 +147,11 @@ export type Database = {
           created_at?: string
           data_agendada?: string | null
           descricao?: string | null
+          formato?: string | null
           id?: string
           is_urgent?: boolean
           posicao?: number
+          qtd_slides?: number | null
           responsaveis_ids?: string[]
           status?: string
           titulo: string
@@ -158,9 +162,11 @@ export type Database = {
           created_at?: string
           data_agendada?: string | null
           descricao?: string | null
+          formato?: string | null
           id?: string
           is_urgent?: boolean
           posicao?: number
+          qtd_slides?: number | null
           responsaveis_ids?: string[]
           status?: string
           titulo?: string
@@ -339,13 +345,16 @@ export type Database = {
           id: string
           logo_url: string | null
           nicho: string | null
+          nicho_extra: string | null
           nome: string
+          plano: string | null
           prazo_onboarding: string | null
           primary_status: string
           responsaveis_ids: string[]
           status: string
           status_cliente: string
           updated_at: string
+          valor_venda: number | null
         }
         Insert: {
           campos_personalizados?: Json
@@ -356,13 +365,16 @@ export type Database = {
           id?: string
           logo_url?: string | null
           nicho?: string | null
+          nicho_extra?: string | null
           nome: string
+          plano?: string | null
           prazo_onboarding?: string | null
           primary_status?: string
           responsaveis_ids?: string[]
           status?: string
           status_cliente?: string
           updated_at?: string
+          valor_venda?: number | null
         }
         Update: {
           campos_personalizados?: Json
@@ -373,13 +385,16 @@ export type Database = {
           id?: string
           logo_url?: string | null
           nicho?: string | null
+          nicho_extra?: string | null
           nome?: string
+          plano?: string | null
           prazo_onboarding?: string | null
           primary_status?: string
           responsaveis_ids?: string[]
           status?: string
           status_cliente?: string
           updated_at?: string
+          valor_venda?: number | null
         }
         Relationships: []
       }

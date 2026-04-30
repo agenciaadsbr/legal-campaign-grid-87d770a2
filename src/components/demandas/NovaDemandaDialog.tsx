@@ -190,19 +190,25 @@ export function NovaDemandaDialog({
             <Label>Título da tarefa *</Label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
           </div>
-          <div>
-            <Label>Subtipo</Label>
-            {categoria === "Personalizado" ? (
-              <Input value={subtipo} onChange={(e) => setSubtipo(e.target.value)} placeholder="Descreva" />
-            ) : (
-              <Select value={subtipo} onValueChange={setSubtipo}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {subtipos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+          {categoria === "EditorVideo" ? (
+            <div className="col-span-2">
+              <VideoSubtipoCascade value={subtipo} onChange={setSubtipo} />
+            </div>
+          ) : (
+            <div>
+              <Label>Subtipo</Label>
+              {categoria === "Personalizado" ? (
+                <Input value={subtipo} onChange={(e) => setSubtipo(e.target.value)} placeholder="Descreva" />
+              ) : (
+                <Select value={subtipo} onValueChange={setSubtipo}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {subtipos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
           <div>
             <Label>Responsáveis da Demanda</Label>
             <Popover>
@@ -280,5 +286,65 @@ export function NovaDemandaDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ============================================================
+// Subtipo de Vídeo em cascata: Finalidade → Origem
+// Salva no campo `subtipo` como "Finalidade · Origem"
+// ============================================================
+const VIDEO_FINALIDADES = ["Anúncio", "Orgânico/Feed"] as const;
+const VIDEO_ORIGENS = [
+  "Vídeo do cliente",
+  "Vídeo IA com foto do cliente",
+  "Vídeo IA banco da agência",
+] as const;
+
+function VideoSubtipoCascade({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  // Faz parse do valor existente "Finalidade · Origem"
+  const [finalidade, origem] = (() => {
+    if (!value) return ["", ""];
+    const partes = value.split("·").map((s) => s.trim());
+    return [partes[0] ?? "", partes[1] ?? ""];
+  })();
+
+  const setFinalidade = (f: string) => {
+    onChange(origem ? `${f} · ${origem}` : f);
+  };
+  const setOrigem = (o: string) => {
+    onChange(finalidade ? `${finalidade} · ${o}` : o);
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <Label>Finalidade do vídeo</Label>
+        <Select value={finalidade} onValueChange={setFinalidade}>
+          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+          <SelectContent>
+            {VIDEO_FINALIDADES.map((f) => (
+              <SelectItem key={f} value={f}>{f}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>Origem do vídeo</Label>
+        <Select value={origem} onValueChange={setOrigem}>
+          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+          <SelectContent>
+            {VIDEO_ORIGENS.map((o) => (
+              <SelectItem key={o} value={o}>{o}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
   );
 }

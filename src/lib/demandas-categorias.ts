@@ -88,14 +88,17 @@ export const CATEGORIA_SUBTIPOS: Record<DemandaCategoria, string[]> = {
 };
 
 export const CATEGORIAS: DemandaCategoria[] = [
-  "Designer",
+  // Designer e Tecnologia foram descontinuados (ver memória do projeto):
+  // - Designer → migra para Personalizado (Urgência/Outro)
+  // - Tecnologia → migra para IAAtendimento
+  // As chaves seguem existindo em CATEGORIA_LABEL/CATEGORIA_SUBTIPOS para
+  // manter retrocompatibilidade de leitura de demandas antigas.
   "EditorVideo",
   "LandingPage",
   "TrafegoPago",
   "IAAtendimento",
   "Briefing",
   "Planejamento",
-  "Tecnologia",
   "Suporte",
   "Personalizado",
 ];

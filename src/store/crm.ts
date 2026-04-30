@@ -42,6 +42,8 @@ export interface Cliente {
   id: string;
   nome_cliente: string;
   nicho: string;
+  /** Nicho secundário/extra opcional. */
+  nicho_extra?: string | null;
   status_cliente: StatusCliente;
   /** Status global do ciclo de vida (Onboarding/Ativo/Pausado/Encerrado) — independente de `status_cliente` */
   status_global: StatusClienteGlobal;
@@ -56,6 +58,10 @@ export interface Cliente {
   created_at: string;
   custom: Record<string, any>;
   primary_status?: string;
+  /** Plano nominal contratado: Mensal | Trimestral | Semestral | Anual | Personalizado */
+  plano?: string | null;
+  /** Valor de venda do contrato (R$). */
+  valor_venda?: number | null;
 }
 
 export interface Contrato {
@@ -281,6 +287,9 @@ function mapCliente(
     created_at: row.created_at,
     custom: row.campos_personalizados ?? {},
     primary_status: row.primary_status ?? "Criar",
+    plano: row.plano ?? null,
+    valor_venda: row.valor_venda ?? null,
+    nicho_extra: row.nicho_extra ?? null,
   };
 }
 
@@ -514,6 +523,9 @@ export const useCRM = create<State>()((set, get) => ({
         responsaveis_ids: data.responsaveis ?? [],
         descricao: data.observacoes ?? "",
         campos_personalizados: {},
+        plano: (data as any).plano ?? null,
+        valor_venda: (data as any).valor_venda ?? null,
+        nicho_extra: (data as any).nicho_extra ?? null,
       } as any)
       .select()
       .single();
@@ -577,6 +589,9 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
     if (patch.observacoes !== undefined) dbPatch.descricao = patch.observacoes;
     if (patch.custom !== undefined) dbPatch.campos_personalizados = patch.custom;
+    if ((patch as any).plano !== undefined) dbPatch.plano = (patch as any).plano ?? null;
+    if ((patch as any).valor_venda !== undefined) dbPatch.valor_venda = (patch as any).valor_venda ?? null;
+    if ((patch as any).nicho_extra !== undefined) dbPatch.nicho_extra = (patch as any).nicho_extra ?? null;
     // Unificado: status_cliente e status_global são o mesmo campo (ciclo de vida)
     const novoStatusUnificado =
       (patch as any).status_global ?? (patch.status_cliente as any);

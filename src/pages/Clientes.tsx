@@ -110,6 +110,26 @@ function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v
   );
 }
 
+// Planos comerciais — usados nos diálogos de cliente
+type PlanoNominal = "Mensal" | "Trimestral" | "Semestral" | "Anual" | "Personalizado";
+const PLANOS_NOMINAIS: PlanoNominal[] = ["Mensal", "Trimestral", "Semestral", "Anual", "Personalizado"];
+const PLANO_MESES: Record<PlanoNominal, number | null> = {
+  Mensal: 1,
+  Trimestral: 3,
+  Semestral: 6,
+  Anual: 12,
+  Personalizado: null, // mantém input manual
+};
+
+// Util: deduzir plano nominal a partir da duração
+function inferirPlano(meses: number): PlanoNominal {
+  if (meses === 1) return "Mensal";
+  if (meses === 3) return "Trimestral";
+  if (meses === 6) return "Semestral";
+  if (meses === 12) return "Anual";
+  return "Personalizado";
+}
+
 function NovoClienteDialog() {
   const { addCliente, updateCliente, deleteCliente, nichos, statusOptions } = useCRM();
   const { isAdmin } = useAuth();
@@ -126,12 +146,15 @@ function NovoClienteDialog() {
   const initialForm = () => ({
     nome_cliente: "",
     nicho: nichos[0]?.label ?? "",
+    nicho_extra: "",
     status_cliente: "Ativo" as any,
     status_global: "Onboarding" as any,
     prazo_onboarding: "" as string,
     data_inicio_contrato: hojeISO,
     duracao_meses: 3,
     data_fim_contrato: calcFim(hojeISO, 3),
+    plano: "Trimestral" as PlanoNominal,
+    valor_venda: "" as string,
     responsaveis: [] as string[],
     observacoes: "",
   });
@@ -142,6 +165,18 @@ function NovoClienteDialog() {
 
   const setMeses = (m: number) =>
     setForm((f) => ({ ...f, duracao_meses: m, data_fim_contrato: calcFim(f.data_inicio_contrato, m) }));
+
+  const setPlano = (p: PlanoNominal) =>
+    setForm((f) => {
+      const meses = PLANO_MESES[p];
+      if (meses === null) return { ...f, plano: p };
+      return {
+        ...f,
+        plano: p,
+        duracao_meses: meses,
+        data_fim_contrato: calcFim(f.data_inicio_contrato, meses),
+      };
+    });
 
   const totalCards = form.duracao_meses * 4;
   const isEdit = createdId !== null;
@@ -163,11 +198,12 @@ function NovoClienteDialog() {
     }
     setSaving(true);
     try {
-      const { duracao_meses, prazo_onboarding, status_global, ...rest } = form;
+      const { duracao_meses, prazo_onboarding, status_global, valor_venda, ...rest } = form;
       const payload = {
         ...rest,
         status_global,
         prazo_onboarding: prazo_onboarding || null,
+        valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
       };
       const id = await addCliente(payload as any);
       setCreatedId(id);
@@ -187,10 +223,11 @@ function NovoClienteDialog() {
     }
     setSaving(true);
     try {
-      const { duracao_meses, prazo_onboarding, ...patch } = form;
+      const { duracao_meses, prazo_onboarding, valor_venda, ...patch } = form;
       await updateCliente(createdId, {
         ...(patch as any),
         prazo_onboarding: prazo_onboarding || null,
+        valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
       });
       toast.success("Alterações salvas");
     } catch (e: any) {
@@ -252,6 +289,36 @@ function NovoClienteDialog() {
                   <SelectItem value="Encerrado">Encerrado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Nicho extra (opcional)</Label>
+            <Input
+              value={form.nicho_extra}
+              onChange={(e) => setForm({ ...form, nicho_extra: e.target.value })}
+              placeholder="Ex.: Bancário, Trabalhista..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Plano</Label>
+              <Select value={form.plano} onValueChange={(v) => setPlano(v as PlanoNominal)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PLANOS_NOMINAIS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Valor de venda (R$)</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={form.valor_venda}
+                onChange={(e) => setForm({ ...form, valor_venda: e.target.value })}
+                placeholder="0,00"
+              />
             </div>
           </div>
           <div>
