@@ -1147,7 +1147,7 @@ function FiltrosTopo({
         <PopoverTrigger asChild>
           <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
             <Filter className="h-3.5 w-3.5" />
-            <span className="text-xs">Filtrar por responsável do post</span>
+            <span className="text-xs">Filtrar por responsável</span>
             {filtroResponsaveis.length > 0 && (
               <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
                 {filtroResponsaveis.length}
@@ -1156,7 +1156,7 @@ function FiltrosTopo({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-2" align="start">
-          <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis do post</div>
+          <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis do cliente</div>
           <div className="max-h-60 overflow-auto space-y-0.5">
             {responsaveis.map((r) => {
               const checked = filtroResponsaveis.includes(r.id);
@@ -1220,7 +1220,7 @@ function FiltrosTopo({
 }
 
 export default function Clientes() {
-  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis } = useCRM();
+  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos } = useCRM();
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
   const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
@@ -1235,6 +1235,23 @@ export default function Clientes() {
     () => (localStorage.getItem("clientes:visao") as any) ?? "clientes",
   );
 
+  // Novos filtros (visão Clientes)
+  const [filtroNichos, setFiltroNichos] = useState<string[]>([]);
+  const [filtroPeriodoContrato, setFiltroPeriodoContrato] = useState<
+    "todos" | "30" | "90" | "vencido"
+  >("todos");
+
+  // Ordenação e densidade
+  const [sortKey, setSortKey] = useState<"cliente" | "status" | "nicho" | "periodo">(
+    () => (localStorage.getItem("dashtasks.clientes.sort.key") as any) ?? "cliente",
+  );
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(
+    () => (localStorage.getItem("dashtasks.clientes.sort.dir") as any) ?? "asc",
+  );
+  const [density, setDensity] = useState<"compacto" | "confortavel">(
+    () => (localStorage.getItem("dashtasks.clientes.density") as any) ?? "compacto",
+  );
+
   // Persistência das preferências do usuário
   useEffect(() => {
     localStorage.setItem("clientes:visao", visao);
@@ -1242,6 +1259,39 @@ export default function Clientes() {
   useEffect(() => {
     localStorage.setItem("clientes:filtroStatusGlobal", filtroStatusGlobal);
   }, [filtroStatusGlobal]);
+  useEffect(() => {
+    localStorage.setItem("dashtasks.clientes.sort.key", sortKey);
+    localStorage.setItem("dashtasks.clientes.sort.dir", sortDir);
+  }, [sortKey, sortDir]);
+  useEffect(() => {
+    localStorage.setItem("dashtasks.clientes.density", density);
+  }, [density]);
+
+  const handleSortChange = (k: typeof sortKey) => {
+    if (k === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(k);
+      setSortDir("asc");
+    }
+  };
+
+  const limparFiltros = () => {
+    setBusca("");
+    setFiltroResponsaveis([]);
+    setApenasMinhas(false);
+    setFiltroStatusGlobal("todos");
+    setFiltroNichos([]);
+    setFiltroPeriodoContrato("todos");
+  };
+
+  const algumFiltroAtivo =
+    busca.trim() !== "" ||
+    filtroResponsaveis.length > 0 ||
+    apenasMinhas ||
+    filtroStatusGlobal !== "todos" ||
+    filtroNichos.length > 0 ||
+    filtroPeriodoContrato !== "todos";
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
@@ -1366,7 +1416,11 @@ export default function Clientes() {
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-xl font-bold leading-tight">Clientes</h1>
-            <p className="text-xs text-muted-foreground">{clientes.length} clientes</p>
+            <p className="text-xs text-muted-foreground">
+              {visao === "clientes" && algumFiltroAtivo
+                ? `Filtros ativos · ${clientes.length} clientes no total`
+                : `${clientes.length} clientes`}
+            </p>
           </div>
           <ToggleGroup
             type="single"
@@ -1409,6 +1463,127 @@ export default function Clientes() {
             setApenasMinhas={setApenasMinhas}
             currentUserId={currentUserId}
           />
+          {visao === "clientes" && (
+            <>
+              {/* Filtro de Nicho */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
+                    <Filter className="h-3.5 w-3.5" />
+                    <span className="text-xs">Nicho</span>
+                    {filtroNichos.length > 0 && (
+                      <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+                        {filtroNichos.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="start">
+                  <div className="text-[11px] text-muted-foreground px-2 pb-1.5">
+                    Nichos
+                  </div>
+                  <div className="max-h-60 overflow-auto space-y-0.5">
+                    {nichos.length === 0 ? (
+                      <div className="text-xs text-muted-foreground px-2 py-3 text-center">
+                        Nenhum nicho cadastrado
+                      </div>
+                    ) : (
+                      nichos.map((n) => {
+                        const checked = filtroNichos.includes(n.label);
+                        return (
+                          <button
+                            type="button"
+                            key={n.label}
+                            onClick={() =>
+                              setFiltroNichos(
+                                checked
+                                  ? filtroNichos.filter((v) => v !== n.label)
+                                  : [...filtroNichos, n.label],
+                              )
+                            }
+                            className={cn(
+                              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                              checked && "bg-accent",
+                            )}
+                          >
+                            <Checkbox checked={checked} />
+                            <span
+                              className="h-3 w-3 rounded-full shrink-0"
+                              style={{ backgroundColor: n.cor }}
+                            />
+                            <span className="truncate">{n.label}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                  {filtroNichos.length > 0 && (
+                    <div className="border-t mt-2 pt-2 flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => setFiltroNichos([])}
+                      >
+                        <X className="h-3 w-3" /> Limpar
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+
+              {/* Período do contrato */}
+              <Select
+                value={filtroPeriodoContrato}
+                onValueChange={(v) => setFiltroPeriodoContrato(v as any)}
+              >
+                <SelectTrigger className="h-8 w-[180px] text-xs">
+                  <SelectValue placeholder="Contrato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Contrato: todos</SelectItem>
+                  <SelectItem value="30">Vence em 30 dias</SelectItem>
+                  <SelectItem value="90">Vence em 90 dias</SelectItem>
+                  <SelectItem value="vencido">Já vencido</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Densidade */}
+              <ToggleGroup
+                type="single"
+                value={density}
+                onValueChange={(v) => v && setDensity(v as any)}
+                className="border rounded-md p-0.5"
+              >
+                <ToggleGroupItem
+                  value="compacto"
+                  className="h-7 px-2 text-xs"
+                  title="Densidade compacta"
+                >
+                  Compacto
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="confortavel"
+                  className="h-7 px-2 text-xs"
+                  title="Densidade confortável"
+                >
+                  Confortável
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              {algumFiltroAtivo && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                  onClick={limparFiltros}
+                  title="Limpar todos os filtros"
+                >
+                  <X className="h-3.5 w-3.5" /> Limpar filtros
+                </Button>
+              )}
+            </>
+          )}
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-8 w-56 text-sm" />
@@ -1419,6 +1594,7 @@ export default function Clientes() {
         </div>
       </div>
 
+
       {visao === "clientes" ? (
         <ClientesGeralTable
           filtroBusca={busca}
@@ -1426,6 +1602,12 @@ export default function Clientes() {
           apenasMinhas={apenasMinhas}
           currentUserId={currentUserId}
           filtroStatusGlobal={filtroStatusGlobal}
+          filtroNichos={filtroNichos}
+          filtroPeriodoContrato={filtroPeriodoContrato}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
+          density={density}
           onAbrirHistorico={setHistoricoClienteId}
           acoesSlot={(clienteId) => {
             const cli = clientes.find((c) => c.id === clienteId);
