@@ -1583,6 +1583,52 @@ export default function Clientes() {
                 </PopoverContent>
               </Popover>
 
+              {/* Saúde */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
+                    <Activity className="h-3.5 w-3.5" />
+                    <span className="text-xs">Saúde</span>
+                    {filtroSaude.length > 0 && (
+                      <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+                        {filtroSaude.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2" align="start">
+                  <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Nível de saúde</div>
+                  {([
+                    { v: "critico" as NivelSaude, label: "Crítico", dot: "bg-destructive" },
+                    { v: "atencao" as NivelSaude, label: "Atenção", dot: "bg-amber-500" },
+                    { v: "ok" as NivelSaude, label: "Ok", dot: "bg-emerald-500" },
+                  ]).map((opt) => {
+                    const checked = filtroSaude.includes(opt.v);
+                    return (
+                      <button
+                        type="button"
+                        key={opt.v}
+                        onClick={() =>
+                          setFiltroSaude(
+                            checked
+                              ? filtroSaude.filter((v) => v !== opt.v)
+                              : [...filtroSaude, opt.v],
+                          )
+                        }
+                        className={cn(
+                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                          checked && "bg-accent",
+                        )}
+                      >
+                        <Checkbox checked={checked} />
+                        <span className={cn("h-2 w-2 rounded-full", opt.dot)} />
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </PopoverContent>
+              </Popover>
+
               {/* Período do contrato */}
               <Select
                 value={filtroPeriodoContrato}
