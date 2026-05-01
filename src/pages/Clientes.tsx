@@ -1430,14 +1430,8 @@ export default function Clientes() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">(
     () => (localStorage.getItem("dashtasks.clientes.sort.dir") as any) ?? "asc",
   );
-  const [density, setDensity] = useState<"compacto" | "confortavel">(
-    () => (localStorage.getItem("dashtasks.clientes.density") as any) ?? "compacto",
-  );
 
   // Persistência das preferências do usuário
-  useEffect(() => {
-    localStorage.setItem("clientes:visao", visao);
-  }, [visao]);
   useEffect(() => {
     localStorage.setItem("clientes:filtroStatusGlobal", filtroStatusGlobal);
   }, [filtroStatusGlobal]);
@@ -1445,9 +1439,6 @@ export default function Clientes() {
     localStorage.setItem("dashtasks.clientes.sort.key", sortKey);
     localStorage.setItem("dashtasks.clientes.sort.dir", sortDir);
   }, [sortKey, sortDir]);
-  useEffect(() => {
-    localStorage.setItem("dashtasks.clientes.density", density);
-  }, [density]);
 
   const handleSortChange = (k: typeof sortKey) => {
     if (k === sortKey) {
@@ -1461,7 +1452,6 @@ export default function Clientes() {
   const limparFiltros = () => {
     setBusca("");
     setFiltroResponsaveis([]);
-    setApenasMinhas(false);
     setFiltroStatusGlobal("todos");
     setFiltroNichos([]);
     setFiltroPeriodoContrato("todos");
@@ -1471,7 +1461,6 @@ export default function Clientes() {
   const algumFiltroAtivo =
     busca.trim() !== "" ||
     filtroResponsaveis.length > 0 ||
-    apenasMinhas ||
     filtroStatusGlobal !== "todos" ||
     filtroNichos.length > 0 ||
     filtroPeriodoContrato !== "todos" ||
@@ -1479,11 +1468,6 @@ export default function Clientes() {
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
-
-  const colunasVisiveis = useMemo(
-    () => [...colunasCliente].filter((c) => !c.oculta).sort((a, b) => a.ordem - b.ordem),
-    [colunasCliente]
-  );
 
   // Responsáveis dos POSTS (cards) por cliente — usado nos filtros do módulo Clientes/Posts.
   // Não usa o "responsável geral do cliente" (c.responsaveis), que é apenas informativo.
