@@ -193,11 +193,6 @@ export default function ProjetoCliente() {
             </p>
           </div>
         </div>
-        {headerBtn && (
-          <Button onClick={headerBtn.onClick}>
-            <Plus className="h-4 w-4 mr-1" /> {headerBtn.label}
-          </Button>
-        )}
       </div>
 
       {/* Tabs */}
