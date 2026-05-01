@@ -1470,13 +1470,6 @@ export default function Clientes() {
   const currentUserId = responsaveis[0]?.id ?? null;
 
 
-  const algumGrupoAberto = useMemo(
-    // Revisar e Criar são fixos (sempre renderizam). Concluídos só aparece com toggle.
-    () => !grupoColapsado["post:Revisar"] || !grupoColapsado["post:Criar"] ||
-          (mostrarConcluidos && (gruposPosts.Concluidos?.length ?? 0) > 0 && !grupoColapsado["post:Concluidos"]),
-    [gruposPosts, grupoColapsado, mostrarConcluidos]
-  );
-
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between gap-4 flex-wrap">
