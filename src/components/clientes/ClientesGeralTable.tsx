@@ -14,7 +14,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ColorBadge } from "@/components/StatusBadge";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
-import { CelulaResponsaveis } from "@/components/clientes/CelulaResponsaveis";
 import {
   Tooltip,
   TooltipContent,
@@ -24,8 +23,8 @@ import {
 import {
   AlertTriangle,
   Zap,
-  CalendarClock,
   Hourglass,
+  CalendarX,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
@@ -98,6 +97,42 @@ function SortHeader({
   );
 }
 
+type AlertTone = "destructive" | "amber" | "primary";
+
+function AlertBadge({
+  count,
+  icon: Icon,
+  tone,
+  label,
+}: {
+  count: number;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: AlertTone;
+  label?: string;
+}) {
+  const toneClass =
+    tone === "destructive"
+      ? "bg-destructive/15 text-destructive"
+      : tone === "amber"
+      ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+      : "bg-primary/15 text-primary";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 h-5 px-1.5 rounded text-[11px] font-semibold tabular-nums",
+        toneClass,
+      )}
+    >
+      <Icon className="h-3 w-3" />
+      {label ?? count}
+    </span>
+  );
+}
+
+function EmptyDash() {
+  return <span className="text-xs text-muted-foreground">—</span>;
+}
+
 export function ClientesGeralTable({
   filtroBusca = "",
   filtroResponsaveis = [],
@@ -123,14 +158,12 @@ export function ClientesGeralTable({
     hoje.setHours(0, 0, 0, 0);
 
     let lista = clientes.filter((c) => {
-      // Status global
       if (
         filtroStatusGlobal !== "todos" &&
         (c.status_global ?? "Onboarding") !== filtroStatusGlobal
       )
         return false;
 
-      // Responsáveis do cliente
       const respsCliente = c.responsaveis ?? [];
       if (filtroResponsaveis.length > 0) {
         if (!filtroResponsaveis.some((r) => respsCliente.includes(r))) return false;
@@ -139,12 +172,10 @@ export function ClientesGeralTable({
         if (!respsCliente.includes(currentUserId)) return false;
       }
 
-      // Nicho
       if (filtroNichos.length > 0) {
         if (!c.nicho || !filtroNichos.includes(c.nicho)) return false;
       }
 
-      // Período do contrato
       if (filtroPeriodoContrato !== "todos") {
         if (!c.data_fim_contrato) return false;
         const fim = new Date(c.data_fim_contrato);
@@ -154,7 +185,6 @@ export function ClientesGeralTable({
         if (filtroPeriodoContrato === "90" && (dias < 0 || dias > 90)) return false;
       }
 
-      // Busca textual
       if (termo) {
         return (
           c.nome_cliente.toLowerCase().includes(termo) ||
@@ -165,7 +195,6 @@ export function ClientesGeralTable({
       return true;
     });
 
-    // Ordenação
     const cmp = (a: typeof clientes[number], b: typeof clientes[number]) => {
       let v = 0;
       if (sortKey === "cliente") {
@@ -207,6 +236,9 @@ export function ClientesGeralTable({
       ? "[&_td]:py-1 [&_td]:px-2"
       : "[&_td]:py-2.5 [&_td]:px-3";
 
+  const tooltipContentClass =
+    "max-w-[420px] min-w-[280px] p-0 bg-popover text-popover-foreground border border-border shadow-lg";
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-1.5">
@@ -221,9 +253,7 @@ export function ClientesGeralTable({
                 <Table className={cn(denseTh, denseTd)}>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-10 text-xs text-muted-foreground">
-                        #
-                      </TableHead>
+                      <TableHead className="w-10 text-xs text-muted-foreground">#</TableHead>
                       <TableHead className="min-w-[220px]">
                         <SortHeader
                           label="Cliente"
@@ -242,10 +272,7 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      <TableHead>Responsáveis</TableHead>
-                      <TableHead className="min-w-[180px]">
-                        Último comentário
-                      </TableHead>
+                      <TableHead className="min-w-[180px]">Último comentário</TableHead>
                       <TableHead>
                         <SortHeader
                           label="Nicho"
@@ -255,7 +282,7 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      <TableHead>
+                      <TableHead className="whitespace-nowrap">
                         <SortHeader
                           label="Período do contrato"
                           sortKey="periodo"
@@ -264,21 +291,22 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      {acoesSlot && (
-                        <TableHead className="text-right">Ações</TableHead>
-                      )}
+                      <TableHead className="text-center whitespace-nowrap">Posts atrasados</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">Tarefas atrasadas</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">Tarefas urgentes</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">Onboarding</TableHead>
+                      {acoesSlot && <TableHead className="text-right">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {linhas.map((cliente, idx) => {
                       const cardsCli = cards.filter((k) => k.cliente_id === cliente.id);
-                      const postsAtrasados = cardsCli.filter(
-                        (k) => k.status_card === "Atrasado",
-                      ).length;
+                      const postsAtrasadosList = cardsCli
+                        .filter((k) => k.status_card === "Atrasado")
+                        .sort((a, b) => a.titulo_card.localeCompare(b.titulo_card, "pt-BR"));
+                      const postsAtrasados = postsAtrasadosList.length;
 
-                      const demandasCli = demandas.filter(
-                        (d) => d.cliente_id === cliente.id,
-                      );
+                      const demandasCli = demandas.filter((d) => d.cliente_id === cliente.id);
                       const demAtrasadasList = demandasCli
                         .filter((d) => d.status === "Atrasado")
                         .sort((a, b) => {
@@ -296,216 +324,91 @@ export function ClientesGeralTable({
                         });
                       const demUrgentes = demUrgentesList.length;
 
-                      // Indicadores de contrato / onboarding
                       const hoje = new Date();
                       hoje.setHours(0, 0, 0, 0);
-                      let contratoVenceEm: number | null = null;
-                      if (cliente.data_fim_contrato) {
-                        const fim = new Date(cliente.data_fim_contrato);
-                        const d = diffDays(hoje, fim);
-                        if (d >= 0 && d <= 15) contratoVenceEm = d;
-                      }
-                      let onboardingAtrasado = false;
+                      let onboardingState: "vencido" | "pendente" | null = null;
                       if (
                         (cliente.status_global ?? "Onboarding") === "Onboarding" &&
                         cliente.prazo_onboarding
                       ) {
                         const prazo = new Date(cliente.prazo_onboarding);
-                        if (diffDays(hoje, prazo) < 0) onboardingAtrasado = true;
+                        const d = diffDays(hoje, prazo);
+                        if (d < 0) onboardingState = "vencido";
+                        else if (d <= 3) onboardingState = "pendente";
                       }
 
                       const nichoOpt = nichos.find((n) => n.label === cliente.nicho);
-
                       const contrato = contratos.find((c) => c.cliente_id === cliente.id);
-                      const fimContrato =
-                        cliente.data_fim_contrato ?? contrato?.data_fim ?? null;
+                      const fimContrato = cliente.data_fim_contrato ?? contrato?.data_fim ?? null;
                       const inicioContrato =
                         cliente.data_inicio_contrato ?? contrato?.data_inicio ?? null;
 
+                      const renderTaskList = (
+                        list: typeof demAtrasadasList,
+                        total: number,
+                        labelSingular: string,
+                        labelPlural: string,
+                      ) => (
+                        <div className="p-3 space-y-2 text-xs">
+                          <div className="font-semibold text-sm">
+                            {total} {total > 1 ? labelPlural : labelSingular}
+                          </div>
+                          <ul className="space-y-1.5">
+                            {list.slice(0, 5).map((d) => {
+                              const catLabel = CATEGORIA_LABEL[d.categoria] ?? "Outro";
+                              const prazo = d.data_limite
+                                ? new Date(d.data_limite).toLocaleDateString("pt-BR")
+                                : "sem prazo";
+                              const respIds = getResponsaveisIds(d);
+                              const respNomes = respIds
+                                .map((id) => responsaveis.find((r) => r.id === id)?.nome)
+                                .filter(Boolean) as string[];
+                              const respLabel =
+                                respNomes.length === 0
+                                  ? null
+                                  : respNomes.length === 1
+                                  ? respNomes[0]
+                                  : `${respNomes[0]} +${respNomes.length - 1}`;
+                              return (
+                                <li
+                                  key={d.id}
+                                  className="border-b border-border/60 last:border-0 pb-1.5 last:pb-0"
+                                >
+                                  <div className="font-medium line-clamp-2 break-words">
+                                    {d.titulo}
+                                  </div>
+                                  <div className="text-muted-foreground mt-0.5 leading-snug">
+                                    <div>Categoria: {catLabel}</div>
+                                    {respLabel && <div>Responsável: {respLabel}</div>}
+                                    <div>Prazo: {prazo}</div>
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          {total > 5 && (
+                            <div className="text-muted-foreground pt-1 border-t border-border/60">
+                              + {total - 5} {total - 5 > 1 ? labelPlural : labelSingular}
+                            </div>
+                          )}
+                        </div>
+                      );
+
                       return (
-                        <TableRow
-                          key={cliente.id}
-                          className="hover:bg-accent/30"
-                        >
+                        <TableRow key={cliente.id} className="hover:bg-accent/30">
                           <TableCell className="text-xs text-muted-foreground tabular-nums w-10">
                             {idx + 1}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              <Link
-                                to={`/clientes/${cliente.id}`}
-                                className="text-primary text-xs font-medium hover:underline truncate"
-                              >
-                                {cliente.nome_cliente}
-                              </Link>
-                              {/* Indicadores rápidos de saúde */}
-                              <div className="flex items-center gap-1">
-                                {postsAtrasados > 0 && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-0.5 h-4 px-1 rounded bg-destructive/15 text-destructive text-[10px] font-semibold tabular-nums">
-                                        <AlertTriangle className="h-2.5 w-2.5" />
-                                        {postsAtrasados}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {postsAtrasados} post{postsAtrasados > 1 ? "s" : ""} atrasado{postsAtrasados > 1 ? "s" : ""}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {demAtrasadas > 0 && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-0.5 h-4 px-1 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-semibold tabular-nums">
-                                        <Hourglass className="h-2.5 w-2.5" />
-                                        {demAtrasadas}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                      side="bottom"
-                                      align="start"
-                                      className="max-w-[420px] min-w-[280px] p-0"
-                                    >
-                                      <div className="p-3 space-y-2 text-xs">
-                                        <div className="font-semibold text-sm">
-                                          {demAtrasadas} tarefa{demAtrasadas > 1 ? "s" : ""} atrasada{demAtrasadas > 1 ? "s" : ""}
-                                        </div>
-                                        <ul className="space-y-1.5">
-                                          {demAtrasadasList.slice(0, 5).map((d) => {
-                                            const catLabel = CATEGORIA_LABEL[d.categoria] ?? "Outro";
-                                            const prazo = d.data_limite
-                                              ? new Date(d.data_limite).toLocaleDateString("pt-BR")
-                                              : "sem prazo";
-                                            const respIds = getResponsaveisIds(d);
-                                            const respNomes = respIds
-                                              .map((id) => responsaveis.find((r) => r.id === id)?.nome)
-                                              .filter(Boolean) as string[];
-                                            const respLabel =
-                                              respNomes.length === 0
-                                                ? null
-                                                : respNomes.length === 1
-                                                ? respNomes[0]
-                                                : `${respNomes[0]} +${respNomes.length - 1}`;
-                                            return (
-                                              <li
-                                                key={d.id}
-                                                className="border-b border-border/60 last:border-0 pb-1.5 last:pb-0"
-                                              >
-                                                <div className="font-medium line-clamp-2 break-words">
-                                                  {d.titulo}
-                                                </div>
-                                                <div className="text-muted-foreground mt-0.5 leading-snug">
-                                                  <div>Categoria: {catLabel}</div>
-                                                  <div>Prazo: {prazo}</div>
-                                                  {respLabel && <div>Responsável: {respLabel}</div>}
-                                                </div>
-                                              </li>
-                                            );
-                                          })}
-                                        </ul>
-                                        {demAtrasadas > 5 && (
-                                          <div className="text-muted-foreground pt-1 border-t border-border/60">
-                                            + {demAtrasadas - 5} tarefa{demAtrasadas - 5 > 1 ? "s" : ""} atrasada{demAtrasadas - 5 > 1 ? "s" : ""}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {demUrgentes > 0 && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-0.5 h-4 px-1 rounded bg-primary/15 text-primary text-[10px] font-semibold tabular-nums">
-                                        <Zap className="h-2.5 w-2.5" />
-                                        {demUrgentes}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                      side="bottom"
-                                      align="start"
-                                      className="max-w-[420px] min-w-[280px] p-0"
-                                    >
-                                      <div className="p-3 space-y-2 text-xs">
-                                        <div className="font-semibold text-sm">
-                                          {demUrgentes} tarefa{demUrgentes > 1 ? "s" : ""} urgente{demUrgentes > 1 ? "s" : ""}
-                                        </div>
-                                        <ul className="space-y-1.5">
-                                          {demUrgentesList.slice(0, 5).map((d) => {
-                                            const catLabel = CATEGORIA_LABEL[d.categoria] ?? "Outro";
-                                            const prazo = d.data_limite
-                                              ? new Date(d.data_limite).toLocaleDateString("pt-BR")
-                                              : "sem prazo";
-                                            const respIds = getResponsaveisIds(d);
-                                            const respNomes = respIds
-                                              .map((id) => responsaveis.find((r) => r.id === id)?.nome)
-                                              .filter(Boolean) as string[];
-                                            const respLabel =
-                                              respNomes.length === 0
-                                                ? null
-                                                : respNomes.length === 1
-                                                ? respNomes[0]
-                                                : `${respNomes[0]} +${respNomes.length - 1}`;
-                                            return (
-                                              <li
-                                                key={d.id}
-                                                className="border-b border-border/60 last:border-0 pb-1.5 last:pb-0"
-                                              >
-                                                <div className="font-medium line-clamp-2 break-words">
-                                                  {d.titulo}
-                                                </div>
-                                                <div className="text-muted-foreground mt-0.5 leading-snug">
-                                                  <div>Categoria: {catLabel}</div>
-                                                  <div>Prazo: {prazo}</div>
-                                                  {respLabel && <div>Responsável: {respLabel}</div>}
-                                                </div>
-                                              </li>
-                                            );
-                                          })}
-                                        </ul>
-                                        {demUrgentes > 5 && (
-                                          <div className="text-muted-foreground pt-1 border-t border-border/60">
-                                            + {demUrgentes - 5} tarefa{demUrgentes - 5 > 1 ? "s" : ""} urgente{demUrgentes - 5 > 1 ? "s" : ""}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {contratoVenceEm !== null && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center h-4 w-4 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                                        <CalendarClock className="h-2.5 w-2.5 mx-auto" />
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {contratoVenceEm === 0
-                                        ? "Contrato vence hoje"
-                                        : `Contrato vence em ${contratoVenceEm} dia${contratoVenceEm > 1 ? "s" : ""}`}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {onboardingAtrasado && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center h-4 px-1 rounded bg-destructive/15 text-destructive text-[10px] font-semibold">
-                                        Onb.
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Onboarding com prazo vencido</TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </div>
-                            </div>
+                            <Link
+                              to={`/clientes/${cliente.id}`}
+                              className="text-primary text-xs font-medium hover:underline truncate"
+                            >
+                              {cliente.nome_cliente}
+                            </Link>
                           </TableCell>
                           <TableCell>
                             <StatusClienteBadge status={cliente.status_global} />
-                          </TableCell>
-                          <TableCell>
-                            <CelulaResponsaveis
-                              clienteId={cliente.id}
-                              ids={cliente.responsaveis ?? []}
-                            />
                           </TableCell>
                           <TableCell className="text-xs">
                             <button
@@ -526,10 +429,10 @@ export function ClientesGeralTable({
                             {cliente.nicho && nichoOpt ? (
                               <ColorBadge label={nichoOpt.label} color={nichoOpt.cor} />
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <EmptyDash />
                             )}
                           </TableCell>
-                          <TableCell className="text-[11px] text-muted-foreground">
+                          <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">
                             {inicioContrato ? (
                               <>
                                 {new Date(inicioContrato).toLocaleDateString("pt-BR")}
@@ -542,10 +445,146 @@ export function ClientesGeralTable({
                               "—"
                             )}
                           </TableCell>
+
+                          {/* Posts atrasados */}
+                          <TableCell className="text-center">
+                            {postsAtrasados === 0 ? (
+                              <EmptyDash />
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="inline-flex">
+                                    <AlertBadge
+                                      count={postsAtrasados}
+                                      icon={AlertTriangle}
+                                      tone="destructive"
+                                    />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="bottom"
+                                  align="center"
+                                  className={tooltipContentClass}
+                                >
+                                  <div className="p-3 space-y-2 text-xs">
+                                    <div className="font-semibold text-sm">
+                                      {postsAtrasados} post{postsAtrasados > 1 ? "s" : ""} atrasado
+                                      {postsAtrasados > 1 ? "s" : ""}
+                                    </div>
+                                    <ul className="space-y-1">
+                                      {postsAtrasadosList.slice(0, 5).map((p) => (
+                                        <li
+                                          key={p.id}
+                                          className="border-b border-border/60 last:border-0 pb-1 last:pb-0"
+                                        >
+                                          <div className="font-medium line-clamp-2 break-words">
+                                            Criar post — {p.titulo_card}
+                                          </div>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                    {postsAtrasados > 5 && (
+                                      <div className="text-muted-foreground pt-1 border-t border-border/60">
+                                        + {postsAtrasados - 5} post
+                                        {postsAtrasados - 5 > 1 ? "s" : ""} atrasado
+                                        {postsAtrasados - 5 > 1 ? "s" : ""}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+
+                          {/* Tarefas atrasadas */}
+                          <TableCell className="text-center">
+                            {demAtrasadas === 0 ? (
+                              <EmptyDash />
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="inline-flex">
+                                    <AlertBadge
+                                      count={demAtrasadas}
+                                      icon={Hourglass}
+                                      tone="amber"
+                                    />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="bottom"
+                                  align="center"
+                                  className={tooltipContentClass}
+                                >
+                                  {renderTaskList(
+                                    demAtrasadasList,
+                                    demAtrasadas,
+                                    "tarefa atrasada",
+                                    "tarefas atrasadas",
+                                  )}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+
+                          {/* Tarefas urgentes */}
+                          <TableCell className="text-center">
+                            {demUrgentes === 0 ? (
+                              <EmptyDash />
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="inline-flex">
+                                    <AlertBadge count={demUrgentes} icon={Zap} tone="primary" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="bottom"
+                                  align="center"
+                                  className={tooltipContentClass}
+                                >
+                                  {renderTaskList(
+                                    demUrgentesList,
+                                    demUrgentes,
+                                    "tarefa urgente",
+                                    "tarefas urgentes",
+                                  )}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+
+                          {/* Onboarding */}
+                          <TableCell className="text-center">
+                            {onboardingState === null ? (
+                              <EmptyDash />
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="inline-flex">
+                                    <AlertBadge
+                                      count={0}
+                                      icon={CalendarX}
+                                      tone={onboardingState === "vencido" ? "destructive" : "amber"}
+                                      label={onboardingState === "vencido" ? "Vencido" : "Pendente"}
+                                    />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="bottom"
+                                  align="center"
+                                  className="bg-popover text-popover-foreground border border-border shadow-lg"
+                                >
+                                  {onboardingState === "vencido"
+                                    ? "Onboarding com prazo vencido"
+                                    : "Onboarding pendente"}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+
                           {acoesSlot && (
-                            <TableCell className="text-right">
-                              {acoesSlot(cliente.id)}
-                            </TableCell>
+                            <TableCell className="text-right">{acoesSlot(cliente.id)}</TableCell>
                           )}
                         </TableRow>
                       );

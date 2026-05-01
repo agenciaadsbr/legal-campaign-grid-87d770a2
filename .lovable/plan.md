@@ -1,51 +1,64 @@
-## Objetivo
+## Reorganização da tabela de Clientes
 
-Padronizar o tooltip do badge ⚡ **Tarefas urgentes** (na coluna *Cliente* da tabela em `/clientes`) para exibir os detalhes de cada tarefa, igual ao que já é mostrado no badge ⌛ Tarefas atrasadas. Hoje ele mostra apenas o texto genérico "1 Tarefa urgente".
+Transformar a listagem principal numa visão gerencial limpa: sair os badges colados no nome do cliente e a coluna "Responsáveis", entrar 4 colunas operacionais de alerta com tooltips ricos.
 
-## Onde
+### Nova ordem de colunas
 
-`src/components/clientes/ClientesGeralTable.tsx` — bloco do indicador `demUrgentes` (linhas 289–291 e 409–421).
+```
+#  |  Cliente  |  Status  |  Último comentário  |  Nicho  |  Período do contrato
+   |  Posts atrasados  |  Tarefas atrasadas  |  Tarefas urgentes  |  Onboarding  |  Ações
+```
 
-## O que muda
+Coluna **Responsáveis** sai. Os badges (⌛ ⚡ ⚠️ Onb.) saem de junto do nome.
 
-1. Substituir o cálculo simples por uma **lista** ordenada (mais antigas primeiro), espelhando a lógica de `demAtrasadasList`:
+### Detalhes por coluna nova
 
-   ```ts
-   const demUrgentesList = demandasCli
-     .filter((d) => d.prioridade === "Urgente")
-     .sort((a, b) => {
-       const da = a.data_limite ? new Date(a.data_limite).getTime() : Infinity;
-       const db = b.data_limite ? new Date(b.data_limite).getTime() : Infinity;
-       return da - db;
-     });
-   const demUrgentes = demUrgentesList.length;
-   ```
+**Posts atrasados**
+- Conta `cards` do cliente com `status_card === "Atrasado"`.
+- Exibe `[ícone AlertTriangle] N` em badge vermelho. Se 0 → `—`.
+- Tooltip: título "N posts atrasados" + lista (até 5) com título do post e card pai. Acima de 5: "+ X posts atrasados".
 
-2. Reescrever o `<TooltipContent>` do badge ⚡ usando exatamente o mesmo layout do badge ⌛:
-   - `side="bottom" align="start"` e `className="max-w-[420px] min-w-[280px] p-0"`.
-   - Cabeçalho: `"{n} tarefa(s) urgente(s)"`.
-   - Lista com até 5 itens, cada um exibindo:
-     - **Título** (`line-clamp-2 break-words`).
-     - **Categoria**: `CATEGORIA_LABEL[d.categoria] ?? "Outro"`.
-     - **Prazo**: `data_limite` formatado `dd/MM/yyyy` (`pt-BR`); se `null`, `"sem prazo"`.
-     - **Responsável**: primeiro nome via `getResponsaveisIds(d)` cruzado com `responsaveis`. Mais de 1 → `"Nome +N"`. Nenhum → linha omitida.
-   - Rodapé `"+ {n - 5} tarefa(s) urgente(s)"` se a lista exceder 5.
-   - Mesmas classes/tokens semânticos (`text-muted-foreground`, `border-border/60`) usados no tooltip de atrasadas — sem cores hardcoded.
+**Tarefas atrasadas**
+- Conta `demandas` do cliente com `status === "Atrasado"`, ordenadas por `data_limite` asc.
+- Badge âmbar com ícone Hourglass + número. Se 0 → `—`.
+- Tooltip: "N tarefas atrasadas" + lista (até 5) com Título, Categoria, Responsável (via `getResponsaveisIds` + `responsaveis`), Prazo. Excedente: "+ X tarefas atrasadas".
 
-## O que **não** muda
+**Tarefas urgentes**
+- Conta `demandas` com `prioridade === "Urgente"`, ordenadas por `data_limite` asc.
+- Badge primário com ícone Zap + número. Se 0 → `—`.
+- Tooltip: "N tarefa(s) urgente(s)" + lista (até 5) com Título, Categoria, Responsável, Prazo.
 
-- Lógica de criação/contagem de tarefas urgentes (badge segue mostrando apenas o número).
-- Tooltip de atrasadas, posts, contrato e onboarding.
-- Filtros, ordenação e Projeto Completo.
+**Onboarding**
+- Mostra alerta apenas se `status_global === "Onboarding"` e `prazo_onboarding` está vencido (ou nos próximos 3 dias = "pendente").
+- Vencido → badge vermelho "Vencido" com tooltip "Onboarding com prazo vencido".
+- Pendente próximo → badge âmbar "Pendente" com tooltip "Onboarding pendente".
+- Sem pendência → `—`.
 
-## Validação manual
+### Tooltip padrão
+- Reaproveita o padrão já existente: `max-w-[420px] min-w-[280px]`, fundo `bg-popover`, borda `border-border`, sombra suave, texto `text-xs`. Funciona em hover (desktop) e tap (mobile, comportamento nativo do Radix Tooltip).
 
-- Cliente com 1 tarefa urgente → cabeçalho singular + 1 item completo.
-- Cliente com 7 urgentes → 5 itens + rodapé `+ 2 tarefas urgentes`.
-- Tarefa urgente sem prazo → exibe `"sem prazo"`.
-- Tarefa urgente sem responsável → linha de responsável omitida.
-- Cliente que tem urgente **e** atrasada → ambos badges abrem tooltips estruturados e equivalentes.
+### Mudanças no código
 
-## Versão
+Arquivo único: **`src/components/clientes/ClientesGeralTable.tsx`**
 
-Bump em `public/version.json`.
+1. Remover `<TableHead>Responsáveis</TableHead>` do header.
+2. Remover `<TableCell>` com `<CelulaResponsaveis ... />` do body.
+3. Remover import `CelulaResponsaveis`.
+4. Remover o bloco "Indicadores rápidos de saúde" colado ao nome do cliente (linhas ~341-498) — manter só o `Link` do nome.
+5. Adicionar 4 novos `<TableHead>` antes do `Ações`: "Posts atrasados", "Tarefas atrasadas", "Tarefas urgentes", "Onboarding" (todos com `text-center` e `whitespace-nowrap`).
+6. Adicionar 4 novas `<TableCell>` correspondentes, cada uma renderizando um pequeno componente badge+tooltip (extrair helper local `AlertCell` para evitar repetição). Quando contagem = 0 mostrar `<span className="text-muted-foreground">—</span>` centralizado.
+7. Reaproveitar a lógica já existente de `postsAtrasados`, `demAtrasadasList`, `demUrgentesList`, `onboardingAtrasado` — apenas mover os tooltips das pílulas inline para dentro das células.
+8. Remover indicador `contratoVenceEm` da exibição (não está nos requisitos; mantido só nos dados se necessário no futuro — vou remover do cálculo também para limpar).
+
+### Não muda
+- Filtros, busca, ordenação, modo compacto/confortável, slot de Ações, navegação ao clicar no nome do cliente.
+- Coluna Responsáveis dentro do **Projeto Completo** e nas tarefas — intocadas.
+- Banco de dados — nenhuma migração.
+- `CelulaResponsaveis.tsx` permanece no projeto (ainda usada em outros lugares se houver; só deixa de ser importada aqui).
+
+### Validação
+Para um cliente com 2 posts atrasados, 3 tarefas atrasadas, 1 urgente:
+- Coluna Posts atrasados: badge "2"
+- Coluna Tarefas atrasadas: badge "3", tooltip lista as 3 com categoria/responsável/prazo
+- Coluna Tarefas urgentes: badge "1", tooltip lista a tarefa
+- Coluna Onboarding: `—` (se já ativo)
