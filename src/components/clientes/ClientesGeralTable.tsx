@@ -291,10 +291,25 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      <TableHead className="text-center whitespace-nowrap">Posts atrasados</TableHead>
-                      <TableHead className="text-center whitespace-nowrap">Tarefas atrasadas</TableHead>
-                      <TableHead className="text-center whitespace-nowrap">Tarefas urgentes</TableHead>
-                      <TableHead className="text-center whitespace-nowrap">Onboarding</TableHead>
+                      <TableHead className="text-center w-[90px]">
+                        <div className="leading-tight">
+                          <div>Posts</div>
+                          <div>atrasados</div>
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center w-[90px]">
+                        <div className="leading-tight">
+                          <div>Tarefas</div>
+                          <div>atrasadas</div>
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center w-[90px]">
+                        <div className="leading-tight">
+                          <div>Tarefas</div>
+                          <div>urgentes</div>
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center w-[110px]">Onboarding</TableHead>
                       {acoesSlot && <TableHead className="text-right">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
