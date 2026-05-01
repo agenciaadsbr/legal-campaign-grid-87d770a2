@@ -1749,6 +1749,9 @@ export default function Clientes() {
                 </PopoverContent>
               </Popover>
 
+              {/* Período (tarefas/posts) */}
+              <FiltroPeriodoButton value={filtroPeriodo} onChange={setFiltroPeriodo} />
+
               {/* Período do contrato */}
               <Select
                 value={filtroPeriodoContrato}
