@@ -50,7 +50,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ClientesGeralTable } from "@/components/clientes/ClientesGeralTable";
+import { ClientesGeralTable, type FiltroPeriodo, type PeriodoPreset } from "@/components/clientes/ClientesGeralTable";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
 import { StatusClienteBadge, STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
