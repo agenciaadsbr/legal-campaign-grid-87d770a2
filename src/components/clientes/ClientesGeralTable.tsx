@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useCRM } from "@/store/crm";
-import { useDemandas, getResponsaveisIds } from "@/store/demandas";
+import { useDemandas, useDemandasBootstrap, getResponsaveisIds } from "@/store/demandas";
 import { CATEGORIA_LABEL } from "@/lib/demandas-categorias";
 import {
   Table,
@@ -114,6 +114,7 @@ export function ClientesGeralTable({
   acoesSlot,
 }: Props) {
   const { clientes, cards, contratos, nichos, responsaveis } = useCRM();
+  useDemandasBootstrap();
   const demandas = useDemandas((s) => s.demandas);
 
   const linhas = useMemo(() => {
