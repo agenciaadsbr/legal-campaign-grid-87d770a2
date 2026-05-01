@@ -1397,10 +1397,9 @@ function FiltrosTopo({
 }
 
 export default function Clientes() {
-  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos } = useCRM();
+  const { clientes, responsaveis, nichos } = useCRM();
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
-  const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
   const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
   const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
