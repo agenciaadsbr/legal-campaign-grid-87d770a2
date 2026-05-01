@@ -286,9 +286,14 @@ export function ClientesGeralTable({
                           return da - db;
                         });
                       const demAtrasadas = demAtrasadasList.length;
-                      const demUrgentes = demandasCli.filter(
-                        (d) => d.prioridade === "Urgente",
-                      ).length;
+                      const demUrgentesList = demandasCli
+                        .filter((d) => d.prioridade === "Urgente")
+                        .sort((a, b) => {
+                          const da = a.data_limite ? new Date(a.data_limite).getTime() : Infinity;
+                          const db = b.data_limite ? new Date(b.data_limite).getTime() : Infinity;
+                          return da - db;
+                        });
+                      const demUrgentes = demUrgentesList.length;
 
                       // Indicadores de contrato / onboarding
                       const hoje = new Date();
@@ -414,8 +419,54 @@ export function ClientesGeralTable({
                                         {demUrgentes}
                                       </span>
                                     </TooltipTrigger>
-                                    <TooltipContent>
-                                      {demUrgentes} Tarefa{demUrgentes > 1 ? "s" : ""} urgente{demUrgentes > 1 ? "s" : ""}
+                                    <TooltipContent
+                                      side="bottom"
+                                      align="start"
+                                      className="max-w-[420px] min-w-[280px] p-0"
+                                    >
+                                      <div className="p-3 space-y-2 text-xs">
+                                        <div className="font-semibold text-sm">
+                                          {demUrgentes} tarefa{demUrgentes > 1 ? "s" : ""} urgente{demUrgentes > 1 ? "s" : ""}
+                                        </div>
+                                        <ul className="space-y-1.5">
+                                          {demUrgentesList.slice(0, 5).map((d) => {
+                                            const catLabel = CATEGORIA_LABEL[d.categoria] ?? "Outro";
+                                            const prazo = d.data_limite
+                                              ? new Date(d.data_limite).toLocaleDateString("pt-BR")
+                                              : "sem prazo";
+                                            const respIds = getResponsaveisIds(d);
+                                            const respNomes = respIds
+                                              .map((id) => responsaveis.find((r) => r.id === id)?.nome)
+                                              .filter(Boolean) as string[];
+                                            const respLabel =
+                                              respNomes.length === 0
+                                                ? null
+                                                : respNomes.length === 1
+                                                ? respNomes[0]
+                                                : `${respNomes[0]} +${respNomes.length - 1}`;
+                                            return (
+                                              <li
+                                                key={d.id}
+                                                className="border-b border-border/60 last:border-0 pb-1.5 last:pb-0"
+                                              >
+                                                <div className="font-medium line-clamp-2 break-words">
+                                                  {d.titulo}
+                                                </div>
+                                                <div className="text-muted-foreground mt-0.5 leading-snug">
+                                                  <div>Categoria: {catLabel}</div>
+                                                  <div>Prazo: {prazo}</div>
+                                                  {respLabel && <div>Responsável: {respLabel}</div>}
+                                                </div>
+                                              </li>
+                                            );
+                                          })}
+                                        </ul>
+                                        {demUrgentes > 5 && (
+                                          <div className="text-muted-foreground pt-1 border-t border-border/60">
+                                            + {demUrgentes - 5} tarefa{demUrgentes - 5 > 1 ? "s" : ""} urgente{demUrgentes - 5 > 1 ? "s" : ""}
+                                          </div>
+                                        )}
+                                      </div>
                                     </TooltipContent>
                                   </Tooltip>
                                 )}
