@@ -1,55 +1,33 @@
-## Objetivo
+## Problema
 
-Limpar a barra superior da página `/clientes` removendo três controles obsoletos, sem alterar a tabela, suas colunas ou os dados do banco.
+Dentro de "Projeto Completo" (`/clientes/:id/projeto`), o cabeçalho global renderiza um botão de ação no canto superior direito (ex.: "Adicionar item", "Editar briefing", "Adicionar documentação", "Adicionar Tarefa") que **duplica** o botão já existente dentro da própria aba:
 
-## Mudanças (apenas em `src/pages/Clientes.tsx`)
+- Aba **Planejamento**: já tem "TXT" + "Adicionar item" na toolbar interna → cabeçalho mostra outro "Adicionar item".
+- Aba **Documentação**: já tem "Adicionar" interno → cabeçalho mostra "Adicionar documentação".
+- Aba **Briefing**: já tem "Editar briefing" interno → cabeçalho mostra outro "Editar briefing".
+- Abas de área (Vídeos, Tráfego, LP, IA, Urgências): `AreaTab` já tem "Nova tarefa de …" interno → cabeçalho mostra "Adicionar Tarefa".
 
-### 1. Remover a aba "Clientes / Status" (ToggleGroup de visão)
-- Remover o `ToggleGroup` (linhas ~1642–1650) que alterna entre `clientes` e `status`.
-- Remover o estado `visao` e seu `useEffect` de persistência (`localStorage "clientes:visao"`).
-- Remover o bloco condicional `visao === "status"` que renderiza os switches "Apenas com ações pendentes" e "Mostrar concluídos" no topo.
-- Remover o ramo `else` do return (a tabela alternativa de "status") — manter apenas a renderização do `ClientesGeralTable`.
-- Limpar imports/estados que ficarem órfãos após remover a visão Status (ex.: `apenasPendentes`, `mostrarConcluidos`, `gruposPosts`, etc.) somente se realmente não forem mais usados.
-- Ajustar o subtítulo: trocar a condição `visao === "clientes" && algumFiltroAtivo` por apenas `algumFiltroAtivo`.
+Ou seja, o botão global do cabeçalho é redundante em todas as abas.
 
-A coluna "Status" da tabela e os dados de `status_cliente` no banco permanecem intactos.
+## Solução
 
-### 2. Remover o botão "Minhas tarefas"
-- No componente `FiltrosTopo` (linhas ~1403–1422), remover o `<Button>` "Minhas tarefas".
-- Remover o estado `apenasMinhas` e o setter da página.
-- Remover `apenasMinhas` da prop passada ao `ClientesGeralTable` (manter a prop como `false` se a assinatura exigir; idealmente remover do uso).
-- Remover `apenasMinhas` da composição `algumFiltroAtivo` e da função `limparFiltros`.
-- O filtro "Filtrar por responsável" (popover de responsáveis) permanece intacto.
+Remover de uma vez o botão de ação global do cabeçalho do Projeto Completo, mantendo apenas os botões internos de cada aba (que já estão posicionados de forma contextual e correta).
 
-### 3. Remover o seletor "Compacto / Confortável"
-- Remover o `ToggleGroup` de densidade (linhas ~1772–1792).
-- Remover o estado `density` e o `useEffect` que persiste em `localStorage "dashtasks.clientes.density"`.
-- Não passar mais a prop `density` ao `ClientesGeralTable` — o componente já tem default `"compacto"`, então o layout permanece o atual padrão.
+## Mudanças técnicas
 
-## Resultado da barra de filtros
+**`src/pages/ProjetoCliente.tsx`**
+- Remover o bloco `headerBtn` (linhas ~151-158) que calcula qual botão mostrar.
+- Remover a renderização condicional `{headerBtn && (<Button …>)}` no header (linhas ~205-209).
+- Manter intactos os states `novaTarefaOpen`, `novoDocOpen`, `novoPlanOpen`, `editarBriefingTrigger` — eles continuam sendo usados pelos botões internos das abas (que já recebem `novoOpenExterno`/`onNovoOpenChangeExterno`/`modoEdicaoExterno`).
+- O dialog `NovaDemandaDialog` global (controlado por `novaTarefaOpen`) permanece, pois cada `AreaTab` continua disparando "Nova tarefa" pelo seu próprio botão interno.
 
-Linha principal:
-- Todos os status (Select existente)
-- Filtrar por responsável (Popover existente)
-- Nicho
-- Período
-- Contrato: todos
-- Buscar cliente
-
-Linha secundária / ações:
-- Configurações do painel (`ConfiguracoesSheet`)
-- Colunas (`GerenciarColunas`)
-- Novo Cliente (`NovoClienteDialog`)
-
-## Não alterar
-- `src/components/clientes/ClientesGeralTable.tsx` (a não ser, opcionalmente, remover a prop `density` da chamada — o componente continua aceitando default).
-- Colunas Status, Último comentário, Nicho, Período do contrato, Posts atrasados, Tarefas atrasadas, Tarefas urgentes, Onboarding.
-- Botões editar/excluir, lógica de responsáveis, filtro de período, busca, schemas e dados do Supabase.
-
-## Versão
-- Bump em `public/version.json`.
+**`public/version.json`**
+- Atualizar timestamp.
 
 ## Validação
-- A barra superior não exibe mais o toggle "Clientes/Status", o botão "Minhas tarefas" nem os botões "Compacto/Confortável".
-- Filtros de responsável, nicho, período, contrato, status e busca continuam funcionando.
-- A tabela renderiza no layout padrão (compacto) sem erros de console.
+
+Após aplicar:
+- Em **Planejamento**: aparece somente o par "TXT" + "Adicionar item" dentro da aba; cabeçalho não tem botão.
+- Em **Documentação**, **Briefing** e abas de área: somente os botões internos respectivos.
+- Aba **Visão Geral** e **Posts** continuam sem botão no cabeçalho (já era o comportamento).
+- Todos os fluxos de criação/edição continuam funcionando pelos botões internos.
