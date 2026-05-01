@@ -186,42 +186,46 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
       <table className="w-full text-sm">
         <thead className="bg-muted/50">
           <tr>
-            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase text-muted-foreground">Tipo</th>
-            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase text-muted-foreground">Cliente</th>
-            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase text-muted-foreground">Data</th>
-            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase text-muted-foreground">Mensagem</th>
-            <th className="px-4 py-2.5"></th>
+            <th className="text-left px-3 py-1.5 text-[10px] font-semibold uppercase text-muted-foreground">Tipo</th>
+            <th className="text-left px-3 py-1.5 text-[10px] font-semibold uppercase text-muted-foreground">Cliente</th>
+            <th className="text-left px-3 py-1.5 text-[10px] font-semibold uppercase text-muted-foreground">Data</th>
+            <th className="text-left px-3 py-1.5 text-[10px] font-semibold uppercase text-muted-foreground">Mensagem</th>
+            <th className="px-3 py-1.5 w-[1%]"></th>
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
-            <tr><td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">Nenhum alerta</td></tr>
+            <tr><td colSpan={5} className="text-center py-6 text-muted-foreground text-xs">Nenhum alerta</td></tr>
           )}
           {items.map((a) => {
             const cli = clientes.find((c) => c.id === a.cliente_id);
             return (
               <tr key={a.id} className="border-t hover:bg-accent/30">
-                <td className="px-4 py-2.5">
+                <td className="px-3 py-1.5 whitespace-nowrap">
                   <ColorBadge
                     label={a._tipoExibicao ?? a.tipo_alerta.replace(/_/g, " ")}
                     color={a._corExibicao ?? tipoCor[a.tipo_alerta]}
                   />
                 </td>
-                <td className="px-4 py-2.5"><Link to={`/clientes/${a.cliente_id}`} className="text-primary hover:underline">{cli?.nome_cliente}</Link></td>
-                <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.data_alerta).toLocaleDateString("pt-BR")}</td>
-                <td className="px-4 py-2.5">
-                  <Badge variant="outline" className="text-[10px] mr-2 font-mono">
-                    {a._origem === "DEMANDA"
-                      ? "[DEMANDA]"
-                      : a.tipo_alerta.startsWith("Onboarding_")
-                        ? "[ONBOARDING]"
-                        : "[POST]"}
-                  </Badge>
-                  {a.mensagem}
+                <td className="px-3 py-1.5 whitespace-nowrap">
+                  <Link to={`/clientes/${a.cliente_id}`} className="text-primary hover:underline">{cli?.nome_cliente}</Link>
                 </td>
-                <td className="px-4 py-2.5 text-right">
+                <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap text-xs">
+                  {new Date(a.data_alerta).toLocaleDateString("pt-BR")}
+                </td>
+                <td className="px-3 py-1.5">
+                  <Badge variant="outline" className="text-[9px] mr-1.5 font-mono px-1 py-0">
+                    {a._origem === "DEMANDA"
+                      ? "DEMANDA"
+                      : a.tipo_alerta.startsWith("Onboarding_")
+                        ? "ONBOARDING"
+                        : "POST"}
+                  </Badge>
+                  <span className="text-xs">{a.mensagem}</span>
+                </td>
+                <td className="px-3 py-1.5 text-right">
                   {status === "Pendente" && canWrite && (
-                    <Button size="sm" variant="outline" disabled={resolvendo === a.id} onClick={() => onResolver(a)}>
+                    <Button size="sm" variant="ghost" className="h-7 px-2" disabled={resolvendo === a.id} onClick={() => onResolver(a)}>
                       <Check className="h-3.5 w-3.5 mr-1" /> Resolver
                     </Button>
                   )}
@@ -237,18 +241,20 @@ function Tabela({ status }: { status: "Pendente" | "Resolvido" }) {
 
 export default function Alertas() {
   return (
-    <div className="p-6 space-y-4 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">Alertas</h1>
-        <p className="text-sm text-muted-foreground">Renovações, clientes pausados, posts atrasados e contratos finalizando</p>
+    <div className="p-4 space-y-3 animate-fade-in">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-bold leading-tight">Alertas</h1>
+          <p className="text-xs text-muted-foreground">Renovações, pausas, posts atrasados e contratos finalizando</p>
+        </div>
       </div>
       <Tabs defaultValue="pendentes">
-        <TabsList>
-          <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
+        <TabsList className="h-8">
+          <TabsTrigger value="pendentes" className="text-xs h-6 px-3">Pendentes</TabsTrigger>
+          <TabsTrigger value="historico" className="text-xs h-6 px-3">Histórico</TabsTrigger>
         </TabsList>
-        <TabsContent value="pendentes" className="mt-4"><Tabela status="Pendente" /></TabsContent>
-        <TabsContent value="historico" className="mt-4"><Tabela status="Resolvido" /></TabsContent>
+        <TabsContent value="pendentes" className="mt-3"><Tabela status="Pendente" /></TabsContent>
+        <TabsContent value="historico" className="mt-3"><Tabela status="Resolvido" /></TabsContent>
       </Tabs>
     </div>
   );
