@@ -335,6 +335,9 @@ export function ClientesGeralTable({
     filtroStatusGlobal,
     filtroNichos,
     filtroPeriodoContrato,
+    filtroPeriodo,
+    cards,
+    demandas,
     sortKey,
     sortDir,
   ]);
