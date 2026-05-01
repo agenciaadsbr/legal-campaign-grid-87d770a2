@@ -273,6 +273,30 @@ export function ClientesGeralTable({
         if (filtroPeriodoContrato === "90" && (dias < 0 || dias > 90)) return false;
       }
 
+      if (intervalo) {
+        const cardsDoCli = cards.filter((k) => k.cliente_id === c.id);
+        const demDoCli = demandas.filter((d) => d.cliente_id === c.id);
+        const datas: number[] = [];
+        for (const k of cardsDoCli) {
+          if (k.status_card === "Concluído" || k.status_card === "Aprovado") continue;
+          if (!k.data_postagem) continue;
+          datas.push(new Date(k.data_postagem).getTime());
+        }
+        for (const d of demDoCli) {
+          if (d.status === "Concluido") continue;
+          if (!d.data_limite) continue;
+          datas.push(new Date(d.data_limite).getTime());
+        }
+        const ini = intervalo.inicio.getTime();
+        const fim = intervalo.fim.getTime();
+        const match = datas.some((t) => {
+          if (intervalo.modo === "futuro") return t >= ini && t <= fim;
+          if (intervalo.modo === "passado") return t >= ini && t <= fim;
+          return t <= fim && t >= ini;
+        });
+        if (!match) return false;
+      }
+
       if (termo) {
         return (
           c.nome_cliente.toLowerCase().includes(termo) ||
