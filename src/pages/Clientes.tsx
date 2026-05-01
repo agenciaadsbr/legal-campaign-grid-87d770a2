@@ -1327,18 +1327,11 @@ function FiltroPeriodoButton({
 function FiltrosTopo({
   filtroResponsaveis,
   setFiltroResponsaveis,
-  apenasMinhas,
-  setApenasMinhas,
-  currentUserId,
 }: {
   filtroResponsaveis: string[];
   setFiltroResponsaveis: (v: string[]) => void;
-  apenasMinhas: boolean;
-  setApenasMinhas: (v: boolean) => void;
-  currentUserId: string | null;
 }) {
   const { responsaveis } = useCRM();
-  const currentUser = responsaveis.find((r) => r.id === currentUserId);
   const toggle = (id: string) => {
     setFiltroResponsaveis(
       filtroResponsaveis.includes(id)
