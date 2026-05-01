@@ -1244,6 +1244,16 @@ export default function Clientes() {
   const [filtroPeriodoContrato, setFiltroPeriodoContrato] = useState<
     "todos" | "30" | "90" | "vencido"
   >("todos");
+  const [filtroPeriodo, setFiltroPeriodo] = useState<FiltroPeriodo>(() => {
+    try {
+      const raw = localStorage.getItem("dashtasks.clientes.filtroPeriodo");
+      if (raw) return JSON.parse(raw) as FiltroPeriodo;
+    } catch {}
+    return { tipo: "todos" };
+  });
+  useEffect(() => {
+    localStorage.setItem("dashtasks.clientes.filtroPeriodo", JSON.stringify(filtroPeriodo));
+  }, [filtroPeriodo]);
 
   // Ordenação e densidade
   const [sortKey, setSortKey] = useState<"cliente" | "status" | "nicho" | "periodo">(
