@@ -36,6 +36,25 @@ export type SortDir = "asc" | "desc";
 export type Density = "compacto" | "confortavel";
 export type FiltroPeriodoContrato = "todos" | "30" | "90" | "vencido";
 
+export type PeriodoPreset =
+  | "todos"
+  | "hoje"
+  | "esta_semana"
+  | "prox_7"
+  | "prox_14"
+  | "prox_30"
+  | "ult_7"
+  | "ult_14"
+  | "ult_30"
+  | "mes_passado"
+  | "custom";
+
+export interface FiltroPeriodo {
+  tipo: PeriodoPreset;
+  inicio?: string;
+  fim?: string;
+}
+
 interface Props {
   filtroBusca?: string;
   filtroResponsaveis?: string[];
@@ -44,12 +63,79 @@ interface Props {
   filtroStatusGlobal?: string;
   filtroNichos?: string[];
   filtroPeriodoContrato?: FiltroPeriodoContrato;
+  filtroPeriodo?: FiltroPeriodo;
   sortKey?: SortKey;
   sortDir?: SortDir;
   onSortChange?: (key: SortKey) => void;
   density?: Density;
   onAbrirHistorico?: (clienteId: string) => void;
   acoesSlot?: (clienteId: string) => React.ReactNode;
+}
+
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function endOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+}
+function addDays(d: Date, n: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+/**
+ * Resolve um FiltroPeriodo em um intervalo [inicio, fim].
+ * modo "futuro" = a vencer; "passado" = vencidos; "ambos" = qualquer.
+ */
+export function resolveIntervaloPeriodo(
+  filtro: FiltroPeriodo | undefined,
+): { inicio: Date; fim: Date; modo: "futuro" | "passado" | "ambos" } | null {
+  if (!filtro || filtro.tipo === "todos") return null;
+  const hoje = startOfDay(new Date());
+  switch (filtro.tipo) {
+    case "hoje":
+      // hoje + atrasados até hoje
+      return { inicio: new Date(0), fim: endOfDay(hoje), modo: "ambos" };
+    case "esta_semana": {
+      const dow = hoje.getDay(); // 0=dom
+      const diffSeg = dow === 0 ? -6 : 1 - dow;
+      const inicio = addDays(hoje, diffSeg);
+      const fim = endOfDay(addDays(inicio, 6));
+      return { inicio, fim, modo: "ambos" };
+    }
+    case "prox_7":
+      return { inicio: hoje, fim: endOfDay(addDays(hoje, 7)), modo: "futuro" };
+    case "prox_14":
+      return { inicio: hoje, fim: endOfDay(addDays(hoje, 14)), modo: "futuro" };
+    case "prox_30":
+      return { inicio: hoje, fim: endOfDay(addDays(hoje, 30)), modo: "futuro" };
+    case "ult_7":
+      return { inicio: addDays(hoje, -7), fim: endOfDay(hoje), modo: "passado" };
+    case "ult_14":
+      return { inicio: addDays(hoje, -14), fim: endOfDay(hoje), modo: "passado" };
+    case "ult_30":
+      return { inicio: addDays(hoje, -30), fim: endOfDay(hoje), modo: "passado" };
+    case "mes_passado": {
+      const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+      const fim = endOfDay(new Date(hoje.getFullYear(), hoje.getMonth(), 0));
+      return { inicio, fim, modo: "passado" };
+    }
+    case "custom": {
+      if (!filtro.inicio || !filtro.fim) return null;
+      return {
+        inicio: startOfDay(new Date(filtro.inicio)),
+        fim: endOfDay(new Date(filtro.fim)),
+        modo: "ambos",
+      };
+    }
+    default:
+      return null;
+  }
 }
 
 const STATUS_ORDER: Record<string, number> = {
@@ -141,6 +227,7 @@ export function ClientesGeralTable({
   filtroStatusGlobal = "todos",
   filtroNichos = [],
   filtroPeriodoContrato = "todos",
+  filtroPeriodo,
   sortKey = "cliente",
   sortDir = "asc",
   onSortChange,
@@ -156,6 +243,7 @@ export function ClientesGeralTable({
     const termo = filtroBusca.trim().toLowerCase();
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
+    const intervalo = resolveIntervaloPeriodo(filtroPeriodo);
 
     let lista = clientes.filter((c) => {
       if (
@@ -183,6 +271,30 @@ export function ClientesGeralTable({
         if (filtroPeriodoContrato === "vencido" && dias >= 0) return false;
         if (filtroPeriodoContrato === "30" && (dias < 0 || dias > 30)) return false;
         if (filtroPeriodoContrato === "90" && (dias < 0 || dias > 90)) return false;
+      }
+
+      if (intervalo) {
+        const cardsDoCli = cards.filter((k) => k.cliente_id === c.id);
+        const demDoCli = demandas.filter((d) => d.cliente_id === c.id);
+        const datas: number[] = [];
+        for (const k of cardsDoCli) {
+          if (k.status_card === "Concluído" || k.status_card === "Aprovado") continue;
+          if (!k.data_agendada) continue;
+          datas.push(new Date(k.data_agendada).getTime());
+        }
+        for (const d of demDoCli) {
+          if (d.status === "Concluido") continue;
+          if (!d.data_limite) continue;
+          datas.push(new Date(d.data_limite).getTime());
+        }
+        const ini = intervalo.inicio.getTime();
+        const fim = intervalo.fim.getTime();
+        const match = datas.some((t) => {
+          if (intervalo.modo === "futuro") return t >= ini && t <= fim;
+          if (intervalo.modo === "passado") return t >= ini && t <= fim;
+          return t <= fim && t >= ini;
+        });
+        if (!match) return false;
       }
 
       if (termo) {
@@ -223,6 +335,9 @@ export function ClientesGeralTable({
     filtroStatusGlobal,
     filtroNichos,
     filtroPeriodoContrato,
+    filtroPeriodo,
+    cards,
+    demandas,
     sortKey,
     sortDir,
   ]);
