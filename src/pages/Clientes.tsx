@@ -1403,13 +1403,8 @@ export default function Clientes() {
   const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
   const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
-  const [apenasMinhas, setApenasMinhas] = useState(false);
-  const [filtroStatusCliente, setFiltroStatusCliente] = useState<string>("todos");
   const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
     () => localStorage.getItem("clientes:filtroStatusGlobal") ?? "todos",
-  );
-  const [visao, setVisao] = useState<"clientes" | "status">(
-    () => (localStorage.getItem("clientes:visao") as any) ?? "clientes",
   );
 
   // Novos filtros (visão Clientes)
