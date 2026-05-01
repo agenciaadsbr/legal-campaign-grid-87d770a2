@@ -419,10 +419,10 @@ export function ClientesGeralTable({
                           <TableCell className="text-xs text-muted-foreground tabular-nums w-10">
                             {idx + 1}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="min-w-[200px] max-w-[260px]">
                             <Link
                               to={`/clientes/${cliente.id}`}
-                              className="text-primary text-xs font-medium hover:underline truncate"
+                              className="text-primary text-xs font-medium hover:underline break-words leading-snug block"
                             >
                               {cliente.nome_cliente}
                             </Link>
@@ -430,14 +430,14 @@ export function ClientesGeralTable({
                           <TableCell>
                             <StatusClienteBadge status={cliente.status_global} />
                           </TableCell>
-                          <TableCell className="text-xs">
+                          <TableCell className="text-xs max-w-[240px]">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onAbrirHistorico?.(cliente.id);
                               }}
-                              className="text-left truncate max-w-[220px] hover:text-primary"
+                              className="text-left hover:text-primary line-clamp-2 break-words leading-snug w-full"
                               title={cliente.ultimo_comentario}
                             >
                               {cliente.ultimo_comentario || (
