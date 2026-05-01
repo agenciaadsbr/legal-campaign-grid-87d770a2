@@ -1392,27 +1392,6 @@ function FiltrosTopo({
           )}
         </PopoverContent>
       </Popover>
-
-      <Button
-        size="sm"
-        variant={apenasMinhas ? "default" : "outline"}
-        className="gap-1.5 h-8"
-        onClick={() => setApenasMinhas(!apenasMinhas)}
-        disabled={!currentUserId}
-        title={currentUserId ? "Mostrar apenas clientes onde sou responsável" : "Cadastre um responsável para usar este filtro"}
-      >
-        {currentUser ? (
-          <div
-            className="h-4 w-4 rounded-full text-white text-[8px] font-semibold flex items-center justify-center shrink-0"
-            style={{ backgroundColor: currentUser.cor }}
-          >
-            {currentUser.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-          </div>
-        ) : (
-          <CheckCircle2 className="h-3.5 w-3.5" />
-        )}
-        <span className="text-xs">Minhas tarefas</span>
-      </Button>
     </div>
   );
 }
