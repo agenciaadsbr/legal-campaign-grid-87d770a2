@@ -227,6 +227,7 @@ export function ClientesGeralTable({
   filtroStatusGlobal = "todos",
   filtroNichos = [],
   filtroPeriodoContrato = "todos",
+  filtroPeriodo,
   sortKey = "cliente",
   sortDir = "asc",
   onSortChange,
