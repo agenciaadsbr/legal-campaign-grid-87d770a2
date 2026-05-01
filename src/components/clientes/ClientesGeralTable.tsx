@@ -279,8 +279,8 @@ export function ClientesGeralTable({
         const datas: number[] = [];
         for (const k of cardsDoCli) {
           if (k.status_card === "Concluído" || k.status_card === "Aprovado") continue;
-          if (!k.data_postagem) continue;
-          datas.push(new Date(k.data_postagem).getTime());
+          if (!k.data_agendada) continue;
+          datas.push(new Date(k.data_agendada).getTime());
         }
         for (const d of demDoCli) {
           if (d.status === "Concluido") continue;
