@@ -1297,6 +1297,7 @@ export default function Clientes() {
     setFiltroStatusGlobal("todos");
     setFiltroNichos([]);
     setFiltroPeriodoContrato("todos");
+    setFiltroPeriodo({ tipo: "todos" });
   };
 
   const algumFiltroAtivo =
@@ -1305,7 +1306,8 @@ export default function Clientes() {
     apenasMinhas ||
     filtroStatusGlobal !== "todos" ||
     filtroNichos.length > 0 ||
-    filtroPeriodoContrato !== "todos";
+    filtroPeriodoContrato !== "todos" ||
+    filtroPeriodo.tipo !== "todos";
 
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
