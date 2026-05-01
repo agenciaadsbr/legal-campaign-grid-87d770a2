@@ -243,6 +243,7 @@ export function ClientesGeralTable({
     const termo = filtroBusca.trim().toLowerCase();
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
+    const intervalo = resolveIntervaloPeriodo(filtroPeriodo);
 
     let lista = clientes.filter((c) => {
       if (
