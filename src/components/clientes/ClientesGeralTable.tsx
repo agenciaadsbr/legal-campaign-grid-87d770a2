@@ -272,7 +272,12 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      <TableHead className="min-w-[180px]">Último comentário</TableHead>
+                      <TableHead className="min-w-[160px]">
+                        <div className="leading-tight">
+                          <div>Último</div>
+                          <div>comentário</div>
+                        </div>
+                      </TableHead>
                       <TableHead>
                         <SortHeader
                           label="Nicho"

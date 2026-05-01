@@ -1,47 +1,51 @@
-## Quebrar título das colunas de alerta em duas linhas
+## Permitir quebra de linha nas colunas "Cliente" e "Último comentário"
 
-Hoje as 3 colunas operacionais usam títulos longos em uma única linha (`whitespace-nowrap`), ocupando largura desnecessária:
+Em `src/components/clientes/ClientesGeralTable.tsx`:
 
-- "Posts atrasados"
-- "Tarefas atrasadas"
-- "Tarefas urgentes"
-
-A coluna "Onboarding" já é uma palavra só e não precisa quebrar.
-
-### Mudança
-
-Em `src/components/clientes/ClientesGeralTable.tsx` (linhas 294–297):
-
-- Remover `whitespace-nowrap` dessas 3 colunas.
-- Renderizar o título em **duas linhas** explicitamente, com a primeira palavra em cima e a segunda embaixo, mantendo `text-center` e tamanho de fonte atual:
-
+### 1. Título "Último comentário" (linha 275)
+Quebrar em duas linhas, igual aos títulos das colunas de alerta:
 ```tsx
-<TableHead className="text-center w-[90px]">
+<TableHead className="min-w-[160px]">
   <div className="leading-tight">
-    <div>Posts</div>
-    <div>atrasados</div>
+    <div>Último</div>
+    <div>comentário</div>
   </div>
 </TableHead>
-<TableHead className="text-center w-[90px]">
-  <div className="leading-tight">
-    <div>Tarefas</div>
-    <div>atrasadas</div>
-  </div>
-</TableHead>
-<TableHead className="text-center w-[90px]">
-  <div className="leading-tight">
-    <div>Tarefas</div>
-    <div>urgentes</div>
-  </div>
-</TableHead>
-<TableHead className="text-center w-[110px]">Onboarding</TableHead>
 ```
 
-- Largura fixa estreita (~90px) para apertar a tabela horizontalmente, já que o conteúdo das células é apenas um badge numérico pequeno.
-- `leading-tight` para manter as duas linhas próximas e visualmente como um único rótulo.
+### 2. Nome do cliente (linhas 417–424)
+Hoje o `<Link>` usa `truncate`, cortando o nome com "…". Trocar por quebra de linha natural:
+```tsx
+<TableCell className="min-w-[200px] max-w-[260px]">
+  <Link
+    to={`/clientes/${cliente.id}`}
+    className="text-primary text-xs font-medium hover:underline break-words leading-snug block"
+  >
+    {cliente.nome_cliente}
+  </Link>
+</TableCell>
+```
+Remover `truncate`, adicionar `break-words` + `leading-snug` + `block`, e colocar `max-w` na célula para forçar a quebra.
+
+### 3. Texto "Último comentário" (linhas 428–442)
+Hoje o `<button>` usa `truncate max-w-[220px]`, cortando o texto. Substituir por clamp de 2 linhas:
+```tsx
+<TableCell className="text-xs max-w-[240px]">
+  <button
+    type="button"
+    onClick={(e) => { e.stopPropagation(); onAbrirHistorico?.(cliente.id); }}
+    className="text-left hover:text-primary line-clamp-2 break-words leading-snug w-full"
+    title={cliente.ultimo_comentario}
+  >
+    {cliente.ultimo_comentario || <span className="text-muted-foreground">—</span>}
+  </button>
+</TableCell>
+```
+`line-clamp-2` mostra até 2 linhas (mantém compacto e evita linhas muito longas), com `break-words` para quebrar palavras longas.
+
+### 4. Bump em `public/version.json`
 
 ### Resultado
-
-As colunas de alerta ficam mais estreitas, sobra mais espaço para Cliente, Status e Último comentário, e os títulos continuam totalmente legíveis em duas linhas curtas.
-
-Também atualizo `public/version.json` para refletir o deploy.
+- Título "Último comentário" em duas linhas, ocupando menos largura horizontal.
+- Nomes longos de clientes quebram em várias linhas em vez de cortar com "…".
+- Comentários longos exibem até 2 linhas, com tooltip nativo (`title`) mantendo o texto completo.
