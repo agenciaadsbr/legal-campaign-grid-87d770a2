@@ -1,105 +1,55 @@
-## Filtro de Período na aba Clientes
+## Objetivo
 
-Adicionar um novo filtro **"Período"** na barra de filtros da visão Clientes, posicionado entre o filtro de Nicho e o de Contrato. Ele filtra clientes com base em **prazos de tarefas e posts** (a vencer ou já vencidos) dentro do intervalo selecionado, combinando com os filtros já existentes (responsável, nicho, status, contrato).
+Limpar a barra superior da página `/clientes` removendo três controles obsoletos, sem alterar a tabela, suas colunas ou os dados do banco.
 
----
+## Mudanças (apenas em `src/pages/Clientes.tsx`)
 
-### 1. UI do filtro
+### 1. Remover a aba "Clientes / Status" (ToggleGroup de visão)
+- Remover o `ToggleGroup` (linhas ~1642–1650) que alterna entre `clientes` e `status`.
+- Remover o estado `visao` e seu `useEffect` de persistência (`localStorage "clientes:visao"`).
+- Remover o bloco condicional `visao === "status"` que renderiza os switches "Apenas com ações pendentes" e "Mostrar concluídos" no topo.
+- Remover o ramo `else` do return (a tabela alternativa de "status") — manter apenas a renderização do `ClientesGeralTable`.
+- Limpar imports/estados que ficarem órfãos após remover a visão Status (ex.: `apenasPendentes`, `mostrarConcluidos`, `gruposPosts`, etc.) somente se realmente não forem mais usados.
+- Ajustar o subtítulo: trocar a condição `visao === "clientes" && algumFiltroAtivo` por apenas `algumFiltroAtivo`.
 
-Botão "Período" abrindo um Popover com três seções:
+A coluna "Status" da tabela e os dados de `status_cliente` no banco permanecem intactos.
 
-```text
-📅 FUTURO (planejamento)
-   • Hoje
-   • Esta semana
-   • Próximos 7 dias
-   • Próximos 14 dias
-   • Próximos 30 dias
+### 2. Remover o botão "Minhas tarefas"
+- No componente `FiltrosTopo` (linhas ~1403–1422), remover o `<Button>` "Minhas tarefas".
+- Remover o estado `apenasMinhas` e o setter da página.
+- Remover `apenasMinhas` da prop passada ao `ClientesGeralTable` (manter a prop como `false` se a assinatura exigir; idealmente remover do uso).
+- Remover `apenasMinhas` da composição `algumFiltroAtivo` e da função `limparFiltros`.
+- O filtro "Filtrar por responsável" (popover de responsáveis) permanece intacto.
 
-📊 PASSADO (análise)
-   • Últimos 7 dias
-   • Últimos 14 dias
-   • Últimos 30 dias
-   • Mês passado
+### 3. Remover o seletor "Compacto / Confortável"
+- Remover o `ToggleGroup` de densidade (linhas ~1772–1792).
+- Remover o estado `density` e o `useEffect` que persiste em `localStorage "dashtasks.clientes.density"`.
+- Não passar mais a prop `density` ao `ClientesGeralTable` — o componente já tem default `"compacto"`, então o layout permanece o atual padrão.
 
-⚙️ PERSONALIZADO
-   [Data inicial] [Data final]  [Aplicar]
-```
+## Resultado da barra de filtros
 
-- Botão mostra um badge contador quando ativo e o label do período selecionado (ex.: "Período: Próximos 7 dias").
-- Opção "Limpar" dentro do popover para resetar.
-- Datepickers usam `Calendar` shadcn dentro de Popover (com `pointer-events-auto`).
+Linha principal:
+- Todos os status (Select existente)
+- Filtrar por responsável (Popover existente)
+- Nicho
+- Período
+- Contrato: todos
+- Buscar cliente
 
-### 2. Comportamento de filtragem
+Linha secundária / ações:
+- Configurações do painel (`ConfiguracoesSheet`)
+- Colunas (`GerenciarColunas`)
+- Novo Cliente (`NovoClienteDialog`)
 
-Para cada cliente, coleta-se:
-- `data_postagem` dos cards (posts) que ainda não foram concluídos
-- `data_limite` das demandas (tarefas) ainda em aberto
+## Não alterar
+- `src/components/clientes/ClientesGeralTable.tsx` (a não ser, opcionalmente, remover a prop `density` da chamada — o componente continua aceitando default).
+- Colunas Status, Último comentário, Nicho, Período do contrato, Posts atrasados, Tarefas atrasadas, Tarefas urgentes, Onboarding.
+- Botões editar/excluir, lógica de responsáveis, filtro de período, busca, schemas e dados do Supabase.
 
-O cliente passa no filtro se **pelo menos uma** dessas datas cair no intervalo `[inicio, fim]` calculado conforme o preset:
+## Versão
+- Bump em `public/version.json`.
 
-| Preset | Intervalo |
-|---|---|
-| Hoje | tarefas vencendo hoje **ou** atrasadas (data_limite ≤ hoje, status ≠ Concluído) |
-| Esta semana | início da semana atual → fim da semana atual (seg–dom) |
-| Próximos 7/14/30 dias | hoje → hoje + N |
-| Últimos 7/14/30 dias | hoje − N → hoje (apenas itens vencidos/atrasados) |
-| Mês passado | 1º ao último dia do mês anterior |
-| Personalizado | data_inicial → data_final (inclui vencidas e a vencer no intervalo) |
-
-Regras adicionais:
-- Considera tarefas com status `Atrasado` e prioridade `Urgente` quando a data cai no intervalo.
-- Considera posts com `status_card = "Atrasado"` quando `data_postagem` cai no intervalo.
-- Combina com filtros existentes via AND (responsável, nicho, status, contrato).
-- "Todos os períodos" (default) desativa o filtro.
-
-### 3. Persistência
-
-Salvar o preset selecionado em `localStorage` (`dashtasks.clientes.filtroPeriodo`) para sobreviver entre sessões. Datas personalizadas também persistidas.
-
----
-
-### Arquivos alterados
-
-**`src/components/clientes/ClientesGeralTable.tsx`**
-- Novo tipo `FiltroPeriodo` com presets + custom.
-- Nova prop `filtroPeriodo?: { tipo: PeriodoPreset; inicio?: string; fim?: string }`.
-- Função utilitária `resolveIntervalo(filtro)` retornando `{inicio: Date, fim: Date, modo: "futuro"|"passado"|"ambos"}`.
-- No `useMemo` de `linhas`, após os filtros existentes, aplicar verificação cruzando `cards` (data_postagem) + `demandas` (data_limite) do cliente contra o intervalo.
-
-**`src/pages/Clientes.tsx`**
-- Novo state `filtroPeriodo` (com persistência em localStorage).
-- Novo componente `FiltroPeriodoButton` (Popover com as 3 seções + datepickers).
-- Renderizar o botão entre Nicho e Contrato.
-- Incluir `filtroPeriodo` em `algumFiltroAtivo`, `limparFiltros` e props passadas para `ClientesGeralTable`.
-
-**`public/version.json`** — bump de versão.
-
----
-
-### Detalhes técnicos
-
-```ts
-type PeriodoPreset =
-  | "todos"
-  | "hoje" | "esta_semana"
-  | "prox_7" | "prox_14" | "prox_30"
-  | "ult_7" | "ult_14" | "ult_30" | "mes_passado"
-  | "custom";
-
-interface FiltroPeriodo {
-  tipo: PeriodoPreset;
-  inicio?: string; // ISO yyyy-mm-dd, só usado quando tipo="custom"
-  fim?: string;
-}
-```
-
-Lógica de match por cliente (pseudo):
-```ts
-const datas: Date[] = [];
-cardsCli.filter(naoConcluido).forEach(c => c.data_postagem && datas.push(new Date(c.data_postagem)));
-demandasCli.filter(naoConcluida).forEach(d => d.data_limite && datas.push(new Date(d.data_limite)));
-return datas.some(dt => dt >= inicio && dt <= fim);
-```
-
-Para "Hoje" especificamente, também inclui itens com `data < hoje` e status atrasado/aberto (não apenas `=== hoje`).
+## Validação
+- A barra superior não exibe mais o toggle "Clientes/Status", o botão "Minhas tarefas" nem os botões "Compacto/Confortável".
+- Filtros de responsável, nicho, período, contrato, status e busca continuam funcionando.
+- A tabela renderiza no layout padrão (compacto) sem erros de console.

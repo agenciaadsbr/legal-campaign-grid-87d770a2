@@ -56,7 +56,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { StatusClienteBadge, STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const { responsaveis, addResponsavel } = useCRM();
@@ -1327,18 +1327,11 @@ function FiltroPeriodoButton({
 function FiltrosTopo({
   filtroResponsaveis,
   setFiltroResponsaveis,
-  apenasMinhas,
-  setApenasMinhas,
-  currentUserId,
 }: {
   filtroResponsaveis: string[];
   setFiltroResponsaveis: (v: string[]) => void;
-  apenasMinhas: boolean;
-  setApenasMinhas: (v: boolean) => void;
-  currentUserId: string | null;
 }) {
   const { responsaveis } = useCRM();
-  const currentUser = responsaveis.find((r) => r.id === currentUserId);
   const toggle = (id: string) => {
     setFiltroResponsaveis(
       filtroResponsaveis.includes(id)
@@ -1399,45 +1392,18 @@ function FiltrosTopo({
           )}
         </PopoverContent>
       </Popover>
-
-      <Button
-        size="sm"
-        variant={apenasMinhas ? "default" : "outline"}
-        className="gap-1.5 h-8"
-        onClick={() => setApenasMinhas(!apenasMinhas)}
-        disabled={!currentUserId}
-        title={currentUserId ? "Mostrar apenas clientes onde sou responsável" : "Cadastre um responsável para usar este filtro"}
-      >
-        {currentUser ? (
-          <div
-            className="h-4 w-4 rounded-full text-white text-[8px] font-semibold flex items-center justify-center shrink-0"
-            style={{ backgroundColor: currentUser.cor }}
-          >
-            {currentUser.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-          </div>
-        ) : (
-          <CheckCircle2 className="h-3.5 w-3.5" />
-        )}
-        <span className="text-xs">Minhas tarefas</span>
-      </Button>
     </div>
   );
 }
 
 export default function Clientes() {
-  const { clientes, colunasCliente, statusOptions, statusPostOptions, cards, responsaveis, nichos } = useCRM();
+  const { clientes, responsaveis, nichos } = useCRM();
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
-  const [grupoColapsado, setGrupoColapsado] = useState<Record<string, boolean>>({});
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
   const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
-  const [apenasMinhas, setApenasMinhas] = useState(false);
-  const [filtroStatusCliente, setFiltroStatusCliente] = useState<string>("todos");
   const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
     () => localStorage.getItem("clientes:filtroStatusGlobal") ?? "todos",
-  );
-  const [visao, setVisao] = useState<"clientes" | "status">(
-    () => (localStorage.getItem("clientes:visao") as any) ?? "clientes",
   );
 
   // Novos filtros (visão Clientes)
@@ -1463,14 +1429,8 @@ export default function Clientes() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">(
     () => (localStorage.getItem("dashtasks.clientes.sort.dir") as any) ?? "asc",
   );
-  const [density, setDensity] = useState<"compacto" | "confortavel">(
-    () => (localStorage.getItem("dashtasks.clientes.density") as any) ?? "compacto",
-  );
 
   // Persistência das preferências do usuário
-  useEffect(() => {
-    localStorage.setItem("clientes:visao", visao);
-  }, [visao]);
   useEffect(() => {
     localStorage.setItem("clientes:filtroStatusGlobal", filtroStatusGlobal);
   }, [filtroStatusGlobal]);
@@ -1478,9 +1438,6 @@ export default function Clientes() {
     localStorage.setItem("dashtasks.clientes.sort.key", sortKey);
     localStorage.setItem("dashtasks.clientes.sort.dir", sortDir);
   }, [sortKey, sortDir]);
-  useEffect(() => {
-    localStorage.setItem("dashtasks.clientes.density", density);
-  }, [density]);
 
   const handleSortChange = (k: typeof sortKey) => {
     if (k === sortKey) {
@@ -1494,7 +1451,6 @@ export default function Clientes() {
   const limparFiltros = () => {
     setBusca("");
     setFiltroResponsaveis([]);
-    setApenasMinhas(false);
     setFiltroStatusGlobal("todos");
     setFiltroNichos([]);
     setFiltroPeriodoContrato("todos");
@@ -1504,7 +1460,6 @@ export default function Clientes() {
   const algumFiltroAtivo =
     busca.trim() !== "" ||
     filtroResponsaveis.length > 0 ||
-    apenasMinhas ||
     filtroStatusGlobal !== "todos" ||
     filtroNichos.length > 0 ||
     filtroPeriodoContrato !== "todos" ||
@@ -1513,119 +1468,6 @@ export default function Clientes() {
   // Placeholder do usuário atual: primeiro responsável cadastrado.
   const currentUserId = responsaveis[0]?.id ?? null;
 
-  const colunasVisiveis = useMemo(
-    () => [...colunasCliente].filter((c) => !c.oculta).sort((a, b) => a.ordem - b.ordem),
-    [colunasCliente]
-  );
-
-  // Responsáveis dos POSTS (cards) por cliente — usado nos filtros do módulo Clientes/Posts.
-  // Não usa o "responsável geral do cliente" (c.responsaveis), que é apenas informativo.
-  const respsPostsPorCliente = useMemo(() => {
-    const map = new Map<string, Set<string>>();
-    cards.forEach((card) => {
-      let set = map.get(card.cliente_id);
-      if (!set) { set = new Set<string>(); map.set(card.cliente_id, set); }
-      (card.responsaveis ?? []).forEach((r) => set!.add(r));
-    });
-    return map;
-  }, [cards]);
-
-  const filtrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    return clientes
-      .filter((c) => {
-        if (!termo) return true;
-        return (
-          c.nome_cliente?.toLowerCase().includes(termo) ||
-          (c.nicho ?? "").toLowerCase().includes(termo) ||
-          (c.observacoes ?? "").toLowerCase().includes(termo) ||
-          (c.status_cliente ?? "").toLowerCase().includes(termo)
-        );
-      })
-      .filter((c) => {
-        if (filtroResponsaveis.length === 0) return true;
-        const respsPosts = respsPostsPorCliente.get(c.id);
-        if (!respsPosts || respsPosts.size === 0) return false;
-        return filtroResponsaveis.some((r) => respsPosts.has(r));
-      })
-      .filter((c) => {
-        if (!apenasMinhas) return true;
-        if (!currentUserId) return false;
-        const respsPosts = respsPostsPorCliente.get(c.id);
-        return !!respsPosts && respsPosts.has(currentUserId);
-      })
-      // Quando há busca ativa, ignora o filtro de status para permitir achar qualquer cliente
-      .filter((c) => !!termo || filtroStatusCliente === "todos" || c.status_cliente === filtroStatusCliente);
-  }, [clientes, busca, filtroResponsaveis, apenasMinhas, currentUserId, filtroStatusCliente, respsPostsPorCliente]);
-
-
-  const GRUPOS = ["Revisar", "Criar", "Concluidos"] as const;
-  const [apenasPendentes, setApenasPendentes] = useState(false);
-  const [mostrarConcluidos, setMostrarConcluidos] = useState(false);
-
-  const pendentesPorCliente = useMemo(() => {
-    const map: Record<string, { total: number; pendentes: number }> = {};
-    cards.forEach((card) => {
-      if (!map[card.cliente_id]) map[card.cliente_id] = { total: 0, pendentes: 0 };
-      map[card.cliente_id].total += 1;
-      if (card.status_card !== "Postado" && card.status_card !== "Planejamento") map[card.cliente_id].pendentes += 1;
-    });
-    return map;
-  }, [cards]);
-
-  // Classifica cards por prioridade (atrasado / urgente / hoje)
-  type Prioridade = "atrasado" | "urgente" | "hoje";
-  const tarefasPorCliente = useMemo(() => {
-    const hojeStart = new Date(); hojeStart.setHours(0, 0, 0, 0);
-    const amanhaStart = new Date(hojeStart); amanhaStart.setDate(amanhaStart.getDate() + 1);
-    const map: Record<string, { atrasado: typeof cards; urgente: typeof cards; hoje: typeof cards }> = {};
-    cards.forEach((card) => {
-      if (card.status_card === "Postado" || card.status_card === "Planejamento") return;
-      const due = card.data_agendada ? new Date(card.data_agendada) : null;
-      let prio: Prioridade | null = null;
-      if (card.status_card === "Atrasado" || (due && due < hojeStart)) prio = "atrasado";
-      else if (card.is_urgent) prio = "urgente";
-      else if (due && due >= hojeStart && due < amanhaStart) prio = "hoje";
-      if (!prio) return;
-      if (!map[card.cliente_id]) map[card.cliente_id] = { atrasado: [], urgente: [], hoje: [] };
-      map[card.cliente_id][prio].push(card);
-    });
-    return map;
-  }, [cards]);
-
-  const filtradosFinal = useMemo(() => {
-    if (!apenasPendentes || busca.trim()) return filtrados;
-    return filtrados.filter((c) => {
-      const t = tarefasPorCliente[c.id];
-      return t && (t.atrasado.length + t.urgente.length + t.hoje.length) > 0;
-    });
-  }, [filtrados, apenasPendentes, tarefasPorCliente, busca]);
-
-
-  const gruposPosts = useMemo(() => {
-    const map: Record<string, typeof clientes> = { Revisar: [], Criar: [], Concluidos: [] };
-    filtradosFinal.forEach((c) => {
-      const stats = pendentesPorCliente[c.id];
-      // Concluído = tem cards e todos estão postados (sem pendentes).
-      // Cliente sem nenhum card NÃO é concluído — vai para "Criar" para ficar visível.
-      const concluido = !!stats && stats.total > 0 && stats.pendentes === 0;
-      if (concluido) {
-        if (mostrarConcluidos || busca.trim()) map.Concluidos.push(c);
-        return;
-      }
-      const ps = (c.primary_status as string) === "Revisar" ? "Revisar" : "Criar";
-      map[ps].push(c);
-    });
-    return map;
-  }, [filtradosFinal, pendentesPorCliente, mostrarConcluidos, busca]);
-
-
-  const algumGrupoAberto = useMemo(
-    // Revisar e Criar são fixos (sempre renderizam). Concluídos só aparece com toggle.
-    () => !grupoColapsado["post:Revisar"] || !grupoColapsado["post:Criar"] ||
-          (mostrarConcluidos && (gruposPosts.Concluidos?.length ?? 0) > 0 && !grupoColapsado["post:Concluidos"]),
-    [gruposPosts, grupoColapsado, mostrarConcluidos]
-  );
 
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
@@ -1634,20 +1476,11 @@ export default function Clientes() {
           <div>
             <h1 className="text-xl font-bold leading-tight">Clientes</h1>
             <p className="text-xs text-muted-foreground">
-              {visao === "clientes" && algumFiltroAtivo
+              {algumFiltroAtivo
                 ? `Filtros ativos · ${clientes.length} clientes no total`
                 : `${clientes.length} clientes`}
             </p>
           </div>
-          <ToggleGroup
-            type="single"
-            value={visao}
-            onValueChange={(v) => v && setVisao(v as any)}
-            className="border rounded-md p-0.5"
-          >
-            <ToggleGroupItem value="clientes" className="h-7 px-2 text-xs">Clientes</ToggleGroupItem>
-            <ToggleGroupItem value="status" className="h-7 px-2 text-xs">Status</ToggleGroupItem>
-          </ToggleGroup>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={filtroStatusGlobal} onValueChange={setFiltroStatusGlobal}>
@@ -1661,148 +1494,106 @@ export default function Clientes() {
               ))}
             </SelectContent>
           </Select>
-          {visao === "status" && (
-            <>
-              <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
-                <Switch checked={apenasPendentes} onCheckedChange={setApenasPendentes} />
-                <span>Apenas com ações pendentes</span>
-              </label>
-              <label className="flex items-center gap-1.5 text-xs px-2 h-8 rounded-md border bg-card cursor-pointer">
-                <Switch checked={mostrarConcluidos} onCheckedChange={setMostrarConcluidos} />
-                <span>Mostrar concluídos</span>
-              </label>
-            </>
-          )}
           <FiltrosTopo
             filtroResponsaveis={filtroResponsaveis}
             setFiltroResponsaveis={setFiltroResponsaveis}
-            apenasMinhas={apenasMinhas}
-            setApenasMinhas={setApenasMinhas}
-            currentUserId={currentUserId}
           />
-          {visao === "clientes" && (
-            <>
-              {/* Filtro de Nicho */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
-                    <Filter className="h-3.5 w-3.5" />
-                    <span className="text-xs">Nicho</span>
-                    {filtroNichos.length > 0 && (
-                      <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
-                        {filtroNichos.length}
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-2" align="start">
-                  <div className="text-[11px] text-muted-foreground px-2 pb-1.5">
-                    Nichos
+          {/* Filtro de Nicho */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="sm" variant="outline" className="gap-1.5 h-8 relative">
+                <Filter className="h-3.5 w-3.5" />
+                <span className="text-xs">Nicho</span>
+                {filtroNichos.length > 0 && (
+                  <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+                    {filtroNichos.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2" align="start">
+              <div className="text-[11px] text-muted-foreground px-2 pb-1.5">
+                Nichos
+              </div>
+              <div className="max-h-60 overflow-auto space-y-0.5">
+                {nichos.length === 0 ? (
+                  <div className="text-xs text-muted-foreground px-2 py-3 text-center">
+                    Nenhum nicho cadastrado
                   </div>
-                  <div className="max-h-60 overflow-auto space-y-0.5">
-                    {nichos.length === 0 ? (
-                      <div className="text-xs text-muted-foreground px-2 py-3 text-center">
-                        Nenhum nicho cadastrado
-                      </div>
-                    ) : (
-                      nichos.map((n) => {
-                        const checked = filtroNichos.includes(n.label);
-                        return (
-                          <button
-                            type="button"
-                            key={n.label}
-                            onClick={() =>
-                              setFiltroNichos(
-                                checked
-                                  ? filtroNichos.filter((v) => v !== n.label)
-                                  : [...filtroNichos, n.label],
-                              )
-                            }
-                            className={cn(
-                              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
-                              checked && "bg-accent",
-                            )}
-                          >
-                            <Checkbox checked={checked} />
-                            <span
-                              className="h-3 w-3 rounded-full shrink-0"
-                              style={{ backgroundColor: n.cor }}
-                            />
-                            <span className="truncate">{n.label}</span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                  {filtroNichos.length > 0 && (
-                    <div className="border-t mt-2 pt-2 flex justify-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs gap-1"
-                        onClick={() => setFiltroNichos([])}
+                ) : (
+                  nichos.map((n) => {
+                    const checked = filtroNichos.includes(n.label);
+                    return (
+                      <button
+                        type="button"
+                        key={n.label}
+                        onClick={() =>
+                          setFiltroNichos(
+                            checked
+                              ? filtroNichos.filter((v) => v !== n.label)
+                              : [...filtroNichos, n.label],
+                          )
+                        }
+                        className={cn(
+                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                          checked && "bg-accent",
+                        )}
                       >
-                        <X className="h-3 w-3" /> Limpar
-                      </Button>
-                    </div>
-                  )}
-                </PopoverContent>
-              </Popover>
-
-              {/* Período (tarefas/posts) */}
-              <FiltroPeriodoButton value={filtroPeriodo} onChange={setFiltroPeriodo} />
-
-              {/* Período do contrato */}
-              <Select
-                value={filtroPeriodoContrato}
-                onValueChange={(v) => setFiltroPeriodoContrato(v as any)}
-              >
-                <SelectTrigger className="h-8 w-[180px] text-xs">
-                  <SelectValue placeholder="Contrato" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Contrato: todos</SelectItem>
-                  <SelectItem value="30">Vence em 30 dias</SelectItem>
-                  <SelectItem value="90">Vence em 90 dias</SelectItem>
-                  <SelectItem value="vencido">Já vencido</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Densidade */}
-              <ToggleGroup
-                type="single"
-                value={density}
-                onValueChange={(v) => v && setDensity(v as any)}
-                className="border rounded-md p-0.5"
-              >
-                <ToggleGroupItem
-                  value="compacto"
-                  className="h-7 px-2 text-xs"
-                  title="Densidade compacta"
-                >
-                  Compacto
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="confortavel"
-                  className="h-7 px-2 text-xs"
-                  title="Densidade confortável"
-                >
-                  Confortável
-                </ToggleGroupItem>
-              </ToggleGroup>
-
-              {algumFiltroAtivo && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                  onClick={limparFiltros}
-                  title="Limpar todos os filtros"
-                >
-                  <X className="h-3.5 w-3.5" /> Limpar filtros
-                </Button>
+                        <Checkbox checked={checked} />
+                        <span
+                          className="h-3 w-3 rounded-full shrink-0"
+                          style={{ backgroundColor: n.cor }}
+                        />
+                        <span className="truncate">{n.label}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {filtroNichos.length > 0 && (
+                <div className="border-t mt-2 pt-2 flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setFiltroNichos([])}
+                  >
+                    <X className="h-3 w-3" /> Limpar
+                  </Button>
+                </div>
               )}
-            </>
+            </PopoverContent>
+          </Popover>
+
+          {/* Período (tarefas/posts) */}
+          <FiltroPeriodoButton value={filtroPeriodo} onChange={setFiltroPeriodo} />
+
+          {/* Período do contrato */}
+          <Select
+            value={filtroPeriodoContrato}
+            onValueChange={(v) => setFiltroPeriodoContrato(v as any)}
+          >
+            <SelectTrigger className="h-8 w-[180px] text-xs">
+              <SelectValue placeholder="Contrato" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Contrato: todos</SelectItem>
+              <SelectItem value="30">Vence em 30 dias</SelectItem>
+              <SelectItem value="90">Vence em 90 dias</SelectItem>
+              <SelectItem value="vencido">Já vencido</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {algumFiltroAtivo && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+              onClick={limparFiltros}
+              title="Limpar todos os filtros"
+            >
+              <X className="h-3.5 w-3.5" /> Limpar filtros
+            </Button>
           )}
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
@@ -1815,156 +1606,23 @@ export default function Clientes() {
       </div>
 
 
-      {visao === "clientes" ? (
-        <ClientesGeralTable
-          filtroBusca={busca}
-          filtroResponsaveis={filtroResponsaveis}
-          apenasMinhas={apenasMinhas}
-          currentUserId={currentUserId}
-          filtroStatusGlobal={filtroStatusGlobal}
-          filtroNichos={filtroNichos}
-          filtroPeriodoContrato={filtroPeriodoContrato}
-          filtroPeriodo={filtroPeriodo}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          onSortChange={handleSortChange}
-          density={density}
-          onAbrirHistorico={setHistoricoClienteId}
-          acoesSlot={(clienteId) => {
-            const cli = clientes.find((c) => c.id === clienteId);
-            return cli ? <AcoesCliente cliente={cli} /> : null;
-          }}
-        />
-      ) : (
-      <div className="border rounded-lg bg-card overflow-hidden">
-        <div className="overflow-auto scrollbar-thin max-h-[calc(100vh-160px)]">
-          <table className="w-full text-xs border-collapse">
-            {algumGrupoAberto && (
-              <thead className="sticky top-0 bg-muted/50 z-10">
-                <tr>
-                  {colunasVisiveis.map((c) => (
-                    <th
-                      key={c.key}
-                      className={cn(
-                        "text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5 border-b border-r",
-                        c.fixada && "sticky left-0 bg-muted/50 z-20"
-                      )}
-                      style={{ minWidth: c.largura, width: c.largura }}
-                    >
-                      {c.label}
-                    </th>
-                  ))}
-                  <th
-                    className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5 border-b sticky right-0 bg-muted/50 z-20"
-                    style={{ minWidth: 90, width: 90 }}
-                  >
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-            )}
-            <tbody>
-              {GRUPOS.map((statusLabel) => {
-                const statusOpt = statusLabel === "Concluidos" ? undefined : statusPostOptions.find((s) => s.label === statusLabel);
-                const cor = statusOpt?.cor ?? (
-                  statusLabel === "Revisar" ? "#f59e0b" :
-                  statusLabel === "Criar" ? "#3b82f6" :
-                  "#9ca3af"
-                );
-                const labelExibido = statusLabel === "Concluidos" ? "Concluídos" : statusLabel;
-                const items = gruposPosts[statusLabel] ?? [];
-                const key = `post:${statusLabel}`;
-                const colapsado = grupoColapsado[key];
-                // Concluídos: só aparece se toggle ativo E houver itens.
-                // Revisar / Criar: sempre fixos (mesmo vazios).
-                if (statusLabel === "Concluidos" && items.length === 0) return null;
-                return (
-                  <Fragment2 key={key}>
-                    <tr className="bg-muted/60 hover:bg-muted/70 sticky">
-                      <td
-                        colSpan={colunasVisiveis.length + 1}
-                        className={cn("px-2 py-2 border-l-4", !colapsado && "border-b")}
-                        style={{ borderLeftColor: cor }}
-                      >
-                        <button
-                          onClick={() => setGrupoColapsado((g) => ({ ...g, [key]: !colapsado }))}
-                          className="flex items-center gap-2 text-sm font-semibold w-full"
-                        >
-                          {colapsado ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          <ColorBadge label={labelExibido.toUpperCase()} color={cor} variant="filled" />
-                          <span
-                            className="ml-1 inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 rounded-full text-[11px] font-bold tabular-nums"
-                            style={{ backgroundColor: `${cor}26`, color: cor }}
-                          >
-                            {items.length}
-                          </span>
-                        </button>
-                      </td>
-                    </tr>
-                    {!colapsado && items.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={colunasVisiveis.length + 1}
-                          className="px-4 py-3 border-b text-[11px] text-muted-foreground italic"
-                        >
-                          Nenhum cliente neste status
-                        </td>
-                      </tr>
-                    )}
-                    {!colapsado && items.map((cliente) => {
-                      const tarefas = tarefasPorCliente[cliente.id] ?? { atrasado: [], urgente: [], hoje: [] };
-                      const total = tarefas.atrasado.length + tarefas.urgente.length + tarefas.hoje.length;
-                      return (
-                        <tr key={`${key}-${cliente.id}`} className="hover:bg-accent/30 transition-colors">
-                          {colunasVisiveis.map((col, i) => (
-                            <td
-                              key={col.key}
-                              className={cn(
-                                "px-2 py-1.5 border-b border-r align-middle",
-                                col.fixada && "sticky left-0 bg-card"
-                              )}
-                              style={{ minWidth: col.largura, width: col.largura }}
-                            >
-                              {i === 0 && col.key === "nome_cliente" ? (
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <Link
-                                    to={`/clientes/${cliente.id}`}
-                                    className="text-primary text-xs font-medium hover:underline truncate"
-                                  >
-                                    {cliente.nome_cliente}
-                                  </Link>
-                                  {total > 0 && (
-                                    <TarefasInline tarefas={tarefas} clienteId={cliente.id} />
-                                  )}
-                                </div>
-                              ) : (
-                                <CelulaValor col={col} cliente={cliente} onAbrirHistorico={setHistoricoClienteId} />
-                              )}
-                            </td>
-                          ))}
-                          <td
-                            className="px-2 py-1.5 border-b align-middle sticky right-0 bg-card"
-                            style={{ minWidth: 90, width: 90 }}
-                          >
-                            <AcoesCliente cliente={cliente} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </Fragment2>
-                );
-              })}
-
-              {filtradosFinal.length === 0 && (
-                <tr><td colSpan={colunasVisiveis.length + 1} className="text-center py-10 text-muted-foreground text-xs">
-                  {apenasPendentes ? "Nenhum cliente com ações pendentes" : "Nenhum cliente encontrado"}
-                </td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      )}
+      <ClientesGeralTable
+        filtroBusca={busca}
+        filtroResponsaveis={filtroResponsaveis}
+        currentUserId={currentUserId}
+        filtroStatusGlobal={filtroStatusGlobal}
+        filtroNichos={filtroNichos}
+        filtroPeriodoContrato={filtroPeriodoContrato}
+        filtroPeriodo={filtroPeriodo}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSortChange}
+        onAbrirHistorico={setHistoricoClienteId}
+        acoesSlot={(clienteId) => {
+          const cli = clientes.find((c) => c.id === clienteId);
+          return cli ? <AcoesCliente cliente={cli} /> : null;
+        }}
+      />
 
       <HistoricoComentariosDialog
         clienteId={historicoClienteId}
@@ -1975,88 +1633,4 @@ export default function Clientes() {
   );
 }
 
-function TarefasInline({
-  tarefas,
-  clienteId,
-}: {
-  tarefas: { atrasado: any[]; urgente: any[]; hoje: any[] };
-  clienteId: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const total = tarefas.atrasado.length + tarefas.urgente.length + tarefas.hoje.length;
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-accent border border-transparent hover:border-border transition-colors"
-          aria-label={`${total} tarefas pendentes`}
-        >
-          {tarefas.atrasado.length > 0 && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-destructive">
-              <AlertCircle className="h-3 w-3" /> {tarefas.atrasado.length}
-            </span>
-          )}
-          {tarefas.urgente.length > 0 && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-orange-500">
-              <Zap className="h-3 w-3" /> {tarefas.urgente.length}
-            </span>
-          )}
-          {tarefas.hoje.length > 0 && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-yellow-600">
-              <Clock className="h-3 w-3" /> {tarefas.hoje.length}
-            </span>
-          )}
-          <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-2" align="start">
-        <ListaTarefasGrupo titulo="Atrasadas" cor="text-destructive" Icon={AlertCircle} items={tarefas.atrasado} clienteId={clienteId} />
-        <ListaTarefasGrupo titulo="Urgentes" cor="text-orange-500" Icon={Zap} items={tarefas.urgente} clienteId={clienteId} />
-        <ListaTarefasGrupo titulo="Hoje" cor="text-yellow-600" Icon={Clock} items={tarefas.hoje} clienteId={clienteId} />
-      </PopoverContent>
-    </Popover>
-  );
-}
 
-function ListaTarefasGrupo({
-  titulo,
-  cor,
-  Icon,
-  items,
-  clienteId,
-}: {
-  titulo: string;
-  cor: string;
-  Icon: any;
-  items: any[];
-  clienteId: string;
-}) {
-  if (items.length === 0) return null;
-  const visiveis = items.slice(0, 5);
-  const restante = items.length - visiveis.length;
-  return (
-    <div className="mb-2 last:mb-0">
-      <div className={cn("flex items-center gap-1 text-[11px] font-semibold mb-1", cor)}>
-        <Icon className="h-3 w-3" /> {titulo} ({items.length})
-      </div>
-      <div className="space-y-0.5">
-        {visiveis.map((c) => (
-          <Link
-            key={c.id}
-            to={`/clientes/${clienteId}`}
-            className="block px-2 py-1 rounded-md text-[11px] hover:bg-accent truncate"
-          >
-            • {c.titulo_card || `Card ${c.numero_semana}`}
-          </Link>
-        ))}
-        {restante > 0 && (
-          <div className="px-2 py-0.5 text-[10px] text-muted-foreground">+{restante} tarefa{restante > 1 ? "s" : ""}</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-import { Fragment as Fragment2 } from "react";
