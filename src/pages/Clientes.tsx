@@ -1824,6 +1824,7 @@ export default function Clientes() {
           filtroStatusGlobal={filtroStatusGlobal}
           filtroNichos={filtroNichos}
           filtroPeriodoContrato={filtroPeriodoContrato}
+          filtroPeriodo={filtroPeriodo}
           sortKey={sortKey}
           sortDir={sortDir}
           onSortChange={handleSortChange}
