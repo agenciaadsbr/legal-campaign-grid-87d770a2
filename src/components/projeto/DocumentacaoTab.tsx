@@ -521,6 +521,19 @@ function ItemCard({
               {item.formato && (
                 <Badge variant="secondary" className="text-[10px]">{item.formato}</Badge>
               )}
+              {item.origem_global_id && (
+                <Badge
+                  className="text-[10px] bg-primary/10 text-primary border-primary/30"
+                  title="Vem de Configurações > Documentos"
+                >
+                  Padrão
+                </Badge>
+              )}
+              {item.enviado && (
+                <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-500/40">
+                  <CheckCircle2 className="h-3 w-3 mr-0.5" /> Enviado
+                </Badge>
+              )}
             </div>
             {item.url && (
               <a
