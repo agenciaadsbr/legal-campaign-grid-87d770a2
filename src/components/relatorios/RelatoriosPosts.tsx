@@ -34,14 +34,11 @@ export function RelatoriosPosts({ cards, posts }: Props) {
   const { responsaveis } = useCRM();
 
   const counts = useMemo(() => {
-    const byStatus = STATUS_ORDER.reduce((acc, s) => {
-      acc[s] = cards.filter((c) => c.status_card === s).length;
-      return acc;
-    }, {} as Record<string, number>);
-    return {
-      total: cards.length,
-      ...byStatus,
-    };
+    const byStatus: Record<string, number> = {};
+    STATUS_ORDER.forEach((s) => {
+      byStatus[s] = cards.filter((c) => c.status_card === s).length;
+    });
+    return { total: cards.length, ...byStatus } as Record<string, number> & { total: number };
   }, [cards]);
 
   const porMes = useMemo(() => {
