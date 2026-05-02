@@ -232,13 +232,16 @@ export type Database = {
           bloco: string
           cliente_id: string
           created_at: string
+          data_envio: string | null
           data_evento: string | null
+          enviado: boolean
           enviado_por: string | null
           formato: string | null
           id: string
           login: string | null
           observacao: string | null
           ordem: number
+          origem_global_id: string | null
           senha: string | null
           tipo: string
           titulo: string
@@ -249,13 +252,16 @@ export type Database = {
           bloco?: string
           cliente_id: string
           created_at?: string
+          data_envio?: string | null
           data_evento?: string | null
+          enviado?: boolean
           enviado_por?: string | null
           formato?: string | null
           id?: string
           login?: string | null
           observacao?: string | null
           ordem?: number
+          origem_global_id?: string | null
           senha?: string | null
           tipo?: string
           titulo: string
@@ -266,13 +272,16 @@ export type Database = {
           bloco?: string
           cliente_id?: string
           created_at?: string
+          data_envio?: string | null
           data_evento?: string | null
+          enviado?: boolean
           enviado_por?: string | null
           formato?: string | null
           id?: string
           login?: string | null
           observacao?: string | null
           ordem?: number
+          origem_global_id?: string | null
           senha?: string | null
           tipo?: string
           titulo?: string
@@ -741,6 +750,69 @@ export type Database = {
           subtipo?: string | null
           titulo?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      documentos_globais: {
+        Row: {
+          aplicar_automatico: boolean
+          arquivo_url: string | null
+          ativo: boolean
+          bloco: string
+          categoria: string
+          created_at: string
+          descricao: string | null
+          escopo: string
+          id: string
+          login: string | null
+          observacao_interna: string | null
+          ordem: number
+          permissao_acesso: string
+          senha: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          aplicar_automatico?: boolean
+          arquivo_url?: string | null
+          ativo?: boolean
+          bloco?: string
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          escopo?: string
+          id?: string
+          login?: string | null
+          observacao_interna?: string | null
+          ordem?: number
+          permissao_acesso?: string
+          senha?: string | null
+          tipo?: string
+          titulo: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          aplicar_automatico?: boolean
+          arquivo_url?: string | null
+          ativo?: boolean
+          bloco?: string
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          escopo?: string
+          id?: string
+          login?: string | null
+          observacao_interna?: string | null
+          ordem?: number
+          permissao_acesso?: string
+          senha?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          url?: string | null
         }
         Relationships: []
       }
