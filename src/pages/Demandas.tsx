@@ -299,7 +299,7 @@ export default function Demandas() {
         </TabsContent>
 
         <TabsContent value="relatorios" className="mt-2">
-          <RelatoriosDemandas />
+          <RelatoriosDemandas demandas={demandas} />
         </TabsContent>
       </Tabs>
 
