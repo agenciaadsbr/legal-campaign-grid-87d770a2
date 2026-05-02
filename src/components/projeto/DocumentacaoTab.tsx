@@ -810,6 +810,26 @@ function DocumentacaoItemDialog({
               onChange={(e) => setObservacao(e.target.value)}
             />
           </div>
+          <div className="col-span-2 flex flex-wrap items-center gap-4 pt-2 border-t border-border">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={enviado}
+                onCheckedChange={(v) => setEnviado(v === true)}
+              />
+              Marcar como enviado ao cliente
+            </label>
+            {enviado && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Data de envio:</Label>
+                <Input
+                  type="date"
+                  className="h-8 w-[160px]"
+                  value={dataEnvio}
+                  onChange={(e) => setDataEnvio(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
