@@ -681,6 +681,8 @@ function DocumentacaoItemDialog({
   const [observacao, setObservacao] = useState("");
   const [dataEvento, setDataEvento] = useState("");
   const [formato, setFormato] = useState("");
+  const [enviado, setEnviado] = useState(false);
+  const [dataEnvio, setDataEnvio] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -695,6 +697,8 @@ function DocumentacaoItemDialog({
       setObservacao(item?.observacao ?? "");
       setDataEvento(item?.data_evento ?? "");
       setFormato(item?.formato ?? "");
+      setEnviado(item?.enviado ?? false);
+      setDataEnvio(item?.data_envio ? item.data_envio.slice(0, 10) : "");
     }
   }, [open, item, bloco]);
 
@@ -712,6 +716,10 @@ function DocumentacaoItemDialog({
       data_evento: dataEvento || null,
       enviado_por: null,
       formato: formato || null,
+      enviado,
+      data_envio: enviado
+        ? (dataEnvio ? new Date(dataEnvio).toISOString() : new Date().toISOString())
+        : null,
     };
     if (item) {
       await update(item.id, payload as any);
