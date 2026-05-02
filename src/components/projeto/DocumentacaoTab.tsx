@@ -48,6 +48,8 @@ import {
   Send,
   Files,
   ClipboardCopy,
+  Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -240,6 +242,16 @@ export function DocumentacaoTab({
           </SelectContent>
         </Select>
         <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              await useDocumentacao.getState().applyGlobalDefaults(clienteId);
+            }}
+            title="Aplicar documentos padrão da empresa"
+          >
+            <Sparkles className="h-4 w-4 mr-1" /> Aplicar padrão
+          </Button>
           <Button variant="outline" size="sm" onClick={exportarTxt}>
             <FileText className="h-4 w-4 mr-1" /> TXT
           </Button>
@@ -509,6 +521,19 @@ function ItemCard({
               {item.formato && (
                 <Badge variant="secondary" className="text-[10px]">{item.formato}</Badge>
               )}
+              {item.origem_global_id && (
+                <Badge
+                  className="text-[10px] bg-primary/10 text-primary border-primary/30"
+                  title="Vem de Configurações > Documentos"
+                >
+                  Padrão
+                </Badge>
+              )}
+              {item.enviado && (
+                <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-500/40">
+                  <CheckCircle2 className="h-3 w-3 mr-0.5" /> Enviado
+                </Badge>
+              )}
             </div>
             {item.url && (
               <a
@@ -656,6 +681,8 @@ function DocumentacaoItemDialog({
   const [observacao, setObservacao] = useState("");
   const [dataEvento, setDataEvento] = useState("");
   const [formato, setFormato] = useState("");
+  const [enviado, setEnviado] = useState(false);
+  const [dataEnvio, setDataEnvio] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -670,6 +697,8 @@ function DocumentacaoItemDialog({
       setObservacao(item?.observacao ?? "");
       setDataEvento(item?.data_evento ?? "");
       setFormato(item?.formato ?? "");
+      setEnviado(item?.enviado ?? false);
+      setDataEnvio(item?.data_envio ? item.data_envio.slice(0, 10) : "");
     }
   }, [open, item, bloco]);
 
@@ -687,6 +716,10 @@ function DocumentacaoItemDialog({
       data_evento: dataEvento || null,
       enviado_por: null,
       formato: formato || null,
+      enviado,
+      data_envio: enviado
+        ? (dataEnvio ? new Date(dataEnvio).toISOString() : new Date().toISOString())
+        : null,
     };
     if (item) {
       await update(item.id, payload as any);
@@ -776,6 +809,26 @@ function DocumentacaoItemDialog({
               value={observacao}
               onChange={(e) => setObservacao(e.target.value)}
             />
+          </div>
+          <div className="col-span-2 flex flex-wrap items-center gap-4 pt-2 border-t border-border">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={enviado}
+                onCheckedChange={(v) => setEnviado(v === true)}
+              />
+              Marcar como enviado ao cliente
+            </label>
+            {enviado && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Data de envio:</Label>
+                <Input
+                  type="date"
+                  className="h-8 w-[160px]"
+                  value={dataEnvio}
+                  onChange={(e) => setDataEnvio(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter>

@@ -110,6 +110,9 @@ export interface DocumentacaoItem {
   enviado_por: string | null;
   formato: string | null;
   ordem: number;
+  origem_global_id: string | null;
+  enviado: boolean;
+  data_envio: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -120,13 +123,14 @@ interface State {
   loading: boolean;
   load: () => Promise<void>;
   create: (
-    item: Omit<DocumentacaoItem, "id" | "created_at" | "updated_at" | "ordem"> & { ordem?: number },
+    item: Omit<DocumentacaoItem, "id" | "created_at" | "updated_at" | "ordem" | "origem_global_id" | "enviado" | "data_envio"> & { ordem?: number; origem_global_id?: string | null; enviado?: boolean; data_envio?: string | null },
   ) => Promise<string | null>;
   createBatch: (
-    items: Array<Omit<DocumentacaoItem, "id" | "created_at" | "updated_at" | "ordem"> & { ordem?: number }>,
+    items: Array<Omit<DocumentacaoItem, "id" | "created_at" | "updated_at" | "ordem" | "origem_global_id" | "enviado" | "data_envio"> & { ordem?: number; origem_global_id?: string | null }>,
   ) => Promise<void>;
   update: (id: string, patch: Partial<DocumentacaoItem>) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  applyGlobalDefaults: (clienteId: string) => Promise<{ inseridos: number; jaExistiam: number }>;
 }
 
 export const useDocumentacao = create<State>((set, get) => ({
@@ -163,19 +167,22 @@ export const useDocumentacao = create<State>((set, get) => ({
       enviado_por: item.enviado_por ?? null,
       formato: item.formato ?? null,
       ordem: item.ordem ?? 0,
+      origem_global_id: (item as any).origem_global_id ?? null,
+      enviado: (item as any).enviado ?? false,
+      data_envio: (item as any).data_envio ?? null,
     };
     const { data, error } = await supabase
       .from("cliente_documentacao")
-      .insert(payload)
+      .insert(payload as any)
       .select()
       .single();
     if (error) {
       toast.error("Erro ao salvar", { description: error.message });
       return null;
     }
-    set({ itens: [...get().itens, data as DocumentacaoItem] });
+    set({ itens: [...get().itens, data as unknown as DocumentacaoItem] });
     toast.success("Item adicionado");
-    return data.id;
+    return (data as any).id;
   },
 
   async createBatch(items) {
@@ -193,16 +200,17 @@ export const useDocumentacao = create<State>((set, get) => ({
       enviado_por: item.enviado_por ?? null,
       formato: item.formato ?? null,
       ordem: item.ordem ?? 0,
+      origem_global_id: (item as any).origem_global_id ?? null,
     }));
     const { data, error } = await supabase
       .from("cliente_documentacao")
-      .insert(payload)
+      .insert(payload as any)
       .select();
     if (error) {
       toast.error("Erro ao salvar em lote", { description: error.message });
       return;
     }
-    set({ itens: [...get().itens, ...((data ?? []) as DocumentacaoItem[])] });
+    set({ itens: [...get().itens, ...((data ?? []) as unknown as DocumentacaoItem[])] });
     toast.success(`${data?.length ?? 0} itens adicionados`);
   },
 
@@ -222,7 +230,7 @@ export const useDocumentacao = create<State>((set, get) => ({
       return;
     }
     set({
-      itens: get().itens.map((i) => (i.id === id ? (data as DocumentacaoItem) : i)),
+      itens: get().itens.map((i) => (i.id === id ? (data as unknown as DocumentacaoItem) : i)),
     });
   },
 
@@ -234,6 +242,64 @@ export const useDocumentacao = create<State>((set, get) => ({
     }
     set({ itens: get().itens.filter((i) => i.id !== id) });
     toast.success("Item removido");
+  },
+
+  async applyGlobalDefaults(clienteId) {
+    const { data: globais, error } = await supabase
+      .from("documentos_globais" as any)
+      .select("*")
+      .eq("escopo", "cliente")
+      .eq("ativo", true)
+      .eq("aplicar_automatico", true)
+      .order("ordem", { ascending: true });
+    if (error) {
+      toast.error("Erro ao buscar documentos padrão", { description: error.message });
+      return { inseridos: 0, jaExistiam: 0 };
+    }
+    const lista = (globais ?? []) as any[];
+    if (lista.length === 0) {
+      toast.message("Nenhum documento padrão ativo para aplicar.");
+      return { inseridos: 0, jaExistiam: 0 };
+    }
+    const itensCliente = get().itens.filter((i) => i.cliente_id === clienteId);
+    const jaTemSet = new Set(itensCliente.map((i) => i.origem_global_id).filter(Boolean));
+    const novos = lista.filter((g) => !jaTemSet.has(g.id));
+    if (novos.length === 0) {
+      toast.success("Cliente já possui todos os documentos padrão.");
+      return { inseridos: 0, jaExistiam: lista.length };
+    }
+    const baseOrdem = (itensCliente.at(-1)?.ordem ?? 0) + 1;
+    const payload = novos.map((g, i) => ({
+      cliente_id: clienteId,
+      bloco: g.bloco ?? "materiais",
+      tipo: g.tipo ?? "material",
+      titulo: g.titulo,
+      url: g.url ?? null,
+      login: g.login ?? null,
+      senha: g.senha ?? null,
+      observacao: g.descricao ?? null,
+      data_evento: null,
+      enviado_por: null,
+      formato: null,
+      ordem: baseOrdem + i,
+      origem_global_id: g.id,
+      enviado: false,
+      data_envio: null,
+    }));
+    const { data, error: insErr } = await supabase
+      .from("cliente_documentacao")
+      .insert(payload as any)
+      .select();
+    if (insErr) {
+      toast.error("Erro ao aplicar documentos padrão", { description: insErr.message });
+      return { inseridos: 0, jaExistiam: lista.length - novos.length };
+    }
+    set({ itens: [...get().itens, ...((data ?? []) as unknown as DocumentacaoItem[])] });
+    toast.success(
+      `${data?.length ?? 0} documento(s) padrão aplicado(s)` +
+        (lista.length - novos.length > 0 ? ` (${lista.length - novos.length} já existiam)` : ""),
+    );
+    return { inseridos: data?.length ?? 0, jaExistiam: lista.length - novos.length };
   },
 }));
 

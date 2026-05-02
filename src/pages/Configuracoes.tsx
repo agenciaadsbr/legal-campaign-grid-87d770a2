@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EquipeAcessosManager } from "@/components/EquipeAcessosManager";
 import { MeuPerfil } from "@/components/MeuPerfil";
 import { ConfiguracoesDemandasManager } from "@/components/ConfiguracoesDemandasManager";
+import { DocumentosGlobaisManager } from "@/components/configuracoes/DocumentosGlobaisManager";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Configuracoes() {
@@ -26,6 +27,7 @@ export default function Configuracoes() {
           <TabsTrigger value="aparencia">Aparência</TabsTrigger>
           {isAdmin && <TabsTrigger value="equipe">Equipe & Acessos</TabsTrigger>}
           {isAdmin && <TabsTrigger value="demandas">Demandas</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="documentos">Documentos</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="perfil" className="mt-4">
@@ -54,6 +56,12 @@ export default function Configuracoes() {
         {isAdmin && (
           <TabsContent value="demandas" className="mt-4">
             <ConfiguracoesDemandasManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="documentos" className="mt-4">
+            <DocumentosGlobaisManager />
           </TabsContent>
         )}
       </Tabs>
