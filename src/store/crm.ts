@@ -582,6 +582,40 @@ export const useCRM = create<State>()((set, get) => ({
       if (postsErr) toast.error(`Cards criados, mas os posts falharam: ${postsErr.message}`);
     }
 
+    // ===== Aplicar documentos padrão da empresa (Configurações > Documentos) =====
+    try {
+      const { data: globais } = await supabase
+        .from("documentos_globais" as any)
+        .select("*")
+        .eq("escopo", "cliente")
+        .eq("ativo", true)
+        .eq("aplicar_automatico", true)
+        .order("ordem", { ascending: true });
+      if (globais && globais.length > 0) {
+        const docsPayload = (globais as any[]).map((g, i) => ({
+          cliente_id: inserted.id,
+          bloco: g.bloco ?? "materiais",
+          tipo: g.tipo ?? "material",
+          titulo: g.titulo,
+          url: g.url ?? null,
+          login: g.login ?? null,
+          senha: g.senha ?? null,
+          observacao: g.descricao ?? null,
+          formato: null,
+          data_evento: null,
+          enviado_por: null,
+          ordem: i,
+          origem_global_id: g.id,
+        }));
+        const { error: docsErr } = await supabase
+          .from("cliente_documentacao")
+          .insert(docsPayload as any);
+        if (docsErr) console.warn("Falha ao aplicar documentos padrão:", docsErr.message);
+      }
+    } catch (e) {
+      console.warn("Erro inesperado ao aplicar documentos padrão", e);
+    }
+
     await get()._loadAll();
     return inserted.id;
   },
