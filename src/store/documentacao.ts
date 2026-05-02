@@ -110,6 +110,9 @@ export interface DocumentacaoItem {
   enviado_por: string | null;
   formato: string | null;
   ordem: number;
+  origem_global_id: string | null;
+  enviado: boolean;
+  data_envio: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -120,13 +123,14 @@ interface State {
   loading: boolean;
   load: () => Promise<void>;
   create: (
-    item: Omit<DocumentacaoItem, "id" | "created_at" | "updated_at" | "ordem"> & { ordem?: number },
+    item: Omit<DocumentacaoItem, "id" | "created_at" | "updated_at" | "ordem" | "origem_global_id" | "enviado" | "data_envio"> & { ordem?: number; origem_global_id?: string | null; enviado?: boolean; data_envio?: string | null },
   ) => Promise<string | null>;
   createBatch: (
-    items: Array<Omit<DocumentacaoItem, "id" | "created_at" | "updated_at" | "ordem"> & { ordem?: number }>,
+    items: Array<Omit<DocumentacaoItem, "id" | "created_at" | "updated_at" | "ordem" | "origem_global_id" | "enviado" | "data_envio"> & { ordem?: number; origem_global_id?: string | null }>,
   ) => Promise<void>;
   update: (id: string, patch: Partial<DocumentacaoItem>) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  applyGlobalDefaults: (clienteId: string) => Promise<{ inseridos: number; jaExistiam: number }>;
 }
 
 export const useDocumentacao = create<State>((set, get) => ({
