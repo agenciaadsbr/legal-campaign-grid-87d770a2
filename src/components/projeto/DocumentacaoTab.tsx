@@ -242,6 +242,16 @@ export function DocumentacaoTab({
           </SelectContent>
         </Select>
         <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              await useDocumentacao.getState().applyGlobalDefaults(clienteId);
+            }}
+            title="Aplicar documentos padrão da empresa"
+          >
+            <Sparkles className="h-4 w-4 mr-1" /> Aplicar padrão
+          </Button>
           <Button variant="outline" size="sm" onClick={exportarTxt}>
             <FileText className="h-4 w-4 mr-1" /> TXT
           </Button>
