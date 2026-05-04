@@ -141,8 +141,29 @@ export default function ProjetoCliente() {
     const next = new URLSearchParams(searchParams);
     if (v === "visao") next.delete("tab");
     else next.set("tab", v);
+    next.delete("demanda");
     setSearchParams(next, { replace: true });
   };
+
+  // Deep-link: ?demanda={id} abre o detalhe da demanda na aba correspondente
+  const demandaIdParam = searchParams.get("demanda");
+  const demandaDeepLink = useMemo(() => {
+    if (!demandaIdParam) return null;
+    return demandas.find((d) => d.id === demandaIdParam) ?? null;
+  }, [demandaIdParam, demandas]);
+  const abaDemandaDeepLink = demandaDeepLink ? tab : null;
+  useEffect(() => {
+    if (!demandaIdParam) return;
+    // Limpa o param após o React renderizar (a prop já foi entregue à AreaTab)
+    const t = setTimeout(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("demanda");
+      setSearchParams(next, { replace: true });
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demandaIdParam]);
+
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [novoPlanOpen, setNovoPlanOpen] = useState(false);
