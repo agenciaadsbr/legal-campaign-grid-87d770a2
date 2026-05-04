@@ -10,6 +10,7 @@ import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Demandas from "./pages/Demandas";
+import MinhasTarefas from "./pages/MinhasTarefas";
 
 import ClienteDetalhe from "./pages/ClienteDetalhe";
 import ProjetoCliente from "./pages/ProjetoCliente";
@@ -48,6 +49,7 @@ const App = () => (
                 }
               >
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/minhas-tarefas" element={<MinhasTarefas />} />
                 <Route path="/clientes" element={<Clientes />} />
                 <Route path="/clientes/:clienteId" element={<ProjetoCliente />} />
                 <Route path="/clientes/:clienteId/projeto" element={<ProjetoCliente />} />
