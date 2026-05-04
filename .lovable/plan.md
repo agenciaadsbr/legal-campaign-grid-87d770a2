@@ -1,137 +1,97 @@
+## Objetivo
 
-## Nova aba "Documentos" em Configurações
+Reestruturar o módulo **Dashboard** (`/`) com um layout mais profissional, denso e organizado por seções temáticas, reaproveitando o componente `KpiCard` (já criado para Relatórios) e expondo métricas reais que hoje não aparecem ou aparecem de forma básica. Nenhuma alteração fora do Dashboard.
 
-Centralizar templates de documentos da empresa e aplicar automaticamente em novos clientes na aba `Documentação` do Projeto Completo.
+## Layout proposto
 
----
+```text
+┌─ Header ──────────────────────────────────────────────────────┐
+│ Dashboard                                  [filtro período ▾] │
+│ Visão geral em tempo real do Dash Tasks                       │
+└───────────────────────────────────────────────────────────────┘
 
-### 1. Banco de dados (migração)
+SEÇÃO 1 — Visão Geral (KPIs principais, 4 colunas no desktop)
+┌──────────┬──────────┬──────────┬──────────┐
+│ Clientes │ Onboard. │ Ativos   │ Pausados │
+│ total    │ +renov.  │ +%       │          │
+└──────────┴──────────┴──────────┴──────────┘
 
-**Tabela nova: `documentos_globais`** (templates da empresa — não pertence a cliente nenhum)
+SEÇÃO 2 — Conteúdo & Posts (6 KPIs)
+[Total posts] [Criar] [Revisar] [Agendar] [Postados] [Hoje]
 
-Colunas:
-- `id` uuid PK
-- `escopo` text — `"cliente"` (padrão p/ clientes) ou `"interno"` (uso da equipe)
-- `titulo` text not null
-- `tipo` text — reutiliza valores de `TIPOS_POR_BLOCO` (ex.: `boas_vindas`, `treinamento`, `script`...)
-- `bloco` text — `"acessos" | "links" | "reunioes" | "materiais" | "documentos"` (em qual bloco vai cair na Documentação do cliente). Padrão `materiais`.
-- `categoria` text — Boas-vindas, Treinamento, Comercial, CRM/Automação, Atendimento, Tráfego Pago, Documentos gerais, Outros
-- `descricao` text
-- `url` text (link)
-- `arquivo_url` text (anexo opcional via bucket `anexos`)
-- `login`, `senha` text (opcional, p/ acessos padrão)
-- `observacao_interna` text
-- `aplicar_automatico` boolean default `true` (só efetivo p/ escopo `cliente`)
-- `permissao_acesso` text — `"todos" | "admin"` (default `todos`; usado apenas p/ escopo interno)
-- `ativo` boolean default `true`
-- `ordem` int default `0`
-- `created_at`, `updated_at` timestamptz
+SEÇÃO 3 — Demandas Internas (5 KPIs)
+[Abertas] [Urgentes] [Atrasadas] [Em revisão] [Concluídas hoje]
 
-RLS:
-- SELECT: `authenticated` true (interno filtrado no app pela `permissao_acesso`)
-- INSERT/UPDATE/DELETE: somente `has_role(auth.uid(), 'admin')`
+SEÇÃO 4 — Gráficos (grid 12 col)
+┌─ col-8 ─────────────────────────┬─ col-4 ───────────┐
+│ Posts por mês (AreaChart)       │ Distribuição de   │
+│ últimos 12 meses                │ status de clientes│
+│                                 │ (Donut)           │
+└─────────────────────────────────┴───────────────────┘
+┌─ col-6 ─────────────────────────┬─ col-6 ───────────┐
+│ Carga por responsável — Posts   │ Carga por respon. │
+│ (Bar horizontal, ordenado)      │ — Demandas (Bar)  │
+└─────────────────────────────────┴───────────────────┘
+┌─ col-7 ─────────────────────────┬─ col-5 ───────────┐
+│ Demandas por status × prioridade│ Próximos prazos   │
+│ (Bar empilhado)                 │ (lista top 6)     │
+└─────────────────────────────────┴───────────────────┘
 
-Trigger `set_updated_at` no UPDATE.
-
-**Tabela `cliente_documentacao`** — adicionar coluna opcional:
-- `origem_global_id` uuid null — referência fraca ao `documentos_globais.id` (rastreia origem; permite marcar "já aplicado")
-- `enviado` boolean default `false`
-- `data_envio` timestamptz null
-
-Isso permite saber quais documentos padrão já foram copiados para um cliente (evita duplicar ao "Aplicar manualmente").
-
----
-
-### 2. Frontend — Configurações
-
-**`src/pages/Configuracoes.tsx`**: adicionar nova aba `"Documentos"` (apenas se `isAdmin`), na ordem solicitada (após Demandas).
-
-**Novo componente: `src/components/configuracoes/DocumentosGlobaisManager.tsx`**
-
-Estrutura:
-- Sub-tabs: `"Documentos padrão para clientes"` (escopo=`cliente`) | `"Documentos internos da empresa"` (escopo=`interno`)
-- Toolbar: busca por título, filtro por categoria, filtro por tipo, botão `Novo documento`
-- Lista (cards/tabela) com: título, categoria, tipo, bloco, badge "Auto" se `aplicar_automatico`, badge "Inativo" se `!ativo`
-- Ações por item: editar, duplicar, ativar/desativar, excluir, drag para reordenar (ou setas ↑↓)
-
-**Novo componente: `src/components/configuracoes/DocumentoGlobalDialog.tsx`**
-
-Form com todos os campos. Para escopo `cliente` mostra `aplicar_automatico` + `bloco`. Para escopo `interno` mostra `permissao_acesso` (e esconde `aplicar_automatico`, mas permite marcar — quando marcado, vira `aplicar_automatico=true`).
-
-**Novo store: `src/store/documentosGlobais.ts`** — Zustand igual aos outros stores (load, create, update, remove, duplicate, toggleAtivo) + realtime na tabela `documentos_globais`.
-
----
-
-### 3. Aplicação automática em novos clientes
-
-Em `src/store/crm.ts` → função `addCliente`, após criar o cliente com sucesso, fazer:
-
-```ts
-const { data: globais } = await supabase
-  .from("documentos_globais")
-  .select("*")
-  .eq("escopo", "cliente")
-  .eq("ativo", true)
-  .eq("aplicar_automatico", true)
-  .order("ordem");
-
-if (globais?.length) {
-  await supabase.from("cliente_documentacao").insert(
-    globais.map((g, i) => ({
-      cliente_id: inserted.id,
-      bloco: g.bloco ?? "materiais",
-      tipo: g.tipo ?? "material",
-      titulo: g.titulo,
-      url: g.url ?? null,
-      login: g.login ?? null,
-      senha: g.senha ?? null,
-      observacao: g.descricao ?? null,
-      ordem: i,
-      origem_global_id: g.id,
-    }))
-  );
-}
+SEÇÃO 5 — Atividade recente
+┌─ col-6 ─────────────────────────┬─ col-6 ───────────┐
+│ Alertas pendentes (lista top 5) │ Renovações próx.  │
+│                                 │ 7 dias (lista)    │
+└─────────────────────────────────┴───────────────────┘
 ```
 
-Não bloqueia criação de cliente em caso de erro (toast warning).
+## Métricas e cálculos (todos derivados dos stores existentes)
 
----
+**Clientes** (`useCRM`):
+- Total, Onboarding, Ativos, Pausados, Encerrados (via `status_global`)
+- Renovações em até 7 dias (`prazo_onboarding`)
+- % ativos sobre o total (no `hint` do KPI)
 
-### 4. Aba Documentação do Projeto (cliente)
+**Posts/Cards** (`useCRM.cards` + `posts`):
+- Total cards, por status (Criar, Revisar, Agendar, Postado, Renovação)
+- Posts criados hoje
+- Série mensal últimos 12 meses (AreaChart com gradiente)
+- Carga por responsável (BarChart horizontal ordenado desc)
 
-Em `src/components/projeto/DocumentacaoTab.tsx`:
+**Demandas** (`useDemandas`):
+- Abertas (status ≠ Concluido), Urgentes, Atrasadas, Em revisão, Concluídas hoje
+- Empilhado status × prioridade (Bar stacked)
+- Carga por responsável (usa `getResponsaveisIds`)
+- Próximos prazos: top 6 demandas com `data_limite` futuro mais próximo, status ≠ Concluido
 
-- **Botão novo no toolbar**: `"Aplicar documentos padrão"` — chama edge function/cliente que busca `documentos_globais` ativos com `aplicar_automatico=true` e cria apenas os que ainda não existem para esse cliente (filtrando por `origem_global_id`). Toast com qtd inserida / qtd já existente.
-- **Identificação visual**: itens com `origem_global_id` ganham um badge `"Padrão"` (cor sutil) + tooltip "Vem de Configurações > Documentos".
-- Edição/exclusão do item no cliente continua funcionando normalmente — não toca no global (já garantido pela arquitetura: cópia, não referência).
-- **Campos novos editáveis** no item: checkbox `Marcado como enviado` + `Data de envio` (preenche `enviado` e `data_envio` em `cliente_documentacao`).
+**Atividade**:
+- Top 5 alertas com `status === "Pendente"` (mensagem + cliente + data)
+- Top 5 clientes em renovação ≤ 7 dias com nome, dias restantes e badge
 
-Não criar nova seção visual separada — manter agrupamento atual por bloco; o badge `Padrão` já diferencia. (Se preferirem seção separada "Materiais padrão da empresa", dá pra adicionar — confirmar se quiser; por padrão mantenho agrupamento atual para não duplicar UI.)
+## Arquivos afetados (apenas Dashboard)
 
----
+- `src/pages/Dashboard.tsx` — reescrito, usando `KpiCard` e novos gráficos.
+- `src/components/dashboard/ProximosPrazosCard.tsx` — **novo** (lista demandas próximas do vencimento).
+- `src/components/dashboard/AlertasRecentesCard.tsx` — **novo** (lista alertas pendentes).
+- `src/components/dashboard/RenovacoesCard.tsx` — **novo** (lista renovações próximas).
+- `src/components/dashboard/StatusClientesDonut.tsx` — **novo** (donut com distribuição de status).
+- `src/components/dashboard/DemandasStackedBar.tsx` — **novo** (status × prioridade).
 
-### 5. Permissões
+`DashboardDemandasSection.tsx` continua existindo (usado em outros lugares? checar — se só Dashboard, vira KPIs inline da Seção 3 sem remover o arquivo para evitar quebras; manteremos o arquivo intacto e apenas pararemos de importá-lo no Dashboard).
 
-- Aba `Configurações > Documentos`: visível só para `isAdmin` (já é o padrão das outras abas admin).
-- RLS na tabela `documentos_globais`: writes só para admin.
-- Documentos internos com `permissao_acesso='admin'`: filtrados no client (lista só admins veem) — RLS adicional não necessária pois a aba inteira é admin-only.
+## Detalhes técnicos
 
----
+- Reutilizar `KpiCard` existente (`src/components/relatorios/KpiCard.tsx`) — sem duplicar.
+- Gráficos com `recharts`, mesmo `tooltipStyle` usado em Relatórios para consistência visual.
+- Cores via tokens HSL do `index.css` (`--primary`, `--status-*`, `--destructive`, `--info`) — nada hardcoded.
+- Layout responsivo: KPIs `grid-cols-2 md:grid-cols-3 lg:grid-cols-{4|5|6}`; gráficos `lg:grid-cols-12`.
+- Tudo em `useMemo` para evitar recomputo a cada render.
+- Sem migrações de banco. Sem novas dependências.
+- Escopo restrito: nenhuma alteração em Relatórios, Demandas, Configurações, sidebar ou stores.
 
-### 6. Detalhes técnicos
+## Critérios de aceitação
 
-**Arquivos novos:**
-- `src/store/documentosGlobais.ts`
-- `src/components/configuracoes/DocumentosGlobaisManager.tsx`
-- `src/components/configuracoes/DocumentoGlobalDialog.tsx`
-- migração SQL (criar tabela + colunas + RLS + trigger)
-
-**Arquivos editados:**
-- `src/pages/Configuracoes.tsx` — adicionar TabTrigger + TabContent
-- `src/store/crm.ts` — `addCliente` aplica padrões automáticos
-- `src/store/documentacao.ts` — incluir `origem_global_id`, `enviado`, `data_envio` na interface e payloads
-- `src/components/projeto/DocumentacaoTab.tsx` — botão "Aplicar documentos padrão", badge "Padrão", campos enviado/data_envio no dialog de item
-
-**Compatibilidade:** Documentos já existentes nos clientes não são tocados. Cliente antigo recebe documentos padrão apenas via ação manual `Aplicar documentos padrão`.
-
-**Validação manual:** seguir o roteiro de 10 passos do briefing após implementação.
+1. `/` exibe header, 5 seções na ordem descrita.
+2. KPIs mostram contagens reais derivadas dos stores (zero quando não há dados).
+3. Gráficos renderizam com tokens semânticos de cor (dark/light corretos).
+4. Listas de "Próximos prazos", "Alertas" e "Renovações" mostram até 6/5 itens com vazio amigável quando não há dados.
+5. Nenhum arquivo fora de `src/pages/Dashboard.tsx` e `src/components/dashboard/*` é alterado.
