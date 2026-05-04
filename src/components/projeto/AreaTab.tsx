@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
 import {
