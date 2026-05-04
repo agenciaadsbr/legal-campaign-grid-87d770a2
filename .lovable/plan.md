@@ -1,97 +1,218 @@
 ## Objetivo
 
-Reestruturar o módulo **Dashboard** (`/`) com um layout mais profissional, denso e organizado por seções temáticas, reaproveitando o componente `KpiCard` (já criado para Relatórios) e expondo métricas reais que hoje não aparecem ou aparecem de forma básica. Nenhuma alteração fora do Dashboard.
+Adicionar três funcionalidades **sem alterar** módulos existentes (Clientes, Projeto Completo, Demandas, Posts, Documentação, Briefing, Planejamento):
 
-## Layout proposto
+1. Módulo **"Minhas Tarefas"** — painel individual do colaborador logado.
+2. **Sistema de prioridade** com ordenação inteligente (Urgente → Atrasado → Próximo prazo → Demais).
+3. **Fluxo de delegação** ao concluir uma tarefa (concluir apenas vs. concluir + criar próxima).
+4. **Toggle "Por Colaborador"** no Dashboard atual.
 
-```text
-┌─ Header ──────────────────────────────────────────────────────┐
-│ Dashboard                                  [filtro período ▾] │
-│ Visão geral em tempo real do Dash Tasks                       │
-└───────────────────────────────────────────────────────────────┘
+Tudo é **aditivo**: novos arquivos, novas rotas, novos componentes. Stores existentes só ganham métodos novos (não removem nada). Não há mudanças destrutivas no banco.
 
-SEÇÃO 1 — Visão Geral (KPIs principais, 4 colunas no desktop)
-┌──────────┬──────────┬──────────┬──────────┐
-│ Clientes │ Onboard. │ Ativos   │ Pausados │
-│ total    │ +renov.  │ +%       │          │
-└──────────┴──────────┴──────────┴──────────┘
+---
 
-SEÇÃO 2 — Conteúdo & Posts (6 KPIs)
-[Total posts] [Criar] [Revisar] [Agendar] [Postados] [Hoje]
+## 1. Mapeamento "usuário logado → tarefas"
 
-SEÇÃO 3 — Demandas Internas (5 KPIs)
-[Abertas] [Urgentes] [Atrasadas] [Em revisão] [Concluídas hoje]
+Auth usa `auth.users`, mas tarefas usam `responsavel_id` (tabela `responsaveis`). O elo já existe: `profiles.responsavel_id` aponta para `responsaveis.id` (visto em `crm.ts:482`).
 
-SEÇÃO 4 — Gráficos (grid 12 col)
-┌─ col-8 ─────────────────────────┬─ col-4 ───────────┐
-│ Posts por mês (AreaChart)       │ Distribuição de   │
-│ últimos 12 meses                │ status de clientes│
-│                                 │ (Donut)           │
-└─────────────────────────────────┴───────────────────┘
-┌─ col-6 ─────────────────────────┬─ col-6 ───────────┐
-│ Carga por responsável — Posts   │ Carga por respon. │
-│ (Bar horizontal, ordenado)      │ — Demandas (Bar)  │
-└─────────────────────────────────┴───────────────────┘
-┌─ col-7 ─────────────────────────┬─ col-5 ───────────┐
-│ Demandas por status × prioridade│ Próximos prazos   │
-│ (Bar empilhado)                 │ (lista top 6)     │
-└─────────────────────────────────┴───────────────────┘
+Será criado um helper `useResponsavelAtual()` em `src/hooks/useResponsavelAtual.ts`:
+- Lê `auth.user.id`, busca `profiles.responsavel_id`, devolve o `Responsavel` correspondente.
+- Cacheado em memória; recarrega no login/logout.
 
-SEÇÃO 5 — Atividade recente
-┌─ col-6 ─────────────────────────┬─ col-6 ───────────┐
-│ Alertas pendentes (lista top 5) │ Renovações próx.  │
-│                                 │ 7 dias (lista)    │
-└─────────────────────────────────┴───────────────────┘
+---
+
+## 2. Fontes de tarefas (somente leitura, consolidação)
+
+Novo arquivo `src/lib/minhasTarefas.ts` exporta:
+
+```ts
+export type TaskFonte = "demanda" | "post" | "planejamento" | "documentacao";
+export interface UnifiedTask {
+  id: string;                 // `${fonte}:${id_origem}`
+  fonte: TaskFonte;
+  origem_id: string;
+  cliente_id: string;
+  titulo: string;
+  area: string;               // "Posts" | "Vídeo" | "Tráfego Pago" | "LP/Site" | "IA/Atendimento" | "Documentação" | "Planejamento" | "Urgência/Outro"
+  prioridade: "Baixa"|"Media"|"Alta"|"Urgente";
+  prazo: string | null;
+  status: "pendente"|"em_andamento"|"atrasado"|"concluido";
+  urgente: boolean;
+  responsaveis_ids: string[];
+  link: string;               // rota dentro do Projeto Completo
+}
 ```
 
-## Métricas e cálculos (todos derivados dos stores existentes)
+Função `buildUnifiedTasks({ demandas, cards, planejamento, documentacao, responsavelId })` consolida:
 
-**Clientes** (`useCRM`):
-- Total, Onboarding, Ativos, Pausados, Encerrados (via `status_global`)
-- Renovações em até 7 dias (`prazo_onboarding`)
-- % ativos sobre o total (no `hint` do KPI)
+| Fonte | Tabela | Filtro do usuário | Mapa de área |
+|---|---|---|---|
+| Demandas | `demandas` | `responsaveis_ids` contém `responsavelId` | `categoria` → label (Vídeo, LP, Tráfego, IA/Atend., Briefing, Planejamento, Suporte, Urgência/Outro) |
+| Posts | `cards` | `responsaveis_ids` contém | área = "Posts" |
+| Planejamento | `cliente_planejamento_itens` | `responsavel_id` = | área = "Planejamento" |
+| Documentação | `cliente_documentacao` | `enviado_por` = `auth.uid()` (campo é uuid de auth) | área = "Documentação" |
 
-**Posts/Cards** (`useCRM.cards` + `posts`):
-- Total cards, por status (Criar, Revisar, Agendar, Postado, Renovação)
-- Posts criados hoje
-- Série mensal últimos 12 meses (AreaChart com gradiente)
-- Carga por responsável (BarChart horizontal ordenado desc)
+`status` derivado: `concluido` se `data_conclusao`/`status="Concluido"|"Postado"|"concluido"` ou `enviado=true`; `atrasado` se `prazo < hoje` e não concluído; `em_andamento` se status intermediário; `pendente` caso contrário.
 
-**Demandas** (`useDemandas`):
-- Abertas (status ≠ Concluido), Urgentes, Atrasadas, Em revisão, Concluídas hoje
-- Empilhado status × prioridade (Bar stacked)
-- Carga por responsável (usa `getResponsaveisIds`)
-- Próximos prazos: top 6 demandas com `data_limite` futuro mais próximo, status ≠ Concluido
+`urgente`: demandas com `prioridade="Urgente"`, posts com `is_urgent=true`, planejamento com `prioridade="urgente"`.
 
-**Atividade**:
-- Top 5 alertas com `status === "Pendente"` (mensagem + cliente + data)
-- Top 5 clientes em renovação ≤ 7 dias com nome, dias restantes e badge
+**Sem nova tabela.** Tudo derivado em runtime dos stores já carregados (`useDemandas`, `useCRM`, `usePlanejamento`, `useDocumentacao`).
 
-## Arquivos afetados (apenas Dashboard)
+---
 
-- `src/pages/Dashboard.tsx` — reescrito, usando `KpiCard` e novos gráficos.
-- `src/components/dashboard/ProximosPrazosCard.tsx` — **novo** (lista demandas próximas do vencimento).
-- `src/components/dashboard/AlertasRecentesCard.tsx` — **novo** (lista alertas pendentes).
-- `src/components/dashboard/RenovacoesCard.tsx` — **novo** (lista renovações próximas).
-- `src/components/dashboard/StatusClientesDonut.tsx` — **novo** (donut com distribuição de status).
-- `src/components/dashboard/DemandasStackedBar.tsx` — **novo** (status × prioridade).
+## 3. Módulo "Minhas Tarefas"
 
-`DashboardDemandasSection.tsx` continua existindo (usado em outros lugares? checar — se só Dashboard, vira KPIs inline da Seção 3 sem remover o arquivo para evitar quebras; manteremos o arquivo intacto e apenas pararemos de importá-lo no Dashboard).
+### Rota
+`/minhas-tarefas` em `App.tsx`, dentro de `RequireAuth` + `AppLayout`.
 
-## Detalhes técnicos
+### Menu lateral (`AppSidebar.tsx`)
+Inserir item após "Dashboard":
+```
+Dashboard
+Minhas Tarefas      ← NOVO  (ícone CheckSquare)
+Clientes
+Contratos
+Alertas
+Relatórios
+Configurações
+```
 
-- Reutilizar `KpiCard` existente (`src/components/relatorios/KpiCard.tsx`) — sem duplicar.
-- Gráficos com `recharts`, mesmo `tooltipStyle` usado em Relatórios para consistência visual.
-- Cores via tokens HSL do `index.css` (`--primary`, `--status-*`, `--destructive`, `--info`) — nada hardcoded.
-- Layout responsivo: KPIs `grid-cols-2 md:grid-cols-3 lg:grid-cols-{4|5|6}`; gráficos `lg:grid-cols-12`.
-- Tudo em `useMemo` para evitar recomputo a cada render.
-- Sem migrações de banco. Sem novas dependências.
-- Escopo restrito: nenhuma alteração em Relatórios, Demandas, Configurações, sidebar ou stores.
+### Página `src/pages/MinhasTarefas.tsx`
+Layout: header + filtros + tabela (lista, **não grade**).
 
-## Critérios de aceitação
+**Filtros (topo):**
+- Cliente (Select com lista de clientes do usuário)
+- Área (multi-select com checkboxes — usa o componente `Popover+Checkbox` já presente em filtros do projeto)
+- Status (pendente / em_andamento / atrasado / concluído)
+- Período (componente reutilizado — ver §6)
+- Busca por texto (Input com filtro client-side em `titulo` e nome do cliente)
 
-1. `/` exibe header, 5 seções na ordem descrita.
-2. KPIs mostram contagens reais derivadas dos stores (zero quando não há dados).
-3. Gráficos renderizam com tokens semânticos de cor (dark/light corretos).
-4. Listas de "Próximos prazos", "Alertas" e "Renovações" mostram até 6/5 itens com vazio amigável quando não há dados.
-5. Nenhum arquivo fora de `src/pages/Dashboard.tsx` e `src/components/dashboard/*` é alterado.
+**Tabela (Colunas):**
+| Cliente | Tarefa | Área | Prioridade | Prazo | Status | Ações |
+|---|---|---|---|---|---|---|
+
+- "Cliente" mostra logo + nome (componente já usado no Dashboard)
+- "Tarefa" mostra título + ícones inline (⚡ urgente, 🔴 atrasado, 🟡 próximo prazo ≤ 3 dias)
+- "Prioridade" usa badge colorido por `PRIORIDADE_COR`
+- "Status" usa `StatusBadge` existente quando aplicável
+- "Ações": botão "Abrir" (link p/ Projeto Completo) + botão "Concluir" (abre modal de delegação)
+
+### Componentes novos
+- `src/components/tarefas/MinhasTarefasFiltros.tsx`
+- `src/components/tarefas/MinhasTarefasTabela.tsx`
+- `src/components/tarefas/PrioridadeIcon.tsx` (renderiza ⚡/🔴/🟡 conforme regras)
+- `src/components/tarefas/ConcluirTarefaDialog.tsx` (modal de delegação — §5)
+
+---
+
+## 4. Ordenação por prioridade
+
+Função pura `ordenarTarefas(tasks: UnifiedTask[])`:
+
+```text
+1. urgente=true                          → topo
+2. status="atrasado"                     → segundo bloco
+3. demais ordenados por prazo asc        → próximos primeiro (nulls no fim)
+4. dentro do mesmo bucket: prioridade DESC (Urgente/Alta/Media/Baixa)
+```
+
+Aplicada por padrão no módulo "Minhas Tarefas" e no painel do Dashboard por colaborador.
+
+---
+
+## 5. Fluxo de delegação ("Concluir tarefa")
+
+Modal `ConcluirTarefaDialog`:
+
+**Tela 1 — escolha:**
+- Botão `✔ Concluir apenas`
+- Botão `🔄 Concluir e criar próxima tarefa`
+- Botão `Cancelar`
+
+**Tela 2 (apenas se "Concluir e criar próxima"):**
+Formulário com:
+- Novo responsável (Select de `responsaveis`)
+- Título
+- Área (Select com mesmas categorias usadas em `UnifiedTask.area`)
+- Prazo (DatePicker)
+- Prioridade (Baixa/Média/Alta/Urgente)
+- Descrição (Textarea)
+- Checkbox "Reutilizar anexos da tarefa anterior" (visível **só** se a tarefa origem é uma `demanda` — única fonte com tabela de anexos)
+
+**Comportamento ao confirmar:**
+
+A. "Concluir apenas":
+- `demanda` → `useDemandas.moveStatus(id, "Concluido")`
+- `post`/card → `useCRM.updateCard(id, { status: "Postado" })`
+- `planejamento` → `usePlanejamento.update(id, { status: "concluido" })`
+- `documentacao` → `useDocumentacao.update(id, { enviado: true, data_envio: now })`
+
+B. "Concluir e criar próxima":
+- Conclui a anterior (igual A).
+- Cria **nova `demanda`** via `useDemandas.createDemanda({ ... , descricao: descricao + "\n\n— Vinculada a: " + tituloAnterior + " (id: " + idAnterior + ")" })`. Vinculação parent–child fica registrada no campo `descricao` (sem alterar schema).
+- Se "Reutilizar anexos" marcado **e** origem foi demanda, copia rows de `anexos_demandas` da anterior para a nova (mesma URL, sem reupload — só `insert` apontando `demanda_id` da nova).
+
+**Importante:** este fluxo **não substitui** os botões existentes nas demais telas — é exclusivo do botão "Concluir" da lista "Minhas Tarefas". Os Kanbans, listas e telas atuais continuam funcionando exatamente como hoje.
+
+---
+
+## 6. Filtro de Período reutilizável
+
+Criar `src/components/filters/PeriodoFiltro.tsx` (componente único e reutilizável):
+
+Opções:
+- **Futuro:** Hoje · Esta semana · Próximos 7 / 14 / 30 dias
+- **Passado:** Últimos 7 / 14 / 30 dias · Mês passado
+- **Personalizado:** date range picker
+
+Devolve `{ inicio: Date|null, fim: Date|null, preset: string }`. Usado em "Minhas Tarefas" e no Dashboard "Por Colaborador".
+
+> Hoje não existe um componente único — cada tela tem sua própria implementação. Este novo componente fica disponível para reuso futuro **sem modificar** os filtros já implementados em outras telas.
+
+---
+
+## 7. Dashboard — toggle "Por Colaborador"
+
+Em `src/pages/Dashboard.tsx`, no topo, adicionar `Tabs` com:
+- "Visão Geral" (renderiza tudo que existe hoje — não mexer)
+- "Por Colaborador" (nova aba)
+
+### Aba "Por Colaborador" — `src/components/dashboard/DashboardPorColaborador.tsx`
+- Select de colaborador (default = usuário logado, se mapeado)
+- `PeriodoFiltro` (do §6)
+- 4 KPIs (`KpiCard` reutilizado): Total · Pendentes · Atrasadas · Urgentes
+- Gráfico de barras horizontais "Distribuição por Área" (recharts, cores semânticas)
+- Lista compacta das 10 tarefas mais prioritárias (mesmo `ordenarTarefas`)
+
+Reutiliza `buildUnifiedTasks` filtrando pelo colaborador selecionado.
+
+---
+
+## 8. Garantias de não-regressão
+
+- Nenhum arquivo em `src/components/projeto/*`, `src/components/demandas/*`, `src/components/clientes/*` será editado.
+- Stores (`crm.ts`, `demandas.ts`, `planejamento.ts`, `documentacao.ts`) **não terão métodos removidos**. Todos os updates de delegação reusam métodos públicos já existentes.
+- Sem migração de banco (não há novas tabelas, colunas ou triggers).
+- Tipos TS ficam isolados em `src/lib/minhasTarefas.ts` — não tocam tipos do Supabase.
+
+---
+
+## Resumo de arquivos
+
+**Novos:**
+- `src/pages/MinhasTarefas.tsx`
+- `src/lib/minhasTarefas.ts`
+- `src/hooks/useResponsavelAtual.ts`
+- `src/components/tarefas/MinhasTarefasFiltros.tsx`
+- `src/components/tarefas/MinhasTarefasTabela.tsx`
+- `src/components/tarefas/PrioridadeIcon.tsx`
+- `src/components/tarefas/ConcluirTarefaDialog.tsx`
+- `src/components/filters/PeriodoFiltro.tsx`
+- `src/components/dashboard/DashboardPorColaborador.tsx`
+
+**Editados (aditivo):**
+- `src/App.tsx` — registra rota `/minhas-tarefas`
+- `src/components/AppSidebar.tsx` — adiciona item de menu
+- `src/pages/Dashboard.tsx` — envolve conteúdo atual em `<Tabs>` adicionando aba "Por Colaborador"
+
+**Banco:** nenhuma migração.
