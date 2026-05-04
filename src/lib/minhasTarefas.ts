@@ -1,6 +1,6 @@
 import type { Demanda } from "@/store/demandas";
 import { getResponsaveisIds } from "@/store/demandas";
-import type { Card as PostCard, Cliente } from "@/store/crm";
+import type { Card as PostCard, Cliente, Contrato } from "@/store/crm";
 import type { PlanItem } from "@/store/planejamento";
 import type { DocumentacaoItem } from "@/store/documentacao";
 import { CATEGORIA_LABEL } from "@/lib/demandas-categorias";
@@ -79,10 +79,11 @@ interface BuildArgs {
   planejamento: PlanItem[];
   documentacao: DocumentacaoItem[];
   clientes: Cliente[];
+  contratos?: Contrato[];
 }
 
 export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
-  const { responsavelId, authUserId, demandas, cards, planejamento, documentacao, clientes } = args;
+  const { responsavelId, authUserId, demandas, cards, planejamento, documentacao, clientes, contratos = [] } = args;
   const clienteMap = new Map(clientes.map((c) => [c.id, c.nome_cliente]));
   const out: UnifiedTask[] = [];
 
@@ -116,37 +117,69 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       });
   }
 
-  // --- Posts (cards) AGRUPADOS por cliente + responsável + (ano, mes_referencia) ---
+  // --- Posts (cards) AGRUPADOS por cliente + responsável + contrato ---
+  // Uma única tarefa por contrato: 3 meses → 12 posts, 6 meses → 24 posts, etc.
   if (responsavelId) {
-    const grupos = new Map<string, PostCard[]>();
+    // Indexa contratos por cliente
+    const contratosPorCliente = new Map<string, Contrato[]>();
+    for (const c of contratos) {
+      const arr = contratosPorCliente.get(c.cliente_id) ?? [];
+      arr.push(c);
+      contratosPorCliente.set(c.cliente_id, arr);
+    }
+
+    const resolverContratoId = (cliente_id: string, dataRef: string | null): string => {
+      const lista = contratosPorCliente.get(cliente_id) ?? [];
+      if (lista.length === 0) return "all";
+      if (dataRef) {
+        const t = new Date(dataRef).getTime();
+        const cobre = lista.find((c) => {
+          const ini = new Date(c.data_inicio).getTime();
+          const fim = new Date(c.data_fim).getTime();
+          return !isNaN(ini) && !isNaN(fim) && t >= ini && t <= fim;
+        });
+        if (cobre) return cobre.id;
+      }
+      // fallback: Ativo mais recente; senão o mais recente em geral
+      const ativos = lista.filter((c) => c.status === "Ativo");
+      const pool = ativos.length ? ativos : lista;
+      const escolhido = [...pool].sort(
+        (a, b) => new Date(b.data_inicio).getTime() - new Date(a.data_inicio).getTime(),
+      )[0];
+      return escolhido?.id ?? "all";
+    };
+
+    const grupos = new Map<string, { cards: PostCard[]; contrato_id: string }>();
     cards
       .filter((c) => (c.responsaveis ?? []).includes(responsavelId))
       .forEach((c) => {
-        const ano = c.data_agendada
-          ? new Date(c.data_agendada).getFullYear()
-          : new Date(c.created_at).getFullYear();
-        const key = `${c.cliente_id}::${responsavelId}::${ano}-${c.mes_referencia ?? 0}`;
-        const arr = grupos.get(key) ?? [];
-        arr.push(c);
-        grupos.set(key, arr);
+        const contrato_id = resolverContratoId(c.cliente_id, c.data_agendada ?? c.created_at);
+        const key = `${c.cliente_id}::${responsavelId}::${contrato_id}`;
+        const g = grupos.get(key) ?? { cards: [], contrato_id };
+        g.cards.push(c);
+        grupos.set(key, g);
       });
 
-    grupos.forEach((cardsGrupo, key) => {
+    grupos.forEach((grupo) => {
+      const cardsGrupo = grupo.cards;
       const cliente_id = cardsGrupo[0].cliente_id;
       const pendentes = cardsGrupo.filter((c) => c.status_card !== "Postado");
-      const concluidos = cardsGrupo.length - pendentes.length;
       const todosConcluidos = pendentes.length === 0;
 
-      // prazo = menor data_agendada entre pendentes (fallback: menor entre todos)
+      // prazo = menor data_agendada entre pendentes; fallback: data_fim do contrato
       const prazosPendentes = pendentes
         .map((c) => c.data_agendada)
         .filter((p): p is string => !!p)
         .sort();
-      const prazo = prazosPendentes[0] ?? null;
+      let prazo: string | null = prazosPendentes[0] ?? null;
+      if (!prazo && grupo.contrato_id !== "all") {
+        const ct = contratos.find((x) => x.id === grupo.contrato_id);
+        prazo = ct?.data_fim ?? null;
+      }
 
       const algumUrgente = cardsGrupo.some((c) => !!c.is_urgent);
-      const algumEmAndamento = pendentes.some((c) =>
-        c.status_card === "Criar" || c.status_card === "Revisar" || c.status_card === "Agendar"
+      const algumEmAndamento = pendentes.some(
+        (c) => c.status_card === "Criar" || c.status_card === "Revisar" || c.status_card === "Agendar",
       );
 
       let status: TaskStatus;
@@ -159,10 +192,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         ? `${cardsGrupo.length} posts concluídos`
         : `Criar ${pendentes.length} post${pendentes.length === 1 ? "" : "s"}`;
 
-      const loteSuffix = key.split("::")[2]; // "ano-mesRef"
-
       out.push({
-        id: `posts:${cliente_id}:${responsavelId}:${loteSuffix}`,
+        id: `posts:${cliente_id}:${responsavelId}:${grupo.contrato_id}`,
         fonte: "post",
         origem_id: cardsGrupo[0].id,
         cliente_id,
@@ -174,7 +205,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         status,
         urgente: algumUrgente,
         responsaveis_ids: [responsavelId],
-        link: `/clientes/${cliente_id}/projeto?tab=posts&lote=${loteSuffix}`,
+        link: `/clientes/${cliente_id}/projeto?tab=posts`,
       });
     });
   }
