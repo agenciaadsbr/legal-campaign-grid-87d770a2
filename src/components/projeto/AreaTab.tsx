@@ -37,12 +37,19 @@ export function AreaTab({
   demandas,
   categoria,
   emptyHint,
+  demandaInicial,
 }: Props) {
   const { responsaveis } = useCRM();
   const [novaOpen, setNovaOpen] = useState(false);
   const [selecionada, setSelecionada] = useState<Demanda | null>(null);
   const [filtroSubtipo, setFiltroSubtipo] = useState<string>("todos");
   const [filtroResp, setFiltroResp] = useState<string>("todos");
+
+  // Deep-link: abre o detalhe quando uma demanda inicial é fornecida
+  useEffect(() => {
+    if (demandaInicial) setSelecionada(demandaInicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demandaInicial?.id]);
 
   const subtipos = CATEGORIA_SUBTIPOS[categoria] ?? [];
 
