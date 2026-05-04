@@ -26,6 +26,8 @@ interface Props {
   categoria: DemandaCategoria;
   /** Texto vazio customizado. */
   emptyHint?: string;
+  /** Demanda a ser aberta automaticamente (deep-link de Minhas Tarefas). */
+  demandaInicial?: Demanda | null;
 }
 
 export function AreaTab({
