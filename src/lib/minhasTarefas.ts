@@ -253,7 +253,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           status,
           urgente: p.prioridade === "urgente",
           responsaveis_ids: p.responsavel_id ? [p.responsavel_id] : [],
-          link: `/clientes/${p.cliente_id}/projeto`,
+          link: `/clientes/${p.cliente_id}/projeto?tab=planejamento`,
         });
       });
   }
