@@ -100,33 +100,67 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       });
   }
 
-  // --- Posts (cards) ---
+  // --- Posts (cards) AGRUPADOS por cliente + responsável + (ano, mes_referencia) ---
   if (responsavelId) {
+    const grupos = new Map<string, PostCard[]>();
     cards
       .filter((c) => (c.responsaveis ?? []).includes(responsavelId))
       .forEach((c) => {
-        let status: TaskStatus = "pendente";
-        if (c.status_card === "Postado") status = "concluido";
-        else if (c.status_card === "Criar" || c.status_card === "Revisar" || c.status_card === "Agendar") status = "em_andamento";
-        const prazo = c.data_agendada ?? null;
-        if (status !== "concluido" && isAtrasado(prazo, status)) status = "atrasado";
-
-        out.push({
-          id: `post:${c.id}`,
-          fonte: "post",
-          origem_id: c.id,
-          cliente_id: c.cliente_id,
-          cliente_nome: clienteMap.get(c.cliente_id) ?? "—",
-          titulo: c.titulo_card,
-          area: "Posts",
-          prioridade: c.is_urgent ? "Urgente" : "Media",
-          prazo,
-          status,
-          urgente: !!c.is_urgent,
-          responsaveis_ids: c.responsaveis ?? [],
-          link: `/clientes/${c.cliente_id}/projeto`,
-        });
+        const ano = c.data_agendada
+          ? new Date(c.data_agendada).getFullYear()
+          : new Date(c.created_at).getFullYear();
+        const key = `${c.cliente_id}::${responsavelId}::${ano}-${c.mes_referencia ?? 0}`;
+        const arr = grupos.get(key) ?? [];
+        arr.push(c);
+        grupos.set(key, arr);
       });
+
+    grupos.forEach((cardsGrupo, key) => {
+      const cliente_id = cardsGrupo[0].cliente_id;
+      const pendentes = cardsGrupo.filter((c) => c.status_card !== "Postado");
+      const concluidos = cardsGrupo.length - pendentes.length;
+      const todosConcluidos = pendentes.length === 0;
+
+      // prazo = menor data_agendada entre pendentes (fallback: menor entre todos)
+      const prazosPendentes = pendentes
+        .map((c) => c.data_agendada)
+        .filter((p): p is string => !!p)
+        .sort();
+      const prazo = prazosPendentes[0] ?? null;
+
+      const algumUrgente = cardsGrupo.some((c) => !!c.is_urgent);
+      const algumEmAndamento = pendentes.some((c) =>
+        c.status_card === "Criar" || c.status_card === "Revisar" || c.status_card === "Agendar"
+      );
+
+      let status: TaskStatus;
+      if (todosConcluidos) status = "concluido";
+      else if (isAtrasado(prazo, "pendente")) status = "atrasado";
+      else if (algumEmAndamento) status = "em_andamento";
+      else status = "pendente";
+
+      const titulo = todosConcluidos
+        ? `${cardsGrupo.length} posts concluídos`
+        : `Criar ${pendentes.length} post${pendentes.length === 1 ? "" : "s"}`;
+
+      const loteSuffix = key.split("::")[2]; // "ano-mesRef"
+
+      out.push({
+        id: `posts:${cliente_id}:${responsavelId}:${loteSuffix}`,
+        fonte: "post",
+        origem_id: cardsGrupo[0].id,
+        cliente_id,
+        cliente_nome: clienteMap.get(cliente_id) ?? "—",
+        titulo,
+        area: "Posts",
+        prioridade: algumUrgente ? "Urgente" : "Media",
+        prazo,
+        status,
+        urgente: algumUrgente,
+        responsaveis_ids: [responsavelId],
+        link: `/clientes/${cliente_id}/projeto?tab=posts&lote=${loteSuffix}`,
+      });
+    });
   }
 
   // --- Planejamento ---
