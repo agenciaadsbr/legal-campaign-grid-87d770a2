@@ -277,7 +277,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           status,
           urgente: false,
           responsaveis_ids: [],
-          link: `/clientes/${d.cliente_id}/projeto`,
+          link: `/clientes/${d.cliente_id}/projeto?tab=documentacao`,
         });
       });
   }
