@@ -32,6 +32,7 @@ export default function MinhasTarefas() {
 
   const clientes = useCRM((s) => s.clientes);
   const cards = useCRM((s) => s.cards);
+  const contratos = useCRM((s) => s.contratos);
   const demandas = useDemandas((s) => s.demandas);
   const planejamento = usePlanejamento((s) => s.itens);
   const documentacao = useDocumentacao((s) => s.itens);
@@ -49,8 +50,9 @@ export default function MinhasTarefas() {
         planejamento,
         documentacao,
         clientes,
+        contratos,
       }),
-    [responsavelId, user?.id, demandas, cards, planejamento, documentacao, clientes],
+    [responsavelId, user?.id, demandas, cards, planejamento, documentacao, clientes, contratos],
   );
 
   const tarefasFiltradas = useMemo(() => {
