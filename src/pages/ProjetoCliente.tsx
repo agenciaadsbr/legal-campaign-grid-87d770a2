@@ -258,6 +258,7 @@ export default function ProjetoCliente() {
             clienteId={clienteId!}
             demandas={filtrarPorArea(demandasCli, "videos")}
             categoria="EditorVideo"
+            demandaInicial={abaDemandaDeepLink === "videos" ? demandaDeepLink : null}
           />
         </TabsContent>
 
@@ -269,6 +270,7 @@ export default function ProjetoCliente() {
             clienteId={clienteId!}
             demandas={filtrarPorArea(demandasCli, "trafego")}
             categoria="TrafegoPago"
+            demandaInicial={abaDemandaDeepLink === "trafego" ? demandaDeepLink : null}
           />
         </TabsContent>
 
@@ -280,6 +282,7 @@ export default function ProjetoCliente() {
             clienteId={clienteId!}
             demandas={filtrarPorArea(demandasCli, "lp")}
             categoria="LandingPage"
+            demandaInicial={abaDemandaDeepLink === "lp" ? demandaDeepLink : null}
           />
         </TabsContent>
 
@@ -291,6 +294,7 @@ export default function ProjetoCliente() {
             clienteId={clienteId!}
             demandas={filtrarPorArea(demandasCli, "ia")}
             categoria="IAAtendimento"
+            demandaInicial={abaDemandaDeepLink === "ia" ? demandaDeepLink : null}
           />
         </TabsContent>
 
@@ -303,6 +307,7 @@ export default function ProjetoCliente() {
             demandas={filtrarPorArea(demandasCli, "urgencias")}
             categoria="Personalizado"
             emptyHint="Nenhuma urgência registrada para este cliente."
+            demandaInicial={abaDemandaDeepLink === "urgencias" ? demandaDeepLink : null}
           />
         </TabsContent>
 
