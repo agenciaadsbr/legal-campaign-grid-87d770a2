@@ -6,7 +6,7 @@ import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao"
 import { useAuth } from "@/hooks/useAuth";
 import { useResponsavelAtual } from "@/hooks/useResponsavelAtual";
 import {
-  buildUnifiedTasks, ordenarTarefas, type UnifiedTask,
+  buildUnifiedTasks, ordenarTarefas, parsePrazoLocal, type UnifiedTask,
 } from "@/lib/minhasTarefas";
 import { MinhasTarefasFiltros, type FiltrosState } from "@/components/tarefas/MinhasTarefasFiltros";
 import { MinhasTarefasTabela } from "@/components/tarefas/MinhasTarefasTabela";
