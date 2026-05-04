@@ -15,6 +15,8 @@ import { DemandasStackedBar } from "@/components/dashboard/DemandasStackedBar";
 import { ProximosPrazosCard } from "@/components/dashboard/ProximosPrazosCard";
 import { AlertasRecentesCard } from "@/components/dashboard/AlertasRecentesCard";
 import { RenovacoesCard } from "@/components/dashboard/RenovacoesCard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DashboardPorColaborador } from "@/components/dashboard/DashboardPorColaborador";
 
 const tooltipStyle = {
   background: "hsl(var(--popover))",
@@ -131,6 +133,13 @@ export default function Dashboard() {
         </div>
       </header>
 
+      <Tabs defaultValue="geral" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="geral">Visão Geral</TabsTrigger>
+          <TabsTrigger value="colaborador">Por Colaborador</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="geral" className="space-y-6 mt-0">
       {/* SEÇÃO 1 — Clientes */}
       <section className="space-y-3">
         <SectionHeader title="Clientes" subtitle="Visão geral da base" />
@@ -271,6 +280,12 @@ export default function Dashboard() {
         <AlertasRecentesCard alertas={alertas} clientes={clientes} />
         <RenovacoesCard clientes={clientes} />
       </section>
+        </TabsContent>
+
+        <TabsContent value="colaborador" className="mt-0">
+          <DashboardPorColaborador />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
