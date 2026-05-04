@@ -114,7 +114,7 @@ export default function MinhasTarefas() {
           <h1 className="text-2xl font-bold tracking-tight">Minhas Tarefas</h1>
           <p className="text-sm text-muted-foreground">
             {responsavel
-              ? <>Painel individual de <strong>{responsavel.nome}</strong></>
+              ? <>Painel individual de <strong>{responsavel.nome}</strong> — apenas tarefas atribuídas a você</>
               : "Suas tarefas em todos os clientes"}
           </p>
         </div>

@@ -282,7 +282,24 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       });
   }
 
-  return out;
+  // ---------- TRAVA DE SEGURANÇA ----------
+  // Nunca exibir tarefas que não pertençam ao responsável atual.
+  // Documentação é exceção: já filtrada por authUserId e não tem responsavel_id.
+  if (responsavelId) {
+    const filtrado = out.filter((t) => {
+      if (t.fonte === "documentacao") return true;
+      return t.responsaveis_ids.includes(responsavelId);
+    });
+    if (filtrado.length !== out.length) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[MinhasTarefas] Trava de responsável descartou ${out.length - filtrado.length} tarefa(s) que não pertencem a ${responsavelId}.`,
+      );
+    }
+    return filtrado;
+  }
+  // Sem vínculo de responsável: só documentação do próprio usuário.
+  return out.filter((t) => t.fonte === "documentacao");
 }
 
 export function ordenarTarefas(tasks: UnifiedTask[]): UnifiedTask[] {
