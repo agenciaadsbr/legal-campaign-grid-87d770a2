@@ -6,7 +6,7 @@ import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao"
 import { useAuth } from "@/hooks/useAuth";
 import { useResponsavelAtual } from "@/hooks/useResponsavelAtual";
 import {
-  buildUnifiedTasks, ordenarTarefas, type UnifiedTask,
+  buildUnifiedTasks, ordenarTarefas, parsePrazoLocal, type UnifiedTask,
 } from "@/lib/minhasTarefas";
 import { MinhasTarefasFiltros, type FiltrosState } from "@/components/tarefas/MinhasTarefasFiltros";
 import { MinhasTarefasTabela } from "@/components/tarefas/MinhasTarefasTabela";
@@ -56,8 +56,12 @@ export default function MinhasTarefas() {
   const tarefasFiltradas = useMemo(() => {
     const { cliente, areas, status, busca, periodo } = filtros;
     const buscaLower = busca.trim().toLowerCase();
-    const ini = periodo.inicio?.getTime() ?? null;
-    const fim = periodo.fim?.getTime() ?? null;
+    const ini = periodo.inicio;
+    const fim = periodo.fim;
+    const isFuturo = ["hoje", "esta_semana", "prox_7", "prox_14", "prox_30"].includes(periodo.preset);
+    const isPassado = ["ult_7", "ult_14", "ult_30", "mes_passado"].includes(periodo.preset);
+    const isCustom = periodo.preset === "personalizado";
+    const periodoAtivo = (ini !== null || fim !== null) && periodo.preset !== "todos";
 
     const filtradas = todasTarefas.filter((t) => {
       if (cliente !== "all" && t.cliente_id !== cliente) return false;
@@ -67,11 +71,21 @@ export default function MinhasTarefas() {
         const hay = `${t.titulo} ${t.cliente_nome}`.toLowerCase();
         if (!hay.includes(buscaLower)) return false;
       }
-      if (ini !== null || fim !== null) {
-        if (!t.prazo) return false;
-        const p = new Date(t.prazo).getTime();
-        if (ini !== null && p < ini) return false;
-        if (fim !== null && p > fim) return false;
+      if (periodoAtivo) {
+        const prazoDate = parsePrazoLocal(t.prazo);
+        if (!prazoDate) return false;
+        const pTime = prazoDate.getTime();
+        const iniT = ini?.getTime() ?? null;
+        const fimT = fim?.getTime() ?? null;
+
+        if (isFuturo) {
+          // Inclui tudo até "fim", trazendo também atrasadas pendentes
+          if (fimT !== null && pTime > fimT) return false;
+          if (iniT !== null && pTime < iniT && t.status !== "atrasado") return false;
+        } else if (isPassado || isCustom) {
+          if (iniT !== null && pTime < iniT) return false;
+          if (fimT !== null && pTime > fimT) return false;
+        }
       }
       return true;
     });

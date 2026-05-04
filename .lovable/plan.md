@@ -1,218 +1,129 @@
+
 ## Objetivo
 
-Adicionar três funcionalidades **sem alterar** módulos existentes (Clientes, Projeto Completo, Demandas, Posts, Documentação, Briefing, Planejamento):
+Corrigir apenas o módulo **Minhas Tarefas** para:
+1. Agrupar **cards de posts** em uma única tarefa "Criar X posts" por cliente/responsável/lote.
+2. Corrigir o **filtro de período** (Hoje, Esta semana, Próximos 7/14/30, Últimos 7/14/30, Mês passado, Personalizado).
 
-1. Módulo **"Minhas Tarefas"** — painel individual do colaborador logado.
-2. **Sistema de prioridade** com ordenação inteligente (Urgente → Atrasado → Próximo prazo → Demais).
-3. **Fluxo de delegação** ao concluir uma tarefa (concluir apenas vs. concluir + criar próxima).
-4. **Toggle "Por Colaborador"** no Dashboard atual.
-
-Tudo é **aditivo**: novos arquivos, novas rotas, novos componentes. Stores existentes só ganham métodos novos (não removem nada). Não há mudanças destrutivas no banco.
+Sem alterar Projeto Completo, aba Clientes, criação automática dos cards, nem o banco.
 
 ---
 
-## 1. Mapeamento "usuário logado → tarefas"
+## 1. Agrupamento de posts (`src/lib/minhasTarefas.ts`)
 
-Auth usa `auth.users`, mas tarefas usam `responsavel_id` (tabela `responsaveis`). O elo já existe: `profiles.responsavel_id` aponta para `responsaveis.id` (visto em `crm.ts:482`).
+Hoje cada `Card` vira um `UnifiedTask`. Vou substituir esse trecho por uma rotina que agrupa.
 
-Será criado um helper `useResponsavelAtual()` em `src/hooks/useResponsavelAtual.ts`:
-- Lê `auth.user.id`, busca `profiles.responsavel_id`, devolve o `Responsavel` correspondente.
-- Cacheado em memória; recarrega no login/logout.
+**Chave de agrupamento** (sem campo `lote_id` no banco, infiro pelo lote natural já existente):
+
+```
+cliente_id  +  responsavelId  +  lote_key
+```
+
+onde `lote_key` é derivada dos campos atuais do card:
+- `mes_referencia` (já existe em `Card`) → identifica o ciclo/mês do contrato
+- ano calendário do `data_agendada` (ou `created_at` se não houver) → separa lotes que se repetem em meses iguais de anos diferentes
+- agrupamos por (cliente, responsável, ano, mes_referencia)
+
+Isso significa, na prática:
+- Contrato trimestral, 12 posts (4 por mês × 3 meses) → **3 tarefas** (uma por mês de referência) — o briefing pediu "1 tarefa para 12 posts", mas como o contrato pode atravessar meses e o usuário pediu também "12 + 12 etapas = 2 tarefas", a chave por `mes_referencia + ano` cobre os dois casos descritos. Caso o usuário queira **uma única tarefa por contrato inteiro**, pergunto abaixo.
+
+**Campos da tarefa agrupada**:
+- `id`: `posts:<cliente_id>:<responsavelId>:<ano>-<mes_referencia>`
+- `fonte`: `"post"` (mantém compatibilidade com `ConcluirTarefaDialog`, que já trata posts) — mas como agora representa N cards, o botão "Concluir" abre o cliente em vez de marcar tudo como Postado (ver §3)
+- `titulo`: `Criar {N} posts` (apenas pendentes; concluídos vão para uma label "{N} concluídos")
+- `area`: `"Posts"`
+- `prioridade`: maior prioridade entre os cards do grupo (`Urgente` se algum `is_urgent`, senão `Media`)
+- `prazo`: menor `data_agendada` entre os cards **pendentes** do grupo (null se nenhum)
+- `status`:
+  - `concluido` se todos `status_card === "Postado"`
+  - `atrasado` se algum pendente com `data_agendada < hoje`
+  - `em_andamento` se algum em `Criar/Revisar/Agendar`
+  - `pendente` caso contrário
+- `urgente`: true se algum card do grupo é `is_urgent`
+- `responsaveis_ids`: `[responsavelId]`
+- `link`: `/clientes/{cliente_id}/projeto?tab=posts&lote={ano}-{mes_referencia}` (a aba já existe; o query param é apenas informativo — se o `ProjetoCliente` não interpretar, o usuário cai na aba Posts normalmente, conforme item 5 do briefing)
+- guarda `_postsIds: string[]` interno (campo extra opcional na interface) para uso futuro
+
+Tarefas de outras áreas (demandas, planejamento, documentação) **ficam inalteradas** — continuam individuais.
 
 ---
 
-## 2. Fontes de tarefas (somente leitura, consolidação)
+## 2. Filtro de período (`src/pages/MinhasTarefas.tsx`)
 
-Novo arquivo `src/lib/minhasTarefas.ts` exporta:
-
+O bug atual está aqui:
 ```ts
-export type TaskFonte = "demanda" | "post" | "planejamento" | "documentacao";
-export interface UnifiedTask {
-  id: string;                 // `${fonte}:${id_origem}`
-  fonte: TaskFonte;
-  origem_id: string;
-  cliente_id: string;
-  titulo: string;
-  area: string;               // "Posts" | "Vídeo" | "Tráfego Pago" | "LP/Site" | "IA/Atendimento" | "Documentação" | "Planejamento" | "Urgência/Outro"
-  prioridade: "Baixa"|"Media"|"Alta"|"Urgente";
-  prazo: string | null;
-  status: "pendente"|"em_andamento"|"atrasado"|"concluido";
-  urgente: boolean;
-  responsaveis_ids: string[];
-  link: string;               // rota dentro do Projeto Completo
+if (ini !== null || fim !== null) {
+  if (!t.prazo) return false;        // exclui tudo sem prazo
+  const p = new Date(t.prazo).getTime();
+  if (ini !== null && p < ini) return false;
+  if (fim !== null && p > fim) return false;
 }
 ```
 
-Função `buildUnifiedTasks({ demandas, cards, planejamento, documentacao, responsavelId })` consolida:
+Problemas:
+- Tarefas **atrasadas** (`prazo < hoje`) são excluídas em "Hoje", "Esta semana", "Próximos N" — o briefing pede que **atrasadas apareçam junto com Hoje** e nas janelas futuras.
+- `new Date("YYYY-MM-DD")` em JS interpreta como UTC, jogando o dia para o fuso anterior — quebra "Hoje".
 
-| Fonte | Tabela | Filtro do usuário | Mapa de área |
-|---|---|---|---|
-| Demandas | `demandas` | `responsaveis_ids` contém `responsavelId` | `categoria` → label (Vídeo, LP, Tráfego, IA/Atend., Briefing, Planejamento, Suporte, Urgência/Outro) |
-| Posts | `cards` | `responsaveis_ids` contém | área = "Posts" |
-| Planejamento | `cliente_planejamento_itens` | `responsavel_id` = | área = "Planejamento" |
-| Documentação | `cliente_documentacao` | `enviado_por` = `auth.uid()` (campo é uuid de auth) | área = "Documentação" |
-
-`status` derivado: `concluido` se `data_conclusao`/`status="Concluido"|"Postado"|"concluido"` ou `enviado=true`; `atrasado` se `prazo < hoje` e não concluído; `em_andamento` se status intermediário; `pendente` caso contrário.
-
-`urgente`: demandas com `prioridade="Urgente"`, posts com `is_urgent=true`, planejamento com `prioridade="urgente"`.
-
-**Sem nova tabela.** Tudo derivado em runtime dos stores já carregados (`useDemandas`, `useCRM`, `usePlanejamento`, `useDocumentacao`).
-
----
-
-## 3. Módulo "Minhas Tarefas"
-
-### Rota
-`/minhas-tarefas` em `App.tsx`, dentro de `RequireAuth` + `AppLayout`.
-
-### Menu lateral (`AppSidebar.tsx`)
-Inserir item após "Dashboard":
-```
-Dashboard
-Minhas Tarefas      ← NOVO  (ícone CheckSquare)
-Clientes
-Contratos
-Alertas
-Relatórios
-Configurações
-```
-
-### Página `src/pages/MinhasTarefas.tsx`
-Layout: header + filtros + tabela (lista, **não grade**).
-
-**Filtros (topo):**
-- Cliente (Select com lista de clientes do usuário)
-- Área (multi-select com checkboxes — usa o componente `Popover+Checkbox` já presente em filtros do projeto)
-- Status (pendente / em_andamento / atrasado / concluído)
-- Período (componente reutilizado — ver §6)
-- Busca por texto (Input com filtro client-side em `titulo` e nome do cliente)
-
-**Tabela (Colunas):**
-| Cliente | Tarefa | Área | Prioridade | Prazo | Status | Ações |
-|---|---|---|---|---|---|---|
-
-- "Cliente" mostra logo + nome (componente já usado no Dashboard)
-- "Tarefa" mostra título + ícones inline (⚡ urgente, 🔴 atrasado, 🟡 próximo prazo ≤ 3 dias)
-- "Prioridade" usa badge colorido por `PRIORIDADE_COR`
-- "Status" usa `StatusBadge` existente quando aplicável
-- "Ações": botão "Abrir" (link p/ Projeto Completo) + botão "Concluir" (abre modal de delegação)
-
-### Componentes novos
-- `src/components/tarefas/MinhasTarefasFiltros.tsx`
-- `src/components/tarefas/MinhasTarefasTabela.tsx`
-- `src/components/tarefas/PrioridadeIcon.tsx` (renderiza ⚡/🔴/🟡 conforme regras)
-- `src/components/tarefas/ConcluirTarefaDialog.tsx` (modal de delegação — §5)
-
----
-
-## 4. Ordenação por prioridade
-
-Função pura `ordenarTarefas(tasks: UnifiedTask[])`:
+**Nova regra de filtragem por período**:
 
 ```text
-1. urgente=true                          → topo
-2. status="atrasado"                     → segundo bloco
-3. demais ordenados por prazo asc        → próximos primeiro (nulls no fim)
-4. dentro do mesmo bucket: prioridade DESC (Urgente/Alta/Media/Baixa)
+isFuturo = preset ∈ {hoje, esta_semana, prox_7, prox_14, prox_30}
+isPassado = preset ∈ {ult_7, ult_14, ult_30, mes_passado}
+
+Para cada tarefa pendente (status !== concluido):
+  prazoDate = parsePrazoLocal(t.prazo)   // parser que respeita timezone local
+  
+  Se isFuturo:
+    inclui se (prazoDate ≤ fim) E (prazoDate ≥ ini OU status === "atrasado")
+    // ou seja: tudo que vence até "fim", incluindo atrasadas
+  
+  Se isPassado:
+    inclui se (prazoDate ≥ ini) E (prazoDate ≤ fim)
+  
+  Se personalizado:
+    inclui se (prazoDate ≥ ini) E (prazoDate ≤ fim)
+  
+  Tarefas concluídas: aplicam-se as datas normalmente (sem o "atrasadas grátis").
+  Tarefas sem prazo: aparecem só quando preset === "todos".
 ```
 
-Aplicada por padrão no módulo "Minhas Tarefas" e no painel do Dashboard por colaborador.
+Adiciono helper `parsePrazoLocal(s)` que trata `YYYY-MM-DD` como meia-noite local (e mantém ISO completo se vier com timezone), evitando o off-by-one de fuso.
+
+A função `calcularPeriodo` no `PeriodoFiltro.tsx` já está correta — não mexo nela.
 
 ---
 
-## 5. Fluxo de delegação ("Concluir tarefa")
+## 3. Conclusão da tarefa agrupada de posts
 
-Modal `ConcluirTarefaDialog`:
+`ConcluirTarefaDialog` hoje chama `updateCard(task.origem_id, ...)`. Para a tarefa agrupada não faz sentido marcar 12 cards como Postado de uma vez. Solução mínima:
 
-**Tela 1 — escolha:**
-- Botão `✔ Concluir apenas`
-- Botão `🔄 Concluir e criar próxima tarefa`
-- Botão `Cancelar`
-
-**Tela 2 (apenas se "Concluir e criar próxima"):**
-Formulário com:
-- Novo responsável (Select de `responsaveis`)
-- Título
-- Área (Select com mesmas categorias usadas em `UnifiedTask.area`)
-- Prazo (DatePicker)
-- Prioridade (Baixa/Média/Alta/Urgente)
-- Descrição (Textarea)
-- Checkbox "Reutilizar anexos da tarefa anterior" (visível **só** se a tarefa origem é uma `demanda` — única fonte com tabela de anexos)
-
-**Comportamento ao confirmar:**
-
-A. "Concluir apenas":
-- `demanda` → `useDemandas.moveStatus(id, "Concluido")`
-- `post`/card → `useCRM.updateCard(id, { status: "Postado" })`
-- `planejamento` → `usePlanejamento.update(id, { status: "concluido" })`
-- `documentacao` → `useDocumentacao.update(id, { enviado: true, data_envio: now })`
-
-B. "Concluir e criar próxima":
-- Conclui a anterior (igual A).
-- Cria **nova `demanda`** via `useDemandas.createDemanda({ ... , descricao: descricao + "\n\n— Vinculada a: " + tituloAnterior + " (id: " + idAnterior + ")" })`. Vinculação parent–child fica registrada no campo `descricao` (sem alterar schema).
-- Se "Reutilizar anexos" marcado **e** origem foi demanda, copia rows de `anexos_demandas` da anterior para a nova (mesma URL, sem reupload — só `insert` apontando `demanda_id` da nova).
-
-**Importante:** este fluxo **não substitui** os botões existentes nas demais telas — é exclusivo do botão "Concluir" da lista "Minhas Tarefas". Os Kanbans, listas e telas atuais continuam funcionando exatamente como hoje.
+- Quando `task.fonte === "post"` **e** `task.id` começa com `posts:` (agrupada), o botão "Concluir" no `MinhasTarefasTabela` é substituído por um botão **"Abrir posts"** que navega para `task.link`. Não abre o dialog.
+- Cards individuais (não agrupados) deixam de existir no Minhas Tarefas — então o caminho antigo do dialog para posts pode ser removido com segurança (o dialog continua funcionando para `demanda`, `planejamento`, `documentacao`).
 
 ---
 
-## 6. Filtro de Período reutilizável
+## 4. KPIs do topo
 
-Criar `src/components/filters/PeriodoFiltro.tsx` (componente único e reutilizável):
-
-Opções:
-- **Futuro:** Hoje · Esta semana · Próximos 7 / 14 / 30 dias
-- **Passado:** Últimos 7 / 14 / 30 dias · Mês passado
-- **Personalizado:** date range picker
-
-Devolve `{ inicio: Date|null, fim: Date|null, preset: string }`. Usado em "Minhas Tarefas" e no Dashboard "Por Colaborador".
-
-> Hoje não existe um componente único — cada tela tem sua própria implementação. Este novo componente fica disponível para reuso futuro **sem modificar** os filtros já implementados em outras telas.
+Já são calculados a partir de `todasTarefas`. Como agora `todasTarefas` retorna tarefas agrupadas para posts, os 4 cards (Total, Pendentes, Atrasadas, Urgentes) passam a refletir a contagem correta automaticamente. Sem mudança extra.
 
 ---
 
-## 7. Dashboard — toggle "Por Colaborador"
+## Arquivos alterados
 
-Em `src/pages/Dashboard.tsx`, no topo, adicionar `Tabs` com:
-- "Visão Geral" (renderiza tudo que existe hoje — não mexer)
-- "Por Colaborador" (nova aba)
+- `src/lib/minhasTarefas.ts` — substitui o bloco "Posts (cards)" por agrupamento; mantém demandas/planejamento/documentação intactos. Adiciona `parsePrazoLocal` exportado.
+- `src/pages/MinhasTarefas.tsx` — substitui o bloco do filtro de período pela nova regra usando `parsePrazoLocal`.
+- `src/components/tarefas/MinhasTarefasTabela.tsx` — para tarefas com `id` iniciado por `posts:`, troca o botão "Concluir" por "Abrir posts" (`navigate(t.link)`).
 
-### Aba "Por Colaborador" — `src/components/dashboard/DashboardPorColaborador.tsx`
-- Select de colaborador (default = usuário logado, se mapeado)
-- `PeriodoFiltro` (do §6)
-- 4 KPIs (`KpiCard` reutilizado): Total · Pendentes · Atrasadas · Urgentes
-- Gráfico de barras horizontais "Distribuição por Área" (recharts, cores semânticas)
-- Lista compacta das 10 tarefas mais prioritárias (mesmo `ordenarTarefas`)
-
-Reutiliza `buildUnifiedTasks` filtrando pelo colaborador selecionado.
+Sem migrações. Sem alteração de criação de cards. Nenhum outro módulo é tocado.
 
 ---
 
-## 8. Garantias de não-regressão
+## Pergunta antes de implementar
 
-- Nenhum arquivo em `src/components/projeto/*`, `src/components/demandas/*`, `src/components/clientes/*` será editado.
-- Stores (`crm.ts`, `demandas.ts`, `planejamento.ts`, `documentacao.ts`) **não terão métodos removidos**. Todos os updates de delegação reusam métodos públicos já existentes.
-- Sem migração de banco (não há novas tabelas, colunas ou triggers).
-- Tipos TS ficam isolados em `src/lib/minhasTarefas.ts` — não tocam tipos do Supabase.
+Sobre o **agrupamento de posts**, qual granularidade você quer?
 
----
+- **A — Por mês de referência** (proposto): contrato de 3 meses com 12 posts (4/mês) → 3 tarefas ("Criar 4 posts — Cliente X — Mês 1", etc.). Trimestral com 12 posts no mesmo `mes_referencia` → 1 tarefa.
+- **B — Por contrato inteiro**: 12 posts trimestrais → sempre 1 tarefa, independente de quantos meses cubra. Exigiria inferir o "contrato" pela tabela `contratos` (data_inicio/data_fim) e mapear cards cujo `data_agendada` cai no intervalo.
 
-## Resumo de arquivos
+Se preferir B, ajusto o plano antes de implementar.
 
-**Novos:**
-- `src/pages/MinhasTarefas.tsx`
-- `src/lib/minhasTarefas.ts`
-- `src/hooks/useResponsavelAtual.ts`
-- `src/components/tarefas/MinhasTarefasFiltros.tsx`
-- `src/components/tarefas/MinhasTarefasTabela.tsx`
-- `src/components/tarefas/PrioridadeIcon.tsx`
-- `src/components/tarefas/ConcluirTarefaDialog.tsx`
-- `src/components/filters/PeriodoFiltro.tsx`
-- `src/components/dashboard/DashboardPorColaborador.tsx`
-
-**Editados (aditivo):**
-- `src/App.tsx` — registra rota `/minhas-tarefas`
-- `src/components/AppSidebar.tsx` — adiciona item de menu
-- `src/pages/Dashboard.tsx` — envolve conteúdo atual em `<Tabs>` adicionando aba "Por Colaborador"
-
-**Banco:** nenhuma migração.

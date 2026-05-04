@@ -103,15 +103,26 @@ export function MinhasTarefasTabela({ tasks, onConcluir }: Props) {
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
                   {t.status !== "concluido" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      onClick={() => onConcluir(t)}
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                      Concluir
-                    </Button>
+                    t.id.startsWith("posts:") ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => navigate(t.link)}
+                      >
+                        Abrir posts
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => onConcluir(t)}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                        Concluir
+                      </Button>
+                    )
                   )}
                 </div>
               </TableCell>
