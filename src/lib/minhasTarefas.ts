@@ -129,7 +129,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           status,
           urgente: d.prioridade === "Urgente",
           responsaveis_ids: getResponsaveisIds(d),
-          link: `/clientes/${d.cliente_id}/projeto`,
+          link: `/clientes/${d.cliente_id}/projeto?tab=${categoriaParaAba(d.categoria)}&demanda=${d.id}`,
           origem_categoria: d.categoria,
         });
       });
