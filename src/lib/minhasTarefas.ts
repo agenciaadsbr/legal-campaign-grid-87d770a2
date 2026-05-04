@@ -62,6 +62,24 @@ function mapCategoriaArea(cat: string): string {
   return CATEGORIA_LABEL[cat as keyof typeof CATEGORIA_LABEL] ?? cat;
 }
 
+/** Mapeia categoria de demanda -> aba do Projeto Completo. */
+function categoriaParaAba(cat: string): string {
+  switch (cat) {
+    case "EditorVideo": return "videos";
+    case "TrafegoPago": return "trafego";
+    case "LandingPage": return "lp";
+    case "IAAtendimento": return "ia";
+    case "Briefing": return "briefing";
+    case "Planejamento": return "planejamento";
+    case "Personalizado":
+    case "Suporte":
+    case "Designer":   // legado
+    case "Tecnologia": // legado
+    default:
+      return "urgencias";
+  }
+}
+
 function mapPrioridadePlan(p: string): TaskPrioridade {
   switch (p) {
     case "urgente": return "Urgente";
@@ -111,7 +129,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           status,
           urgente: d.prioridade === "Urgente",
           responsaveis_ids: getResponsaveisIds(d),
-          link: `/clientes/${d.cliente_id}/projeto`,
+          link: `/clientes/${d.cliente_id}/projeto?tab=${categoriaParaAba(d.categoria)}&demanda=${d.id}`,
           origem_categoria: d.categoria,
         });
       });
@@ -235,7 +253,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           status,
           urgente: p.prioridade === "urgente",
           responsaveis_ids: p.responsavel_id ? [p.responsavel_id] : [],
-          link: `/clientes/${p.cliente_id}/projeto`,
+          link: `/clientes/${p.cliente_id}/projeto?tab=planejamento`,
         });
       });
   }
@@ -259,7 +277,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           status,
           urgente: false,
           responsaveis_ids: [],
-          link: `/clientes/${d.cliente_id}/projeto`,
+          link: `/clientes/${d.cliente_id}/projeto?tab=documentacao`,
         });
       });
   }

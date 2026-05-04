@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCRM } from "@/store/crm";
 import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
@@ -141,8 +141,29 @@ export default function ProjetoCliente() {
     const next = new URLSearchParams(searchParams);
     if (v === "visao") next.delete("tab");
     else next.set("tab", v);
+    next.delete("demanda");
     setSearchParams(next, { replace: true });
   };
+
+  // Deep-link: ?demanda={id} abre o detalhe da demanda na aba correspondente
+  const demandaIdParam = searchParams.get("demanda");
+  const demandaDeepLink = useMemo(() => {
+    if (!demandaIdParam) return null;
+    return demandas.find((d) => d.id === demandaIdParam) ?? null;
+  }, [demandaIdParam, demandas]);
+  const abaDemandaDeepLink = demandaDeepLink ? tab : null;
+  useEffect(() => {
+    if (!demandaIdParam) return;
+    // Limpa o param após o React renderizar (a prop já foi entregue à AreaTab)
+    const t = setTimeout(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("demanda");
+      setSearchParams(next, { replace: true });
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demandaIdParam]);
+
   const [novaTarefaOpen, setNovaTarefaOpen] = useState(false);
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [novoPlanOpen, setNovoPlanOpen] = useState(false);
@@ -237,6 +258,7 @@ export default function ProjetoCliente() {
             clienteId={clienteId!}
             demandas={filtrarPorArea(demandasCli, "videos")}
             categoria="EditorVideo"
+            demandaInicial={abaDemandaDeepLink === "videos" ? demandaDeepLink : null}
           />
         </TabsContent>
 
@@ -248,6 +270,7 @@ export default function ProjetoCliente() {
             clienteId={clienteId!}
             demandas={filtrarPorArea(demandasCli, "trafego")}
             categoria="TrafegoPago"
+            demandaInicial={abaDemandaDeepLink === "trafego" ? demandaDeepLink : null}
           />
         </TabsContent>
 
@@ -259,6 +282,7 @@ export default function ProjetoCliente() {
             clienteId={clienteId!}
             demandas={filtrarPorArea(demandasCli, "lp")}
             categoria="LandingPage"
+            demandaInicial={abaDemandaDeepLink === "lp" ? demandaDeepLink : null}
           />
         </TabsContent>
 
@@ -270,6 +294,7 @@ export default function ProjetoCliente() {
             clienteId={clienteId!}
             demandas={filtrarPorArea(demandasCli, "ia")}
             categoria="IAAtendimento"
+            demandaInicial={abaDemandaDeepLink === "ia" ? demandaDeepLink : null}
           />
         </TabsContent>
 
@@ -282,6 +307,7 @@ export default function ProjetoCliente() {
             demandas={filtrarPorArea(demandasCli, "urgencias")}
             categoria="Personalizado"
             emptyHint="Nenhuma urgência registrada para este cliente."
+            demandaInicial={abaDemandaDeepLink === "urgencias" ? demandaDeepLink : null}
           />
         </TabsContent>
 
