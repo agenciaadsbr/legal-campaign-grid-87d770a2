@@ -1,51 +1,55 @@
 ## Problema
 
-Hoje o módulo "Minhas Tarefas" agrupa posts por `cliente + responsável + (ano, mês_referencia)`. Como cada mês contém ~4 cards, contratos de 3 meses aparecem como 3 tarefas de "Criar 4 posts" — em vez de 1 tarefa de "Criar 12 posts".
+Em **Minhas Tarefas**, o botão de ícone (`ExternalLink`, marcado em vermelho na imagem) hoje sempre navega para `t.link`. Para tarefas individuais (demandas) o link é genérico `/clientes/{id}/projeto`, que cai na aba "Visão Geral" — o usuário precisa caçar a tarefa manualmente. Para Posts já funciona (vai para `?tab=posts`).
 
-O usuário quer: **uma única tarefa por cliente/contrato/responsável**, refletindo a duração total do contrato (3 meses → 12 posts, 6 meses → 24 posts, etc.).
+## Comportamento desejado
 
-## Mudança (escopo único: `src/lib/minhasTarefas.ts`)
+- **Tarefa do tipo Posts** (`id` começa com `posts:`): abrir o cliente já na aba **Posts** (já funciona — manter).
+- **Tarefa única** (demanda, planejamento, documentação): abrir o cliente já na **aba correspondente à área da tarefa** e, quando for demanda, **abrir automaticamente o modal de detalhe** daquela demanda específica.
 
-Reescrever apenas o bloco `--- Posts (cards) ---`. Tudo mais (Demandas, Planejamento, Documentação, ordenação, filtros) permanece intacto.
+Escopo: apenas o módulo Minhas Tarefas. Nada do Projeto Completo, Clientes, criação de cards ou banco de dados é alterado de forma destrutiva — apenas leitura de um novo query param.
 
-### Nova lógica de agrupamento
+## Mudanças
 
-Chave do grupo: `cliente_id :: responsavelId :: contrato_id` (ou apenas `cliente_id :: responsavelId` se não houver contrato — fallback).
+### 1. `src/lib/minhasTarefas.ts` — gerar links específicos
 
-1. Para cada `responsavelId`, filtrar `cards` onde `responsaveis` inclui o responsável.
-2. Resolver o `contrato` do cliente: usar `contratos.find(c => c.cliente_id === card.cliente_id)`. Se houver múltiplos, escolher o que cobre `data_agendada` (entre `data_inicio` e `data_fim`); fallback: contrato `Ativo` mais recente.
-3. Agrupar todos os cards do mesmo `(cliente, responsável, contrato)` em UM único `UnifiedTask`.
+Atualizar o campo `link` de cada `UnifiedTask` para apontar para a aba correta do Projeto Completo, e (no caso de demandas) incluir o id da demanda como query param para deep-link:
 
-### Campos da tarefa agrupada
+- **Demanda**: `link: /clientes/{cliente_id}/projeto?tab={aba}&demanda={demanda_id}` onde `aba` vem de um helper local equivalente a `categoriaParaAba()` de `ProjetoCliente.tsx`:
+  - `EditorVideo` → `videos`
+  - `TrafegoPago` → `trafego`
+  - `LandingPage` → `lp`
+  - `IAAtendimento` → `ia`
+  - `Briefing` → `briefing`
+  - `Planejamento` → `planejamento`
+  - `Personalizado` / `Suporte` / `Designer` (legado) / `Tecnologia` (legado) → `urgencias`
+- **Planejamento**: `link: /clientes/{cliente_id}/projeto?tab=planejamento`
+- **Documentação**: `link: /clientes/{cliente_id}/projeto?tab=documentacao`
+- **Posts** (mantém): `link: /clientes/{cliente_id}/projeto?tab=posts`
 
-- `id`: `posts:<cliente_id>:<responsavelId>:<contrato_id|all>`
-- `titulo`:
-  - Se houver pendentes: `"Criar X posts"` (X = nº de cards com `status_card !== "Postado"`)
-  - Se todos concluídos: `"X posts concluídos"`
-- `prazo`: menor `data_agendada` entre os pendentes; fallback `contrato.data_fim`
-- `prioridade`: `Urgente` se algum card `is_urgent`, senão `Media`
-- `status`: `concluido` (todos postados) | `atrasado` (prazo < hoje) | `em_andamento` (algum em Criar/Revisar/Agendar) | `pendente`
-- `urgente`: `algumUrgente`
-- `area`: `"Posts"`
-- `link`: `/clientes/<cliente_id>/projeto?tab=posts` (sem filtro de lote — abre todos os posts do cliente)
+### 2. `src/pages/ProjetoCliente.tsx` — abrir demanda automaticamente via query param
 
-### BuildArgs
+Ler `searchParams.get("demanda")`. Quando presente:
+- Localizar a demanda em `demandasCli` pelo id.
+- Garantir que a `tab` ativa é a correspondente (a tab já vem na URL via `?tab=...`, mas tratamos como fallback caso só venha `?demanda=...`).
+- Passar essa demanda para a `AreaTab` correta como prop nova `demandaInicial?: Demanda` (opcional, não-quebrável).
+- Após consumir, remover `demanda` da URL via `setSearchParams` (replace) para evitar reabrir ao trocar de aba.
 
-Adicionar `contratos: Contrato[]` ao `BuildArgs`. Atualizar o caller em `src/pages/MinhasTarefas.tsx` para passar `contratos` da `useCRM`.
+### 3. `src/components/projeto/AreaTab.tsx` — aceitar prop `demandaInicial`
 
-## Resultado esperado
+Adicionar prop opcional `demandaInicial?: Demanda | null`. Em um `useEffect`, se vier valor e ainda não houver `selecionada`, chamar `setSelecionada(demandaInicial)` — abrindo o `DemandaDetalheDialog` que já existe no componente. Nenhuma assinatura existente quebra (prop opcional).
 
-| Antes | Depois |
-|---|---|
-| AL Advocacia — Criar 4 posts (3x linhas, uma por mês) | AL Advocacia — Criar 12 posts (1 linha) |
-| KPI Total contava cada mês | KPI Total conta 1 por contrato |
+### 4. `src/components/tarefas/MinhasTarefasTabela.tsx`
 
-Botão "Abrir posts" continua levando à aba Posts do cliente; KPIs permanecem corretos automaticamente porque derivam de `todasTarefas`.
+Nenhuma mudança lógica necessária — o botão `ExternalLink` já navega para `t.link`. Como `t.link` agora carrega `?tab=...&demanda=...` para tarefas únicas, o comportamento fica correto automaticamente. Manter o botão "Abrir posts" / "Concluir" como está.
 
-## Arquivos afetados
+### 5. `public/version.json`
 
-- `src/lib/minhasTarefas.ts` — reescrever apenas o bloco de Posts e o tipo `BuildArgs`.
-- `src/pages/MinhasTarefas.tsx` — passar `contratos` no `buildUnifiedTasks(...)`.
-- `public/version.json` — bump.
+Bump de versão.
 
-Nenhuma alteração em banco, em cards, em Projeto Completo ou em outros módulos.
+## Resultado
+
+- Clicar no ícone azul/externo de uma tarefa de **Posts** → abre cliente na aba Posts (mantido).
+- Clicar no ícone de uma tarefa de **Vídeo / Tráfego / LP / IA / Briefing / Planejamento / Urgência** → abre cliente na aba certa **e** o dialog da demanda específica abre automaticamente.
+- Clicar em uma tarefa de **Planejamento** ou **Documentação** → abre direto na aba correspondente.
+- Sistema antigo (Projeto Completo, criação de demandas, kanban) continua intacto: a única adição é leitura opcional de `?demanda=` e uma prop opcional em `AreaTab`.
