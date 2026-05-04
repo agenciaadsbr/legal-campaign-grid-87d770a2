@@ -34,11 +34,27 @@ const PRIO_RANK: Record<TaskPrioridade, number> = {
   Baixa: 1,
 };
 
+/**
+ * Converte string de prazo em Date local (meia-noite local).
+ * Aceita "YYYY-MM-DD" (sem deslocar fuso) e ISO completo.
+ */
+export function parsePrazoLocal(s: string | null | undefined): Date | null {
+  if (!s) return null;
+  // Se for YYYY-MM-DD puro, parseia como local
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 function isAtrasado(prazo: string | null, status: TaskStatus): boolean {
   if (!prazo || status === "concluido") return false;
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
-  return new Date(prazo) < hoje;
+  const d = parsePrazoLocal(prazo);
+  return d !== null && d < hoje;
 }
 
 function mapCategoriaArea(cat: string): string {
