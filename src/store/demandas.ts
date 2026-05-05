@@ -280,6 +280,19 @@ export const useDemandasStore = create<State>((set, get) => ({
     set({ anexos: [...get().anexos, data as AnexoDemanda] });
   },
 
+  async removeAnexo(id) {
+    const { error } = await supabase
+      .from("anexos_demandas")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      toast.error("Erro ao remover anexo", { description: error.message });
+      return;
+    }
+    set({ anexos: get().anexos.filter((a) => a.id !== id) });
+    toast.success("Anexo removido");
+  },
+
   async approveDemanda(id, aprovado_por) {
     await get().updateDemanda(id, {
       aprovado_por,
