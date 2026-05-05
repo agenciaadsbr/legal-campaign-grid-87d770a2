@@ -1,51 +1,45 @@
-# Equiparar "Adicionar em lote" do gerenciador global ao do Projeto Completo
+# Padronizar blocos do gerenciador global como o bloco "Acessos"
 
-Hoje o "Adicionar em lote" das abas **Documentos padrão para clientes** e **Documentos internos da empresa** é uma textarea simples (uma linha = um título). O do **DocumentacaoTab** (Projeto Completo) é muito mais rico:
+## Contexto
 
-- Toggle **"Mensagem completa" / "Lista de itens"** para os blocos `documentos`, `links`, `reunioes`.
-- Para `acessos` e `materiais`: modo **mensagem completa fixa** (salva 1 item do tipo `mensagem` com o texto formatado).
-- Modo lista: parser inteligente (`parseLoteTexto`) que detecta:
-  - Itens separados por linha em branco
-  - URLs, `Login:`, `Senha:` automaticamente
-  - Bullets (`-`, `•`, `*`) e listas livres
-  - Formato pipe `título | url | login | senha | observação`
-  - Emojis e prefixos no título (ex.: `🔗 Gmail:` → `Gmail`)
-- Select de **Tipo aplicado a todos** os itens da lista.
-- Badge "**N item(ns) detectado(s)**" que atualiza ao vivo conforme o usuário cola.
-- Botão muda para `Adicionar todos (N)` ou `Salvar mensagem`.
+Hoje, em **Configurações → Documentos padrão para clientes** e **Documentos internos da empresa**, cada bloco (Acessos, Links, Reuniões, Materiais, Documentos) mostra na barra de ações:
 
-Vou replicar esse mesmo diálogo no manager global, reutilizando o parser para evitar divergência futura.
+- `+ Adicionar` (abre o diálogo de item único)
+- `+ Adicionar em lote`
+- `Copiar mensagem` (apenas Acessos e Materiais)
 
-## Arquivos
+No **Projeto Completo → Documentação**, os blocos têm apenas:
 
-### Novo: `src/lib/documentacaoLote.ts`
-Extrair `parseLoteTexto`, `LoteItem` e a constante `TITULO_MENSAGEM_PADRAO` do `DocumentacaoTab.tsx` para um arquivo compartilhado. Lógica idêntica, sem mudança de comportamento.
+- `+ Adicionar em lote`
+- `Copiar mensagem` (apenas Acessos e Materiais)
 
-### Editado: `src/components/projeto/DocumentacaoTab.tsx`
-- Remover as definições locais de `parseLoteTexto`, `LoteItem` e `tituloMensagemPadrao`.
-- Importar do novo `@/lib/documentacaoLote`.
-- Nenhuma mudança visível para o usuário.
+O bloco "Acessos" do Projeto Completo é a referência: sem botão "Adicionar" individual no bloco. A criação avulsa fica no botão global do topo.
 
-### Editado: `src/components/configuracoes/DocumentosGlobaisManager.tsx`
-- Remover a textarea simples atual + função `salvarLote` antiga + estado `loteTexto`/`loteSalvando`.
-- Criar componente local `DocumentoGlobalLoteDialog` (mesma estrutura visual e fluxo do `DocumentacaoLoteDialog`):
-  - Mesma UI: toggle de modo (quando aplicável), select de tipo, textarea grande (font-mono), badge de itens detectados, footer com botões dinâmicos.
-  - Usa `parseLoteTexto` do helper compartilhado.
-  - Em vez de `useDocumentacao.create/createBatch` (que escreve em `documentacao_itens` por cliente), chama `useDocumentosGlobais.create` em loop sequencial, enviando:
-    - `escopo` atual (`cliente`/`interno`)
-    - `bloco` selecionado
-    - `tipo` (do select, ou `mensagem` no modo mensagem completa)
-    - `titulo`, `url`, `login`, `senha`, `descricao` (mapeando `observacao → descricao`)
-    - `aplicar_automatico = (escopo === "cliente")`
-    - `permissao_acesso = (escopo === "interno" ? "admin" : "todos")`
-    - `categoria: "Outros"`, `ativo: true`
-  - Modo "Mensagem completa": cria 1 item com `tipo: "mensagem"`, `titulo` = `TITULO_MENSAGEM_PADRAO[bloco]`, `descricao` = texto colado integral.
-  - Mantém as proteções já implementadas: deduplicação interna do lote, ignorar títulos já existentes (mesmo `escopo+bloco`, case-insensitive), guarda anti-clique-duplo, toast final com contagem.
-- Substituir o uso do diálogo antigo por `<DocumentoGlobalLoteDialog>` e simplificar o estado (`loteState` continua, mas sem `loteTexto/loteSalvando` no componente pai — vão para dentro do diálogo, igual ao DocumentacaoTab).
+## O que será feito
+
+### `src/components/configuracoes/DocumentosGlobaisManager.tsx`
+
+1. **Remover o botão "+ Adicionar"** que aparece dentro de cada bloco (atualmente linhas 408-421 — o `<Button>` com `onClick={() => setDialog({ open: true, item: null, blocoInicial: bloco as DocGlobalBloco })}`). Ele será removido de **todos** os blocos.
+2. Manter:
+   - `+ Adicionar em lote` em **todos** os blocos (já abre o `DocumentoGlobalLoteDialog` com toggle "Mensagem completa / Lista de itens", parser inteligente, badge de itens detectados, select de tipo e proteções anti-duplicação).
+   - `Copiar mensagem` em **Acessos** e **Materiais** (já existente).
+3. Manter intacto o botão global `+ Adicionar` no topo da aba (header da toolbar, linhas 331-337) — é por ele que se cria um item único, com o seletor de bloco já existente.
+4. Nenhuma mudança nos cards de item, na seleção múltipla, nas abas, nos filtros ou no diálogo de edição.
 
 ### `public/version.json`
-Bump do timestamp.
+
+Bump do timestamp para forçar atualização do client.
 
 ## Resultado
 
-O botão "Adicionar em lote" em ambas as abas globais abre **exatamente o mesmo diálogo** (visual e comportamento) do "Documentos" do Projeto Completo, com toggle de modo, parser inteligente, badge de detecção e select de tipo — porém persistindo em `documentos_globais` (com escopo correto) em vez de `documentacao_itens` por cliente. Proteções anti-duplicação seguem ativas.
+Cada bloco das duas abas globais fica visualmente e funcionalmente **idêntico** ao bloco "Acessos" do Projeto Completo:
+
+```text
+[ + Adicionar em lote ]  [ Copiar mensagem (só acessos/materiais) ]
+[ ☐ Selecionar todos                                    ... ]
+[ item 1 ]
+[ item 2 ]
+...
+```
+
+Para criar um item avulso, o usuário usa o botão `+ Adicionar` do topo da aba (que abre o seletor de bloco e depois o diálogo de item único — fluxo já existente, sem alteração).

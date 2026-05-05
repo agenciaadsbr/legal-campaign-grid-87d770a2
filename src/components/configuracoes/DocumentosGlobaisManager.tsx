@@ -409,20 +409,6 @@ export function DocumentosGlobaisManager() {
                                 size="sm"
                                 variant="ghost"
                                 className="h-7 px-2 text-xs"
-                                onClick={() =>
-                                  setDialog({
-                                    open: true,
-                                    item: null,
-                                    blocoInicial: bloco as DocGlobalBloco,
-                                  })
-                                }
-                              >
-                                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-xs"
                                 onClick={() => abrirLote(bloco)}
                               >
                                 <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
