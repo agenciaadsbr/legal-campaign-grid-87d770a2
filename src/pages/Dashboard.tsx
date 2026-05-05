@@ -143,13 +143,13 @@ export default function Dashboard() {
       {/* SEÇÃO 1 — Clientes */}
       <section className="space-y-3">
         <SectionHeader title="Clientes" subtitle="Visão geral da base" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          <KpiCard icon={Users} label="Total" value={clientesKpis.total} tone="primary"
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+          <KpiCard compact icon={Users} label="Total" value={clientesKpis.total} tone="primary"
             hint={`${clientesKpis.pctAtivos}% ativos`} />
-          <KpiCard icon={Sparkles} label="Em onboarding" value={clientesKpis.onboarding} tone="info" />
-          <KpiCard icon={UserCheck} label="Ativos" value={clientesKpis.ativos} tone="success" />
-          <KpiCard icon={Pause} label="Pausados" value={clientesKpis.pausados} tone="warning" />
-          <KpiCard icon={RefreshCw} label="Renovação ≤ 7d" value={clientesKpis.renovacao}
+          <KpiCard compact icon={Sparkles} label="Em onboarding" value={clientesKpis.onboarding} tone="info" />
+          <KpiCard compact icon={UserCheck} label="Ativos" value={clientesKpis.ativos} tone="success" />
+          <KpiCard compact icon={Pause} label="Pausados" value={clientesKpis.pausados} tone="warning" />
+          <KpiCard compact icon={RefreshCw} label="Renovação ≤ 7d" value={clientesKpis.renovacao}
             tone={clientesKpis.renovacao > 0 ? "warning" : "default"} />
         </div>
       </section>
@@ -157,27 +157,27 @@ export default function Dashboard() {
       {/* SEÇÃO 2 — Posts */}
       <section className="space-y-3">
         <SectionHeader title="Conteúdo & Posts" subtitle="Pipeline editorial" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <KpiCard icon={FileText} label="Total cards" value={postsKpis.totalCards} tone="primary" />
-          <KpiCard icon={PenLine} label="Em criação" value={postsKpis.criar} />
-          <KpiCard icon={Search} label="Em revisão" value={postsKpis.revisar} tone="info" />
-          <KpiCard icon={Calendar} label="Agendados" value={postsKpis.agendar} tone="warning" />
-          <KpiCard icon={CheckCircle2} label="Postados" value={postsKpis.postados} tone="success" />
-          <KpiCard icon={FileText} label="Posts hoje" value={postsKpis.postsHoje} tone="info" />
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+          <KpiCard compact icon={FileText} label="Total cards" value={postsKpis.totalCards} tone="primary" />
+          <KpiCard compact icon={PenLine} label="Em criação" value={postsKpis.criar} />
+          <KpiCard compact icon={Search} label="Em revisão" value={postsKpis.revisar} tone="info" />
+          <KpiCard compact icon={Calendar} label="Agendados" value={postsKpis.agendar} tone="warning" />
+          <KpiCard compact icon={CheckCircle2} label="Postados" value={postsKpis.postados} tone="success" />
+          <KpiCard compact icon={FileText} label="Posts hoje" value={postsKpis.postsHoje} tone="info" />
         </div>
       </section>
 
       {/* SEÇÃO 3 — Demandas */}
       <section className="space-y-3">
         <SectionHeader title="Demandas internas" subtitle="Tarefas operacionais do time" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          <KpiCard icon={ListChecks} label="Abertas" value={demandasKpis.abertas} tone="primary" />
-          <KpiCard icon={AlertTriangle} label="Urgentes" value={demandasKpis.urgentes}
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+          <KpiCard compact icon={ListChecks} label="Abertas" value={demandasKpis.abertas} tone="primary" />
+          <KpiCard compact icon={AlertTriangle} label="Urgentes" value={demandasKpis.urgentes}
             tone={demandasKpis.urgentes > 0 ? "destructive" : "default"} />
-          <KpiCard icon={Clock} label="Atrasadas" value={demandasKpis.atrasadas}
+          <KpiCard compact icon={Clock} label="Atrasadas" value={demandasKpis.atrasadas}
             tone={demandasKpis.atrasadas > 0 ? "destructive" : "default"} />
-          <KpiCard icon={RefreshCcw} label="Em revisão" value={demandasKpis.emRevisao} tone="info" />
-          <KpiCard icon={CheckCircle2} label="Concluídas hoje" value={demandasKpis.concluidasHoje} tone="success" />
+          <KpiCard compact icon={RefreshCcw} label="Em revisão" value={demandasKpis.emRevisao} tone="info" />
+          <KpiCard compact icon={CheckCircle2} label="Concluídas hoje" value={demandasKpis.concluidasHoje} tone="success" />
         </div>
       </section>
 
