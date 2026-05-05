@@ -4,6 +4,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -20,6 +22,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -41,7 +44,10 @@ import {
   Send,
   Files,
   ShieldCheck,
+  ListPlus,
+  ClipboardCopy,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   DOC_GLOBAL_CATEGORIAS,
@@ -68,6 +74,65 @@ const BLOCO_ICON: Record<DocBloco, any> = {
   documentos: Files,
 };
 
+// Tipo padrão usado ao criar itens em lote para cada bloco
+const TIPO_PADRAO_LOTE: Record<DocBloco, string> = {
+  acessos: "outro",
+  links: "outro",
+  reunioes: "reuniao",
+  materiais: "material",
+  documentos: "outro",
+};
+
+// ----- Helpers de mensagem (compatíveis com DocumentacaoTab) -----
+function construirMensagemAcessosGlobal(lista: DocumentoGlobal[]): string {
+  if (!lista.length) return "";
+  const partes: string[] = ["Segue abaixo as informações de acesso:", ""];
+  lista.forEach((it) => {
+    partes.push(`🔗 ${it.titulo}`);
+    if (it.url) partes.push(it.url);
+    if (it.login) partes.push(`Login: ${it.login}`);
+    if (it.senha) partes.push(`Senha: ${it.senha}`);
+    if (it.descricao) partes.push(it.descricao);
+    partes.push("");
+  });
+  return partes.join("\n").trimEnd();
+}
+
+function construirMensagemMateriaisGlobal(lista: DocumentoGlobal[]): string {
+  if (!lista.length) return "";
+  const partes: string[] = ["Segue abaixo os materiais enviados:", ""];
+  lista.forEach((it) => {
+    partes.push(`🔗 ${it.titulo}`);
+    if (it.url) partes.push(it.url);
+    if (it.descricao) partes.push(it.descricao);
+    partes.push("");
+  });
+  return partes.join("\n").trimEnd();
+}
+
+function montarTextoItem(item: DocumentoGlobal): string {
+  const linhas: string[] = [];
+  linhas.push(item.titulo);
+  const meta: string[] = [];
+  if (item.categoria) meta.push(`Categoria: ${item.categoria}`);
+  const tipoLabel = DOC_TIPO_LABEL[item.tipo] ?? item.tipo;
+  if (tipoLabel) meta.push(`Tipo: ${tipoLabel}`);
+  if (meta.length) linhas.push(meta.join(" | "));
+  if (item.descricao) linhas.push(item.descricao);
+  if (item.url) linhas.push(`URL: ${item.url}`);
+  if (item.login) linhas.push(`Login: ${item.login}`);
+  if (item.senha) linhas.push(`Senha: ${item.senha}`);
+  return linhas.join("\n");
+}
+
+const emptySelecionados = (): Record<DocBloco, Set<string>> => ({
+  acessos: new Set(),
+  links: new Set(),
+  reunioes: new Set(),
+  materiais: new Set(),
+  documentos: new Set(),
+});
+
 export function DocumentosGlobaisManager() {
   useDocumentosGlobaisBootstrap();
   const { isAdmin } = useAuth();
@@ -76,6 +141,7 @@ export function DocumentosGlobaisManager() {
   const duplicate = useDocumentosGlobais((s) => s.duplicate);
   const toggleAtivo = useDocumentosGlobais((s) => s.toggleAtivo);
   const reorder = useDocumentosGlobais((s) => s.reorder);
+  const create = useDocumentosGlobais((s) => s.create);
 
   const [escopo, setEscopo] = useState<DocGlobalEscopo>("cliente");
 
@@ -102,6 +168,24 @@ export function DocumentosGlobaisManager() {
     blocoInicial?: DocGlobalBloco;
   }>({ open: false, item: null });
 
+  // Adicionar em lote
+  const [loteState, setLoteState] = useState<{ open: boolean; bloco: DocBloco | null }>({
+    open: false,
+    bloco: null,
+  });
+  const [loteTexto, setLoteTexto] = useState("");
+  const [loteSalvando, setLoteSalvando] = useState(false);
+
+  // Seleção múltipla por bloco
+  const [selecionados, setSelecionados] = useState<Record<DocBloco, Set<string>>>(
+    emptySelecionados,
+  );
+
+  // Reset de seleção ao trocar escopo/filtros
+  useEffect(() => {
+    setSelecionados(emptySelecionados());
+  }, [escopo, busca, filtroBloco, filtroCategoria]);
+
   const filtrados = useMemo(() => {
     let l = itens.filter((i) => i.escopo === escopo);
     if (filtroBloco !== "todos") l = l.filter((i) => (i.bloco as DocBloco) === filtroBloco);
@@ -127,6 +211,101 @@ export function DocumentosGlobaisManager() {
     });
     return map;
   }, [filtrados]);
+
+  // ----- Handlers de seleção múltipla -----
+  const toggleItem = (bloco: DocBloco, id: string) => {
+    setSelecionados((s) => {
+      const next = new Set(s[bloco]);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return { ...s, [bloco]: next };
+    });
+  };
+
+  const toggleTodos = (bloco: DocBloco, ids: string[]) => {
+    setSelecionados((s) => {
+      const atual = s[bloco];
+      const todosMarcados = ids.length > 0 && ids.every((id) => atual.has(id));
+      const next = new Set<string>(atual);
+      if (todosMarcados) {
+        ids.forEach((id) => next.delete(id));
+      } else {
+        ids.forEach((id) => next.add(id));
+      }
+      return { ...s, [bloco]: next };
+    });
+  };
+
+  const limparSelecao = (bloco: DocBloco) => {
+    setSelecionados((s) => ({ ...s, [bloco]: new Set() }));
+  };
+
+  const excluirSelecionados = async (bloco: DocBloco) => {
+    const ids = Array.from(selecionados[bloco]);
+    if (ids.length === 0) return;
+    if (!confirm(`Excluir ${ids.length} item(ns) selecionado(s)?`)) return;
+    for (const id of ids) {
+      await remove(id);
+    }
+    limparSelecao(bloco);
+    toast.success(`${ids.length} item(ns) excluído(s)`);
+  };
+
+  // ----- Adicionar em lote -----
+  const abrirLote = (bloco: DocBloco) => {
+    setLoteTexto("");
+    setLoteState({ open: true, bloco });
+  };
+
+  const salvarLote = async () => {
+    if (!loteState.bloco) return;
+    const linhas = loteTexto
+      .split("\n")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (linhas.length === 0) {
+      toast.error("Informe ao menos um título");
+      return;
+    }
+    setLoteSalvando(true);
+    const bloco = loteState.bloco;
+    const tipo = TIPO_PADRAO_LOTE[bloco];
+    for (const titulo of linhas) {
+      await create({
+        escopo,
+        bloco: bloco as DocGlobalBloco,
+        tipo,
+        titulo,
+        categoria: "Outros",
+        aplicar_automatico: escopo === "cliente",
+        permissao_acesso: escopo === "interno" ? "admin" : "todos",
+        ativo: true,
+      });
+    }
+    setLoteSalvando(false);
+    setLoteState({ open: false, bloco: null });
+    setLoteTexto("");
+    toast.success(`${linhas.length} item(ns) adicionado(s)`);
+  };
+
+  // ----- Copiar mensagem do bloco -----
+  const copiarMensagemBloco = (bloco: DocBloco, lista: DocumentoGlobal[]) => {
+    if (lista.length === 0) return;
+    const itemMsg = lista.find((i) => i.tipo === "mensagem");
+    const msg = itemMsg?.descricao
+      ? itemMsg.descricao
+      : bloco === "acessos"
+        ? construirMensagemAcessosGlobal(lista)
+        : construirMensagemMateriaisGlobal(lista);
+    navigator.clipboard.writeText(msg);
+    toast.success("Mensagem copiada");
+  };
+
+  // ----- Copiar tudo do item -----
+  const copiarTudoItem = (item: DocumentoGlobal) => {
+    navigator.clipboard.writeText(montarTextoItem(item));
+    toast.success("Item copiado");
+  };
 
   return (
     <div className="space-y-4">
@@ -223,40 +402,45 @@ export function DocumentosGlobaisManager() {
                   </div>
                 )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 items-start">
-                  {DOC_BLOCOS.map((bloco) => {
-                    const lista = porBloco.get(bloco) ?? [];
-                    const Icone = BLOCO_ICON[bloco];
-                    return (
-                      <Collapsible
-                        key={bloco}
-                        open={openBlocos[bloco]}
-                        onOpenChange={(v) =>
-                          setOpenBlocos((s) => ({ ...s, [bloco]: v }))
-                        }
-                      >
-                        <Card>
-                          <CollapsibleTrigger asChild>
-                            <button
-                              type="button"
-                              className="w-full flex items-center gap-2 p-3 text-left hover:bg-accent/30"
-                            >
-                              <ChevronDown
-                                className={cn(
-                                  "h-4 w-4 transition-transform",
-                                  !openBlocos[bloco] && "-rotate-90",
-                                )}
-                              />
-                              <Icone className="h-4 w-4 text-primary" />
-                              <span className="text-sm font-semibold flex-1">
-                                {DOC_BLOCO_LABEL[bloco]}
-                              </span>
-                              <Badge variant="outline" className="text-[10px]">
-                                {lista.length}
-                              </Badge>
-                            </button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <CardContent className="p-3 pt-0 space-y-2">
+                {DOC_BLOCOS.map((bloco) => {
+                  const lista = porBloco.get(bloco) ?? [];
+                  const Icone = BLOCO_ICON[bloco];
+                  const ids = lista.map((i) => i.id);
+                  const sel = selecionados[bloco];
+                  const qtdSel = ids.filter((id) => sel.has(id)).length;
+                  const todosMarcados = qtdSel > 0 && qtdSel === ids.length;
+                  return (
+                    <Collapsible
+                      key={bloco}
+                      open={openBlocos[bloco]}
+                      onOpenChange={(v) =>
+                        setOpenBlocos((s) => ({ ...s, [bloco]: v }))
+                      }
+                    >
+                      <Card>
+                        <CollapsibleTrigger asChild>
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-2 p-3 text-left hover:bg-accent/30"
+                          >
+                            <ChevronDown
+                              className={cn(
+                                "h-4 w-4 transition-transform",
+                                !openBlocos[bloco] && "-rotate-90",
+                              )}
+                            />
+                            <Icone className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-semibold flex-1">
+                              {DOC_BLOCO_LABEL[bloco]}
+                            </span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {lista.length}
+                            </Badge>
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <CardContent className="p-3 pt-0 space-y-2">
+                            <div className="flex flex-wrap gap-1 pb-2">
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -269,48 +453,113 @@ export function DocumentosGlobaisManager() {
                                   })
                                 }
                               >
-                                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar neste bloco
+                                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
                               </Button>
-                              {lista.length === 0 ? (
-                                <div className="text-xs text-muted-foreground italic px-2 py-3">
-                                  Nenhum item neste bloco.
-                                </div>
-                              ) : (
-                                <div
-                                  className={cn(
-                                    "grid grid-cols-1 gap-2 max-h-[420px] overflow-y-auto pr-1",
-                                    "[&::-webkit-scrollbar]:w-1.5",
-                                    "[&::-webkit-scrollbar-track]:bg-transparent",
-                                    "[&::-webkit-scrollbar-thumb]:bg-border",
-                                    "[&::-webkit-scrollbar-thumb]:rounded-full",
-                                    "hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
-                                  )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => abrirLote(bloco)}
+                              >
+                                <ListPlus className="h-3.5 w-3.5 mr-1" /> Adicionar em lote
+                              </Button>
+                              {(bloco === "acessos" || bloco === "materiais") && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-xs"
+                                  disabled={lista.length === 0}
+                                  onClick={() => copiarMensagemBloco(bloco, lista)}
                                 >
-                                  {lista.map((it, idx) => (
-                                    <ItemGlobalCard
-                                      key={it.id}
-                                      item={it}
-                                      isFirst={idx === 0}
-                                      isLast={idx === lista.length - 1}
-                                      escopo={escopo}
-                                      onEditar={() => setDialog({ open: true, item: it })}
-                                      onDuplicar={() => duplicate(it.id)}
-                                      onExcluir={() => {
-                                        if (confirm(`Excluir "${it.titulo}"?`)) remove(it.id);
-                                      }}
-                                      onToggleAtivo={() => toggleAtivo(it.id)}
-                                      onMover={(dir) => reorder(it.id, dir)}
-                                    />
-                                  ))}
-                                </div>
+                                  <ClipboardCopy className="h-3.5 w-3.5 mr-1" /> Copiar mensagem
+                                </Button>
                               )}
-                            </CardContent>
-                          </CollapsibleContent>
-                        </Card>
-                      </Collapsible>
-                    );
-                  })}
-                </div>
+                            </div>
+
+                            {lista.length > 0 && (
+                              <div className="flex items-center gap-2 px-1 pb-1 border-b border-border/60">
+                                <Checkbox
+                                  checked={
+                                    todosMarcados
+                                      ? true
+                                      : qtdSel > 0
+                                        ? "indeterminate"
+                                        : false
+                                  }
+                                  onCheckedChange={() => toggleTodos(bloco, ids)}
+                                  aria-label="Selecionar todos"
+                                />
+                                <span className="text-[11px] text-muted-foreground">
+                                  {qtdSel > 0
+                                    ? `${qtdSel} selecionado(s)`
+                                    : "Selecionar todos"}
+                                </span>
+                                {qtdSel > 0 && (
+                                  <div className="ml-auto flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 px-2 text-xs"
+                                      onClick={() => limparSelecao(bloco)}
+                                    >
+                                      Limpar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="h-7 px-2 text-xs"
+                                      onClick={() => excluirSelecionados(bloco)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir ({qtdSel})
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {lista.length === 0 ? (
+                              <div className="text-xs text-muted-foreground italic px-2 py-3">
+                                Nenhum item neste bloco.
+                              </div>
+                            ) : (
+                              <div
+                                className={cn(
+                                  "grid grid-cols-1 gap-2 max-h-[420px] overflow-y-auto pr-1",
+                                  "[&::-webkit-scrollbar]:w-1.5",
+                                  "[&::-webkit-scrollbar-track]:bg-transparent",
+                                  "[&::-webkit-scrollbar-thumb]:bg-border",
+                                  "[&::-webkit-scrollbar-thumb]:rounded-full",
+                                  "hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
+                                )}
+                              >
+                                {lista.map((it, idx) => (
+                                  <ItemGlobalCard
+                                    key={it.id}
+                                    item={it}
+                                    isFirst={idx === 0}
+                                    isLast={idx === lista.length - 1}
+                                    escopo={escopo}
+                                    selecionado={sel.has(it.id)}
+                                    onToggleSelecionado={() => toggleItem(bloco, it.id)}
+                                    onEditar={() => setDialog({ open: true, item: it })}
+                                    onDuplicar={() => duplicate(it.id)}
+                                    onCopiarTudo={() => copiarTudoItem(it)}
+                                    onExcluir={() => {
+                                      if (confirm(`Excluir "${it.titulo}"?`)) remove(it.id);
+                                    }}
+                                    onToggleAtivo={() => toggleAtivo(it.id)}
+                                    onMover={(dir) => reorder(it.id, dir)}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
+                  );
+                })}
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -351,6 +600,43 @@ export function DocumentosGlobaisManager() {
         </DialogContent>
       </Dialog>
 
+      {/* Diálogo: Adicionar em lote */}
+      <Dialog
+        open={loteState.open}
+        onOpenChange={(v) => setLoteState((s) => ({ ...s, open: v }))}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Adicionar em lote — {loteState.bloco ? DOC_BLOCO_LABEL[loteState.bloco] : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Cole uma lista — um título por linha. Cada linha vira um documento neste bloco.
+              Você pode editar os detalhes depois clicando em cada item.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={loteTexto}
+            onChange={(e) => setLoteTexto(e.target.value)}
+            placeholder={"Ex.:\nGmail\nGoogle Ads\nMeta Business"}
+            rows={10}
+            className="text-sm"
+          />
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setLoteState({ open: false, bloco: null })}
+              disabled={loteSalvando}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={salvarLote} disabled={loteSalvando}>
+              {loteSalvando ? "Salvando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <DocumentoGlobalDialog
         open={dialog.open}
         onOpenChange={(v) => setDialog((s) => ({ ...s, open: v }))}
@@ -371,8 +657,11 @@ function ItemGlobalCard({
   isFirst,
   isLast,
   escopo,
+  selecionado,
+  onToggleSelecionado,
   onEditar,
   onDuplicar,
+  onCopiarTudo,
   onExcluir,
   onToggleAtivo,
   onMover,
@@ -381,17 +670,31 @@ function ItemGlobalCard({
   isFirst: boolean;
   isLast: boolean;
   escopo: DocGlobalEscopo;
+  selecionado: boolean;
+  onToggleSelecionado: () => void;
   onEditar: () => void;
   onDuplicar: () => void;
+  onCopiarTudo: () => void;
   onExcluir: () => void;
   onToggleAtivo: () => void;
   onMover: (dir: "up" | "down") => void;
 }) {
   return (
-    <Card className={cn("border-border", !item.ativo && "opacity-60")}>
+    <Card
+      className={cn(
+        "border-border",
+        !item.ativo && "opacity-60",
+        selecionado && "ring-1 ring-primary/40 border-primary/40",
+      )}
+    >
       <CardContent className="p-2.5">
         <div className="flex items-start gap-2">
-          <div className="flex flex-col gap-0.5 pt-0.5">
+          <div className="flex flex-col items-center gap-1 pt-0.5">
+            <Checkbox
+              checked={selecionado}
+              onCheckedChange={onToggleSelecionado}
+              aria-label="Selecionar item"
+            />
             <Button
               variant="ghost"
               size="icon"
@@ -460,6 +763,15 @@ function ItemGlobalCard({
         </div>
 
         <div className="flex items-center justify-end gap-0.5 mt-1.5 pt-1.5 border-t border-border/60">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1.5 text-[10px]"
+            onClick={onCopiarTudo}
+            title="Copiar tudo"
+          >
+            <ClipboardCopy className="h-3 w-3 mr-1" /> Copiar tudo
+          </Button>
           <Button
             variant="ghost"
             size="icon"
