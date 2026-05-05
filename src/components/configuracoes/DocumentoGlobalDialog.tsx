@@ -162,7 +162,9 @@ export function DocumentoGlobalDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="cliente">Documento padrão para clientes</SelectItem>
-                <SelectItem value="interno">Documento interno da empresa</SelectItem>
+                {isAdmin && (
+                  <SelectItem value="interno">Documento interno da empresa</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
