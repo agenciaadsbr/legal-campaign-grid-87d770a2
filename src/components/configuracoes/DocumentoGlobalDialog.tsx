@@ -85,7 +85,7 @@ export function DocumentoGlobalDialog({
     } else {
       setEscopo(escopoInicial);
       setTitulo("");
-      setBloco("materiais");
+      setBloco(blocoInicial ?? "materiais");
       setTipo("material");
       setCategoria("Outros");
       setDescricao("");
@@ -98,7 +98,7 @@ export function DocumentoGlobalDialog({
       setPermissao("todos");
       setAtivo(true);
     }
-  }, [open, item, escopoInicial]);
+  }, [open, item, escopoInicial, blocoInicial]);
 
   // Quando troca o bloco, garante tipo válido
   useEffect(() => {
