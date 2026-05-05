@@ -182,13 +182,13 @@ export default function Dashboard() {
       </section>
 
       {/* SEÇÃO 4 — Gráficos */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <Card className="lg:col-span-8">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Posts por mês</CardTitle>
-            <CardDescription>Volume de posts criados nos últimos 12 meses</CardDescription>
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-sm">Posts por mês</CardTitle>
+            <CardDescription className="text-xs">Volume de posts criados nos últimos 12 meses</CardDescription>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="p-3 pt-0 h-56">
             <ResponsiveContainer>
               <AreaChart data={postsPorMes} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                 <defs>
@@ -213,11 +213,11 @@ export default function Dashboard() {
         </div>
 
         <Card className="lg:col-span-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Carga por responsável — Posts</CardTitle>
-            <CardDescription>Cards atribuídos por pessoa</CardDescription>
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-sm">Carga por responsável — Posts</CardTitle>
+            <CardDescription className="text-xs">Cards atribuídos por pessoa</CardDescription>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="p-3 pt-0 h-56">
             {cargaPosts.length === 0 ? (
               <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
                 Sem dados
@@ -240,11 +240,11 @@ export default function Dashboard() {
         </Card>
 
         <Card className="lg:col-span-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Carga por responsável — Demandas</CardTitle>
-            <CardDescription>Demandas internas atribuídas por pessoa</CardDescription>
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-sm">Carga por responsável — Demandas</CardTitle>
+            <CardDescription className="text-xs">Demandas internas atribuídas por pessoa</CardDescription>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="p-3 pt-0 h-56">
             {cargaDemandas.length === 0 ? (
               <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
                 Sem dados
@@ -276,7 +276,7 @@ export default function Dashboard() {
       </section>
 
       {/* SEÇÃO 5 — Atividade */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <AlertasRecentesCard alertas={alertas} clientes={clientes} />
         <RenovacoesCard clientes={clientes} />
       </section>
