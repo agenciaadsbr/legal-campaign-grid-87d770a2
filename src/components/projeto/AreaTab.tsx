@@ -43,10 +43,13 @@ export function AreaTab({
 }: Props) {
   const { responsaveis } = useCRM();
   const createRascunho = useDemandas((s) => s.createRascunho);
+  const updateDemanda = useDemandas((s) => s.updateDemanda);
   const [selecionada, setSelecionada] = useState<Demanda | null>(null);
   const [rascunhoId, setRascunhoId] = useState<string | null>(null);
   const [filtroSubtipo, setFiltroSubtipo] = useState<string>("todos");
   const [filtroResp, setFiltroResp] = useState<string>("todos");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Deep-link: abre o detalhe quando uma demanda inicial é fornecida.
   // Se a demanda inicial veio recém-criada como rascunho ("Sem título"),
