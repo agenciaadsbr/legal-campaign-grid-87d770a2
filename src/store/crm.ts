@@ -202,6 +202,7 @@ interface State {
     cardId: string,
     payload: { responsaveis: string[]; data_agendada?: string | null; titulo?: string; descricao?: string | null; formato?: string | null; qtd_slides?: number | null },
   ) => Promise<void>;
+  createCardRascunho: (payload: { cliente_id: string; mes_referencia?: number }) => Promise<{ cardId: string; postId: string } | null>;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
   updateComentario: (
@@ -776,6 +777,65 @@ export const useCRM = create<State>()((set, get) => ({
     }
     toast.success("Tarefa iniciada");
     await get()._loadAll();
+  },
+
+  createCardRascunho: async ({ cliente_id, mes_referencia }) => {
+    // Calcula próxima posição para o cliente (gera mes/semana derivados)
+    const cardsCli = get().cards.filter((c) => c.cliente_id === cliente_id);
+    const maxPos = cardsCli.reduce((acc, c) => {
+      const pos = (c.mes_referencia - 1) * 4 + (c.numero_semana - 1);
+      return pos > acc ? pos : acc;
+    }, -1);
+    let posicao = maxPos + 1;
+    if (mes_referencia) {
+      // tenta encaixar no mês solicitado
+      const base = (mes_referencia - 1) * 4;
+      const ocupadas = new Set(
+        cardsCli
+          .filter((c) => c.mes_referencia === mes_referencia)
+          .map((c) => c.numero_semana),
+      );
+      let semana = 1;
+      while (ocupadas.has(semana) && semana <= 4) semana++;
+      if (semana <= 4) posicao = base + (semana - 1);
+    }
+    const mes = Math.floor(posicao / 4) + 1;
+    const semana = (posicao % 4) + 1;
+    const statusInicial =
+      get().statusPostOptions.find((o) => o.label === "Planejamento")?.label ?? "Planejamento";
+
+    const { data: cardRow, error: cardErr } = await supabase
+      .from("cards")
+      .insert({
+        cliente_id,
+        titulo: `Post Mês ${mes} - Semana ${semana}`,
+        status: statusInicial,
+        posicao,
+        responsaveis_ids: [],
+      })
+      .select()
+      .single();
+    if (cardErr || !cardRow) {
+      toast.error(`Falha ao criar tarefa: ${cardErr?.message ?? "desconhecido"}`);
+      return null;
+    }
+
+    const { data: postRow, error: postErr } = await supabase
+      .from("posts")
+      .insert({
+        card_id: cardRow.id,
+        titulo: cardRow.titulo,
+        status: cardRow.status,
+      })
+      .select()
+      .single();
+    if (postErr || !postRow) {
+      toast.error(`Card criado, mas falhou ao gerar post: ${postErr?.message ?? "desconhecido"}`);
+      return null;
+    }
+
+    await get()._loadAll();
+    return { cardId: cardRow.id, postId: postRow.id };
   },
 
   // ============= Comentários =============

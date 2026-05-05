@@ -258,7 +258,7 @@ export default function ProjetoCliente() {
 
         {/* ============== POSTS ============== */}
         <TabsContent value="posts" className="mt-4">
-          <PostsKanbanCliente onAdicionarTarefa={() => setNovaTarefaOpen(true)} />
+          <PostsKanbanCliente />
         </TabsContent>
 
         {/* ============== VÍDEOS ============== */}

@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCRM, StatusCard, Card as CardT } from "@/store/crm";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -29,7 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Zap, Play, Calendar, CalendarX, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { IniciarTarefaDialog } from "@/components/IniciarTarefaDialog";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
@@ -290,14 +290,14 @@ function Coluna({
   );
 }
 
-export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: () => void } = {}) {
+export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = {}) {
   const { clienteId } = useParams();
-  const { cards, moveCard, contratos, statusPostOptions, responsaveis } = useCRM();
+  const navigate = useNavigate();
+  const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho } = useCRM();
   const { canWrite } = useAuth();
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [iniciarOpen, setIniciarOpen] = useState(false);
-  const [iniciarCardId, setIniciarCardId] = useState<string | null>(null);
+  const [criandoTarefa, setCriandoTarefa] = useState(false);
 
   const [filtroResps, setFiltroResps] = useState<string[]>([]);
   const [filtroSomente, setFiltroSomente] = useState<"todos" | "atrasados" | "hoje" | "semana">("todos");
@@ -341,9 +341,24 @@ export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: 
     return Math.max(1, Math.min(6, max || 3));
   }, [contratos, cards, clienteId]);
 
-  const abrirIniciar = (id: string) => {
-    setIniciarCardId(id);
-    setIniciarOpen(true);
+  // Abre o detalhe do post (formulário único). Se o título ainda for placeholder,
+  // aplica foco automático no campo de título.
+  const abrirDetalhe = (cardId: string, opts?: { focusTitulo?: boolean }) => {
+    const post = posts.find((p) => p.card_id === cardId);
+    if (!post || !clienteId) return;
+    const url = `/clientes/${clienteId}/posts/${post.id}${opts?.focusTitulo ? "?focus=titulo" : ""}`;
+    navigate(url);
+  };
+
+  const handleAdicionarTarefa = async () => {
+    if (!clienteId || criandoTarefa) return;
+    setCriandoTarefa(true);
+    const mes = filtroMes !== "all" ? Number(filtroMes) : undefined;
+    const novo = await createCardRascunho({ cliente_id: clienteId, mes_referencia: mes });
+    setCriandoTarefa(false);
+    if (novo) {
+      navigate(`/clientes/${clienteId}/posts/${novo.postId}?focus=titulo`);
+    }
   };
 
   const onDragEnd = (e: DragEndEvent) => {
@@ -355,11 +370,12 @@ export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: 
     const card = cards.find((c) => c.id === String(e.active.id));
     if (!card) return;
     if (novoStatus === card.status_card) return;
-    if (card.status_card === "Planejamento") {
-      abrirIniciar(card.id);
-      return;
-    }
+    const veioDePlanejamento = card.status_card === "Planejamento";
     moveCard(card.id, novoStatus as StatusCard);
+    if (veioDePlanejamento) {
+      const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
+      abrirDetalhe(card.id, { focusTitulo: isPlaceholderTitulo });
+    }
   };
 
   const respsSelLabel =
@@ -445,9 +461,9 @@ export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: 
           />
         </div>
 
-        {canWrite && onAdicionarTarefa && (
-          <Button onClick={onAdicionarTarefa} size="sm" className="h-9">
-            <Plus className="h-4 w-4 mr-1" /> Adicionar Tarefa
+        {canWrite && (
+          <Button onClick={handleAdicionarTarefa} size="sm" className="h-9" disabled={criandoTarefa}>
+            <Plus className="h-4 w-4 mr-1" /> {criandoTarefa ? "Criando..." : "Adicionar Tarefa"}
           </Button>
         )}
       </div>
@@ -459,7 +475,7 @@ export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: 
               key={s}
               status={s}
               cards={cardsCliente.filter((c) => c.status_card === s)}
-              onIniciar={abrirIniciar}
+              onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })}
               pagina={paginas[s] ?? 1}
               onPaginaChange={(p) => setPaginas((prev) => ({ ...prev, [s]: p }))}
             />
@@ -468,12 +484,10 @@ export function PostsKanbanCliente({ onAdicionarTarefa }: { onAdicionarTarefa?: 
         <DragOverlay>
           {activeId ? (() => {
             const c = cardsCliente.find((x) => x.id === activeId);
-            return c ? <CardItem card={c} onIniciar={abrirIniciar} /> : null;
+            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} /> : null;
           })() : null}
         </DragOverlay>
       </DndContext>
-
-      <IniciarTarefaDialog open={iniciarOpen} onOpenChange={setIniciarOpen} cardId={iniciarCardId} />
     </div>
   );
 }
