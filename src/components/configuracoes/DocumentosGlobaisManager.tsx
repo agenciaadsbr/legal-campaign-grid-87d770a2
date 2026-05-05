@@ -213,12 +213,19 @@ export function DocumentosGlobaisManager() {
             </div>
 
             <TabsContent value={escopo} className="mt-4 space-y-3">
-              {filtrados.length === 0 ? (
-                <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Nenhum documento {escopo === "cliente" ? "padrão para clientes" : "interno"}{" "}
-                  encontrado com os filtros atuais.
-                </div>
-              ) : (
+              {filtrados.length === 0 &&
+                (busca.trim() !== "" ||
+                  filtroBloco !== "todos" ||
+                  filtroCategoria !== "todas") && (
+                  <div className="rounded-md border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
+                    Nenhum documento {escopo === "cliente" ? "padrão para clientes" : "interno"}{" "}
+                    encontrado com os filtros atuais.
+                  </div>
+                )}
+              {(() => {
+                return null;
+              })()}
+              {true && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 items-start">
                   {DOC_BLOCOS.map((bloco) => {
                     const lista = porBloco.get(bloco) ?? [];
