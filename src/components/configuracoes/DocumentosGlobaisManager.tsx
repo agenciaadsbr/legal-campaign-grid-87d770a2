@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -62,9 +63,14 @@ import {
   DOC_BLOCOS,
   DOC_TIPO_LABEL,
   DocBloco,
+  TIPOS_POR_BLOCO,
 } from "@/store/documentacao";
 import { DocumentoGlobalDialog } from "./DocumentoGlobalDialog";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  parseLoteTexto,
+  TITULO_MENSAGEM_PADRAO,
+} from "@/lib/documentacaoLote";
 
 const BLOCO_ICON: Record<DocBloco, any> = {
   acessos: KeyRound,
