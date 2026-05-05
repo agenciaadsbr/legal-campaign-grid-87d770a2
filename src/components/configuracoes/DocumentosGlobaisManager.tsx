@@ -80,14 +80,6 @@ const BLOCO_ICON: Record<DocBloco, any> = {
   documentos: Files,
 };
 
-// Tipo padrão usado ao criar itens em lote para cada bloco
-const TIPO_PADRAO_LOTE: Record<DocBloco, string> = {
-  acessos: "outro",
-  links: "outro",
-  reunioes: "reuniao",
-  materiais: "material",
-  documentos: "outro",
-};
 
 // ----- Helpers de mensagem (compatíveis com DocumentacaoTab) -----
 function construirMensagemAcessosGlobal(lista: DocumentoGlobal[]): string {
@@ -174,13 +166,11 @@ export function DocumentosGlobaisManager() {
     blocoInicial?: DocGlobalBloco;
   }>({ open: false, item: null });
 
-  // Adicionar em lote
+  // Adicionar em lote (estado local — todo o conteúdo do diálogo vive em DocumentoGlobalLoteDialog)
   const [loteState, setLoteState] = useState<{ open: boolean; bloco: DocBloco | null }>({
     open: false,
     bloco: null,
   });
-  const [loteTexto, setLoteTexto] = useState("");
-  const [loteSalvando, setLoteSalvando] = useState(false);
 
   // Seleção múltipla por bloco
   const [selecionados, setSelecionados] = useState<Record<DocBloco, Set<string>>>(
