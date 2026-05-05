@@ -13,9 +13,12 @@ import { Play } from "lucide-react";
 interface Props {
   demandas: Demanda[];
   onOpen: (d: Demanda) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function ProjetoKanban({ demandas, onOpen }: Props) {
+export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, onToggleSelect }: Props) {
   const moveStatus = useDemandas((s) => s.moveStatus);
   const updateDemanda = useDemandas((s) => s.updateDemanda);
   const [dragOver, setDragOver] = useState<DemandaStatus | null>(null);
@@ -37,11 +40,13 @@ export function ProjetoKanban({ demandas, onOpen }: Props) {
           <div
             key={status}
             onDragOver={(e) => {
+              if (selectionMode) return;
               e.preventDefault();
               setDragOver(status);
             }}
             onDragLeave={() => setDragOver(null)}
             onDrop={(e) => {
+              if (selectionMode) return;
               e.preventDefault();
               const id = e.dataTransfer.getData("text/demanda");
               if (id) moveStatus(id, status);
@@ -71,10 +76,13 @@ export function ProjetoKanban({ demandas, onOpen }: Props) {
                   key={d.id}
                   demanda={d}
                   onClick={() => onOpen(d)}
-                  draggable
+                  draggable={!selectionMode}
                   onDragStart={(e) =>
                     e.dataTransfer.setData("text/demanda", d.id)
                   }
+                  selectionMode={selectionMode}
+                  selected={selectedIds?.has(d.id)}
+                  onToggleSelect={() => onToggleSelect?.(d.id)}
                   extraAction={
                     status === "Planejamento" ? (
                       <Button

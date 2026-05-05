@@ -26,16 +26,30 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search, Plus } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) => void }) {
+function CardItem({
+  card,
+  onIniciar,
+  selectionMode,
+  selected,
+  onToggleSelect,
+}: {
+  card: CardT;
+  onIniciar: (id: string) => void;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const { responsaveis, posts, updateCard } = useCRM();
   const { canWrite } = useAuth();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
@@ -101,22 +115,46 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
     onIniciar(card.id);
   };
 
+  const dragProps = selectionMode ? {} : { ...attributes, ...listeners };
+
   const inner = (
     <div
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
+      {...dragProps}
+      onClick={
+        selectionMode
+          ? (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelect?.();
+            }
+          : undefined
+      }
       className={cn(
-        "group relative bg-card border rounded-lg p-2.5 mb-1.5 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:shadow-sm transition-all",
+        "group relative bg-card border rounded-lg p-2.5 mb-1.5 hover:border-primary/40 hover:shadow-sm transition-all",
+        !selectionMode && "cursor-grab active:cursor-grabbing",
+        selectionMode && "cursor-pointer",
         isUrgent && "border-l-2 border-l-amber-500",
         isAtrasadoStatus && "border-l-2 border-l-red-500",
         isDragging && "opacity-40",
+        selectionMode && selected && "ring-2 ring-primary border-primary",
       )}
     >
+      {selectionMode && (
+        <div
+          className="absolute top-2 right-2 z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect?.();
+          }}
+        >
+          <Checkbox checked={!!selected} className="bg-background" />
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-1.5 flex-1 min-w-0">
           {isUrgent && <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />}
-          {editingTitulo ? (
+          {editingTitulo && !selectionMode ? (
             <Input
               autoFocus
               value={tituloDraft}
@@ -133,14 +171,15 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
             />
           ) : (
             <span
-              title={canWrite ? "Clique para editar o título" : card.titulo_card}
-              onPointerDown={(e) => { if (canWrite) e.stopPropagation(); }}
-              onClick={canWrite ? startEdit : undefined}
-              onDoubleClick={canWrite && !isPlanejamento ? startEdit : undefined}
+              title={canWrite && !selectionMode ? "Clique para editar o título" : card.titulo_card}
+              onPointerDown={(e) => { if (canWrite && !selectionMode) e.stopPropagation(); }}
+              onClick={canWrite && !selectionMode ? startEdit : undefined}
+              onDoubleClick={canWrite && !isPlanejamento && !selectionMode ? startEdit : undefined}
               className={cn(
                 "text-sm font-medium leading-tight line-clamp-2 break-words",
                 isPlaceholderTitulo && isPlanejamento && "text-muted-foreground italic",
-                canWrite && "cursor-text hover:text-primary transition-colors",
+                canWrite && !selectionMode && "cursor-text hover:text-primary transition-colors",
+                selectionMode && "pr-7",
               )}
             >
               {tituloVisivel}
@@ -148,7 +187,7 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {canWrite && !isPlanejamento && (
+          {canWrite && !isPlanejamento && !selectionMode && (
             <Button
               type="button"
               variant="ghost"
@@ -186,7 +225,7 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
 
-      {isPlanejamento && canWrite ? (
+      {isPlanejamento && canWrite && !selectionMode ? (
         <Button
           type="button"
           size="sm"
@@ -205,7 +244,7 @@ function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) =>
     </div>
   );
 
-  if (!post) return inner;
+  if (!post || selectionMode) return inner;
   return <Link to={`posts/${post.id}`}>{inner}</Link>;
 }
 
@@ -215,14 +254,20 @@ function Coluna({
   onIniciar,
   pagina,
   onPaginaChange,
+  selectionMode,
+  selectedIds,
+  onToggleSelect,
 }: {
   status: StatusCard;
   cards: CardT[];
   onIniciar: (id: string) => void;
   pagina: number;
   onPaginaChange: (p: number) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const { setNodeRef, isOver } = useDroppable({ id: status, disabled: selectionMode });
   const isAtrasado = status === "Atrasado";
   const total = cards.length;
   const totalPaginas = Math.max(1, Math.ceil(total / CARDS_POR_PAGINA));
@@ -257,7 +302,16 @@ function Coluna({
         ref={scrollRef}
         className="overflow-y-auto scrollbar-thin pr-1 flex-1 min-h-0"
       >
-        {visiveis.map((c) => <CardItem key={c.id} card={c} onIniciar={onIniciar} />)}
+        {visiveis.map((c) => (
+          <CardItem
+            key={c.id}
+            card={c}
+            onIniciar={onIniciar}
+            selectionMode={selectionMode}
+            selected={selectedIds?.has(c.id)}
+            onToggleSelect={() => onToggleSelect?.(c.id)}
+          />
+        ))}
       </div>
       {total > CARDS_POR_PAGINA && (
         <div className="flex items-center justify-between gap-1 mt-2 px-1 pt-1.5 border-t border-border/50">
@@ -293,11 +347,13 @@ function Coluna({
 export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = {}) {
   const { clienteId } = useParams();
   const navigate = useNavigate();
-  const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho } = useCRM();
+  const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho, updateCard } = useCRM();
   const { canWrite } = useAuth();
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [criandoTarefa, setCriandoTarefa] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [filtroResps, setFiltroResps] = useState<string[]>([]);
   const [filtroSomente, setFiltroSomente] = useState<"todos" | "atrasados" | "hoje" | "semana">("todos");
@@ -462,11 +518,91 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
         </div>
 
         {canWrite && (
+          <Button
+            size="sm"
+            variant={selectionMode ? "secondary" : "outline"}
+            className="h-9"
+            onClick={() => {
+              setSelectionMode((v) => !v);
+              setSelectedIds(new Set());
+            }}
+          >
+            <CheckSquare className="h-4 w-4 mr-1" />
+            {selectionMode ? "Cancelar seleção" : "Selecionar"}
+          </Button>
+        )}
+
+        {canWrite && (
           <Button onClick={handleAdicionarTarefa} size="sm" className="h-9" disabled={criandoTarefa}>
             <Plus className="h-4 w-4 mr-1" /> {criandoTarefa ? "Criando..." : "Adicionar Tarefa"}
           </Button>
         )}
       </div>
+
+      {selectionMode && (
+        <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-card p-2.5">
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <Checkbox
+              checked={
+                cardsCliente.length > 0 &&
+                cardsCliente.every((c) => selectedIds.has(c.id))
+              }
+              onCheckedChange={(v) => {
+                if (v) setSelectedIds(new Set(cardsCliente.map((c) => c.id)));
+                else setSelectedIds(new Set());
+              }}
+            />
+            <span className="font-medium">Selecionar todos</span>
+          </label>
+          <Badge variant="secondary" className="text-xs">
+            {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
+          </Badge>
+          <div className="ml-auto flex items-center gap-2">
+            <AtribuirResponsaveisPopover
+              responsaveis={responsaveis}
+              count={selectedIds.size}
+              onApply={async (novosIds, modo) => {
+                const ids = Array.from(selectedIds);
+                await Promise.all(
+                  ids.map((id) => {
+                    const atual = cards.find((c) => c.id === id);
+                    const atuais = atual?.responsaveis ?? [];
+                    const finalIds: string[] =
+                      modo === "substituir"
+                        ? novosIds
+                        : Array.from(new Set([...atuais, ...novosIds]));
+                    return updateCard(id, { responsaveis: finalIds });
+                  }),
+                );
+                toast.success(
+                  `${ids.length} ${ids.length === 1 ? "card atualizado" : "cards atualizados"}`,
+                );
+                setSelectedIds(new Set());
+                setSelectionMode(false);
+              }}
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+              disabled={selectedIds.size === 0}
+            >
+              Limpar
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setSelectionMode(false);
+                setSelectedIds(new Set());
+              }}
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Sair
+            </Button>
+          </div>
+        </div>
+      )}
 
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex gap-3 overflow-x-auto overflow-y-hidden scrollbar-thin pb-2 flex-1 min-h-0">
@@ -478,6 +614,16 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
               onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })}
               pagina={paginas[s] ?? 1}
               onPaginaChange={(p) => setPaginas((prev) => ({ ...prev, [s]: p }))}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onToggleSelect={(id) =>
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })
+              }
             />
           ))}
         </div>

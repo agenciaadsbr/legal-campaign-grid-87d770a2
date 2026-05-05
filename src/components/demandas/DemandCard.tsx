@@ -10,6 +10,7 @@ import { useCRM } from "@/store/crm";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, AlertTriangle } from "lucide-react";
 import { AvatarStack } from "@/components/AvatarStack";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -18,9 +19,21 @@ interface Props {
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   extraAction?: React.ReactNode;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-export function DemandCard({ demanda, onClick, draggable, onDragStart, extraAction }: Props) {
+export function DemandCard({
+  demanda,
+  onClick,
+  draggable,
+  onDragStart,
+  extraAction,
+  selectionMode,
+  selected,
+  onToggleSelect,
+}: Props) {
   const { clientes, responsaveis } = useCRM();
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
   const respIds = getResponsaveisIds(demanda);
@@ -30,24 +43,45 @@ export function DemandCard({ demanda, onClick, draggable, onDragStart, extraActi
   const atrasada = demanda.status === "Atrasado";
   const urgente = demanda.prioridade === "Urgente";
 
+  const handleClick = () => {
+    if (selectionMode) {
+      onToggleSelect?.();
+    } else {
+      onClick?.();
+    }
+  };
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={onClick}
-      draggable={draggable}
+      onClick={handleClick}
+      draggable={draggable && !selectionMode}
       onDragStart={onDragStart}
       className={cn(
-        "rounded-lg border bg-card p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer space-y-2",
+        "rounded-lg border bg-card p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer space-y-2 relative",
         atrasada && "border-destructive/50",
-        urgente && !atrasada && "border-status-renovacao/60"
+        urgente && !atrasada && "border-status-renovacao/60",
+        selectionMode && selected && "ring-2 ring-primary border-primary",
       )}
     >
+      {selectionMode && (
+        <div
+          className="absolute top-2 right-2 z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect?.();
+          }}
+        >
+          <Checkbox checked={!!selected} className="bg-background" />
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-2">
-        <div className="text-sm font-semibold leading-tight line-clamp-2 flex-1">
+        <div className={cn("text-sm font-semibold leading-tight line-clamp-2 flex-1", selectionMode && "pr-7")}>
           {demanda.titulo}
         </div>
-        {urgente && (
+        {urgente && !selectionMode && (
           <Badge
             className="text-[10px] px-1.5 py-0 h-5 shrink-0"
             style={{ background: PRIORIDADE_COR.Urgente, color: "white" }}

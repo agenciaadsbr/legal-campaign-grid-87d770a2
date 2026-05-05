@@ -11,9 +11,12 @@ import { useState } from "react";
 interface Props {
   demandas: Demanda[];
   onOpen: (d: Demanda) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function DemandasKanban({ demandas, onOpen }: Props) {
+export function DemandasKanban({ demandas, onOpen, selectionMode, selectedIds, onToggleSelect }: Props) {
   const moveStatus = useDemandas((s) => s.moveStatus);
   const [dragOver, setDragOver] = useState<DemandaStatus | null>(null);
 
@@ -25,11 +28,13 @@ export function DemandasKanban({ demandas, onOpen }: Props) {
           <div
             key={status}
             onDragOver={(e) => {
+              if (selectionMode) return;
               e.preventDefault();
               setDragOver(status);
             }}
             onDragLeave={() => setDragOver(null)}
             onDrop={(e) => {
+              if (selectionMode) return;
               e.preventDefault();
               const id = e.dataTransfer.getData("text/demanda");
               if (id) moveStatus(id, status);
@@ -57,8 +62,11 @@ export function DemandasKanban({ demandas, onOpen }: Props) {
                   key={d.id}
                   demanda={d}
                   onClick={() => onOpen(d)}
-                  draggable
+                  draggable={!selectionMode}
                   onDragStart={(e) => e.dataTransfer.setData("text/demanda", d.id)}
+                  selectionMode={selectionMode}
+                  selected={selectedIds?.has(d.id)}
+                  onToggleSelect={() => onToggleSelect?.(d.id)}
                 />
               ))}
               {items.length === 0 && (
