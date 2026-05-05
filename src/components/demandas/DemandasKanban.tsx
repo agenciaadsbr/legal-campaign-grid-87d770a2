@@ -11,9 +11,12 @@ import { useState } from "react";
 interface Props {
   demandas: Demanda[];
   onOpen: (d: Demanda) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function DemandasKanban({ demandas, onOpen }: Props) {
+export function DemandasKanban({ demandas, onOpen, selectionMode, selectedIds, onToggleSelect }: Props) {
   const moveStatus = useDemandas((s) => s.moveStatus);
   const [dragOver, setDragOver] = useState<DemandaStatus | null>(null);
 
