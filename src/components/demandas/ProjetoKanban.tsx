@@ -40,11 +40,13 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
           <div
             key={status}
             onDragOver={(e) => {
+              if (selectionMode) return;
               e.preventDefault();
               setDragOver(status);
             }}
             onDragLeave={() => setDragOver(null)}
             onDrop={(e) => {
+              if (selectionMode) return;
               e.preventDefault();
               const id = e.dataTransfer.getData("text/demanda");
               if (id) moveStatus(id, status);
@@ -74,10 +76,13 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
                   key={d.id}
                   demanda={d}
                   onClick={() => onOpen(d)}
-                  draggable
+                  draggable={!selectionMode}
                   onDragStart={(e) =>
                     e.dataTransfer.setData("text/demanda", d.id)
                   }
+                  selectionMode={selectionMode}
+                  selected={selectedIds?.has(d.id)}
+                  onToggleSelect={() => onToggleSelect?.(d.id)}
                   extraAction={
                     status === "Planejamento" ? (
                       <Button
