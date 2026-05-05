@@ -12,9 +12,17 @@ import { useCRM, useCRMBootstrap } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import { DemandasKanban } from "@/components/demandas/DemandasKanban";
 import { DemandCard } from "@/components/demandas/DemandCard";
-import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
-import { DemandaRapidaDialog } from "@/components/demandas/DemandaRapidaDialog";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { RelatoriosDemandas } from "@/components/demandas/RelatoriosDemandas";
 import { ClientesDemandasTable } from "@/components/demandas/ClientesDemandasTable";
 import { STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
