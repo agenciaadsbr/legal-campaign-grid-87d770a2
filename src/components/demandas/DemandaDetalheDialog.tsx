@@ -115,6 +115,20 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
     [demanda, anexos]
   );
 
+  // Sincroniza descricaoLocal quando muda de demanda (por id) ou
+  // quando a descricao chega/atualiza externamente sem haver edição em curso.
+  useEffect(() => {
+    if (demanda) setDescricaoLocal(demanda.descricao ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demanda?.id]);
+
+  // Limpa timer ao desmontar
+  useEffect(() => {
+    return () => {
+      if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
+    };
+  }, []);
+
   if (!demanda) return null;
 
   const isUrgente = demanda.prioridade === "Urgente";
