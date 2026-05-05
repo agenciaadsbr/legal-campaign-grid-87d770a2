@@ -720,6 +720,71 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
           </CardContent>
         </Card>
       </DialogContent>
+
+      {/* Lightbox de imagem do anexo */}
+      <Dialog open={!!previewAnexo} onOpenChange={(o) => !o && setPreviewAnexo(null)}>
+        <DialogContent className="max-w-5xl p-2 bg-background">
+          {previewAnexo && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-2 pt-1">
+                <span className="text-sm font-medium truncate">{previewAnexo.nome}</span>
+                <div className="flex items-center gap-1">
+                  <a
+                    href={previewAnexo.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary hover:underline px-2"
+                  >
+                    Abrir em nova aba
+                  </a>
+                  <a
+                    href={previewAnexo.url}
+                    download={previewAnexo.nome}
+                    className="text-xs text-primary hover:underline px-2"
+                  >
+                    Baixar
+                  </a>
+                </div>
+              </div>
+              <div className="flex items-center justify-center bg-muted/30 rounded">
+                <img
+                  src={previewAnexo.url}
+                  alt={previewAnexo.nome}
+                  className="max-h-[80vh] max-w-full object-contain"
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação de remoção de anexo */}
+      <AlertDialog
+        open={!!anexoParaRemover}
+        onOpenChange={(o) => !o && setAnexoParaRemover(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover anexo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O arquivo será removido deste card.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (anexoParaRemover) {
+                  await removeAnexo(anexoParaRemover);
+                  setAnexoParaRemover(null);
+                }
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
