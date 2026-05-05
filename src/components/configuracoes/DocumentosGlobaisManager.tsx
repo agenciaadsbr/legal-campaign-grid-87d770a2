@@ -612,8 +612,8 @@ function ItemGlobalCard({
       )}
     >
       <CardContent className="p-2.5 flex flex-col flex-1 min-h-0">
-        <div className="flex items-start gap-2 flex-1 min-h-0">
-          <div className="flex flex-col items-center gap-1 pt-0.5">
+        <div className="flex items-stretch gap-2 flex-1 min-h-0">
+          <div className="flex flex-col items-center gap-1 pt-0.5 shrink-0">
             <Checkbox
               checked={selecionado}
               onCheckedChange={onToggleSelecionado}

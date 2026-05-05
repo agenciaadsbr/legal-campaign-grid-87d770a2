@@ -1,32 +1,34 @@
-## Problema
+## Problema identificado
 
-Hoje cada `ItemGlobalCard` tem altura "natural" (auto), e a descrição é limitada a `max-h-40` (~160px) com scroll interno. Quando o card individual fica num grid com `min-h-[480px]` no contêiner pai, a descrição preenche apenas ~160px e sobra muito espaço vazio embaixo — exatamente o "corte pela metade" que aparece no print.
+Na imagem enviada, no card "Links importantes" a barra de ações (Copiar tudo, olho, copiar, lápis, lixeira) aparece **no meio do card**, sobreposta ao texto da descrição ("Se o saldo acabar e não for recarregado..."), enquanto o texto continua sendo renderizado abaixo dela. Isso quebra o padrão visual do card "Acessos" ao lado, onde a barra fica corretamente fixada no rodapé.
 
-A imagem de referência mostra cards onde a área de texto **ocupa toda a altura disponível** do card, com scroll interno só quando o conteúdo passa do limite.
+## Causa raiz
+
+Em `ItemGlobalCard` (`src/components/configuracoes/DocumentosGlobaisManager.tsx`, linha 615), a row horizontal que contém o checkbox + coluna de conteúdo usa `items-start`. Isso impede que a coluna de conteúdo seja esticada verticalmente até a altura do card. Sem essa altura limitada, o `flex-1 min-h-0 overflow-y-auto` aplicado à descrição (linha 672) nunca recebe um teto, então:
+
+- A descrição cresce naturalmente para acomodar todo o texto (sem scroll interno).
+- A barra de ações (irmã da row, no rodapé do `CardContent`) é renderizada na posição natural — que acaba caindo **dentro** da área ocupada pela descrição, gerando o overlap visto na imagem.
 
 ## Correção
 
-**Arquivo:** `src/components/configuracoes/DocumentosGlobaisManager.tsx`
+Arquivo: `src/components/configuracoes/DocumentosGlobaisManager.tsx`
 
-1. **Card raiz (`ItemGlobalCard`)** — transformar em coluna flex de altura total:
-   - `<Card>` recebe `flex flex-col h-full`.
-   - `<CardContent>` recebe `flex flex-col flex-1 min-h-0 p-2.5`.
-   - O wrapper `flex items-start gap-2` vira `flex items-start gap-2 flex-1 min-h-0`.
-   - O wrapper interno `flex-1 min-w-0` passa a ser `flex flex-col flex-1 min-w-0 min-h-0`.
+1. **Linha 615** — Trocar a row horizontal de `items-start` para `items-stretch` (default do flex), para que a coluna de conteúdo herde a altura disponível do card. Manter `flex-1 min-h-0`.
 
-2. **Bloco da descrição** — deixar de ter altura fixa e passar a esticar:
-   - Trocar `max-h-40` por `flex-1 min-h-0` (mantendo `overflow-y-auto`, `whitespace-pre-wrap`, `break-words` e o estilo de scrollbar).
-   - Resultado: o texto preenche toda a altura restante do card; quando excede, aparece scroll interno.
+2. **Linha 616** — A coluna lateral do checkbox + setas continua usando `items-center` próprio; só precisamos garantir que ela não estique de forma estranha. Usar `shrink-0` para mantê-la com largura natural.
 
-3. **Grid pai dos itens (linhas 475-484)** — garantir que cada célula do grid estique:
-   - Adicionar `auto-rows-fr` ao grid (`grid grid-cols-1 gap-2 auto-rows-fr ...`) para que cada linha tenha altura igual e os cards ocupem toda a altura da linha.
-   - Manter `max-h-[calc(100vh-320px)] min-h-[480px] overflow-y-auto` para o scroll externo do bloco.
+3. **Validar cadeia flex** para o scroll interno funcionar:
+   - `Card`: `flex flex-col h-full` ✓ (já está)
+   - `CardContent`: `flex flex-col flex-1 min-h-0` ✓ (já está)
+   - Row horizontal: `flex items-stretch gap-2 flex-1 min-h-0` ← ajuste
+   - Coluna de conteúdo: `flex flex-col flex-1 min-w-0 min-h-0` ✓ (já está)
+   - Descrição: `flex-1 min-h-0 overflow-y-auto …` ✓ (já está)
 
-4. **Bump `public/version.json`** para o timestamp atual.
+4. **`public/version.json`** — bump do timestamp para forçar refresh do cache.
 
 ## Resultado esperado
 
-- Cada card preenche toda a altura disponível na sua linha (sem espaço morto embaixo).
-- A descrição ocupa todo o espaço sobrando entre o cabeçalho (título + badges) e a barra de ações.
-- Scroll interno aparece **só** quando o texto colado é maior que a altura do card.
-- Visual fica idêntico ao print de referência (cards altos, texto preenchendo tudo).
+- A barra de ações fica **sempre fixa no rodapé** do card, alinhada ao padrão do card "Acessos".
+- A descrição ocupa todo o espaço entre o cabeçalho/badges e a barra de ações.
+- Quando o texto colado for maior que a altura disponível, aparece **scroll interno** (a barra de rolagem fininha já estilizada) dentro da área da descrição — sem nunca invadir ou ser invadida pela barra de ações.
+- Nenhuma alteração em comportamento de salvamento, store ou estrutura de dados.
