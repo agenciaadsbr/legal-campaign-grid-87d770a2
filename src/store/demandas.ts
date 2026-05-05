@@ -84,6 +84,16 @@ interface State {
       responsaveis_ids?: string[];
     }
   ) => Promise<string | null>;
+  /**
+   * Cria um rascunho silencioso (sem toast) e retorna o objeto Demanda já normalizado.
+   * Usado pelo fluxo de "formulário único": a tarefa nasce no banco e o usuário
+   * preenche tudo direto no DemandaDetalheDialog.
+   */
+  createRascunho: (args: {
+    cliente_id: string;
+    categoria?: DemandaCategoria;
+    subtipo?: string | null;
+  }) => Promise<Demanda | null>;
   updateDemanda: (id: string, patch: Partial<Demanda>) => Promise<void>;
   deleteDemanda: (id: string) => Promise<void>;
   moveStatus: (id: string, status: DemandaStatus) => Promise<void>;
