@@ -39,8 +39,9 @@ export function AreaTab({
   demandaInicial,
 }: Props) {
   const { responsaveis } = useCRM();
-  const [novaOpen, setNovaOpen] = useState(false);
+  const createRascunho = useDemandas((s) => s.createRascunho);
   const [selecionada, setSelecionada] = useState<Demanda | null>(null);
+  const [rascunhoId, setRascunhoId] = useState<string | null>(null);
   const [filtroSubtipo, setFiltroSubtipo] = useState<string>("todos");
   const [filtroResp, setFiltroResp] = useState<string>("todos");
 
@@ -49,6 +50,14 @@ export function AreaTab({
     if (demandaInicial) setSelecionada(demandaInicial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demandaInicial?.id]);
+
+  const handleNovaTarefa = async () => {
+    const novo = await createRascunho({ cliente_id: clienteId, categoria });
+    if (novo) {
+      setSelecionada(novo);
+      setRascunhoId(novo.id);
+    }
+  };
 
   const subtipos = CATEGORIA_SUBTIPOS[categoria] ?? [];
 
