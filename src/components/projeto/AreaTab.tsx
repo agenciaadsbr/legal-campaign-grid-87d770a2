@@ -130,7 +130,7 @@ export function AreaTab({
                 ))}
               </select>
             )}
-            <Button size="sm" onClick={() => setNovaOpen(true)}>
+            <Button size="sm" onClick={handleNovaTarefa}>
               <Plus className="h-4 w-4 mr-1" /> Nova tarefa de {CATEGORIA_LABEL[categoria]}
             </Button>
           </div>
@@ -149,17 +149,15 @@ export function AreaTab({
         <ProjetoKanban demandas={filtradas} onOpen={setSelecionada} />
       )}
 
-      <NovaDemandaDialog
-        open={novaOpen}
-        onOpenChange={setNovaOpen}
-        defaultClienteId={clienteId}
-        defaultCategoria={categoria}
-        lockCategoria
-        titulo={`Nova tarefa de ${CATEGORIA_LABEL[categoria]}`}
-      />
       <DemandaDetalheDialog
         demanda={selecionada}
-        onOpenChange={(v) => !v && setSelecionada(null)}
+        isRascunho={!!selecionada && selecionada.id === rascunhoId}
+        onOpenChange={(v) => {
+          if (!v) {
+            setSelecionada(null);
+            setRascunhoId(null);
+          }
+        }}
       />
     </div>
   );
