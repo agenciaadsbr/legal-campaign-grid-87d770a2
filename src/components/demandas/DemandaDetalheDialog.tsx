@@ -57,6 +57,13 @@ import { toast } from "sonner";
 interface Props {
   demanda: Demanda | null;
   onOpenChange: (v: boolean) => void;
+  /**
+   * Quando true, indica que a demanda foi recém-criada como rascunho silencioso.
+   * - Foca o input de título automaticamente.
+   * - Ao fechar, se o título permanecer vazio/"Sem título" e não houver
+   *   conteúdo (descrição, anexos, comentários), o rascunho é descartado.
+   */
+  isRascunho?: boolean;
 }
 
 const fileToDataUrl = (f: File) =>
