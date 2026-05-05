@@ -63,6 +63,7 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[160px]">Cliente</TableHead>
+                {mostrarResponsavel && <TableHead className="w-[140px]">Responsável</TableHead>}
                 <TableHead>Tarefa</TableHead>
                 <TableHead className="w-[120px]">Área</TableHead>
                 <TableHead className="w-[90px]">Prioridade</TableHead>
