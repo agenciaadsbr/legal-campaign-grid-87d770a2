@@ -202,6 +202,7 @@ interface State {
     cardId: string,
     payload: { responsaveis: string[]; data_agendada?: string | null; titulo?: string; descricao?: string | null; formato?: string | null; qtd_slides?: number | null },
   ) => Promise<void>;
+  createCardRascunho: (payload: { cliente_id: string; mes_referencia?: number }) => Promise<{ cardId: string; postId: string } | null>;
 
   addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
   updateComentario: (
