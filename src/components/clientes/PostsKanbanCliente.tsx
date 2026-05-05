@@ -29,7 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Zap, Play, Calendar, CalendarX, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { IniciarTarefaDialog } from "@/components/IniciarTarefaDialog";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
