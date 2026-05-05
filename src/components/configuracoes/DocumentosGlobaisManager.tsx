@@ -937,13 +937,8 @@ function DocumentoGlobalLoteDialog({
             </div>
           )}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label>{isMensagemUnica ? "Mensagem completa" : "Itens"}</Label>
-              {!isMensagemUnica && (
-                <Badge variant="outline" className="text-[10px]">
-                  {itensDetectados.length} item(ns) detectado(s)
-                </Badge>
-              )}
+            <div className="mb-1">
+              <Label>{isMensagemUnica ? "Mensagem completa" : "Conteúdo"}</Label>
             </div>
             <Textarea
               rows={14}
