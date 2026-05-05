@@ -1,80 +1,68 @@
+## Contexto
+
+Na aba **Posts** do Projeto do Cliente ainda existem dois formulários separados, exatamente o problema que já corrigimos para Demandas:
+
+1. **`IniciarTarefaDialog`** (`src/components/IniciarTarefaDialog.tsx`) — abre quando o usuário arrasta um card da coluna "Planejamento" para outra coluna. Pede título, briefing, responsáveis, prazo, formato e slides em um modal antes de "iniciar a tarefa".
+2. **`NovaTarefaSeletor`** (mini-dialog em `ProjetoCliente.tsx`, screenshot enviada) — abre pelo botão "Adicionar Tarefa" do Kanban de Posts. Pede só "Categoria" e cria uma **demanda** (não um post), o que é incoerente dentro da aba Posts.
+
+Posts são uma entidade própria (tabela `cards` + `posts`) com fluxo Planejamento → colunas de produção. O detalhe completo de um post já existe em `src/pages/PostDetalhe.tsx` (rota `/clientes/:id/posts/:postId`) — esse é o "card único" equivalente ao `DemandaDetalheDialog`.
+
 ## Objetivo
 
-Hoje o usuário preenche **dois formulários** para criar uma tarefa:
-1. Um modal pequeno (`NovaDemandaDialog` ou `DemandaRapidaDialog`) — só com título, cliente, categoria, subtipo, responsáveis, prazo e descrição.
-2. Logo depois precisa abrir o card da tarefa (`DemandaDetalheDialog`) para de fato trabalhar nela (anexos, briefing, status, comentários, urgência etc.).
+Aplicar à aba Posts a mesma filosofia da unificação de Demandas: **um único formulário em todo o ciclo** (criar e editar). Sem mini-modal de pré-cadastro, sem dialog separado de "Iniciar tarefa".
 
-A meta é eliminar o passo 1. **A criação passa a abrir diretamente o formulário detalhado** (o mesmo da imagem enviada). Edição já usa esse mesmo formulário — então criação e edição ficam idênticas.
+## Alterações
 
-## Como vai funcionar (fluxo novo)
+### 1. `src/components/clientes/PostsKanbanCliente.tsx`
 
-Em **qualquer botão** que hoje cria tarefa:
-- "Nova tarefa de Vídeo / Tráfego Pago / Landing Page / IA·Atendimento / Urgência·Outro" (abas do Projeto Completo do cliente)
-- "Nova Tarefa" e "Demanda rápida" (página /demandas)
+- **Botão "Adicionar Tarefa"**: trocar a callback `onAdicionarTarefa` por uma ação local que cria um card rascunho diretamente em `cards` (status "Planejamento", título "Sem título", `mes_referencia` = mês corrente do filtro ou 1, `numero_semana` derivado do próximo slot livre) e navega para `/clientes/:clienteId/posts/:postId` do post recém-criado. A criação usa um novo helper `createCardRascunho` no store.
+- **Drag-and-drop a partir de "Planejamento"**: remover a chamada `abrirIniciar(card.id)`. Em vez de abrir `IniciarTarefaDialog`, mover o card normalmente via `moveCard` para a nova coluna, **e em seguida navegar para `/clientes/:id/posts/:postId`** (o detalhe), de modo que o usuário ajuste título/responsáveis/formato/prazo no mesmo lugar onde editaria depois. Se o título ainda for o placeholder "Post Mês X - Semana Y", aplicar foco automático no campo de título do detalhe (via query param `?focus=titulo`).
+- **Clique no card já existente**: continua navegando para o detalhe (comportamento atual).
+- Remover import e uso de `IniciarTarefaDialog`, estados `iniciarOpen`/`iniciarCardId` e função `abrirIniciar`.
 
-→ Ao clicar, o sistema **cria imediatamente um rascunho** de demanda no banco (com cliente, categoria e subtipo já preenchidos pelo contexto do botão, status `Criar`, prioridade `Media`, título vazio = "Sem título") e **abre o `DemandaDetalheDialog` desse rascunho**.
+### 2. `src/store/crm.ts`
 
-O usuário preenche tudo dentro do mesmo card (título, datas, responsáveis, anexos, briefing, urgência, status). Como o `DemandaDetalheDialog` já salva campo a campo (debounced), nada de "Salvar/Cancelar" extra — é instantâneo.
+- Adicionar `createCardRascunho({ cliente_id, mes_referencia? })`: insere um card em `cards` com `status_card: "Planejamento"`, título placeholder, sem responsáveis/prazo, e cria também o registro em `posts` vinculado (mesmo padrão usado hoje quando um card é "iniciado"), retornando `{ cardId, postId }`. A criação simultânea garante que o `PostDetalhe` consiga abrir imediatamente.
+- Manter `iniciarTarefa` no store para uso interno (chamado pelo próprio `PostDetalhe` quando o usuário move o status), mas o dialog separado deixa de existir.
 
-Se o usuário **fechar sem dar título**, o rascunho é descartado (deletado) automaticamente para não poluir o Kanban com cards vazios.
+### 3. `src/pages/PostDetalhe.tsx`
 
-## Mudanças no código
+- Aceitar query param `?focus=titulo` e dar `autoFocus` no input de título quando presente.
+- Garantir que o detalhe exponha visivelmente: **Status**, **Formato do post**, **Quantidade de slides** (quando Carrossel), **Prazo**, **Responsáveis**, **Briefing/atividade** — esses campos já existem na página, apenas confirmar que estão acessíveis sem precisar de outro modal. Se algum estiver faltando (formato/slides), adicionar inline na seção de metadados do post, no mesmo padrão visual já usado.
+- Botão de voltar continua para a aba Posts (`?tab=posts`).
 
-### 1) `src/components/demandas/DemandaDetalheDialog.tsx`
-- Aceitar nova prop opcional `isRascunho?: boolean`. Quando `true`:
-  - Foco automático no campo de título ao abrir.
-  - Ao fechar (`onOpenChange(false)`), se `demanda.titulo` estiver vazio/igual a "Sem título" e **não houver** comentários/anexos/edições, chamar `deleteDemanda(demanda.id)` silenciosamente.
-- O título já é editado inline no card (linha 194-201) — só precisa ganhar `autoFocus` quando `isRascunho`.
-- Se a categoria for editável no rascunho: adicionar um pequeno seletor de Categoria + Subtipo no header do card (logo abaixo do título), reutilizando os componentes de `NovaDemandaDialog` (`CATEGORIAS`, `CATEGORIA_SUBTIPOS`, `VideoSubtipoCascade`). Isso permite mudar categoria depois de criada (útil quando vier da página /demandas, onde não há categoria no contexto).
+### 4. `src/pages/ProjetoCliente.tsx`
 
-### 2) Novo helper em `src/store/demandas.ts`
-- `createRascunho({ cliente_id, categoria, subtipo? }) → Promise<Demanda | null>`: insere uma linha mínima e retorna o objeto já normalizado, pronto para ser passado ao `DemandaDetalheDialog`.
-- Reaproveita `createDemanda` internamente, mas garante valores default (titulo: "Sem título", status: "Criar", prioridade: "Media").
+- Remover do `<TabsContent value="posts">` o prop `onAdicionarTarefa` (a criação agora é interna ao Kanban).
+- Manter `NovaTarefaSeletor` apenas para as outras abas que criam **demandas** (vídeos, tráfego, LP, IA, urgências) — nada muda fora de Posts.
 
-### 3) `src/components/projeto/AreaTab.tsx`
-- Remover `<NovaDemandaDialog>`.
-- Botão "Nova tarefa de X" passa a chamar `createRascunho({ cliente_id, categoria })` e setar a demanda retornada em `selecionada`, abrindo direto o `DemandaDetalheDialog` com `isRascunho`.
+### 5. Remoção
 
-### 4) `src/pages/Demandas.tsx`
-- **Remover** os dois botões "Demanda rápida" e "Nova Tarefa" e substituir por um único botão **"Nova Tarefa"**.
-- Esse botão abre um mini-popover/seletor pedindo só **Cliente** (campo obrigatório que não pode ser inferido) e, opcionalmente, **Categoria**. Ao confirmar → cria rascunho → abre `DemandaDetalheDialog`.
-- Alternativa mais simples (recomendada): clicar em "Nova Tarefa" abre direto o `DemandaDetalheDialog` em modo rascunho com um seletor de Cliente + Categoria visível no topo do card (já que a página /demandas não tem cliente no contexto).
-- Remover imports e estado de `DemandaRapidaDialog`.
+- **Excluir** `src/components/IniciarTarefaDialog.tsx`. Buscar referências remanescentes e removê-las (já confirmamos que só `PostsKanbanCliente.tsx` importa).
 
-### 5) Arquivos a deletar
-- `src/components/demandas/NovaDemandaDialog.tsx`
-- `src/components/demandas/DemandaRapidaDialog.tsx`
+### 6. `public/version.json`
 
-(O componente `VideoSubtipoCascade` será movido para dentro de `DemandaDetalheDialog.tsx` ou para `src/lib/demandas-categorias.tsx` para reuso.)
+- Atualizar timestamp para invalidar cache.
 
-### 6) `public/version.json` — bump.
-
-## Fluxos resultantes
+## Comportamento final
 
 ```text
-ANTES:
-[Botão "Nova tarefa de Vídeo"] → Modal pequeno (preenche 6 campos) → [Salvar]
-                                                                        ↓
-                                                             card aparece no Kanban
-                                                                        ↓
-                                                       usuário clica no card → Modal grande
-                                                                        ↓
-                                                          preenche o resto (anexos, briefing...)
+Aba Posts → botão "Adicionar Tarefa"
+  └─ cria card rascunho em "Planejamento"
+     └─ abre /clientes/:id/posts/:postId (PostDetalhe) com foco no título
 
-DEPOIS:
-[Botão "Nova tarefa de Vídeo"] → Rascunho criado em silêncio → Modal grande já aberto
-                                                                        ↓
-                                                preenche tudo num lugar só (auto-save)
-                                                                        ↓
-                                            fecha → se sem título, rascunho é descartado
+Aba Posts → arrastar card de "Planejamento" para "Em produção" (ou outra)
+  └─ moveCard atualiza status
+     └─ abre /clientes/:id/posts/:postId (PostDetalhe) com foco no título
+        (somente se o título ainda for placeholder)
+
+Aba Posts → clicar em card existente
+  └─ abre /clientes/:id/posts/:postId (PostDetalhe)  [já era assim]
 ```
 
-## Riscos e mitigações
-- **Cards "Sem título" órfãos** se o usuário fechar a aba antes do cleanup: cleanup roda em `onOpenChange`. Em casos extremos (crash do browser), um job opcional poderia limpar rascunhos com `titulo='Sem título'` e `created_at < now() - 1h`, mas não é necessário no escopo inicial.
-- **Permissões**: `createRascunho` exige `canWrite`. Já é o comportamento atual de `createDemanda`.
-- **Realtime**: como o card é criado de verdade no banco, ele aparece instantaneamente para os outros usuários como "Sem título". É aceitável — assim que o autor digita, o título sincroniza (debounced 600ms já existe).
+Em todos os caminhos o usuário enxerga **o mesmo formulário** (`PostDetalhe`), ajustando todos os campos no próprio card — nenhum modal intermediário.
 
-## Não muda
-- `IniciarTarefaDialog` (esse é específico do fluxo de Posts/Cards de conteúdo, não de Demandas — não está no escopo).
-- Schema do banco — nenhuma migração necessária.
-- Lógica de listagem, Kanban, filtros, relatórios.
+## Riscos
+
+- Cards rascunho com título "Sem título" podem ficar órfãos se o usuário fechar a aba; mitigação: manter o placeholder `Post Mês X - Semana Y` (já existente) como título inicial em vez de "Sem título", então não há ruído visual no Kanban.
+- O fluxo de drag-and-drop deixa de ter "confirmação antes de iniciar". Como o `PostDetalhe` abre logo em seguida, o usuário continua tendo a chance de ajustar tudo, e pode arrastar o card de volta para "Planejamento" se foi engano.
