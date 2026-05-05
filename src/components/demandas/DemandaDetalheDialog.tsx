@@ -223,12 +223,12 @@ export function DemandaDetalheDialog({ demanda, onOpenChange, isRascunho }: Prop
   };
 
   return (
-    <Dialog open={!!demanda} onOpenChange={onOpenChange}>
+    <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
         <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
           <div className="mb-2">
-            <VoltarVisaoGeralButton onClick={() => onOpenChange(false)} />
+            <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
           {/* CARD 1 — Informações da Demanda */}
           <Card>
@@ -239,10 +239,26 @@ export function DemandaDetalheDialog({ demanda, onOpenChange, isRascunho }: Prop
                     Título da tarefa
                   </div>
                   <Input
-                    value={demanda.titulo}
-                    onChange={(e) =>
-                      updateDemanda(demanda.id, { titulo: e.target.value })
-                    }
+                    ref={tituloInputRef}
+                    value={tituloLocal}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTituloLocal(v);
+                      if (tituloTimer.current) clearTimeout(tituloTimer.current);
+                      tituloTimer.current = setTimeout(() => {
+                        updateDemanda(demanda.id, { titulo: v.trim() || "Sem título" });
+                      }, 500);
+                    }}
+                    onBlur={() => {
+                      if (tituloTimer.current) {
+                        clearTimeout(tituloTimer.current);
+                        tituloTimer.current = null;
+                      }
+                      const novo = tituloLocal.trim() || "Sem título";
+                      if (novo !== demanda.titulo) {
+                        updateDemanda(demanda.id, { titulo: novo });
+                      }
+                    }}
                     placeholder="Ex: Criar landing page para campanha de inverno"
                     className="text-xl font-bold border-0 px-0 focus-visible:ring-0 h-auto"
                   />
