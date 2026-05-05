@@ -1,36 +1,59 @@
 ## Objetivo
 
-Reforçar o módulo **Minhas Tarefas** para garantir, em todas as camadas, que o usuário só veja tarefas atribuídas a **ele mesmo** — nunca de outro responsável.
-
-Hoje o filtro já existe (`useResponsavelAtual` resolve o `responsavelId` do usuário logado e `buildUnifiedTasks` filtra por ele em demandas/posts/planejamento), mas não há uma trava defensiva final. Se algum dia uma fonte nova esquecer o filtro, ou se uma demanda tiver múltiplos responsáveis e for indevidamente repassada, a tarefa apareceria. Vamos blindar.
+Reduzir tamanhos de texto, paddings, espaçamentos e altura de linhas do módulo **Minhas Tarefas** para ficar visualmente consistente com **Clientes** (que usa container `px-5 py-4 space-y-3`, título `text-xl`, controles `h-8 text-xs` e tabela densa com `[&_th]:h-7 [&_td]:py-1`).
 
 ## Mudanças
 
-### 1. `src/lib/minhasTarefas.ts` — Trava de segurança final
+### 1. `src/pages/MinhasTarefas.tsx` — Container, header e KPIs
 
-Antes do `return out` em `buildUnifiedTasks`, adicionar uma camada que:
+- Container: trocar `p-6 space-y-5` por `px-5 py-4 space-y-3` (igual a Clientes).
+- Header:
+  - `<h1>` de `text-2xl font-bold tracking-tight` → `text-xl font-bold leading-tight`.
+  - `<p>` subtítulo de `text-sm` → `text-xs`.
+  - Aviso âmbar de "usuário não vinculado": reduzir `p-3 text-sm` → `p-2 text-xs`.
+- Bloco de KPIs: trocar `gap-3` → `gap-2` e adicionar variante compacta (ver item 2).
 
-- Se há `responsavelId` definido: manter apenas tarefas onde `t.responsaveis_ids.includes(responsavelId)`. Exceção: `t.fonte === "documentacao"` (já filtrada por `authUserId`, não tem responsável).
-- Se NÃO há `responsavelId` (usuário sem vínculo): retornar apenas tarefas da fonte `documentacao` (do próprio usuário). Nada de demandas/posts/planejamento aparece sem vínculo.
-- Logar `console.warn` se a trava descartar algo, para facilitar diagnóstico.
+### 2. `src/components/relatorios/KpiCard.tsx` — adicionar prop opcional `compact`
 
-### 2. `src/pages/MinhasTarefas.tsx` — Mensagem clara quando sem vínculo
+- Adicionar `compact?: boolean` (default `false`, preservando uso atual em outros relatórios).
+- Quando `compact`:
+  - `CardContent` `p-4` → `p-3`.
+  - Label `text-[11px]` mantém, mas `mt-1.5 text-3xl` → `mt-1 text-2xl`.
+  - Ícone container `h-10 w-10` → `h-8 w-8`, ícone `h-5 w-5` → `h-4 w-4`.
+- Em `MinhasTarefas.tsx`, passar `compact` nos 4 `KpiCard`.
 
-Já existe um aviso amarelo quando `!responsavelId`. Reforçar o subtítulo do header para deixar explícito que o painel só mostra tarefas do responsável atual:
+### 3. `src/components/tarefas/MinhasTarefasFiltros.tsx` — barra de filtros mais baixa
 
-- Subtítulo passa a ser: `Painel individual de <strong>{nome}</strong> — apenas tarefas atribuídas a você` (quando há responsável).
-- Quando sem responsável: manter o aviso atual e exibir lista vazia naturalmente (graças à trava acima).
+- Trocar todos os `h-9` por `h-8` (Input busca, SelectTrigger cliente, botões Área / Status / Limpar).
+- Input busca: `pl-8` mantido; adicionar `text-xs` e ajustar ícone para `h-3.5 w-3.5`.
+- Botões Área/Status: já usam `size="sm"`, ajustar para `text-xs` e ícone `h-3.5 w-3.5`.
+- `gap-2` mantido.
+- Garantir que `PeriodoFiltro` se alinhe (usa `h-8` por padrão — não alterar o componente).
 
-### 3. `public/version.json`
+### 4. `src/components/tarefas/MinhasTarefasTabela.tsx` — tabela densa estilo Clientes
 
-Bump de versão.
+- Container `rounded-md border border-border bg-card`: substituir por um `<Card><CardContent className="p-0">` (mesmo wrapper de `ClientesGeralTable`) para herdar visual.
+- Adicionar classes de densidade na `<Table>`:
+  ```
+  className="[&_th]:py-1 [&_th]:px-2 [&_th]:h-7 [&_th]:text-xs [&_td]:py-1 [&_td]:px-2"
+  ```
+- Reduzir larguras de coluna fixas:
+  - Cliente `w-[180px]` → `w-[160px]`
+  - Área `w-[160px]` → `w-[120px]`
+  - Prioridade `w-[110px]` → `w-[90px]`
+  - Prazo `w-[110px]` → `w-[90px]`
+  - Status `w-[130px]` → `w-[110px]`
+  - Ações `w-[160px]` → `w-[120px]`
+- Cells: textos `text-sm` → `text-xs` (Cliente, título da Tarefa). `text-xs` que já existem ficam.
+- Botões da coluna Ações: `h-8` → `h-7`, padding `px-2`, texto `text-xs`. Ícones `h-3.5 w-3.5` mantidos.
+- Estado vazio (`p-12`) → `p-6`, ícone `h-10 w-10` → `h-8 w-8`, título `text-sm` → `text-xs font-medium`.
 
-## Garantias resultantes
+### 5. `public/version.json`
 
-- Nenhuma demanda atribuída a outro responsável aparece em Minhas Tarefas.
-- Nenhum card de Posts de outro responsável aparece (o agrupamento por `(cliente, responsavel, contrato)` já isola, e a trava confirma).
-- Nenhum item de Planejamento de outro responsável aparece.
-- Documentação continua restrita a `enviado_por === authUserId`.
-- Usuário sem vínculo de responsável vê painel vazio + aviso para contatar admin.
+- Bump para invalidar cache.
 
-Nada além de `minhasTarefas.ts` e da página `MinhasTarefas` é tocado. Projeto Completo, Clientes, criação de cards e banco de dados permanecem intactos.
+## Resultado esperado
+
+- Header, filtros, KPIs e tabela com a mesma densidade compacta da página **Clientes**.
+- Sem alterações funcionais — apenas estilo/espacamento.
+- `KpiCard` continua compatível com `Dashboard` e `Relatorios` (a flag `compact` é opt-in).

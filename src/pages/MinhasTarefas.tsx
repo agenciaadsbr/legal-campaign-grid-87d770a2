@@ -108,11 +108,11 @@ export default function MinhasTarefas() {
   );
 
   return (
-    <div className="p-6 space-y-5 animate-fade-in">
+    <div className="px-5 py-4 space-y-3 animate-fade-in">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Minhas Tarefas</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold leading-tight">Minhas Tarefas</h1>
+          <p className="text-xs text-muted-foreground">
             {responsavel
               ? <>Painel individual de <strong>{responsavel.nome}</strong> — apenas tarefas atribuídas a você</>
               : "Suas tarefas em todos os clientes"}
@@ -121,18 +121,18 @@ export default function MinhasTarefas() {
       </header>
 
       {!responsavelId && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
           Seu usuário ainda não está vinculado a um responsável da equipe. Peça a um administrador
           para fazer o vínculo em <strong>Configurações → Equipe & Acessos</strong>.
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard icon={ListChecks} label="Total" value={kpis.total} tone="primary" />
-        <KpiCard icon={CheckCircle2} label="Pendentes" value={kpis.pendentes} tone="info" />
-        <KpiCard icon={AlertCircle} label="Atrasadas" value={kpis.atrasadas}
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <KpiCard compact icon={ListChecks} label="Total" value={kpis.total} tone="primary" />
+        <KpiCard compact icon={CheckCircle2} label="Pendentes" value={kpis.pendentes} tone="info" />
+        <KpiCard compact icon={AlertCircle} label="Atrasadas" value={kpis.atrasadas}
           tone={kpis.atrasadas > 0 ? "destructive" : "default"} />
-        <KpiCard icon={Zap} label="Urgentes" value={kpis.urgentes}
+        <KpiCard compact icon={Zap} label="Urgentes" value={kpis.urgentes}
           tone={kpis.urgentes > 0 ? "destructive" : "default"} />
       </div>
 

@@ -12,6 +12,7 @@ interface KpiCardProps {
   hint?: string;
   tone?: KpiTone;
   delta?: number;
+  compact?: boolean;
 }
 
 const toneMap: Record<KpiTone, { iconBg: string; iconFg: string; valueFg: string }> = {
@@ -23,28 +24,28 @@ const toneMap: Record<KpiTone, { iconBg: string; iconFg: string; valueFg: string
   info:        { iconBg: "bg-sky-500/10",       iconFg: "text-sky-500",          valueFg: "text-foreground" },
 };
 
-export function KpiCard({ icon: Icon, label, value, hint, tone = "default", delta }: KpiCardProps) {
+export function KpiCard({ icon: Icon, label, value, hint, tone = "default", delta, compact = false }: KpiCardProps) {
   const t = toneMap[tone];
   const hasDelta = typeof delta === "number" && !Number.isNaN(delta);
   const positive = (delta ?? 0) >= 0;
 
   return (
     <Card className="overflow-hidden border-border bg-card transition-shadow hover:shadow-md">
-      <CardContent className="p-4">
+      <CardContent className={cn(compact ? "p-3" : "p-4")}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               {label}
             </div>
-            <div className={cn("mt-1.5 text-3xl font-bold tracking-tight tabular-nums", t.valueFg)}>
+            <div className={cn("font-bold tracking-tight tabular-nums", compact ? "mt-1 text-2xl" : "mt-1.5 text-3xl", t.valueFg)}>
               {value}
             </div>
             {hint && (
               <div className="mt-1 truncate text-xs text-muted-foreground">{hint}</div>
             )}
           </div>
-          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", t.iconBg)}>
-            <Icon className={cn("h-5 w-5", t.iconFg)} />
+          <div className={cn("flex shrink-0 items-center justify-center rounded-lg", compact ? "h-8 w-8" : "h-10 w-10", t.iconBg)}>
+            <Icon className={cn(compact ? "h-4 w-4" : "h-5 w-5", t.iconFg)} />
           </div>
         </div>
         {hasDelta && (

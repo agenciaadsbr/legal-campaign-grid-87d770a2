@@ -60,18 +60,18 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
     <div className="flex flex-wrap items-center gap-2">
       {/* Busca */}
       <div className="relative min-w-[220px]">
-        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={value.busca}
           onChange={(e) => set({ busca: e.target.value })}
           placeholder="Buscar tarefa ou cliente…"
-          className="h-9 pl-8"
+          className="h-8 pl-8 text-xs"
         />
       </div>
 
       {/* Cliente */}
       <Select value={value.cliente} onValueChange={(v) => set({ cliente: v })}>
-        <SelectTrigger className="h-9 w-[200px]">
+        <SelectTrigger className="h-8 w-[200px] text-xs">
           <SelectValue placeholder="Cliente" />
         </SelectTrigger>
         <SelectContent>
@@ -88,8 +88,8 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
       {/* Área */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9">
-            <Filter className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" className="h-8 text-xs">
+            <Filter className="h-3.5 w-3.5 mr-1.5" />
             Área {value.areas.length > 0 && `(${value.areas.length})`}
           </Button>
         </PopoverTrigger>
@@ -117,8 +117,8 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
       {/* Status */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9">
-            <Filter className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" className="h-8 text-xs">
+            <Filter className="h-3.5 w-3.5 mr-1.5" />
             Status {value.status.length > 0 && `(${value.status.length})`}
           </Button>
         </PopoverTrigger>
@@ -145,7 +145,7 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
         <Button
           variant="ghost"
           size="sm"
-          className="h-9 text-muted-foreground"
+          className="h-8 text-xs text-muted-foreground"
           onClick={() =>
             onChange({
               cliente: "all",
