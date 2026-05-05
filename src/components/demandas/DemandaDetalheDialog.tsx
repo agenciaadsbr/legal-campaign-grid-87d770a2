@@ -237,7 +237,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-4 md:p-5">
         <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
           <div className="mb-2">
