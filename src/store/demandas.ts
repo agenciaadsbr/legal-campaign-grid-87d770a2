@@ -209,7 +209,34 @@ export const useDemandasStore = create<State>((set, get) => ({
     return novo.id;
   },
 
-  async updateDemanda(id, patch) {
+  async createRascunho({ cliente_id, categoria, subtipo }) {
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id ?? null;
+    const payload: any = {
+      cliente_id,
+      titulo: "Sem título",
+      categoria: categoria ?? "Personalizado",
+      subtipo: subtipo ?? null,
+      status: "Criar",
+      prioridade: "Media",
+      responsaveis_ids: [],
+      responsavel_id: null,
+      criado_por: uid,
+      precisa_aprovacao: false,
+    };
+    const { data, error } = await supabase
+      .from("demandas")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao criar tarefa", { description: error.message });
+      return null;
+    }
+    const novo = normalizeDemanda(data);
+    set({ demandas: [novo, ...get().demandas] });
+    return novo;
+  },
     const clean: any = { ...patch };
     delete clean.id;
     delete clean.created_at;
