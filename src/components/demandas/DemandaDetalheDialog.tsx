@@ -449,18 +449,18 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                         className="group relative h-[72px] w-[72px] border rounded-lg overflow-hidden bg-muted/30"
                       >
                         {img ? (
-                          <a
-                            href={a.url}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => setPreviewAnexo({ url: a.url, nome: a.nome })}
                             className="block w-full h-full"
+                            title={a.nome}
                           >
                             <img
                               src={a.url}
                               alt={a.nome}
                               className="w-full h-full object-cover"
                             />
-                          </a>
+                          </button>
                         ) : (
                           <a
                             href={a.url}
@@ -475,6 +475,19 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                               {a.nome}
                             </span>
                           </a>
+                        )}
+                        {canWrite && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAnexoParaRemover(a.id);
+                            }}
+                            className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-background/90 border border-border text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground shadow-sm"
+                            title="Remover anexo"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                         )}
                       </div>
                     );
@@ -496,10 +509,24 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                 <Textarea
                   rows={5}
                   placeholder="Detalhes internos da demanda: contexto, requisitos, referências..."
-                  value={demanda.descricao ?? ""}
-                  onChange={(e) =>
-                    updateDemanda(demanda.id, { descricao: e.target.value })
-                  }
+                  value={descricaoLocal}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDescricaoLocal(v);
+                    if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
+                    descricaoTimer.current = setTimeout(() => {
+                      updateDemanda(demanda.id, { descricao: v });
+                    }, 600);
+                  }}
+                  onBlur={() => {
+                    if (descricaoTimer.current) {
+                      clearTimeout(descricaoTimer.current);
+                      descricaoTimer.current = null;
+                    }
+                    if ((demanda.descricao ?? "") !== descricaoLocal) {
+                      updateDemanda(demanda.id, { descricao: descricaoLocal });
+                    }
+                  }}
                   className="mt-1.5"
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">
