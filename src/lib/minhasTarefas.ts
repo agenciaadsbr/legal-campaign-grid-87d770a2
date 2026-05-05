@@ -90,8 +90,19 @@ function mapPrioridadePlan(p: string): TaskPrioridade {
 }
 
 interface BuildArgs {
+  /** Responsável "principal" usado para agrupar posts e como id default. Pode ser null. */
   responsavelId: string | null;
+  /** Auth uid do usuário atual (para documentação enviada por ele). */
   authUserId: string | null;
+  /**
+   * Escopo de visualização (admin):
+   * - omitido/undefined: comportamento legado (apenas responsavelId).
+   * - "all": todas as tarefas de qualquer responsável (e qualquer doc).
+   * - string[]: tarefas pertencentes a qualquer responsável da lista.
+   */
+  scopeResponsaveisIds?: string[] | "all";
+  /** Auth uids cuja documentação deve ser incluída (admin). "all" ou array. */
+  scopeAuthUserIds?: string[] | "all";
   demandas: Demanda[];
   cards: PostCard[];
   planejamento: PlanItem[];
@@ -101,7 +112,43 @@ interface BuildArgs {
 }
 
 export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
-  const { responsavelId, authUserId, demandas, cards, planejamento, documentacao, clientes, contratos = [] } = args;
+  const {
+    responsavelId, authUserId, demandas, cards, planejamento, documentacao,
+    clientes, contratos = [], scopeResponsaveisIds, scopeAuthUserIds,
+  } = args;
+
+  // Define o conjunto de responsáveis "visíveis"
+  const respScope: Set<string> | "all" | null =
+    scopeResponsaveisIds === "all"
+      ? "all"
+      : scopeResponsaveisIds && scopeResponsaveisIds.length > 0
+        ? new Set(scopeResponsaveisIds)
+        : responsavelId
+          ? new Set([responsavelId])
+          : null;
+
+  const matchResp = (ids: string[]) => {
+    if (respScope === "all") return true;
+    if (!respScope) return false;
+    return ids.some((id) => respScope.has(id));
+  };
+
+  // Conjunto de auth uids para documentação
+  const docAuthScope: Set<string> | "all" | null =
+    scopeAuthUserIds === "all"
+      ? "all"
+      : scopeAuthUserIds && scopeAuthUserIds.length > 0
+        ? new Set(scopeAuthUserIds)
+        : authUserId
+          ? new Set([authUserId])
+          : null;
+
+  const matchDocAuth = (uid: string | null | undefined) => {
+    if (!uid) return false;
+    if (docAuthScope === "all") return true;
+    if (!docAuthScope) return false;
+    return docAuthScope.has(uid);
+  };
   const clienteMap = new Map(clientes.map((c) => [c.id, c.nome_cliente]));
   const out: UnifiedTask[] = [];
 
