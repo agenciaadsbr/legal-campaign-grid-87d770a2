@@ -320,11 +320,90 @@ export default function Demandas() {
         </TabsContent>
       </Tabs>
 
-      <NovaDemandaDialog open={novaOpen} onOpenChange={setNovaOpen} />
-      <DemandaRapidaDialog open={rapidaOpen} onOpenChange={setRapidaOpen} />
+      {/* Modal seletor de cliente — abre antes do formulário detalhado */}
+      <Dialog open={novaOpen} onOpenChange={(v) => !criandoRascunho && setNovaOpen(v)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova tarefa</DialogTitle>
+            <DialogDescription>
+              Selecione o cliente para abrir a tarefa. Você poderá ajustar
+              categoria, responsáveis, anexos e tudo mais dentro do card.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Cliente *</Label>
+              <Select value={novaClienteId} onValueChange={setNovaClienteId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientesOrdenados.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome_cliente}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Categoria</Label>
+              <Select value={novaCategoria} onValueChange={setNovaCategoria}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {CATEGORIA_LABEL[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Você pode trocar depois dentro do card.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovaOpen(false)} disabled={criandoRascunho}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={!novaClienteId || criandoRascunho}
+              onClick={async () => {
+                if (!novaClienteId) {
+                  toast.error("Selecione um cliente");
+                  return;
+                }
+                setCriandoRascunho(true);
+                const novo = await useDemandasStore.getState().createRascunho({
+                  cliente_id: novaClienteId,
+                  categoria: novaCategoria as any,
+                });
+                setCriandoRascunho(false);
+                if (novo) {
+                  setNovaOpen(false);
+                  setSelecionada(novo);
+                  setRascunhoId(novo.id);
+                }
+              }}
+            >
+              {criandoRascunho ? "Abrindo..." : "Continuar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <DemandaDetalheDialog
         demanda={selecionada}
-        onOpenChange={(v) => !v && setSelecionada(null)}
+        isRascunho={!!selecionada && selecionada.id === rascunhoId}
+        onOpenChange={(v) => {
+          if (!v) {
+            setSelecionada(null);
+            setRascunhoId(null);
+          }
+        }}
       />
     </div>
   );
