@@ -360,17 +360,12 @@ export default function ProjetoCliente() {
         </TabsContent>
       </Tabs>
 
-      {/* Modal global "Adicionar Tarefa" — cliente fixado, escolhe categoria */}
-      <NovaDemandaDialog
+      {/* Modal "Nova tarefa" — cria rascunho e leva para a aba certa */}
+      <NovaTarefaSeletor
         open={novaTarefaOpen}
         onOpenChange={setNovaTarefaOpen}
-        defaultClienteId={clienteId!}
-        lockCliente
-        titulo="Nova Tarefa"
-        onCreated={(_id, categoria) => {
-          // Após criar, leva o usuário para a aba correspondente
-          handleTabChange(categoriaParaAba(categoria));
-        }}
+        clienteId={clienteId!}
+        onCriado={(categoria) => handleTabChange(categoriaParaAba(categoria))}
       />
     </div>
   );
