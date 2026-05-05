@@ -1,45 +1,33 @@
-# Padronizar blocos do gerenciador global como o bloco "Acessos"
+# Lote sempre salva como 1 item único
 
-## Contexto
+## Problema
 
-Hoje, em **Configurações → Documentos padrão para clientes** e **Documentos internos da empresa**, cada bloco (Acessos, Links, Reuniões, Materiais, Documentos) mostra na barra de ações:
+Hoje no diálogo "Adicionar em lote" das abas globais, o modo "Lista de itens" usa o `parseLoteTexto` para dividir o texto colado em N itens (no exemplo da tela: 3 itens detectados → 3 registros criados). O usuário quer que **cada lote adicionado gere apenas 1 item**, sem split.
 
-- `+ Adicionar` (abre o diálogo de item único)
-- `+ Adicionar em lote`
-- `Copiar mensagem` (apenas Acessos e Materiais)
+## O que muda
 
-No **Projeto Completo → Documentação**, os blocos têm apenas:
+### `src/components/configuracoes/DocumentosGlobaisManager.tsx` — `DocumentoGlobalLoteDialog`
 
-- `+ Adicionar em lote`
-- `Copiar mensagem` (apenas Acessos e Materiais)
+1. **Lógica `submit` (modo lista)**: substituir o loop que cria N itens por uma única chamada `create()`:
+   - `descricao` = texto colado integral (preserva exatamente como o usuário colou)
+   - `titulo` = título do primeiro item detectado pelo parser (ou `TITULO_MENSAGEM_PADRAO[bloco]` como fallback), truncado a 200 chars
+   - `url`, `login`, `senha` = do primeiro item detectado (se houver)
+   - `tipo` = valor selecionado no select
+   - Demais campos (escopo, bloco, categoria, aplicar_automatico, permissao_acesso, ativo) iguais à lógica atual
+   - Mantém check anti-duplicação por título dentro do mesmo escopo+bloco
+   - Mantém guarda anti-clique-duplo (`if (salvando) return`)
 
-O bloco "Acessos" do Projeto Completo é a referência: sem botão "Adicionar" individual no bloco. A criação avulsa fica no botão global do topo.
+2. **UI**:
+   - Remover o badge "N item(ns) detectado(s)" (não faz mais sentido — sempre é 1)
+   - Botão muda de `Adicionar todos (N)` para `Adicionar` (no modo lista) e continua `Salvar mensagem` no modo mensagem
+   - `disabled` do botão passa a depender só de `texto.trim()` (não mais de `itensDetectados.length`)
 
-## O que será feito
-
-### `src/components/configuracoes/DocumentosGlobaisManager.tsx`
-
-1. **Remover o botão "+ Adicionar"** que aparece dentro de cada bloco (atualmente linhas 408-421 — o `<Button>` com `onClick={() => setDialog({ open: true, item: null, blocoInicial: bloco as DocGlobalBloco })}`). Ele será removido de **todos** os blocos.
-2. Manter:
-   - `+ Adicionar em lote` em **todos** os blocos (já abre o `DocumentoGlobalLoteDialog` com toggle "Mensagem completa / Lista de itens", parser inteligente, badge de itens detectados, select de tipo e proteções anti-duplicação).
-   - `Copiar mensagem` em **Acessos** e **Materiais** (já existente).
-3. Manter intacto o botão global `+ Adicionar` no topo da aba (header da toolbar, linhas 331-337) — é por ele que se cria um item único, com o seletor de bloco já existente.
-4. Nenhuma mudança nos cards de item, na seleção múltipla, nas abas, nos filtros ou no diálogo de edição.
+3. **Modo "Mensagem completa"** continua exatamente como está (já era 1 item).
 
 ### `public/version.json`
 
-Bump do timestamp para forçar atualização do client.
+Bump do timestamp.
 
 ## Resultado
 
-Cada bloco das duas abas globais fica visualmente e funcionalmente **idêntico** ao bloco "Acessos" do Projeto Completo:
-
-```text
-[ + Adicionar em lote ]  [ Copiar mensagem (só acessos/materiais) ]
-[ ☐ Selecionar todos                                    ... ]
-[ item 1 ]
-[ item 2 ]
-...
-```
-
-Para criar um item avulso, o usuário usa o botão `+ Adicionar` do topo da aba (que abre o seletor de bloco e depois o diálogo de item único — fluxo já existente, sem alteração).
+Cada clique em "Adicionar" cria **exatamente 1** item no bloco, independente de quantas URLs, "Login:"/"Senha:" ou linhas em branco existam no texto colado. O conteúdo completo fica preservado no campo descrição do item criado.

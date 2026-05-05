@@ -826,62 +826,48 @@ function DocumentoGlobalLoteDialog({
       return;
     }
 
-    if (itensDetectados.length === 0) {
-      toast.error("Nenhum item detectado", {
-        description: "Cole o texto com URLs e/ou Login/Senha, ou use o formato com |.",
-      });
+    // Modo lista: salva como UM ÚNICO item, preservando o conteúdo colado integralmente
+    const conteudo = texto.trim();
+    if (!conteudo) {
+      toast.error("Cole o conteúdo antes de salvar.");
       return;
     }
+    const primeiro = itensDetectados[0];
+    const tituloBase = primeiro?.titulo?.trim() || TITULO_MENSAGEM_PADRAO[bloco];
+    const titulo = tituloBase.slice(0, 200);
+    const url = primeiro?.url ?? null;
+    const login = primeiro?.login ?? null;
+    const senha = primeiro?.senha ?? null;
 
-    // Deduplica dentro do lote (por título normalizado) e ignora títulos já existentes
-    const jaExistentes = new Set(
-      itensExistentes
-        .filter((i) => i.escopo === escopo && (i.bloco as DocBloco) === bloco)
-        .map((i) => i.titulo.trim().toLowerCase()),
+    const jaExiste = itensExistentes.some(
+      (i) =>
+        i.escopo === escopo &&
+        (i.bloco as DocBloco) === bloco &&
+        i.titulo.trim().toLowerCase() === titulo.trim().toLowerCase(),
     );
-    const vistosNoLote = new Set<string>();
-    const aCriar = itensDetectados.filter((p) => {
-      const chave = p.titulo.trim().toLowerCase();
-      if (!chave) return false;
-      if (jaExistentes.has(chave)) return false;
-      if (vistosNoLote.has(chave)) return false;
-      vistosNoLote.add(chave);
-      return true;
-    });
-    const ignorados = itensDetectados.length - aCriar.length;
-
-    if (aCriar.length === 0) {
-      toast.info("Todos os itens detectados já existem neste bloco");
+    if (jaExiste) {
+      toast.info("Já existe um item com este título neste bloco");
       onOpenChange(false);
       return;
     }
 
     setSalvando(true);
-    let criados = 0;
-    for (const p of aCriar) {
-      const id = await create({
-        escopo,
-        bloco: bloco as DocGlobalBloco,
-        tipo,
-        titulo: p.titulo,
-        descricao: p.observacao,
-        url: p.url,
-        login: p.login,
-        senha: p.senha,
-        categoria: "Outros",
-        aplicar_automatico: escopo === "cliente",
-        permissao_acesso: escopo === "interno" ? "admin" : "todos",
-        ativo: true,
-      });
-      if (id) criados += 1;
-    }
+    const id = await create({
+      escopo,
+      bloco: bloco as DocGlobalBloco,
+      tipo,
+      titulo,
+      descricao: conteudo,
+      url,
+      login,
+      senha,
+      categoria: "Outros",
+      aplicar_automatico: escopo === "cliente",
+      permissao_acesso: escopo === "interno" ? "admin" : "todos",
+      ativo: true,
+    });
     setSalvando(false);
-    if (criados > 0) {
-      toast.success(
-        `${criados} item(ns) adicionado(s)` +
-          (ignorados > 0 ? ` · ${ignorados} ignorado(s) (já existiam)` : ""),
-      );
-    }
+    if (id) toast.success("Item adicionado");
     onOpenChange(false);
   };
 
