@@ -125,19 +125,56 @@ export function DemandaDetalheDialog({ demanda, onOpenChange, isRascunho }: Prop
     [demanda, anexos]
   );
 
-  // Sincroniza descricaoLocal quando muda de demanda (por id) ou
-  // quando a descricao chega/atualiza externamente sem haver edição em curso.
+  // Sincroniza descricaoLocal/tituloLocal quando muda de demanda (por id) ou
+  // quando os valores chegam/atualizam externamente sem haver edição em curso.
   useEffect(() => {
-    if (demanda) setDescricaoLocal(demanda.descricao ?? "");
+    if (demanda) {
+      setDescricaoLocal(demanda.descricao ?? "");
+      // Em rascunho, o título no banco vem como "Sem título" — mostrar vazio.
+      const t = demanda.titulo === "Sem título" ? "" : demanda.titulo;
+      setTituloLocal(t);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demanda?.id]);
 
-  // Limpa timer ao desmontar
+  // Auto-foco no título quando abrir um rascunho.
+  useEffect(() => {
+    if (isRascunho && demanda) {
+      const t = setTimeout(() => tituloInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [isRascunho, demanda?.id]);
+
+  // Limpa timers ao desmontar
   useEffect(() => {
     return () => {
       if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
+      if (tituloTimer.current) clearTimeout(tituloTimer.current);
     };
   }, []);
+
+  // Wrapper de fechamento: descarta rascunho silenciosamente quando vazio.
+  const handleOpenChange = (open: boolean) => {
+    if (!open && demanda) {
+      // flush de timers pendentes
+      if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
+      if (tituloTimer.current) clearTimeout(tituloTimer.current);
+      const tituloFinal = tituloLocal.trim();
+      const descFinal = descricaoLocal.trim();
+      const semConteudo =
+        !tituloFinal &&
+        !descFinal &&
+        meusComentarios.length === 0 &&
+        meusAnexos.length === 0 &&
+        (demanda.responsaveis_ids?.length ?? 0) === 0 &&
+        !demanda.data_limite &&
+        !demanda.data_inicio;
+      if (isRascunho && semConteudo) {
+        deleteDemanda(demanda.id);
+      }
+    }
+    onOpenChange(open);
+  };
 
   if (!demanda) return null;
 
