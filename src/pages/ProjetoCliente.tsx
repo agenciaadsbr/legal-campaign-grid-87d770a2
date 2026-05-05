@@ -13,7 +13,18 @@ import { AvatarStack } from "@/components/AvatarStack";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
-import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useDemandasStore } from "@/store/demandas";
+import { CATEGORIAS, CATEGORIA_LABEL as CATLABEL_ALL } from "@/lib/demandas-categorias";
+import { toast } from "sonner";
 import { AreaTab } from "@/components/projeto/AreaTab";
 import { VisaoGeralCard } from "@/components/projeto/VisaoGeralCard";
 import { VisaoGeralLista, type VisaoGeralItem } from "@/components/projeto/VisaoGeralLista";
