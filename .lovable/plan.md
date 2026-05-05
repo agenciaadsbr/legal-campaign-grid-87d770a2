@@ -1,38 +1,61 @@
-## Problema
+## Objetivo
 
-Em **Minhas Tarefas**, ao clicar no ícone de "abrir" (ExternalLink) de uma tarefa do tipo demanda, o usuário é levado a `/clientes/:id/projeto?tab=...&demanda=:id`, que abre o componente `DemandaDetalheDialog`.
+Permitir que **administradores** vejam, na página **Minhas Tarefas**, as tarefas atribuídas a **todos os usuários** (não apenas as suas), com um seletor para alternar entre "Minhas tarefas" e tarefas de qualquer responsável (ou de todos).
 
-Hoje esse dialog é renderizado com:
+Para usuários não-admin, nada muda: continuam vendo apenas as próprias tarefas.
 
-```
-<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
-```
+## Escopo da mudança
 
-Ou seja: largura até `max-w-4xl` (~896px) e altura até **90% da viewport**. Em telas grandes (ex.: 1875×1090) isso resulta em um modal gigantesco (~981px de altura) com barra de rolagem interna sempre visível, parecendo "esticado" e fora do padrão dos demais dialogs do sistema (que têm tamanho mais compacto e contido).
+### 1. `src/lib/minhasTarefas.ts` — flexibilizar o builder
 
-## Solução
+- Adicionar suporte a **múltiplos responsáveis** no `buildUnifiedTasks`:
+  - Novo campo opcional `responsavelIds?: string[] | "all"` (mantém `responsavelId` para compatibilidade).
+  - Quando `"all"`: inclui demandas/posts/planejamento de **qualquer** responsável; documentação de qualquer `enviado_por`.
+  - Quando array específico: filtra por qualquer responsável da lista.
+- Ajustar a "trava de segurança" no fim para respeitar o novo escopo (não descartar tarefas válidas no modo admin).
+- Para **posts**, a chave de agrupamento passa a incluir o `responsavel_id` real do card (já é o caso, mas precisa funcionar quando há múltiplos responsáveis distintos visíveis).
 
-Ajustar o `DialogContent` em `src/components/demandas/DemandaDetalheDialog.tsx` (linha 240) para um tamanho padrão e mais contido, semelhante aos outros dialogs do projeto, deixando que o conteúdo determine a altura natural — sem barra de rolagem global do modal — e usando rolagem interna **apenas** quando o conteúdo realmente exceder a tela.
+### 2. `src/pages/MinhasTarefas.tsx` — seletor de visualização (apenas admin)
 
-### Mudanças
+- Ler `isAdmin` de `useAuth()`.
+- Novo estado `visualizacao: "minhas" | "todos" | <responsavelId>` (default `"minhas"`).
+- Renderizar um `<Select>` no header **apenas se `isAdmin`**, com opções:
+  - "Minhas tarefas" (default)
+  - "Todos os usuários"
+  - Lista de responsáveis (de `useCRM(s => s.responsaveis)`) ordenada por nome.
+- Resolver o `responsavelIds` passado ao `buildUnifiedTasks` conforme a seleção:
+  - `"minhas"` → `responsavelId` atual (comportamento de hoje)
+  - `"todos"` → `"all"`
+  - `<id>` → `[id]`
+- Para o caso `"todos"`/`<id>` admin, passar também `authUserId` adequadamente:
+  - `"todos"`: documentação de **todos** os usuários (passar `authUserId: "all"` e tratar no builder).
+  - `<id>`: documentação do auth_user vinculado àquele responsável (via `profiles.responsavel_id`) — se não existir, omitir documentação.
+- Atualizar o subtítulo/header para refletir a visualização ativa (ex.: "Visualizando: Todos os usuários", "Tarefas de João Silva").
+- O badge "Concluir" / ações continuam funcionando, mas o admin vê tudo igualmente.
 
-1. **`src/components/demandas/DemandaDetalheDialog.tsx`** (linha 240)
-   - Trocar:
-     ```
-     max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6
-     ```
-   - Por algo como:
-     ```
-     max-w-3xl max-h-[85vh] overflow-y-auto p-4 md:p-5
-     ```
-   - Resultado:
-     - Largura reduzida de `4xl` (896px) → `3xl` (768px), padrão mais compacto.
-     - Altura levemente reduzida (`85vh`) e o `overflow-y-auto` mantido apenas como segurança (só aparecerá scroll se o conteúdo passar de ~85% da viewport, em vez de quase sempre).
-     - Padding interno levemente reduzido em desktop para visual mais enxuto.
+### 3. `src/components/tarefas/MinhasTarefasTabela.tsx` — coluna "Responsável" no modo admin
 
-2. **`public/version.json`** — bump do timestamp para forçar recarga.
+- Receber prop opcional `mostrarResponsavel?: boolean`.
+- Quando `true`, adicionar coluna **Responsável** (após "Cliente") exibindo nomes dos responsáveis (lookup via `useCRM`), separados por vírgula, com truncate.
+- Em `MinhasTarefas.tsx`, passar `mostrarResponsavel={isAdmin && visualizacao !== "minhas"}`.
 
-### Por que não mexer em mais nada
+### 4. KPIs
 
-- O ícone clicado em Minhas Tarefas apenas faz `navigate(t.link)`; não há "formulário" novo a ajustar — o que aparece é o `DemandaDetalheDialog`. Ajustar o tamanho desse dialog resolve o problema relatado para todas as entradas (tabela, kanban, Minhas Tarefas).
-- Os cards internos do dialog já têm seus próprios layouts; reduzir só o container externo é suficiente para evitar o "modal gigante com scrollbar".
+- Mantidos, mas refletem o conjunto atual (`todasTarefas` já considera o escopo da visualização). Sem mudanças adicionais.
+
+### 5. `public/version.json`
+
+- Bump do timestamp para forçar refresh em produção.
+
+## Detalhes técnicos
+
+- **RLS**: a policy de `demandas` já permite SELECT para admin (`has_role(auth.uid(), 'admin')`), então não é preciso mudar nada no banco. Para `cards`, `cliente_planejamento_itens` e `cliente_documentacao`, todas têm `auth_read_*` com `USING (true)` para autenticados — admin já lê tudo.
+- **Mapeamento auth_user → responsavel**: usar `profiles.responsavel_id` (já existe na coluna). Para a opção `<id>` específica, buscar em `profiles` o `id` (auth uid) onde `responsavel_id = <id>` para incluir documentação correspondente. Se não houver vínculo, documentação fica vazia para essa visualização.
+- **Sem mudanças de schema** e sem migrations.
+
+## Resumo de arquivos editados
+
+- `src/lib/minhasTarefas.ts`
+- `src/pages/MinhasTarefas.tsx`
+- `src/components/tarefas/MinhasTarefasTabela.tsx`
+- `public/version.json`

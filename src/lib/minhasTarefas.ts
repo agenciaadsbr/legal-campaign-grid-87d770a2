@@ -90,8 +90,19 @@ function mapPrioridadePlan(p: string): TaskPrioridade {
 }
 
 interface BuildArgs {
+  /** Responsável "principal" usado para agrupar posts e como id default. Pode ser null. */
   responsavelId: string | null;
+  /** Auth uid do usuário atual (para documentação enviada por ele). */
   authUserId: string | null;
+  /**
+   * Escopo de visualização (admin):
+   * - omitido/undefined: comportamento legado (apenas responsavelId).
+   * - "all": todas as tarefas de qualquer responsável (e qualquer doc).
+   * - string[]: tarefas pertencentes a qualquer responsável da lista.
+   */
+  scopeResponsaveisIds?: string[] | "all";
+  /** Auth uids cuja documentação deve ser incluída (admin). "all" ou array. */
+  scopeAuthUserIds?: string[] | "all";
   demandas: Demanda[];
   cards: PostCard[];
   planejamento: PlanItem[];
@@ -101,14 +112,50 @@ interface BuildArgs {
 }
 
 export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
-  const { responsavelId, authUserId, demandas, cards, planejamento, documentacao, clientes, contratos = [] } = args;
+  const {
+    responsavelId, authUserId, demandas, cards, planejamento, documentacao,
+    clientes, contratos = [], scopeResponsaveisIds, scopeAuthUserIds,
+  } = args;
+
+  // Define o conjunto de responsáveis "visíveis"
+  const respScope: Set<string> | "all" | null =
+    scopeResponsaveisIds === "all"
+      ? "all"
+      : scopeResponsaveisIds && scopeResponsaveisIds.length > 0
+        ? new Set(scopeResponsaveisIds)
+        : responsavelId
+          ? new Set([responsavelId])
+          : null;
+
+  const matchResp = (ids: string[]) => {
+    if (respScope === "all") return true;
+    if (!respScope) return false;
+    return ids.some((id) => respScope.has(id));
+  };
+
+  // Conjunto de auth uids para documentação
+  const docAuthScope: Set<string> | "all" | null =
+    scopeAuthUserIds === "all"
+      ? "all"
+      : scopeAuthUserIds && scopeAuthUserIds.length > 0
+        ? new Set(scopeAuthUserIds)
+        : authUserId
+          ? new Set([authUserId])
+          : null;
+
+  const matchDocAuth = (uid: string | null | undefined) => {
+    if (!uid) return false;
+    if (docAuthScope === "all") return true;
+    if (!docAuthScope) return false;
+    return docAuthScope.has(uid);
+  };
   const clienteMap = new Map(clientes.map((c) => [c.id, c.nome_cliente]));
   const out: UnifiedTask[] = [];
 
   // --- Demandas ---
-  if (responsavelId) {
+  if (respScope) {
     demandas
-      .filter((d) => getResponsaveisIds(d).includes(responsavelId))
+      .filter((d) => matchResp(getResponsaveisIds(d)))
       .forEach((d) => {
         let status: TaskStatus = "pendente";
         if (d.status === "Concluido") status = "concluido";
@@ -136,9 +183,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
   }
 
   // --- Posts (cards) AGRUPADOS por cliente + responsável + contrato ---
-  // Uma única tarefa por contrato: 3 meses → 12 posts, 6 meses → 24 posts, etc.
-  if (responsavelId) {
-    // Indexa contratos por cliente
+  if (respScope) {
     const contratosPorCliente = new Map<string, Contrato[]>();
     for (const c of contratos) {
       const arr = contratosPorCliente.get(c.cliente_id) ?? [];
@@ -158,7 +203,6 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         });
         if (cobre) return cobre.id;
       }
-      // fallback: Ativo mais recente; senão o mais recente em geral
       const ativos = lista.filter((c) => c.status === "Ativo");
       const pool = ativos.length ? ativos : lista;
       const escolhido = [...pool].sort(
@@ -167,16 +211,23 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       return escolhido?.id ?? "all";
     };
 
-    const grupos = new Map<string, { cards: PostCard[]; contrato_id: string }>();
-    cards
-      .filter((c) => (c.responsaveis ?? []).includes(responsavelId))
-      .forEach((c) => {
-        const contrato_id = resolverContratoId(c.cliente_id, c.data_agendada ?? c.created_at);
-        const key = `${c.cliente_id}::${responsavelId}::${contrato_id}`;
-        const g = grupos.get(key) ?? { cards: [], contrato_id };
+    // Agrupa por cliente + cada responsável visível do card + contrato
+    const grupos = new Map<string, { cards: PostCard[]; contrato_id: string; responsavel_id: string }>();
+    cards.forEach((c) => {
+      const respsCard = c.responsaveis ?? [];
+      // responsáveis visíveis nesse card segundo o escopo
+      const respsVisiveis = respScope === "all"
+        ? respsCard
+        : respsCard.filter((r) => respScope.has(r));
+      if (respsVisiveis.length === 0) return;
+      const contrato_id = resolverContratoId(c.cliente_id, c.data_agendada ?? c.created_at);
+      respsVisiveis.forEach((rid) => {
+        const key = `${c.cliente_id}::${rid}::${contrato_id}`;
+        const g = grupos.get(key) ?? { cards: [], contrato_id, responsavel_id: rid };
         g.cards.push(c);
         grupos.set(key, g);
       });
+    });
 
     grupos.forEach((grupo) => {
       const cardsGrupo = grupo.cards;
@@ -184,7 +235,6 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       const pendentes = cardsGrupo.filter((c) => c.status_card !== "Postado");
       const todosConcluidos = pendentes.length === 0;
 
-      // prazo = menor data_agendada entre pendentes; fallback: data_fim do contrato
       const prazosPendentes = pendentes
         .map((c) => c.data_agendada)
         .filter((p): p is string => !!p)
@@ -211,7 +261,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         : `Criar ${pendentes.length} post${pendentes.length === 1 ? "" : "s"}`;
 
       out.push({
-        id: `posts:${cliente_id}:${responsavelId}:${grupo.contrato_id}`,
+        id: `posts:${cliente_id}:${grupo.responsavel_id}:${grupo.contrato_id}`,
         fonte: "post",
         origem_id: cardsGrupo[0].id,
         cliente_id,
@@ -222,16 +272,16 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         prazo,
         status,
         urgente: algumUrgente,
-        responsaveis_ids: [responsavelId],
+        responsaveis_ids: [grupo.responsavel_id],
         link: `/clientes/${cliente_id}/projeto?tab=posts`,
       });
     });
   }
 
   // --- Planejamento ---
-  if (responsavelId) {
+  if (respScope) {
     planejamento
-      .filter((p) => p.responsavel_id === responsavelId)
+      .filter((p) => p.responsavel_id && matchResp([p.responsavel_id]))
       .filter((p) => p.situacao !== "nao_aplicavel")
       .forEach((p) => {
         let status: TaskStatus = "pendente";
@@ -259,9 +309,9 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
   }
 
   // --- Documentação --- (enviado_por é o auth.uid)
-  if (authUserId) {
+  if (docAuthScope) {
     documentacao
-      .filter((d) => d.enviado_por === authUserId)
+      .filter((d) => matchDocAuth(d.enviado_por))
       .forEach((d) => {
         const status: TaskStatus = d.enviado ? "concluido" : "pendente";
         out.push({
@@ -283,23 +333,15 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
   }
 
   // ---------- TRAVA DE SEGURANÇA ----------
-  // Nunca exibir tarefas que não pertençam ao responsável atual.
-  // Documentação é exceção: já filtrada por authUserId e não tem responsavel_id.
-  if (responsavelId) {
+  // Garante que tarefas exibidas pertencem ao escopo solicitado.
+  if (respScope && respScope !== "all") {
     const filtrado = out.filter((t) => {
       if (t.fonte === "documentacao") return true;
-      return t.responsaveis_ids.includes(responsavelId);
+      return t.responsaveis_ids.some((id) => respScope.has(id));
     });
-    if (filtrado.length !== out.length) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[MinhasTarefas] Trava de responsável descartou ${out.length - filtrado.length} tarefa(s) que não pertencem a ${responsavelId}.`,
-      );
-    }
     return filtrado;
   }
-  // Sem vínculo de responsável: só documentação do próprio usuário.
-  return out.filter((t) => t.fonte === "documentacao");
+  return out;
 }
 
 export function ordenarTarefas(tasks: UnifiedTask[]): UnifiedTask[] {

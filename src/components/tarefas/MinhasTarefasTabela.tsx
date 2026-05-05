@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -11,10 +12,12 @@ import { PrioridadeIcons } from "./PrioridadeIcon";
 import type { UnifiedTask } from "@/lib/minhasTarefas";
 import { STATUS_LABEL } from "@/lib/minhasTarefas";
 import { PRIORIDADE_COR, PRIORIDADE_LABEL } from "@/lib/demandas-categorias";
+import { useCRM } from "@/store/crm";
 
 interface Props {
   tasks: UnifiedTask[];
   onConcluir: (task: UnifiedTask) => void;
+  mostrarResponsavel?: boolean;
 }
 
 const STATUS_COR: Record<string, string> = {
@@ -30,8 +33,13 @@ function formatPrazo(p: string | null): string {
   return d.toLocaleDateString("pt-BR");
 }
 
-export function MinhasTarefasTabela({ tasks, onConcluir }: Props) {
+export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = false }: Props) {
   const navigate = useNavigate();
+  const responsaveis = useCRM((s) => s.responsaveis);
+  const respMap = useMemo(
+    () => new Map(responsaveis.map((r) => [r.id, r.nome])),
+    [responsaveis],
+  );
 
   if (tasks.length === 0) {
     return (
@@ -55,6 +63,7 @@ export function MinhasTarefasTabela({ tasks, onConcluir }: Props) {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[160px]">Cliente</TableHead>
+                {mostrarResponsavel && <TableHead className="w-[140px]">Responsável</TableHead>}
                 <TableHead>Tarefa</TableHead>
                 <TableHead className="w-[120px]">Área</TableHead>
                 <TableHead className="w-[90px]">Prioridade</TableHead>
@@ -73,6 +82,13 @@ export function MinhasTarefasTabela({ tasks, onConcluir }: Props) {
                   )}
                 >
                   <TableCell className="font-medium text-xs">{t.cliente_nome}</TableCell>
+                  {mostrarResponsavel && (
+                    <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">
+                      {t.responsaveis_ids.length > 0
+                        ? t.responsaveis_ids.map((id) => respMap.get(id) ?? "—").join(", ")
+                        : "—"}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="flex items-center gap-2 min-w-0">
                       <PrioridadeIcons task={t} />
