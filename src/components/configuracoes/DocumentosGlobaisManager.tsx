@@ -751,3 +751,262 @@ function ItemGlobalCard({
     </Card>
   );
 }
+
+// ============================================================
+// DIÁLOGO: ADICIONAR EM LOTE (mesmo padrão do DocumentacaoTab do Projeto Completo)
+// ============================================================
+function DocumentoGlobalLoteDialog({
+  open,
+  onOpenChange,
+  bloco,
+  escopo,
+  itensExistentes,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  bloco: DocBloco;
+  escopo: DocGlobalEscopo;
+  itensExistentes: DocumentoGlobal[];
+}) {
+  const create = useDocumentosGlobais((s) => s.create);
+  const tiposDisponiveis = TIPOS_POR_BLOCO[bloco] ?? [];
+  const isMensagemFixo = bloco === "acessos" || bloco === "materiais";
+  const podeAlternarModo =
+    bloco === "documentos" || bloco === "links" || bloco === "reunioes";
+  const [modoLote, setModoLote] = useState<"mensagem" | "lista">("mensagem");
+  const [tipo, setTipo] = useState<string>(tiposDisponiveis[0]?.value ?? "outro");
+  const [texto, setTexto] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  const modoEfetivo: "mensagem" | "lista" = isMensagemFixo
+    ? "mensagem"
+    : podeAlternarModo
+      ? modoLote
+      : "lista";
+  const isMensagemUnica = modoEfetivo === "mensagem";
+
+  useEffect(() => {
+    if (open) {
+      setModoLote("mensagem");
+      const tipoInicial =
+        isMensagemFixo || podeAlternarModo
+          ? "mensagem"
+          : tiposDisponiveis[0]?.value ?? "outro";
+      setTipo(
+        tipoInicial === "mensagem"
+          ? tiposDisponiveis.find((t) => t.value !== "mensagem")?.value ?? "outro"
+          : tipoInicial,
+      );
+      setTexto("");
+      setSalvando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, bloco]);
+
+  const itensDetectados = useMemo(
+    () => (isMensagemUnica ? [] : parseLoteTexto(texto, bloco)),
+    [texto, isMensagemUnica, bloco],
+  );
+
+  const isListaLivre =
+    bloco === "documentos" || bloco === "links" || bloco === "reunioes";
+
+  const submit = async () => {
+    if (salvando) return;
+
+    if (isMensagemUnica) {
+      const conteudo = texto.trim();
+      if (!conteudo) {
+        toast.error("Cole o conteúdo da mensagem antes de salvar.");
+        return;
+      }
+      setSalvando(true);
+      await create({
+        escopo,
+        bloco: bloco as DocGlobalBloco,
+        tipo: "mensagem",
+        titulo: TITULO_MENSAGEM_PADRAO[bloco],
+        descricao: conteudo,
+        url: null,
+        login: null,
+        senha: null,
+        categoria: "Outros",
+        aplicar_automatico: escopo === "cliente",
+        permissao_acesso: escopo === "interno" ? "admin" : "todos",
+        ativo: true,
+      });
+      setSalvando(false);
+      onOpenChange(false);
+      return;
+    }
+
+    if (itensDetectados.length === 0) {
+      toast.error("Nenhum item detectado", {
+        description: "Cole o texto com URLs e/ou Login/Senha, ou use o formato com |.",
+      });
+      return;
+    }
+
+    // Deduplica dentro do lote (por título normalizado) e ignora títulos já existentes
+    const jaExistentes = new Set(
+      itensExistentes
+        .filter((i) => i.escopo === escopo && (i.bloco as DocBloco) === bloco)
+        .map((i) => i.titulo.trim().toLowerCase()),
+    );
+    const vistosNoLote = new Set<string>();
+    const aCriar = itensDetectados.filter((p) => {
+      const chave = p.titulo.trim().toLowerCase();
+      if (!chave) return false;
+      if (jaExistentes.has(chave)) return false;
+      if (vistosNoLote.has(chave)) return false;
+      vistosNoLote.add(chave);
+      return true;
+    });
+    const ignorados = itensDetectados.length - aCriar.length;
+
+    if (aCriar.length === 0) {
+      toast.info("Todos os itens detectados já existem neste bloco");
+      onOpenChange(false);
+      return;
+    }
+
+    setSalvando(true);
+    let criados = 0;
+    for (const p of aCriar) {
+      const id = await create({
+        escopo,
+        bloco: bloco as DocGlobalBloco,
+        tipo,
+        titulo: p.titulo,
+        descricao: p.observacao,
+        url: p.url,
+        login: p.login,
+        senha: p.senha,
+        categoria: "Outros",
+        aplicar_automatico: escopo === "cliente",
+        permissao_acesso: escopo === "interno" ? "admin" : "todos",
+        ativo: true,
+      });
+      if (id) criados += 1;
+    }
+    setSalvando(false);
+    if (criados > 0) {
+      toast.success(
+        `${criados} item(ns) adicionado(s)` +
+          (ignorados > 0 ? ` · ${ignorados} ignorado(s) (já existiam)` : ""),
+      );
+    }
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Adicionar em lote — {DOC_BLOCO_LABEL[bloco]}</DialogTitle>
+          <DialogDescription>
+            {isMensagemUnica ? (
+              <>
+                Cole abaixo a mensagem completa (estilo WhatsApp). O conteúdo será
+                salvo como um único item formatado, preservando exatamente como você
+                colou.
+              </>
+            ) : (
+              <>
+                Cole o texto livre — o sistema detecta automaticamente cada item, URL,
+                Login e Senha. Itens são separados por linha em branco.
+                <br />
+                Alternativa: uma linha por item com{" "}
+                <code>título | url | login | senha | observação</code>.
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          {podeAlternarModo && (
+            <div className="flex items-center gap-1 p-1 rounded-md bg-muted w-fit">
+              <Button
+                type="button"
+                size="sm"
+                variant={modoLote === "mensagem" ? "default" : "ghost"}
+                className="h-7 px-3 text-xs"
+                onClick={() => setModoLote("mensagem")}
+              >
+                Mensagem completa
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={modoLote === "lista" ? "default" : "ghost"}
+                className="h-7 px-3 text-xs"
+                onClick={() => setModoLote("lista")}
+              >
+                Lista de itens
+              </Button>
+            </div>
+          )}
+          {!isMensagemUnica && (
+            <div>
+              <Label>Tipo (aplicado a todos)</Label>
+              <Select value={tipo} onValueChange={setTipo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposDisponiveis
+                    .filter((t) => t.value !== "mensagem")
+                    .map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label>{isMensagemUnica ? "Mensagem completa" : "Itens"}</Label>
+              {!isMensagemUnica && (
+                <Badge variant="outline" className="text-[10px]">
+                  {itensDetectados.length} item(ns) detectado(s)
+                </Badge>
+              )}
+            </div>
+            <Textarea
+              rows={14}
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder={
+                isMensagemUnica
+                  ? "Cole aqui a mensagem completa, ex:\n\nBoa tarde Drs.\n\nSegue abaixo as informações:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030"
+                  : isListaLivre
+                    ? "Cole uma lista — uma linha por item, ex:\n\nBriefing\nPlanejamento de mídia Q1\nContrato assinado\nhttps://drive.google.com/...\n\nOu use blocos com URL/observações separados por linha em branco."
+                    : "Cole aqui, ex:\n\n🔗 Link de acesso ao painel:\nhttps://dashboard.adsbr.com.br/\nLogin: licencaadsbr104@gmail.com\nSenha: 102030\n\n🔗 Link do vídeo demonstrativo:\nhttps://www.loom.com/share/..."
+              }
+              className="font-mono text-xs whitespace-pre-wrap"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={salvando}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={submit}
+            disabled={
+              salvando ||
+              (isMensagemUnica ? !texto.trim() : itensDetectados.length === 0)
+            }
+          >
+            {salvando
+              ? "Salvando..."
+              : isMensagemUnica
+                ? "Salvar mensagem"
+                : `Adicionar todos (${itensDetectados.length})`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
