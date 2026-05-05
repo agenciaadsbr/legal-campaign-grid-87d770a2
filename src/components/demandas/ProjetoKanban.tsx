@@ -13,9 +13,12 @@ import { Play } from "lucide-react";
 interface Props {
   demandas: Demanda[];
   onOpen: (d: Demanda) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function ProjetoKanban({ demandas, onOpen }: Props) {
+export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, onToggleSelect }: Props) {
   const moveStatus = useDemandas((s) => s.moveStatus);
   const updateDemanda = useDemandas((s) => s.updateDemanda);
   const [dragOver, setDragOver] = useState<DemandaStatus | null>(null);
