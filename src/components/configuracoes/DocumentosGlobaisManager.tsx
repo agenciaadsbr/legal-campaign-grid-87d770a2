@@ -961,16 +961,13 @@ function DocumentoGlobalLoteDialog({
           </Button>
           <Button
             onClick={submit}
-            disabled={
-              salvando ||
-              (isMensagemUnica ? !texto.trim() : itensDetectados.length === 0)
-            }
+            disabled={salvando || !texto.trim()}
           >
             {salvando
               ? "Salvando..."
               : isMensagemUnica
                 ? "Salvar mensagem"
-                : `Adicionar todos (${itensDetectados.length})`}
+                : "Adicionar"}
           </Button>
         </DialogFooter>
       </DialogContent>
