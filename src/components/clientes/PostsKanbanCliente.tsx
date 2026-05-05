@@ -518,11 +518,91 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
         </div>
 
         {canWrite && (
+          <Button
+            size="sm"
+            variant={selectionMode ? "secondary" : "outline"}
+            className="h-9"
+            onClick={() => {
+              setSelectionMode((v) => !v);
+              setSelectedIds(new Set());
+            }}
+          >
+            <CheckSquare className="h-4 w-4 mr-1" />
+            {selectionMode ? "Cancelar seleção" : "Selecionar"}
+          </Button>
+        )}
+
+        {canWrite && (
           <Button onClick={handleAdicionarTarefa} size="sm" className="h-9" disabled={criandoTarefa}>
             <Plus className="h-4 w-4 mr-1" /> {criandoTarefa ? "Criando..." : "Adicionar Tarefa"}
           </Button>
         )}
       </div>
+
+      {selectionMode && (
+        <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-card p-2.5">
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <Checkbox
+              checked={
+                cardsCliente.length > 0 &&
+                cardsCliente.every((c) => selectedIds.has(c.id))
+              }
+              onCheckedChange={(v) => {
+                if (v) setSelectedIds(new Set(cardsCliente.map((c) => c.id)));
+                else setSelectedIds(new Set());
+              }}
+            />
+            <span className="font-medium">Selecionar todos</span>
+          </label>
+          <Badge variant="secondary" className="text-xs">
+            {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
+          </Badge>
+          <div className="ml-auto flex items-center gap-2">
+            <AtribuirResponsaveisPopover
+              responsaveis={responsaveis}
+              count={selectedIds.size}
+              onApply={async (novosIds, modo) => {
+                const ids = Array.from(selectedIds);
+                await Promise.all(
+                  ids.map((id) => {
+                    const atual = cards.find((c) => c.id === id);
+                    const atuais = atual?.responsaveis ?? [];
+                    const finalIds: string[] =
+                      modo === "substituir"
+                        ? novosIds
+                        : Array.from(new Set([...atuais, ...novosIds]));
+                    return updateCard(id, { responsaveis: finalIds });
+                  }),
+                );
+                toast.success(
+                  `${ids.length} ${ids.length === 1 ? "card atualizado" : "cards atualizados"}`,
+                );
+                setSelectedIds(new Set());
+                setSelectionMode(false);
+              }}
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+              disabled={selectedIds.size === 0}
+            >
+              Limpar
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setSelectionMode(false);
+                setSelectedIds(new Set());
+              }}
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Sair
+            </Button>
+          </div>
+        </div>
+      )}
 
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
         <div className="flex gap-3 overflow-x-auto overflow-y-hidden scrollbar-thin pb-2 flex-1 min-h-0">
@@ -534,6 +614,16 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
               onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })}
               pagina={paginas[s] ?? 1}
               onPaginaChange={(p) => setPaginas((prev) => ({ ...prev, [s]: p }))}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onToggleSelect={(id) =>
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })
+              }
             />
           ))}
         </div>
