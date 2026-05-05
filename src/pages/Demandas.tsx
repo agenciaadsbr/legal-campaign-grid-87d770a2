@@ -47,8 +47,11 @@ export default function Demandas() {
   const { user } = useAuth();
 
   const [novaOpen, setNovaOpen] = useState(false);
-  const [rapidaOpen, setRapidaOpen] = useState(false);
+  const [novaClienteId, setNovaClienteId] = useState<string>("");
+  const [novaCategoria, setNovaCategoria] = useState<string>("Personalizado");
+  const [criandoRascunho, setCriandoRascunho] = useState(false);
   const [selecionada, setSelecionada] = useState<Demanda | null>(null);
+  const [rascunhoId, setRascunhoId] = useState<string | null>(null);
 
   const [busca, setBusca] = useState("");
   const [fCliente, setFCliente] = useState<string>("todos");
