@@ -1,76 +1,38 @@
-# Padronização do módulo Dashboard
+## Objetivo
 
-Compactar as abas **Visão Geral** e **Por Colaborador** do Dashboard para a mesma densidade visual do módulo Clientes (header menor, KPIs `compact`, filtros `h-8`, cards com headers/charts mais densos).
+Igualar o tamanho visual dos cards da seção **"Clientes — Visão geral da base"** ao tamanho dos cards das seções **"Conteúdo & Posts"** e **"Demandas internas"** no Dashboard / aba Visão Geral.
 
-## 1. `src/pages/Dashboard.tsx`
+## Diagnóstico
 
-**Container e header**
-- Wrapper: `p-6 space-y-6` → `px-5 py-4 space-y-3`
-- `<h1>` `text-2xl` → `text-xl leading-tight`
-- Subtítulo `text-sm` → `text-xs`
-- "Atualizado em…" mantém `text-xs`
+Hoje os 3 grupos já usam `KpiCard compact` com `gap-2`, mas a linha de Clientes aparece visivelmente mais alta no screenshot por dois motivos:
 
-**Tabs**
-- `Tabs ... space-y-6` → `space-y-3`
-- `TabsList` recebe `h-8`
-- Cada `TabsTrigger` recebe `text-xs h-7`
-- `TabsContent value="geral" space-y-6 mt-0` → `space-y-4 mt-2`
-- `TabsContent value="colaborador" mt-0` → `mt-2`
+1. O card **"Total"** recebe `hint={`${pctAtivos}% ativos`}`, que adiciona uma linha extra de texto. Como o CSS Grid alinha todas as células pela mais alta, **os 5 cards de Clientes ficam mais altos** que os de Posts/Demandas (que não têm `hint`).
+2. O grid de Clientes usa `lg:grid-cols-5` (5 colunas → cards mais largos) enquanto Posts usa `lg:grid-cols-6` (6 colunas → cards mais estreitos). Isso reforça a sensação de "blocos maiores".
 
-**Seções de KPIs (Clientes / Posts / Demandas)**
-- `section space-y-3` mantido; `gap-3` dos grids → `gap-2`
-- Todos os `<KpiCard ... />` recebem `compact`
-- `SectionHeader`: `h2 text-base` → `text-sm font-semibold`; subtitle continua `text-xs`
+## Mudanças
 
-**Seção 4 — Gráficos**
-- Grid `gap-4` → `gap-3`
-- Em cada `Card` de gráfico:
-  - `CardHeader pb-2` → `p-3 pb-1`
-  - `CardTitle text-base` → `text-sm`
-  - `CardDescription` → adicionar `text-xs`
-  - `CardContent h-72` → `p-3 pt-0 h-56`
-- "Sem dados" mantém `text-xs`
+**`src/pages/Dashboard.tsx` — seção 1 (Clientes), linhas 144–155**
 
-**Seção 5 — Atividade**
-- Grid `gap-4` → `gap-3`
+- Remover o `hint="${clientesKpis.pctAtivos}% ativos"` do card "Total" (mesma altura dos demais cards, sem linha extra).
+- Trocar o grid de `lg:grid-cols-5` para `lg:grid-cols-6` para casar com a densidade da linha de Posts (cards mais estreitos, mesmo padrão visual).
+- A seção continua com 5 KPIs; a 6ª coluna fica vazia em telas largas, o que mantém os cards no MESMO tamanho dos de Posts (objetivo do pedido).
 
-## 2. `src/components/dashboard/DashboardPorColaborador.tsx`
+Alternativa considerada (e descartada): manter `grid-cols-5` em Clientes e Demandas e reduzir Posts também para 5. Foi descartada porque tiraria um KPI ou agruparia dois — preferi alinhar Clientes/Demandas ao formato mais denso de Posts apenas via colunas, sem perder informação.
 
-**Wrapper**
-- `space-y-5` → `space-y-3`
+**`src/pages/Dashboard.tsx` — seção 3 (Demandas), linha 173**
 
-**Filtros**
-- `gap-3` → `gap-2`
-- `SelectTrigger h-9 w-[260px]` → `h-8 w-[240px] text-xs`
-- `PeriodoFiltro` herda altura própria (já compacta)
+- Trocar `lg:grid-cols-5` para `lg:grid-cols-6` pela mesma razão (5 KPIs em grid de 6 colunas → mesma largura/altura visual dos cards de Posts).
 
-**Empty state "Selecione um colaborador"**
-- `p-12 text-sm` → `p-6 text-xs`
+**`public/version.json`**
 
-**KPIs**
-- Grid `gap-3` → `gap-2`
-- 4 `<KpiCard>` recebem `compact`
+- Bump do timestamp para forçar refresh do client.
 
-**Cards de gráficos (Distribuição por área, Top 10 prioridades)**
-- Grid `gap-4` → `gap-3`
-- `CardHeader pb-2` → `p-3 pb-1`
-- `CardTitle text-base` → `text-sm`
-- `CardDescription` adicionar `text-xs`
-- `CardContent h-72` (gráfico) → `p-3 pt-0 h-56`
-- `CardContent space-y-1.5 max-h-72` (top 10) → `p-3 pt-0 space-y-1 max-h-56`
+## Resultado esperado
 
-**Lista Top 10**
-- Item: `gap-2 p-2 rounded` → `gap-2 p-1.5 rounded`
-- Título: `text-sm` → `text-xs`
-- Subtítulo: `text-[11px]` mantido
-- Empty: `py-8 text-xs` → `py-6 text-xs`
+As três seções (Clientes, Conteúdo & Posts, Demandas internas) ficam com cards de **mesma altura e mesma largura**, totalmente padronizados visualmente como no print de referência.
 
-## 3. `public/version.json`
-Bump do timestamp para invalidar cache.
+## Sem mudanças
 
-## Notas
-
-- Nenhuma mudança funcional, lógica de KPIs e dados intacta.
-- `KpiCard` já suporta `compact` (introduzido na padronização do Minhas Tarefas) — reutilizado aqui.
-- Charts permanecem `ResponsiveContainer`; só a altura do container muda (`h-72` → `h-56`).
-- `DashboardDemandasSection.tsx` (usado em outro lugar) **não** é alterado.
+- `KpiCard.tsx` permanece igual (já está em modo `compact`).
+- Tabs, header, gráficos e demais seções permanecem inalterados.
+- Lógica de KPIs e dados não muda.
