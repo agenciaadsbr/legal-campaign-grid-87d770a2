@@ -1,59 +1,76 @@
-## Objetivo
+# Padronização do módulo Dashboard
 
-Reduzir tamanhos de texto, paddings, espaçamentos e altura de linhas do módulo **Minhas Tarefas** para ficar visualmente consistente com **Clientes** (que usa container `px-5 py-4 space-y-3`, título `text-xl`, controles `h-8 text-xs` e tabela densa com `[&_th]:h-7 [&_td]:py-1`).
+Compactar as abas **Visão Geral** e **Por Colaborador** do Dashboard para a mesma densidade visual do módulo Clientes (header menor, KPIs `compact`, filtros `h-8`, cards com headers/charts mais densos).
 
-## Mudanças
+## 1. `src/pages/Dashboard.tsx`
 
-### 1. `src/pages/MinhasTarefas.tsx` — Container, header e KPIs
+**Container e header**
+- Wrapper: `p-6 space-y-6` → `px-5 py-4 space-y-3`
+- `<h1>` `text-2xl` → `text-xl leading-tight`
+- Subtítulo `text-sm` → `text-xs`
+- "Atualizado em…" mantém `text-xs`
 
-- Container: trocar `p-6 space-y-5` por `px-5 py-4 space-y-3` (igual a Clientes).
-- Header:
-  - `<h1>` de `text-2xl font-bold tracking-tight` → `text-xl font-bold leading-tight`.
-  - `<p>` subtítulo de `text-sm` → `text-xs`.
-  - Aviso âmbar de "usuário não vinculado": reduzir `p-3 text-sm` → `p-2 text-xs`.
-- Bloco de KPIs: trocar `gap-3` → `gap-2` e adicionar variante compacta (ver item 2).
+**Tabs**
+- `Tabs ... space-y-6` → `space-y-3`
+- `TabsList` recebe `h-8`
+- Cada `TabsTrigger` recebe `text-xs h-7`
+- `TabsContent value="geral" space-y-6 mt-0` → `space-y-4 mt-2`
+- `TabsContent value="colaborador" mt-0` → `mt-2`
 
-### 2. `src/components/relatorios/KpiCard.tsx` — adicionar prop opcional `compact`
+**Seções de KPIs (Clientes / Posts / Demandas)**
+- `section space-y-3` mantido; `gap-3` dos grids → `gap-2`
+- Todos os `<KpiCard ... />` recebem `compact`
+- `SectionHeader`: `h2 text-base` → `text-sm font-semibold`; subtitle continua `text-xs`
 
-- Adicionar `compact?: boolean` (default `false`, preservando uso atual em outros relatórios).
-- Quando `compact`:
-  - `CardContent` `p-4` → `p-3`.
-  - Label `text-[11px]` mantém, mas `mt-1.5 text-3xl` → `mt-1 text-2xl`.
-  - Ícone container `h-10 w-10` → `h-8 w-8`, ícone `h-5 w-5` → `h-4 w-4`.
-- Em `MinhasTarefas.tsx`, passar `compact` nos 4 `KpiCard`.
+**Seção 4 — Gráficos**
+- Grid `gap-4` → `gap-3`
+- Em cada `Card` de gráfico:
+  - `CardHeader pb-2` → `p-3 pb-1`
+  - `CardTitle text-base` → `text-sm`
+  - `CardDescription` → adicionar `text-xs`
+  - `CardContent h-72` → `p-3 pt-0 h-56`
+- "Sem dados" mantém `text-xs`
 
-### 3. `src/components/tarefas/MinhasTarefasFiltros.tsx` — barra de filtros mais baixa
+**Seção 5 — Atividade**
+- Grid `gap-4` → `gap-3`
 
-- Trocar todos os `h-9` por `h-8` (Input busca, SelectTrigger cliente, botões Área / Status / Limpar).
-- Input busca: `pl-8` mantido; adicionar `text-xs` e ajustar ícone para `h-3.5 w-3.5`.
-- Botões Área/Status: já usam `size="sm"`, ajustar para `text-xs` e ícone `h-3.5 w-3.5`.
-- `gap-2` mantido.
-- Garantir que `PeriodoFiltro` se alinhe (usa `h-8` por padrão — não alterar o componente).
+## 2. `src/components/dashboard/DashboardPorColaborador.tsx`
 
-### 4. `src/components/tarefas/MinhasTarefasTabela.tsx` — tabela densa estilo Clientes
+**Wrapper**
+- `space-y-5` → `space-y-3`
 
-- Container `rounded-md border border-border bg-card`: substituir por um `<Card><CardContent className="p-0">` (mesmo wrapper de `ClientesGeralTable`) para herdar visual.
-- Adicionar classes de densidade na `<Table>`:
-  ```
-  className="[&_th]:py-1 [&_th]:px-2 [&_th]:h-7 [&_th]:text-xs [&_td]:py-1 [&_td]:px-2"
-  ```
-- Reduzir larguras de coluna fixas:
-  - Cliente `w-[180px]` → `w-[160px]`
-  - Área `w-[160px]` → `w-[120px]`
-  - Prioridade `w-[110px]` → `w-[90px]`
-  - Prazo `w-[110px]` → `w-[90px]`
-  - Status `w-[130px]` → `w-[110px]`
-  - Ações `w-[160px]` → `w-[120px]`
-- Cells: textos `text-sm` → `text-xs` (Cliente, título da Tarefa). `text-xs` que já existem ficam.
-- Botões da coluna Ações: `h-8` → `h-7`, padding `px-2`, texto `text-xs`. Ícones `h-3.5 w-3.5` mantidos.
-- Estado vazio (`p-12`) → `p-6`, ícone `h-10 w-10` → `h-8 w-8`, título `text-sm` → `text-xs font-medium`.
+**Filtros**
+- `gap-3` → `gap-2`
+- `SelectTrigger h-9 w-[260px]` → `h-8 w-[240px] text-xs`
+- `PeriodoFiltro` herda altura própria (já compacta)
 
-### 5. `public/version.json`
+**Empty state "Selecione um colaborador"**
+- `p-12 text-sm` → `p-6 text-xs`
 
-- Bump para invalidar cache.
+**KPIs**
+- Grid `gap-3` → `gap-2`
+- 4 `<KpiCard>` recebem `compact`
 
-## Resultado esperado
+**Cards de gráficos (Distribuição por área, Top 10 prioridades)**
+- Grid `gap-4` → `gap-3`
+- `CardHeader pb-2` → `p-3 pb-1`
+- `CardTitle text-base` → `text-sm`
+- `CardDescription` adicionar `text-xs`
+- `CardContent h-72` (gráfico) → `p-3 pt-0 h-56`
+- `CardContent space-y-1.5 max-h-72` (top 10) → `p-3 pt-0 space-y-1 max-h-56`
 
-- Header, filtros, KPIs e tabela com a mesma densidade compacta da página **Clientes**.
-- Sem alterações funcionais — apenas estilo/espacamento.
-- `KpiCard` continua compatível com `Dashboard` e `Relatorios` (a flag `compact` é opt-in).
+**Lista Top 10**
+- Item: `gap-2 p-2 rounded` → `gap-2 p-1.5 rounded`
+- Título: `text-sm` → `text-xs`
+- Subtítulo: `text-[11px]` mantido
+- Empty: `py-8 text-xs` → `py-6 text-xs`
+
+## 3. `public/version.json`
+Bump do timestamp para invalidar cache.
+
+## Notas
+
+- Nenhuma mudança funcional, lógica de KPIs e dados intacta.
+- `KpiCard` já suporta `compact` (introduzido na padronização do Minhas Tarefas) — reutilizado aqui.
+- Charts permanecem `ResponsiveContainer`; só a altura do container muda (`h-72` → `h-56`).
+- `DashboardDemandasSection.tsx` (usado em outro lugar) **não** é alterado.

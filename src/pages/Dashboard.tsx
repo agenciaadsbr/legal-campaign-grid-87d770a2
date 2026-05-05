@@ -119,12 +119,12 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="px-5 py-4 space-y-3 animate-fade-in">
       {/* Header */}
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold tracking-tight leading-tight">Dashboard</h1>
+          <p className="text-xs text-muted-foreground">
             Visão geral em tempo real do Dash Tasks
           </p>
         </div>
@@ -133,23 +133,23 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <Tabs defaultValue="geral" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="geral">Visão Geral</TabsTrigger>
-          <TabsTrigger value="colaborador">Por Colaborador</TabsTrigger>
+      <Tabs defaultValue="geral" className="space-y-3">
+        <TabsList className="h-8">
+          <TabsTrigger value="geral" className="text-xs h-7">Visão Geral</TabsTrigger>
+          <TabsTrigger value="colaborador" className="text-xs h-7">Por Colaborador</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="geral" className="space-y-6 mt-0">
+        <TabsContent value="geral" className="space-y-4 mt-2">
       {/* SEÇÃO 1 — Clientes */}
       <section className="space-y-3">
         <SectionHeader title="Clientes" subtitle="Visão geral da base" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          <KpiCard icon={Users} label="Total" value={clientesKpis.total} tone="primary"
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+          <KpiCard compact icon={Users} label="Total" value={clientesKpis.total} tone="primary"
             hint={`${clientesKpis.pctAtivos}% ativos`} />
-          <KpiCard icon={Sparkles} label="Em onboarding" value={clientesKpis.onboarding} tone="info" />
-          <KpiCard icon={UserCheck} label="Ativos" value={clientesKpis.ativos} tone="success" />
-          <KpiCard icon={Pause} label="Pausados" value={clientesKpis.pausados} tone="warning" />
-          <KpiCard icon={RefreshCw} label="Renovação ≤ 7d" value={clientesKpis.renovacao}
+          <KpiCard compact icon={Sparkles} label="Em onboarding" value={clientesKpis.onboarding} tone="info" />
+          <KpiCard compact icon={UserCheck} label="Ativos" value={clientesKpis.ativos} tone="success" />
+          <KpiCard compact icon={Pause} label="Pausados" value={clientesKpis.pausados} tone="warning" />
+          <KpiCard compact icon={RefreshCw} label="Renovação ≤ 7d" value={clientesKpis.renovacao}
             tone={clientesKpis.renovacao > 0 ? "warning" : "default"} />
         </div>
       </section>
@@ -157,38 +157,38 @@ export default function Dashboard() {
       {/* SEÇÃO 2 — Posts */}
       <section className="space-y-3">
         <SectionHeader title="Conteúdo & Posts" subtitle="Pipeline editorial" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <KpiCard icon={FileText} label="Total cards" value={postsKpis.totalCards} tone="primary" />
-          <KpiCard icon={PenLine} label="Em criação" value={postsKpis.criar} />
-          <KpiCard icon={Search} label="Em revisão" value={postsKpis.revisar} tone="info" />
-          <KpiCard icon={Calendar} label="Agendados" value={postsKpis.agendar} tone="warning" />
-          <KpiCard icon={CheckCircle2} label="Postados" value={postsKpis.postados} tone="success" />
-          <KpiCard icon={FileText} label="Posts hoje" value={postsKpis.postsHoje} tone="info" />
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+          <KpiCard compact icon={FileText} label="Total cards" value={postsKpis.totalCards} tone="primary" />
+          <KpiCard compact icon={PenLine} label="Em criação" value={postsKpis.criar} />
+          <KpiCard compact icon={Search} label="Em revisão" value={postsKpis.revisar} tone="info" />
+          <KpiCard compact icon={Calendar} label="Agendados" value={postsKpis.agendar} tone="warning" />
+          <KpiCard compact icon={CheckCircle2} label="Postados" value={postsKpis.postados} tone="success" />
+          <KpiCard compact icon={FileText} label="Posts hoje" value={postsKpis.postsHoje} tone="info" />
         </div>
       </section>
 
       {/* SEÇÃO 3 — Demandas */}
       <section className="space-y-3">
         <SectionHeader title="Demandas internas" subtitle="Tarefas operacionais do time" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          <KpiCard icon={ListChecks} label="Abertas" value={demandasKpis.abertas} tone="primary" />
-          <KpiCard icon={AlertTriangle} label="Urgentes" value={demandasKpis.urgentes}
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+          <KpiCard compact icon={ListChecks} label="Abertas" value={demandasKpis.abertas} tone="primary" />
+          <KpiCard compact icon={AlertTriangle} label="Urgentes" value={demandasKpis.urgentes}
             tone={demandasKpis.urgentes > 0 ? "destructive" : "default"} />
-          <KpiCard icon={Clock} label="Atrasadas" value={demandasKpis.atrasadas}
+          <KpiCard compact icon={Clock} label="Atrasadas" value={demandasKpis.atrasadas}
             tone={demandasKpis.atrasadas > 0 ? "destructive" : "default"} />
-          <KpiCard icon={RefreshCcw} label="Em revisão" value={demandasKpis.emRevisao} tone="info" />
-          <KpiCard icon={CheckCircle2} label="Concluídas hoje" value={demandasKpis.concluidasHoje} tone="success" />
+          <KpiCard compact icon={RefreshCcw} label="Em revisão" value={demandasKpis.emRevisao} tone="info" />
+          <KpiCard compact icon={CheckCircle2} label="Concluídas hoje" value={demandasKpis.concluidasHoje} tone="success" />
         </div>
       </section>
 
       {/* SEÇÃO 4 — Gráficos */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <Card className="lg:col-span-8">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Posts por mês</CardTitle>
-            <CardDescription>Volume de posts criados nos últimos 12 meses</CardDescription>
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-sm">Posts por mês</CardTitle>
+            <CardDescription className="text-xs">Volume de posts criados nos últimos 12 meses</CardDescription>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="p-3 pt-0 h-56">
             <ResponsiveContainer>
               <AreaChart data={postsPorMes} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                 <defs>
@@ -213,11 +213,11 @@ export default function Dashboard() {
         </div>
 
         <Card className="lg:col-span-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Carga por responsável — Posts</CardTitle>
-            <CardDescription>Cards atribuídos por pessoa</CardDescription>
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-sm">Carga por responsável — Posts</CardTitle>
+            <CardDescription className="text-xs">Cards atribuídos por pessoa</CardDescription>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="p-3 pt-0 h-56">
             {cargaPosts.length === 0 ? (
               <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
                 Sem dados
@@ -240,11 +240,11 @@ export default function Dashboard() {
         </Card>
 
         <Card className="lg:col-span-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Carga por responsável — Demandas</CardTitle>
-            <CardDescription>Demandas internas atribuídas por pessoa</CardDescription>
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-sm">Carga por responsável — Demandas</CardTitle>
+            <CardDescription className="text-xs">Demandas internas atribuídas por pessoa</CardDescription>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="p-3 pt-0 h-56">
             {cargaDemandas.length === 0 ? (
               <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
                 Sem dados
@@ -276,13 +276,13 @@ export default function Dashboard() {
       </section>
 
       {/* SEÇÃO 5 — Atividade */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <AlertasRecentesCard alertas={alertas} clientes={clientes} />
         <RenovacoesCard clientes={clientes} />
       </section>
         </TabsContent>
 
-        <TabsContent value="colaborador" className="mt-0">
+        <TabsContent value="colaborador" className="mt-2">
           <DashboardPorColaborador />
         </TabsContent>
       </Tabs>
@@ -293,7 +293,7 @@ export default function Dashboard() {
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="flex items-baseline gap-2">
-      <h2 className="text-base font-semibold">{title}</h2>
+      <h2 className="text-sm font-semibold">{title}</h2>
       {subtitle && <span className="text-xs text-muted-foreground">— {subtitle}</span>}
     </div>
   );
