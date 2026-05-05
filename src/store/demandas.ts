@@ -237,6 +237,8 @@ export const useDemandasStore = create<State>((set, get) => ({
     set({ demandas: [novo, ...get().demandas] });
     return novo;
   },
+
+  async updateDemanda(id, patch) {
     const clean: any = { ...patch };
     delete clean.id;
     delete clean.created_at;
