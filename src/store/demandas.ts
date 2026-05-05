@@ -96,6 +96,7 @@ interface State {
     imagem_url?: string | null
   ) => Promise<void>;
   addAnexo: (a: Omit<AnexoDemanda, "id" | "created_at">) => Promise<void>;
+  removeAnexo: (id: string) => Promise<void>;
   approveDemanda: (id: string, aprovado_por: string) => Promise<void>;
 }
 
@@ -277,6 +278,19 @@ export const useDemandasStore = create<State>((set, get) => ({
       return;
     }
     set({ anexos: [...get().anexos, data as AnexoDemanda] });
+  },
+
+  async removeAnexo(id) {
+    const { error } = await supabase
+      .from("anexos_demandas")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      toast.error("Erro ao remover anexo", { description: error.message });
+      return;
+    }
+    set({ anexos: get().anexos.filter((a) => a.id !== id) });
+    toast.success("Anexo removido");
   },
 
   async approveDemanda(id, aprovado_por) {

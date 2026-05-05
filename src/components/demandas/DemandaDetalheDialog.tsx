@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -80,6 +80,7 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
     updateDemanda,
     addComentario,
     addAnexo,
+    removeAnexo,
     deleteDemanda,
     comentarios,
     historico,
@@ -90,6 +91,10 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
   const [composerImg, setComposerImg] = useState<string | null>(null);
   const composerFileRef = useRef<HTMLInputElement>(null);
   const anexoFileRef = useRef<HTMLInputElement>(null);
+  const [previewAnexo, setPreviewAnexo] = useState<{ url: string; nome: string } | null>(null);
+  const [anexoParaRemover, setAnexoParaRemover] = useState<string | null>(null);
+  const [descricaoLocal, setDescricaoLocal] = useState("");
+  const descricaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cliente = demanda && clientes.find((c) => c.id === demanda.cliente_id);
   const meusComentarios = useMemo(
@@ -109,6 +114,20 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
     () => (demanda ? anexos.filter((a) => a.demanda_id === demanda.id) : []),
     [demanda, anexos]
   );
+
+  // Sincroniza descricaoLocal quando muda de demanda (por id) ou
+  // quando a descricao chega/atualiza externamente sem haver edição em curso.
+  useEffect(() => {
+    if (demanda) setDescricaoLocal(demanda.descricao ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demanda?.id]);
+
+  // Limpa timer ao desmontar
+  useEffect(() => {
+    return () => {
+      if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
+    };
+  }, []);
 
   if (!demanda) return null;
 
@@ -430,18 +449,18 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                         className="group relative h-[72px] w-[72px] border rounded-lg overflow-hidden bg-muted/30"
                       >
                         {img ? (
-                          <a
-                            href={a.url}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => setPreviewAnexo({ url: a.url, nome: a.nome })}
                             className="block w-full h-full"
+                            title={a.nome}
                           >
                             <img
                               src={a.url}
                               alt={a.nome}
                               className="w-full h-full object-cover"
                             />
-                          </a>
+                          </button>
                         ) : (
                           <a
                             href={a.url}
@@ -456,6 +475,19 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                               {a.nome}
                             </span>
                           </a>
+                        )}
+                        {canWrite && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAnexoParaRemover(a.id);
+                            }}
+                            className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-background/90 border border-border text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground shadow-sm"
+                            title="Remover anexo"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                         )}
                       </div>
                     );
@@ -477,10 +509,24 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                 <Textarea
                   rows={5}
                   placeholder="Detalhes internos da demanda: contexto, requisitos, referências..."
-                  value={demanda.descricao ?? ""}
-                  onChange={(e) =>
-                    updateDemanda(demanda.id, { descricao: e.target.value })
-                  }
+                  value={descricaoLocal}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDescricaoLocal(v);
+                    if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
+                    descricaoTimer.current = setTimeout(() => {
+                      updateDemanda(demanda.id, { descricao: v });
+                    }, 600);
+                  }}
+                  onBlur={() => {
+                    if (descricaoTimer.current) {
+                      clearTimeout(descricaoTimer.current);
+                      descricaoTimer.current = null;
+                    }
+                    if ((demanda.descricao ?? "") !== descricaoLocal) {
+                      updateDemanda(demanda.id, { descricao: descricaoLocal });
+                    }
+                  }}
                   className="mt-1.5"
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">
@@ -674,6 +720,71 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
           </CardContent>
         </Card>
       </DialogContent>
+
+      {/* Lightbox de imagem do anexo */}
+      <Dialog open={!!previewAnexo} onOpenChange={(o) => !o && setPreviewAnexo(null)}>
+        <DialogContent className="max-w-5xl p-2 bg-background">
+          {previewAnexo && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-2 pt-1">
+                <span className="text-sm font-medium truncate">{previewAnexo.nome}</span>
+                <div className="flex items-center gap-1">
+                  <a
+                    href={previewAnexo.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary hover:underline px-2"
+                  >
+                    Abrir em nova aba
+                  </a>
+                  <a
+                    href={previewAnexo.url}
+                    download={previewAnexo.nome}
+                    className="text-xs text-primary hover:underline px-2"
+                  >
+                    Baixar
+                  </a>
+                </div>
+              </div>
+              <div className="flex items-center justify-center bg-muted/30 rounded">
+                <img
+                  src={previewAnexo.url}
+                  alt={previewAnexo.nome}
+                  className="max-h-[80vh] max-w-full object-contain"
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação de remoção de anexo */}
+      <AlertDialog
+        open={!!anexoParaRemover}
+        onOpenChange={(o) => !o && setAnexoParaRemover(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover anexo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O arquivo será removido deste card.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (anexoParaRemover) {
+                  await removeAnexo(anexoParaRemover);
+                  setAnexoParaRemover(null);
+                }
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

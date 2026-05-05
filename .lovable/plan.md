@@ -1,38 +1,48 @@
-## Objetivo
+## O que vai mudar no card "Projeto completo do cliente" (DemandaDetalheDialog)
 
-Igualar o tamanho visual dos cards da seção **"Clientes — Visão geral da base"** ao tamanho dos cards das seções **"Conteúdo & Posts"** e **"Demandas internas"** no Dashboard / aba Visão Geral.
+### 1) Anexos abrem em visualizador (lightbox) ao clicar
 
-## Diagnóstico
+Hoje, clicar em um anexo abre uma nova aba do navegador (`<a target="_blank">`). Vamos trocar por um **visualizador embutido (modal)**:
 
-Hoje os 3 grupos já usam `KpiCard compact` com `gap-2`, mas a linha de Clientes aparece visivelmente mais alta no screenshot por dois motivos:
+- Imagens (png/jpg/webp/gif/svg): abrem em um **Dialog** com a imagem em tamanho grande (max 90% da viewport), com botões "Abrir em nova aba" e "Baixar".
+- Arquivos não-imagem (PDF/DOC/etc): mantêm o comportamento de abrir em nova aba para download (como antes), porém com tooltip melhor.
+- Hover no card do anexo continua mostrando o nome.
 
-1. O card **"Total"** recebe `hint={`${pctAtivos}% ativos`}`, que adiciona uma linha extra de texto. Como o CSS Grid alinha todas as células pela mais alta, **os 5 cards de Clientes ficam mais altos** que os de Posts/Demandas (que não têm `hint`).
-2. O grid de Clientes usa `lg:grid-cols-5` (5 colunas → cards mais largos) enquanto Posts usa `lg:grid-cols-6` (6 colunas → cards mais estreitos). Isso reforça a sensação de "blocos maiores".
+### 2) Botão para remover anexo
 
-## Mudanças
+- Adicionar botão "X" (ícone Trash2) no canto superior direito de cada miniatura de anexo, visível no hover.
+- Confirmação rápida via `AlertDialog` ("Remover anexo?") antes de excluir, para evitar clique acidental.
+- Criar nova função `removeAnexo(id)` em `src/store/demandas.ts` que:
+  - Deleta a linha em `anexos_demandas` no Supabase.
+  - Remove do estado local.
+  - Mostra toast de sucesso/erro.
+- Respeitar permissão: botão só aparece quando `canWrite` é true.
 
-**`src/pages/Dashboard.tsx` — seção 1 (Clientes), linhas 144–155**
+### 3) Corrigir o campo "Atividade / Briefing" que não aceita digitação
 
-- Remover o `hint="${clientesKpis.pctAtivos}% ativos"` do card "Total" (mesma altura dos demais cards, sem linha extra).
-- Trocar o grid de `lg:grid-cols-5` para `lg:grid-cols-6` para casar com a densidade da linha de Posts (cards mais estreitos, mesmo padrão visual).
-- A seção continua com 5 KPIs; a 6ª coluna fica vazia em telas largas, o que mantém os cards no MESMO tamanho dos de Posts (objetivo do pedido).
+**Causa identificada:** o `Textarea` está bindado direto em `demanda.descricao` e dispara `updateDemanda(...)` (chamada Supabase) a cada tecla. Como há subscription realtime que reescreve o objeto `demanda` no store, o cursor "trava" e a digitação não aparece de forma fluida — em alguns casos o caractere é descartado.
 
-Alternativa considerada (e descartada): manter `grid-cols-5` em Clientes e Demandas e reduzir Posts também para 5. Foi descartada porque tiraria um KPI ou agruparia dois — preferi alinhar Clientes/Demandas ao formato mais denso de Posts apenas via colunas, sem perder informação.
+**Correção:**
+- Manter um **estado local** `descricaoLocal` (`useState`) para o texto sendo digitado.
+- Sincronizar com `demanda.descricao` quando a demanda mudar de id (`useEffect` dependendo de `demanda.id`).
+- Persistir com **debounce** (500ms) via `setTimeout`, ou em `onBlur`, chamando `updateDemanda(demanda.id, { descricao: descricaoLocal })`.
+- Manter o `fieldset disabled={!canWrite}` (segurança).
 
-**`src/pages/Dashboard.tsx` — seção 3 (Demandas), linha 173**
+### Detalhes técnicos
 
-- Trocar `lg:grid-cols-5` para `lg:grid-cols-6` pela mesma razão (5 KPIs em grid de 6 colunas → mesma largura/altura visual dos cards de Posts).
+Arquivos editados:
 
-**`public/version.json`**
+- `src/components/demandas/DemandaDetalheDialog.tsx`
+  - Novo estado `previewAnexo: AnexoDemanda | null` + `<Dialog>` para lightbox de imagem.
+  - Substituir `<a target="_blank">` por `<button onClick={() => setPreviewAnexo(a)}>` para imagens.
+  - Botão de remoção (Trash2) sobreposto na miniatura, com `AlertDialog`.
+  - Novo estado `descricaoLocal` + `useEffect` + debounce para o campo Atividade / Briefing.
+  - Importar `removeAnexo` do store.
 
-- Bump do timestamp para forçar refresh do client.
+- `src/store/demandas.ts`
+  - Adicionar à interface `State`: `removeAnexo: (id: string) => Promise<void>`.
+  - Implementar `removeAnexo`: `supabase.from("anexos_demandas").delete().eq("id", id)` + atualizar estado local + toast.
 
-## Resultado esperado
+- `public/version.json` — bump do timestamp.
 
-As três seções (Clientes, Conteúdo & Posts, Demandas internas) ficam com cards de **mesma altura e mesma largura**, totalmente padronizados visualmente como no print de referência.
-
-## Sem mudanças
-
-- `KpiCard.tsx` permanece igual (já está em modo `compact`).
-- Tabs, header, gráficos e demais seções permanecem inalterados.
-- Lógica de KPIs e dados não muda.
+Nada muda fora deste card. As demais abas, kanban e listas continuam iguais.
