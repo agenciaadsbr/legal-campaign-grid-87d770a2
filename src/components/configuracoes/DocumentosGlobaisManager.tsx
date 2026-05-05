@@ -311,7 +311,6 @@ export function DocumentosGlobaisManager() {
                     );
                   })}
                 </div>
-              )}
             </TabsContent>
           </Tabs>
         </CardContent>
