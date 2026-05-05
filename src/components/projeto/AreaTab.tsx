@@ -143,12 +143,94 @@ export function AreaTab({
                 ))}
               </select>
             )}
+            <Button
+              size="sm"
+              variant={selectionMode ? "secondary" : "outline"}
+              onClick={() => {
+                setSelectionMode((v) => !v);
+                setSelectedIds(new Set());
+              }}
+            >
+              <CheckSquare className="h-4 w-4 mr-1" />
+              {selectionMode ? "Cancelar seleção" : "Selecionar"}
+            </Button>
             <Button size="sm" onClick={handleNovaTarefa}>
               <Plus className="h-4 w-4 mr-1" /> Nova tarefa de {CATEGORIA_LABEL[categoria]}
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Barra de seleção em massa */}
+      {selectionMode && (
+        <Card>
+          <CardContent className="p-3 flex items-center gap-3 flex-wrap">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox
+                checked={
+                  filtradas.length > 0 &&
+                  filtradas.every((d) => selectedIds.has(d.id))
+                }
+                onCheckedChange={(v) => {
+                  if (v) {
+                    setSelectedIds(new Set(filtradas.map((d) => d.id)));
+                  } else {
+                    setSelectedIds(new Set());
+                  }
+                }}
+              />
+              <span className="font-medium">Selecionar todos</span>
+            </label>
+            <Badge variant="secondary" className="text-xs">
+              {selectedIds.size} {selectedIds.size === 1 ? "selecionada" : "selecionadas"}
+            </Badge>
+            <div className="ml-auto flex items-center gap-2">
+              <AtribuirResponsaveisPopover
+                responsaveis={responsaveis}
+                count={selectedIds.size}
+                onApply={async (novosIds, modo) => {
+                  const ids = Array.from(selectedIds);
+                  await Promise.all(
+                    ids.map((id) => {
+                      const atual = demandas.find((d) => d.id === id);
+                      const atuais = atual ? getResponsaveisIds(atual) : [];
+                      const finalIds: string[] =
+                        modo === "substituir"
+                          ? novosIds
+                          : Array.from(new Set([...atuais, ...novosIds]));
+                      return updateDemanda(id, { responsaveis_ids: finalIds });
+                    }),
+                  );
+                  toast.success(
+                    `${ids.length} ${ids.length === 1 ? "tarefa atualizada" : "tarefas atualizadas"}`,
+                  );
+                  setSelectedIds(new Set());
+                  setSelectionMode(false);
+                }}
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds(new Set())}
+                disabled={selectedIds.size === 0}
+              >
+                Limpar
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSelectionMode(false);
+                  setSelectedIds(new Set());
+                }}
+              >
+                <X className="h-3.5 w-3.5 mr-1" />
+                Sair
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Kanban */}
       {filtradas.length === 0 ? (
@@ -159,7 +241,20 @@ export function AreaTab({
           </CardContent>
         </Card>
       ) : (
-        <ProjetoKanban demandas={filtradas} onOpen={setSelecionada} />
+        <ProjetoKanban
+          demandas={filtradas}
+          onOpen={setSelecionada}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={(id) =>
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            })
+          }
+        />
       )}
 
       <DemandaDetalheDialog
