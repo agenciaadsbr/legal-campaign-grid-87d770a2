@@ -347,11 +347,13 @@ function Coluna({
 export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = {}) {
   const { clienteId } = useParams();
   const navigate = useNavigate();
-  const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho } = useCRM();
+  const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho, updateCard } = useCRM();
   const { canWrite } = useAuth();
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [criandoTarefa, setCriandoTarefa] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [filtroResps, setFiltroResps] = useState<string[]>([]);
   const [filtroSomente, setFiltroSomente] = useState<"todos" | "atrasados" | "hoje" | "semana">("todos");
