@@ -96,6 +96,7 @@ interface State {
     imagem_url?: string | null
   ) => Promise<void>;
   addAnexo: (a: Omit<AnexoDemanda, "id" | "created_at">) => Promise<void>;
+  removeAnexo: (id: string) => Promise<void>;
   approveDemanda: (id: string, aprovado_por: string) => Promise<void>;
 }
 
