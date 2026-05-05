@@ -166,6 +166,7 @@ export default function PostDetalhe() {
             <div className="flex-1">
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">Título da tarefa</div>
               <Input
+                ref={tituloInputRef}
                 value={card.titulo_card}
                 onChange={(e) => updateCard(card.id, { titulo_card: e.target.value })}
                 placeholder="Ex: Criar arte carrossel sobre aposentadoria rural"
