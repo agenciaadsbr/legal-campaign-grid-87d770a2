@@ -33,10 +33,19 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   escopoInicial: DocGlobalEscopo;
+  blocoInicial?: DocGlobalBloco;
   item?: DocumentoGlobal | null;
+  isAdmin?: boolean;
 }
 
-export function DocumentoGlobalDialog({ open, onOpenChange, escopoInicial, item }: Props) {
+export function DocumentoGlobalDialog({
+  open,
+  onOpenChange,
+  escopoInicial,
+  blocoInicial,
+  item,
+  isAdmin = true,
+}: Props) {
   const create = useDocumentosGlobais((s) => s.create);
   const update = useDocumentosGlobais((s) => s.update);
 
@@ -76,7 +85,7 @@ export function DocumentoGlobalDialog({ open, onOpenChange, escopoInicial, item 
     } else {
       setEscopo(escopoInicial);
       setTitulo("");
-      setBloco("materiais");
+      setBloco(blocoInicial ?? "materiais");
       setTipo("material");
       setCategoria("Outros");
       setDescricao("");
@@ -89,7 +98,7 @@ export function DocumentoGlobalDialog({ open, onOpenChange, escopoInicial, item 
       setPermissao("todos");
       setAtivo(true);
     }
-  }, [open, item, escopoInicial]);
+  }, [open, item, escopoInicial, blocoInicial]);
 
   // Quando troca o bloco, garante tipo válido
   useEffect(() => {
@@ -153,7 +162,9 @@ export function DocumentoGlobalDialog({ open, onOpenChange, escopoInicial, item 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="cliente">Documento padrão para clientes</SelectItem>
-                <SelectItem value="interno">Documento interno da empresa</SelectItem>
+                {isAdmin && (
+                  <SelectItem value="interno">Documento interno da empresa</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
