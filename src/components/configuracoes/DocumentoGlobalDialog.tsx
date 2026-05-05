@@ -33,10 +33,19 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   escopoInicial: DocGlobalEscopo;
+  blocoInicial?: DocGlobalBloco;
   item?: DocumentoGlobal | null;
+  isAdmin?: boolean;
 }
 
-export function DocumentoGlobalDialog({ open, onOpenChange, escopoInicial, item }: Props) {
+export function DocumentoGlobalDialog({
+  open,
+  onOpenChange,
+  escopoInicial,
+  blocoInicial,
+  item,
+  isAdmin = true,
+}: Props) {
   const create = useDocumentosGlobais((s) => s.create);
   const update = useDocumentosGlobais((s) => s.update);
 
