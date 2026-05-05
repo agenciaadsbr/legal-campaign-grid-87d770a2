@@ -201,11 +201,17 @@ export default function Demandas() {
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="sm" className="h-9" onClick={() => setRapidaOpen(true)}>
-              <Zap className="h-4 w-4 mr-1" /> Rápida
-            </Button>
-            <Button size="sm" className="h-9" onClick={() => setNovaOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Nova Demanda
+            <Button
+              size="sm"
+              className="h-9"
+              onClick={() => {
+                // Pré-seleciona o cliente do filtro, se houver
+                setNovaClienteId(fCliente !== "todos" ? fCliente : "");
+                setNovaCategoria(fCat !== "todas" ? fCat : "Personalizado");
+                setNovaOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Nova Tarefa
             </Button>
           </div>
         </CardContent>
