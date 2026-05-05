@@ -85,7 +85,7 @@ const isImageUrl = (url: string, nome?: string) => {
   return /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/.test(n);
 };
 
-export function DemandaDetalheDialog({ demanda, onOpenChange, isRascunho }: Props) {
+export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho }: Props) {
   const { clientes, responsaveis } = useCRM();
   const { user, isAdmin, canWrite } = useAuth();
   const {
@@ -97,7 +97,15 @@ export function DemandaDetalheDialog({ demanda, onOpenChange, isRascunho }: Prop
     comentarios,
     historico,
     anexos,
+    demandas,
   } = useDemandas();
+
+  // Fonte de verdade reativa: lê a demanda viva do store pelo id, para que
+  // mudanças em Categoria/Subtipo/Prioridade/Datas/Responsáveis apareçam
+  // imediatamente nos controles sem precisar fechar e reabrir o card.
+  const demanda = demandaProp
+    ? demandas.find((d) => d.id === demandaProp.id) ?? demandaProp
+    : null;
 
   const [novoComentario, setNovoComentario] = useState("");
   const [composerImg, setComposerImg] = useState<string | null>(null);
