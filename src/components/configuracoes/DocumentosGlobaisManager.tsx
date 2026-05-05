@@ -259,19 +259,46 @@ export function DocumentosGlobaisManager() {
 
   const salvarLote = async () => {
     if (!loteState.bloco) return;
-    const linhas = loteTexto
-      .split("\n")
-      .map((t) => t.trim())
-      .filter(Boolean);
-    if (linhas.length === 0) {
+    if (loteSalvando) return; // guarda contra cliques duplicados
+    // 1) Quebra em linhas, normaliza e remove duplicatas dentro do próprio lote
+    const linhasUnicas = Array.from(
+      new Set(
+        loteTexto
+          .split(/\r?\n/)
+          .map((t) => t.trim())
+          .filter(Boolean),
+      ),
+    );
+    if (linhasUnicas.length === 0) {
       toast.error("Informe ao menos um título");
       return;
     }
-    setLoteSalvando(true);
     const bloco = loteState.bloco;
     const tipo = TIPO_PADRAO_LOTE[bloco];
-    for (const titulo of linhas) {
-      await create({
+
+    // 2) Remove títulos que já existem no mesmo escopo+bloco (case-insensitive)
+    const jaExistentes = new Set(
+      itens
+        .filter((i) => i.escopo === escopo && (i.bloco as DocBloco) === bloco)
+        .map((i) => i.titulo.trim().toLowerCase()),
+    );
+    const aCriar = linhasUnicas.filter(
+      (t) => !jaExistentes.has(t.toLowerCase()),
+    );
+    const ignorados = linhasUnicas.length - aCriar.length;
+
+    if (aCriar.length === 0) {
+      toast.info("Todos os títulos informados já existem neste bloco");
+      setLoteState({ open: false, bloco: null });
+      setLoteTexto("");
+      return;
+    }
+
+    setLoteSalvando(true);
+    // 3) Cria sequencialmente (await) para evitar corrida com o realtime
+    let criados = 0;
+    for (const titulo of aCriar) {
+      const id = await create({
         escopo,
         bloco: bloco as DocGlobalBloco,
         tipo,
@@ -281,11 +308,17 @@ export function DocumentosGlobaisManager() {
         permissao_acesso: escopo === "interno" ? "admin" : "todos",
         ativo: true,
       });
+      if (id) criados += 1;
     }
     setLoteSalvando(false);
     setLoteState({ open: false, bloco: null });
     setLoteTexto("");
-    toast.success(`${linhas.length} item(ns) adicionado(s)`);
+    if (criados > 0) {
+      toast.success(
+        `${criados} item(ns) adicionado(s)` +
+          (ignorados > 0 ? ` · ${ignorados} ignorado(s) (já existiam)` : ""),
+      );
+    }
   };
 
   // ----- Copiar mensagem do bloco -----
