@@ -24,6 +24,11 @@ import {
   STATUS_DEMANDA_LABEL,
   STATUS_DEMANDA_COR,
   CATEGORIA_LABEL,
+  CATEGORIAS,
+  CATEGORIA_SUBTIPOS,
+  PRIORIDADES,
+  PRIORIDADE_LABEL,
+  type DemandaCategoria,
 } from "@/lib/demandas-categorias";
 import {
   Trash2,
@@ -57,6 +62,13 @@ import { toast } from "sonner";
 interface Props {
   demanda: Demanda | null;
   onOpenChange: (v: boolean) => void;
+  /**
+   * Quando true, indica que a demanda foi recém-criada como rascunho silencioso.
+   * - Foca o input de título automaticamente.
+   * - Ao fechar, se o título permanecer vazio/"Sem título" e não houver
+   *   conteúdo (descrição, anexos, comentários), o rascunho é descartado.
+   */
+  isRascunho?: boolean;
 }
 
 const fileToDataUrl = (f: File) =>
@@ -73,7 +85,7 @@ const isImageUrl = (url: string, nome?: string) => {
   return /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/.test(n);
 };
 
-export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
+export function DemandaDetalheDialog({ demanda, onOpenChange, isRascunho }: Props) {
   const { clientes, responsaveis } = useCRM();
   const { user, isAdmin, canWrite } = useAuth();
   const {
@@ -95,6 +107,9 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
   const [anexoParaRemover, setAnexoParaRemover] = useState<string | null>(null);
   const [descricaoLocal, setDescricaoLocal] = useState("");
   const descricaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tituloLocal, setTituloLocal] = useState("");
+  const tituloTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tituloInputRef = useRef<HTMLInputElement>(null);
 
   const cliente = demanda && clientes.find((c) => c.id === demanda.cliente_id);
   const meusComentarios = useMemo(
@@ -115,19 +130,56 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
     [demanda, anexos]
   );
 
-  // Sincroniza descricaoLocal quando muda de demanda (por id) ou
-  // quando a descricao chega/atualiza externamente sem haver edição em curso.
+  // Sincroniza descricaoLocal/tituloLocal quando muda de demanda (por id) ou
+  // quando os valores chegam/atualizam externamente sem haver edição em curso.
   useEffect(() => {
-    if (demanda) setDescricaoLocal(demanda.descricao ?? "");
+    if (demanda) {
+      setDescricaoLocal(demanda.descricao ?? "");
+      // Em rascunho, o título no banco vem como "Sem título" — mostrar vazio.
+      const t = demanda.titulo === "Sem título" ? "" : demanda.titulo;
+      setTituloLocal(t);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demanda?.id]);
 
-  // Limpa timer ao desmontar
+  // Auto-foco no título quando abrir um rascunho.
+  useEffect(() => {
+    if (isRascunho && demanda) {
+      const t = setTimeout(() => tituloInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [isRascunho, demanda?.id]);
+
+  // Limpa timers ao desmontar
   useEffect(() => {
     return () => {
       if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
+      if (tituloTimer.current) clearTimeout(tituloTimer.current);
     };
   }, []);
+
+  // Wrapper de fechamento: descarta rascunho silenciosamente quando vazio.
+  const handleOpenChange = (open: boolean) => {
+    if (!open && demanda) {
+      // flush de timers pendentes
+      if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
+      if (tituloTimer.current) clearTimeout(tituloTimer.current);
+      const tituloFinal = tituloLocal.trim();
+      const descFinal = descricaoLocal.trim();
+      const semConteudo =
+        !tituloFinal &&
+        !descFinal &&
+        meusComentarios.length === 0 &&
+        meusAnexos.length === 0 &&
+        (demanda.responsaveis_ids?.length ?? 0) === 0 &&
+        !demanda.data_limite &&
+        !demanda.data_inicio;
+      if (isRascunho && semConteudo) {
+        deleteDemanda(demanda.id);
+      }
+    }
+    onOpenChange(open);
+  };
 
   if (!demanda) return null;
 
@@ -176,12 +228,12 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
   };
 
   return (
-    <Dialog open={!!demanda} onOpenChange={onOpenChange}>
+    <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
         <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
           <div className="mb-2">
-            <VoltarVisaoGeralButton onClick={() => onOpenChange(false)} />
+            <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
           {/* CARD 1 — Informações da Demanda */}
           <Card>
@@ -192,10 +244,26 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
                     Título da tarefa
                   </div>
                   <Input
-                    value={demanda.titulo}
-                    onChange={(e) =>
-                      updateDemanda(demanda.id, { titulo: e.target.value })
-                    }
+                    ref={tituloInputRef}
+                    value={tituloLocal}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTituloLocal(v);
+                      if (tituloTimer.current) clearTimeout(tituloTimer.current);
+                      tituloTimer.current = setTimeout(() => {
+                        updateDemanda(demanda.id, { titulo: v.trim() || "Sem título" });
+                      }, 500);
+                    }}
+                    onBlur={() => {
+                      if (tituloTimer.current) {
+                        clearTimeout(tituloTimer.current);
+                        tituloTimer.current = null;
+                      }
+                      const novo = tituloLocal.trim() || "Sem título";
+                      if (novo !== demanda.titulo) {
+                        updateDemanda(demanda.id, { titulo: novo });
+                      }
+                    }}
                     placeholder="Ex: Criar landing page para campanha de inverno"
                     className="text-xl font-bold border-0 px-0 focus-visible:ring-0 h-auto"
                   />
@@ -294,6 +362,88 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
             </CardHeader>
 
             <CardContent className="space-y-5">
+              {/* Categoria · Subtipo · Prioridade */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">Categoria</Label>
+                  <Select
+                    value={demanda.categoria}
+                    onValueChange={(v) =>
+                      updateDemanda(demanda.id, {
+                        categoria: v as DemandaCategoria,
+                        // Limpa subtipo se a categoria mudou
+                        subtipo: v === demanda.categoria ? demanda.subtipo : null,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIAS.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {CATEGORIA_LABEL[c]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Subtipo</Label>
+                  {demanda.categoria === "Personalizado" ? (
+                    <Input
+                      value={demanda.subtipo ?? ""}
+                      onChange={(e) =>
+                        updateDemanda(demanda.id, { subtipo: e.target.value || null })
+                      }
+                      placeholder="Descreva"
+                      className="h-9"
+                    />
+                  ) : (
+                    <Select
+                      value={demanda.subtipo ?? "__none__"}
+                      onValueChange={(v) =>
+                        updateDemanda(demanda.id, {
+                          subtipo: v === "__none__" ? null : v,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Selecionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Não definido —</SelectItem>
+                        {(CATEGORIA_SUBTIPOS[demanda.categoria] ?? []).map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs">Prioridade</Label>
+                  <Select
+                    value={demanda.prioridade}
+                    onValueChange={(v) =>
+                      updateDemanda(demanda.id, { prioridade: v as any })
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRIORIDADES.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {PRIORIDADE_LABEL[p]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               {/* Datas + Responsável */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>

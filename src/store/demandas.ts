@@ -84,6 +84,16 @@ interface State {
       responsaveis_ids?: string[];
     }
   ) => Promise<string | null>;
+  /**
+   * Cria um rascunho silencioso (sem toast) e retorna o objeto Demanda já normalizado.
+   * Usado pelo fluxo de "formulário único": a tarefa nasce no banco e o usuário
+   * preenche tudo direto no DemandaDetalheDialog.
+   */
+  createRascunho: (args: {
+    cliente_id: string;
+    categoria?: DemandaCategoria;
+    subtipo?: string | null;
+  }) => Promise<Demanda | null>;
   updateDemanda: (id: string, patch: Partial<Demanda>) => Promise<void>;
   deleteDemanda: (id: string) => Promise<void>;
   moveStatus: (id: string, status: DemandaStatus) => Promise<void>;
@@ -197,6 +207,35 @@ export const useDemandasStore = create<State>((set, get) => ({
       }).then(() => {});
     }
     return novo.id;
+  },
+
+  async createRascunho({ cliente_id, categoria, subtipo }) {
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id ?? null;
+    const payload: any = {
+      cliente_id,
+      titulo: "Sem título",
+      categoria: categoria ?? "Personalizado",
+      subtipo: subtipo ?? null,
+      status: "Criar",
+      prioridade: "Media",
+      responsaveis_ids: [],
+      responsavel_id: null,
+      criado_por: uid,
+      precisa_aprovacao: false,
+    };
+    const { data, error } = await supabase
+      .from("demandas")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao criar tarefa", { description: error.message });
+      return null;
+    }
+    const novo = normalizeDemanda(data);
+    set({ demandas: [novo, ...get().demandas] });
+    return novo;
   },
 
   async updateDemanda(id, patch) {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Demanda, getResponsaveisIds } from "@/store/demandas";
+import { Demanda, getResponsaveisIds, useDemandas } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
 import {
   CATEGORIA_LABEL,
@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, type LucideIcon } from "lucide-react";
 import { ProjetoKanban } from "@/components/demandas/ProjetoKanban";
-import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { AvatarStack } from "@/components/AvatarStack";
 import { cn } from "@/lib/utils";
@@ -40,16 +39,32 @@ export function AreaTab({
   demandaInicial,
 }: Props) {
   const { responsaveis } = useCRM();
-  const [novaOpen, setNovaOpen] = useState(false);
+  const createRascunho = useDemandas((s) => s.createRascunho);
   const [selecionada, setSelecionada] = useState<Demanda | null>(null);
+  const [rascunhoId, setRascunhoId] = useState<string | null>(null);
   const [filtroSubtipo, setFiltroSubtipo] = useState<string>("todos");
   const [filtroResp, setFiltroResp] = useState<string>("todos");
 
-  // Deep-link: abre o detalhe quando uma demanda inicial é fornecida
+  // Deep-link: abre o detalhe quando uma demanda inicial é fornecida.
+  // Se a demanda inicial veio recém-criada como rascunho ("Sem título"),
+  // marca como rascunho para habilitar auto-foco e descarte se vazia.
   useEffect(() => {
-    if (demandaInicial) setSelecionada(demandaInicial);
+    if (demandaInicial) {
+      setSelecionada(demandaInicial);
+      if (demandaInicial.titulo === "Sem título") {
+        setRascunhoId(demandaInicial.id);
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demandaInicial?.id]);
+
+  const handleNovaTarefa = async () => {
+    const novo = await createRascunho({ cliente_id: clienteId, categoria });
+    if (novo) {
+      setSelecionada(novo);
+      setRascunhoId(novo.id);
+    }
+  };
 
   const subtipos = CATEGORIA_SUBTIPOS[categoria] ?? [];
 
@@ -122,7 +137,7 @@ export function AreaTab({
                 ))}
               </select>
             )}
-            <Button size="sm" onClick={() => setNovaOpen(true)}>
+            <Button size="sm" onClick={handleNovaTarefa}>
               <Plus className="h-4 w-4 mr-1" /> Nova tarefa de {CATEGORIA_LABEL[categoria]}
             </Button>
           </div>
@@ -141,17 +156,15 @@ export function AreaTab({
         <ProjetoKanban demandas={filtradas} onOpen={setSelecionada} />
       )}
 
-      <NovaDemandaDialog
-        open={novaOpen}
-        onOpenChange={setNovaOpen}
-        defaultClienteId={clienteId}
-        defaultCategoria={categoria}
-        lockCategoria
-        titulo={`Nova tarefa de ${CATEGORIA_LABEL[categoria]}`}
-      />
       <DemandaDetalheDialog
         demanda={selecionada}
-        onOpenChange={(v) => !v && setSelecionada(null)}
+        isRascunho={!!selecionada && selecionada.id === rascunhoId}
+        onOpenChange={(v) => {
+          if (!v) {
+            setSelecionada(null);
+            setRascunhoId(null);
+          }
+        }}
       />
     </div>
   );

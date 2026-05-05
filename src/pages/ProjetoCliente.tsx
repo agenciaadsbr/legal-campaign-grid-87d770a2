@@ -13,7 +13,18 @@ import { AvatarStack } from "@/components/AvatarStack";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
-import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useDemandasStore } from "@/store/demandas";
+import { CATEGORIAS, CATEGORIA_LABEL as CATLABEL_ALL } from "@/lib/demandas-categorias";
+import { toast } from "sonner";
 import { AreaTab } from "@/components/projeto/AreaTab";
 import { VisaoGeralCard } from "@/components/projeto/VisaoGeralCard";
 import { VisaoGeralLista, type VisaoGeralItem } from "@/components/projeto/VisaoGeralLista";
@@ -349,17 +360,12 @@ export default function ProjetoCliente() {
         </TabsContent>
       </Tabs>
 
-      {/* Modal global "Adicionar Tarefa" — cliente fixado, escolhe categoria */}
-      <NovaDemandaDialog
+      {/* Modal "Nova tarefa" — cria rascunho e leva para a aba certa */}
+      <NovaTarefaSeletor
         open={novaTarefaOpen}
         onOpenChange={setNovaTarefaOpen}
-        defaultClienteId={clienteId!}
-        lockCliente
-        titulo="Nova Tarefa"
-        onCreated={(_id, categoria) => {
-          // Após criar, leva o usuário para a aba correspondente
-          handleTabChange(categoriaParaAba(categoria));
-        }}
+        clienteId={clienteId!}
+        onCriado={(categoria) => handleTabChange(categoriaParaAba(categoria))}
       />
     </div>
   );
@@ -734,5 +740,91 @@ function RelatoriosTab({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// =====================================================
+// Mini-modal "Nova tarefa" — escolhe categoria, cria rascunho e
+// navega para a aba correspondente, abrindo o card detalhado.
+// =====================================================
+function NovaTarefaSeletor({
+  open,
+  onOpenChange,
+  clienteId,
+  onCriado,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  clienteId: string;
+  onCriado: (categoria: DemandaCategoria) => void;
+}) {
+  const [categoria, setCategoria] = useState<DemandaCategoria>("Personalizado");
+  const [criando, setCriando] = useState(false);
+  const [, setSearchParams] = useSearchParams();
+
+  const submit = async () => {
+    if (!clienteId) return;
+    setCriando(true);
+    const novo = await useDemandasStore.getState().createRascunho({
+      cliente_id: clienteId,
+      categoria,
+    });
+    setCriando(false);
+    if (novo) {
+      onOpenChange(false);
+      // Navega para a aba e dispara deep-link para abrir o card.
+      onCriado(categoria);
+      setTimeout(() => {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.set("demanda", novo.id);
+            return next;
+          },
+          { replace: true }
+        );
+      }, 50);
+    } else {
+      toast.error("Não foi possível criar a tarefa");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !criando && onOpenChange(v)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nova tarefa</DialogTitle>
+          <DialogDescription>
+            Escolha a categoria. Você poderá ajustar todos os detalhes
+            (responsáveis, anexos, briefing, prazo, status) direto no card.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Categoria</Label>
+            <Select value={categoria} onValueChange={(v) => setCategoria(v as DemandaCategoria)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIAS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {CATLABEL_ALL[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={criando}>
+            Cancelar
+          </Button>
+          <Button onClick={submit} disabled={criando}>
+            {criando ? "Abrindo..." : "Continuar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
