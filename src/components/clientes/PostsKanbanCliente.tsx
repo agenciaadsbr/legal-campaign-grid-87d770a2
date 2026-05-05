@@ -341,9 +341,24 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
     return Math.max(1, Math.min(6, max || 3));
   }, [contratos, cards, clienteId]);
 
-  const abrirIniciar = (id: string) => {
-    setIniciarCardId(id);
-    setIniciarOpen(true);
+  // Abre o detalhe do post (formulário único). Se o título ainda for placeholder,
+  // aplica foco automático no campo de título.
+  const abrirDetalhe = (cardId: string, opts?: { focusTitulo?: boolean }) => {
+    const post = posts.find((p) => p.card_id === cardId);
+    if (!post || !clienteId) return;
+    const url = `/clientes/${clienteId}/posts/${post.id}${opts?.focusTitulo ? "?focus=titulo" : ""}`;
+    navigate(url);
+  };
+
+  const handleAdicionarTarefa = async () => {
+    if (!clienteId || criandoTarefa) return;
+    setCriandoTarefa(true);
+    const mes = filtroMes !== "all" ? Number(filtroMes) : undefined;
+    const novo = await createCardRascunho({ cliente_id: clienteId, mes_referencia: mes });
+    setCriandoTarefa(false);
+    if (novo) {
+      navigate(`/clientes/${clienteId}/posts/${novo.postId}?focus=titulo`);
+    }
   };
 
   const onDragEnd = (e: DragEndEvent) => {
@@ -355,11 +370,12 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
     const card = cards.find((c) => c.id === String(e.active.id));
     if (!card) return;
     if (novoStatus === card.status_card) return;
-    if (card.status_card === "Planejamento") {
-      abrirIniciar(card.id);
-      return;
-    }
+    const veioDePlanejamento = card.status_card === "Planejamento";
     moveCard(card.id, novoStatus as StatusCard);
+    if (veioDePlanejamento) {
+      const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
+      abrirDetalhe(card.id, { focusTitulo: isPlaceholderTitulo });
+    }
   };
 
   const respsSelLabel =
