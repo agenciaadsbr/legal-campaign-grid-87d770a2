@@ -13,7 +13,7 @@ export default function Configuracoes() {
   const { isAdmin } = useAuth();
 
   return (
-    <div className="px-5 py-4 space-y-3 max-w-5xl animate-fade-in">
+    <div className="px-5 py-4 space-y-3 animate-fade-in">
       <div>
         <h1 className="text-xl font-bold leading-tight">Configurações</h1>
         <p className="text-xs text-muted-foreground">
