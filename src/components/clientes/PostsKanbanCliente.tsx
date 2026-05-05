@@ -254,14 +254,20 @@ function Coluna({
   onIniciar,
   pagina,
   onPaginaChange,
+  selectionMode,
+  selectedIds,
+  onToggleSelect,
 }: {
   status: StatusCard;
   cards: CardT[];
   onIniciar: (id: string) => void;
   pagina: number;
   onPaginaChange: (p: number) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const { setNodeRef, isOver } = useDroppable({ id: status, disabled: selectionMode });
   const isAtrasado = status === "Atrasado";
   const total = cards.length;
   const totalPaginas = Math.max(1, Math.ceil(total / CARDS_POR_PAGINA));
@@ -296,7 +302,16 @@ function Coluna({
         ref={scrollRef}
         className="overflow-y-auto scrollbar-thin pr-1 flex-1 min-h-0"
       >
-        {visiveis.map((c) => <CardItem key={c.id} card={c} onIniciar={onIniciar} />)}
+        {visiveis.map((c) => (
+          <CardItem
+            key={c.id}
+            card={c}
+            onIniciar={onIniciar}
+            selectionMode={selectionMode}
+            selected={selectedIds?.has(c.id)}
+            onToggleSelect={() => onToggleSelect?.(c.id)}
+          />
+        ))}
       </div>
       {total > CARDS_POR_PAGINA && (
         <div className="flex items-center justify-between gap-1 mt-2 px-1 pt-1.5 border-t border-border/50">
