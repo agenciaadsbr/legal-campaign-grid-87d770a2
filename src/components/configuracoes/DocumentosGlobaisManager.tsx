@@ -564,42 +564,16 @@ export function DocumentosGlobaisManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo: Adicionar em lote */}
-      <Dialog
-        open={loteState.open}
-        onOpenChange={(v) => setLoteState((s) => ({ ...s, open: v }))}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              Adicionar em lote — {loteState.bloco ? DOC_BLOCO_LABEL[loteState.bloco] : ""}
-            </DialogTitle>
-            <DialogDescription>
-              Cole uma lista — um título por linha. Cada linha vira um documento neste bloco.
-              Você pode editar os detalhes depois clicando em cada item.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={loteTexto}
-            onChange={(e) => setLoteTexto(e.target.value)}
-            placeholder={"Ex.:\nGmail\nGoogle Ads\nMeta Business"}
-            rows={10}
-            className="text-sm"
-          />
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setLoteState({ open: false, bloco: null })}
-              disabled={loteSalvando}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={salvarLote} disabled={loteSalvando}>
-              {loteSalvando ? "Salvando..." : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Diálogo: Adicionar em lote (mesmo padrão do Projeto Completo) */}
+      {loteState.bloco && (
+        <DocumentoGlobalLoteDialog
+          open={loteState.open}
+          onOpenChange={(v) => setLoteState((s) => ({ ...s, open: v }))}
+          bloco={loteState.bloco}
+          escopo={escopo}
+          itensExistentes={itens}
+        />
+      )}
 
       <DocumentoGlobalDialog
         open={dialog.open}
