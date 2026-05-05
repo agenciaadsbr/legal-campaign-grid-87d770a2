@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -11,10 +12,12 @@ import { PrioridadeIcons } from "./PrioridadeIcon";
 import type { UnifiedTask } from "@/lib/minhasTarefas";
 import { STATUS_LABEL } from "@/lib/minhasTarefas";
 import { PRIORIDADE_COR, PRIORIDADE_LABEL } from "@/lib/demandas-categorias";
+import { useCRM } from "@/store/crm";
 
 interface Props {
   tasks: UnifiedTask[];
   onConcluir: (task: UnifiedTask) => void;
+  mostrarResponsavel?: boolean;
 }
 
 const STATUS_COR: Record<string, string> = {
