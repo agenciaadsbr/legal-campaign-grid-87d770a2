@@ -837,6 +837,8 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
     return { cardId: cardRow.id, postId: postRow.id };
   },
+
+  // ============= Comentários =============
   addComentario: async (c) => {
     // RLS exige auth.uid() = usuario_id, então usamos sempre o usuário autenticado
     const { data: userData } = await supabase.auth.getUser();
