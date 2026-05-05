@@ -68,6 +68,11 @@ import {
   safeFilename,
 } from "./exportUtils";
 import { useCRM } from "@/store/crm";
+import {
+  parseLoteTexto,
+  TITULO_MENSAGEM_PADRAO,
+  type LoteItem,
+} from "@/lib/documentacaoLote";
 
 const BLOCO_ICON: Record<DocBloco, any> = {
   acessos: KeyRound,
