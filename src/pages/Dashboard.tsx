@@ -119,12 +119,12 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="px-5 py-4 space-y-3 animate-fade-in">
       {/* Header */}
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold tracking-tight leading-tight">Dashboard</h1>
+          <p className="text-xs text-muted-foreground">
             Visão geral em tempo real do Dash Tasks
           </p>
         </div>
@@ -133,13 +133,13 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <Tabs defaultValue="geral" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="geral">Visão Geral</TabsTrigger>
-          <TabsTrigger value="colaborador">Por Colaborador</TabsTrigger>
+      <Tabs defaultValue="geral" className="space-y-3">
+        <TabsList className="h-8">
+          <TabsTrigger value="geral" className="text-xs h-7">Visão Geral</TabsTrigger>
+          <TabsTrigger value="colaborador" className="text-xs h-7">Por Colaborador</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="geral" className="space-y-6 mt-0">
+        <TabsContent value="geral" className="space-y-4 mt-2">
       {/* SEÇÃO 1 — Clientes */}
       <section className="space-y-3">
         <SectionHeader title="Clientes" subtitle="Visão geral da base" />
