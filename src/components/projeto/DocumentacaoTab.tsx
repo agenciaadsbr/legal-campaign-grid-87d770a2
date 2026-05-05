@@ -905,13 +905,7 @@ function DocumentacaoLoteDialog({
     bloco === "links" ||
     bloco === "reunioes";
 
-  const tituloMensagemPadrao: Record<DocBloco, string> = {
-    acessos: "Mensagem de acessos",
-    materiais: "Materiais enviados ao cliente",
-    documentos: "Mensagem de documentos",
-    links: "Mensagem de links importantes",
-    reunioes: "Mensagem de reuniões",
-  };
+  const tituloMensagemPadrao = TITULO_MENSAGEM_PADRAO;
 
   const submit = async () => {
     if (isMensagemUnica) {
