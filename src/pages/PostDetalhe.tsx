@@ -56,6 +56,7 @@ const isImageUrl = (url: string, nome?: string) => {
 export default function PostDetalhe() {
   const { postId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario, statusPostOptions } = useCRM();
   const { canWrite } = useAuth();
   const post = posts.find((p) => p.id === postId);
@@ -67,6 +68,19 @@ export default function PostDetalhe() {
   const [showSaved, setShowSaved] = useState(false);
   const composerFileRef = useRef<HTMLInputElement>(null);
   const anexoFileRef = useRef<HTMLInputElement>(null);
+  const tituloInputRef = useRef<HTMLInputElement>(null);
+
+  // Foco automático no título quando vindo da criação/iniciar via ?focus=titulo
+  useEffect(() => {
+    if (searchParams.get("focus") === "titulo" && tituloInputRef.current) {
+      tituloInputRef.current.focus();
+      tituloInputRef.current.select();
+      // limpa o param para não refocar a cada render
+      const next = new URLSearchParams(searchParams);
+      next.delete("focus");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams, post?.id]);
 
   // efeito visual "Salvo" para a legenda (debounce)
   useEffect(() => {
