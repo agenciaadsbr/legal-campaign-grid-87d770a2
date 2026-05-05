@@ -80,7 +80,7 @@ const isImageUrl = (url: string, nome?: string) => {
   return /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/.test(n);
 };
 
-export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
+export function DemandaDetalheDialog({ demanda, onOpenChange, isRascunho }: Props) {
   const { clientes, responsaveis } = useCRM();
   const { user, isAdmin, canWrite } = useAuth();
   const {
@@ -102,6 +102,9 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
   const [anexoParaRemover, setAnexoParaRemover] = useState<string | null>(null);
   const [descricaoLocal, setDescricaoLocal] = useState("");
   const descricaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tituloLocal, setTituloLocal] = useState("");
+  const tituloTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tituloInputRef = useRef<HTMLInputElement>(null);
 
   const cliente = demanda && clientes.find((c) => c.id === demanda.cliente_id);
   const meusComentarios = useMemo(
