@@ -24,6 +24,11 @@ import {
   STATUS_DEMANDA_LABEL,
   STATUS_DEMANDA_COR,
   CATEGORIA_LABEL,
+  CATEGORIAS,
+  CATEGORIA_SUBTIPOS,
+  PRIORIDADES,
+  PRIORIDADE_LABEL,
+  type DemandaCategoria,
 } from "@/lib/demandas-categorias";
 import {
   Trash2,
