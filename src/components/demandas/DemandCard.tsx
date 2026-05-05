@@ -10,6 +10,7 @@ import { useCRM } from "@/store/crm";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, AlertTriangle } from "lucide-react";
 import { AvatarStack } from "@/components/AvatarStack";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -18,9 +19,21 @@ interface Props {
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   extraAction?: React.ReactNode;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-export function DemandCard({ demanda, onClick, draggable, onDragStart, extraAction }: Props) {
+export function DemandCard({
+  demanda,
+  onClick,
+  draggable,
+  onDragStart,
+  extraAction,
+  selectionMode,
+  selected,
+  onToggleSelect,
+}: Props) {
   const { clientes, responsaveis } = useCRM();
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
   const respIds = getResponsaveisIds(demanda);
