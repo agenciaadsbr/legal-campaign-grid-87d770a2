@@ -1,37 +1,51 @@
-# Corrigir duplicação ao "Adicionar em lote"
+# Equiparar "Adicionar em lote" do gerenciador global ao do Projeto Completo
 
-## Diagnóstico
+Hoje o "Adicionar em lote" das abas **Documentos padrão para clientes** e **Documentos internos da empresa** é uma textarea simples (uma linha = um título). O do **DocumentacaoTab** (Projeto Completo) é muito mais rico:
 
-Verifiquei o banco: existe **apenas 1 registro real** em `documentos_globais`. Não há triggers de propagação. A duplicação que aparece na tela ("15") é resultado de itens repetidos sendo enviados/inseridos pelo fluxo de lote, sem nenhuma proteção. Causas possíveis e cumulativas:
+- Toggle **"Mensagem completa" / "Lista de itens"** para os blocos `documentos`, `links`, `reunioes`.
+- Para `acessos` e `materiais`: modo **mensagem completa fixa** (salva 1 item do tipo `mensagem` com o texto formatado).
+- Modo lista: parser inteligente (`parseLoteTexto`) que detecta:
+  - Itens separados por linha em branco
+  - URLs, `Login:`, `Senha:` automaticamente
+  - Bullets (`-`, `•`, `*`) e listas livres
+  - Formato pipe `título | url | login | senha | observação`
+  - Emojis e prefixos no título (ex.: `🔗 Gmail:` → `Gmail`)
+- Select de **Tipo aplicado a todos** os itens da lista.
+- Badge "**N item(ns) detectado(s)**" que atualiza ao vivo conforme o usuário cola.
+- Botão muda para `Adicionar todos (N)` ou `Salvar mensagem`.
 
-1. **Texto colado contém o mesmo título várias vezes** (ex.: 15 linhas iguais ou linhas em branco com espaços). O código atual cria um item por linha sem deduplicar.
-2. **Clique duplo no botão "Adicionar"** dispara `salvarLote` mais de uma vez antes de `loteSalvando` virar `true` (a flag só é setada no meio da função, depois das validações).
-3. **Sem checagem de existência**: títulos já cadastrados no mesmo escopo+bloco são recriados a cada lote.
-4. **Sem constraint única no banco** — não há rede de proteção em última instância.
+Vou replicar esse mesmo diálogo no manager global, reutilizando o parser para evitar divergência futura.
 
-## Correções
+## Arquivos
 
-### `src/components/configuracoes/DocumentosGlobaisManager.tsx` — função `salvarLote`
+### Novo: `src/lib/documentacaoLote.ts`
+Extrair `parseLoteTexto`, `LoteItem` e a constante `TITULO_MENSAGEM_PADRAO` do `DocumentacaoTab.tsx` para um arquivo compartilhado. Lógica idêntica, sem mudança de comportamento.
 
-- **Guarda anti-clique-duplo**: `if (loteSalvando) return;` no topo da função, antes de qualquer trabalho.
-- **Deduplicar dentro do lote**: usar `new Set()` sobre as linhas trimadas e não vazias (split com `/\r?\n/` para cobrir CRLF colado do Windows/Sheets).
-- **Filtrar títulos já existentes**: comparar `titulo.trim().toLowerCase()` contra os itens atuais do mesmo `escopo` + `bloco`. Itens repetidos são ignorados silenciosamente.
-- **Inserir sequencialmente com `await`** (já é assim) e contar sucessos para o toast final ("N adicionados · M ignorados (já existiam)").
-- **Toast informativo** quando nada é criado: "Todos os títulos informados já existem neste bloco".
+### Editado: `src/components/projeto/DocumentacaoTab.tsx`
+- Remover as definições locais de `parseLoteTexto`, `LoteItem` e `tituloMensagemPadrao`.
+- Importar do novo `@/lib/documentacaoLote`.
+- Nenhuma mudança visível para o usuário.
 
-Isso resolve 100% dos casos sem precisar de migração.
-
-### Opcional (recomendado mas não obrigatório) — constraint única no banco
-
-Para blindar de vez contra qualquer fluxo futuro, criar índice único parcial em `documentos_globais (escopo, bloco, lower(titulo))`. Só faço isso se você confirmar — exigirá uma migração e pode rejeitar dados legados que tenham títulos repetidos legítimos. **Por padrão, NÃO vou criar a constraint** — apenas a proteção em código acima.
+### Editado: `src/components/configuracoes/DocumentosGlobaisManager.tsx`
+- Remover a textarea simples atual + função `salvarLote` antiga + estado `loteTexto`/`loteSalvando`.
+- Criar componente local `DocumentoGlobalLoteDialog` (mesma estrutura visual e fluxo do `DocumentacaoLoteDialog`):
+  - Mesma UI: toggle de modo (quando aplicável), select de tipo, textarea grande (font-mono), badge de itens detectados, footer com botões dinâmicos.
+  - Usa `parseLoteTexto` do helper compartilhado.
+  - Em vez de `useDocumentacao.create/createBatch` (que escreve em `documentacao_itens` por cliente), chama `useDocumentosGlobais.create` em loop sequencial, enviando:
+    - `escopo` atual (`cliente`/`interno`)
+    - `bloco` selecionado
+    - `tipo` (do select, ou `mensagem` no modo mensagem completa)
+    - `titulo`, `url`, `login`, `senha`, `descricao` (mapeando `observacao → descricao`)
+    - `aplicar_automatico = (escopo === "cliente")`
+    - `permissao_acesso = (escopo === "interno" ? "admin" : "todos")`
+    - `categoria: "Outros"`, `ativo: true`
+  - Modo "Mensagem completa": cria 1 item com `tipo: "mensagem"`, `titulo` = `TITULO_MENSAGEM_PADRAO[bloco]`, `descricao` = texto colado integral.
+  - Mantém as proteções já implementadas: deduplicação interna do lote, ignorar títulos já existentes (mesmo `escopo+bloco`, case-insensitive), guarda anti-clique-duplo, toast final com contagem.
+- Substituir o uso do diálogo antigo por `<DocumentoGlobalLoteDialog>` e simplificar o estado (`loteState` continua, mas sem `loteTexto/loteSalvando` no componente pai — vão para dentro do diálogo, igual ao DocumentacaoTab).
 
 ### `public/version.json`
-
-Bump do timestamp para invalidar cache.
+Bump do timestamp.
 
 ## Resultado
 
-- Colar 15 linhas iguais → cria **1 item**.
-- Colar 5 linhas, das quais 3 já existem → cria **2 itens** + toast "2 adicionados · 3 ignorados".
-- Clicar 2x no botão "Adicionar" → segunda chamada é ignorada.
-- Sem mudanças no banco, sem migração.
+O botão "Adicionar em lote" em ambas as abas globais abre **exatamente o mesmo diálogo** (visual e comportamento) do "Documentos" do Projeto Completo, com toggle de modo, parser inteligente, badge de detecção e select de tipo — porém persistindo em `documentos_globais` (com escopo correto) em vez de `documentacao_itens` por cliente. Proteções anti-duplicação seguem ativas.
