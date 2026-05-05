@@ -33,8 +33,13 @@ function formatPrazo(p: string | null): string {
   return d.toLocaleDateString("pt-BR");
 }
 
-export function MinhasTarefasTabela({ tasks, onConcluir }: Props) {
+export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = false }: Props) {
   const navigate = useNavigate();
+  const responsaveis = useCRM((s) => s.responsaveis);
+  const respMap = useMemo(
+    () => new Map(responsaveis.map((r) => [r.id, r.nome])),
+    [responsaveis],
+  );
 
   if (tasks.length === 0) {
     return (
