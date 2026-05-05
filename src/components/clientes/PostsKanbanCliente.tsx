@@ -115,22 +115,46 @@ function CardItem({
     onIniciar(card.id);
   };
 
+  const dragProps = selectionMode ? {} : { ...attributes, ...listeners };
+
   const inner = (
     <div
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
+      {...dragProps}
+      onClick={
+        selectionMode
+          ? (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelect?.();
+            }
+          : undefined
+      }
       className={cn(
-        "group relative bg-card border rounded-lg p-2.5 mb-1.5 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:shadow-sm transition-all",
+        "group relative bg-card border rounded-lg p-2.5 mb-1.5 hover:border-primary/40 hover:shadow-sm transition-all",
+        !selectionMode && "cursor-grab active:cursor-grabbing",
+        selectionMode && "cursor-pointer",
         isUrgent && "border-l-2 border-l-amber-500",
         isAtrasadoStatus && "border-l-2 border-l-red-500",
         isDragging && "opacity-40",
+        selectionMode && selected && "ring-2 ring-primary border-primary",
       )}
     >
+      {selectionMode && (
+        <div
+          className="absolute top-2 right-2 z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect?.();
+          }}
+        >
+          <Checkbox checked={!!selected} className="bg-background" />
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-1.5 flex-1 min-w-0">
           {isUrgent && <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />}
-          {editingTitulo ? (
+          {editingTitulo && !selectionMode ? (
             <Input
               autoFocus
               value={tituloDraft}
@@ -147,14 +171,15 @@ function CardItem({
             />
           ) : (
             <span
-              title={canWrite ? "Clique para editar o título" : card.titulo_card}
-              onPointerDown={(e) => { if (canWrite) e.stopPropagation(); }}
-              onClick={canWrite ? startEdit : undefined}
-              onDoubleClick={canWrite && !isPlanejamento ? startEdit : undefined}
+              title={canWrite && !selectionMode ? "Clique para editar o título" : card.titulo_card}
+              onPointerDown={(e) => { if (canWrite && !selectionMode) e.stopPropagation(); }}
+              onClick={canWrite && !selectionMode ? startEdit : undefined}
+              onDoubleClick={canWrite && !isPlanejamento && !selectionMode ? startEdit : undefined}
               className={cn(
                 "text-sm font-medium leading-tight line-clamp-2 break-words",
                 isPlaceholderTitulo && isPlanejamento && "text-muted-foreground italic",
-                canWrite && "cursor-text hover:text-primary transition-colors",
+                canWrite && !selectionMode && "cursor-text hover:text-primary transition-colors",
+                selectionMode && "pr-7",
               )}
             >
               {tituloVisivel}
@@ -162,7 +187,7 @@ function CardItem({
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {canWrite && !isPlanejamento && (
+          {canWrite && !isPlanejamento && !selectionMode && (
             <Button
               type="button"
               variant="ghost"
@@ -200,14 +225,14 @@ function CardItem({
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
 
-      {isPlanejamento && canWrite ? (
+      {isPlanejamento && canWrite && !selectionMode ? (
         <Button
           type="button"
           size="sm"
           variant="default"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={handleIniciar}
-          className="mt-1.5 w-full h-7 text-xs gap-1.5"
+          className="mt-1.5 w-full h-7 text-xs gapEAR-1.5 gap-1.5"
         >
           <Play className="h-3 w-3" /> Iniciar tarefa
         </Button>
@@ -219,7 +244,7 @@ function CardItem({
     </div>
   );
 
-  if (!post) return inner;
+  if (!post || selectionMode) return inner;
   return <Link to={`posts/${post.id}`}>{inner}</Link>;
 }
 
