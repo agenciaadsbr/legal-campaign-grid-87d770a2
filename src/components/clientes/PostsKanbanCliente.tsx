@@ -461,9 +461,9 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
           />
         </div>
 
-        {canWrite && onAdicionarTarefa && (
-          <Button onClick={onAdicionarTarefa} size="sm" className="h-9">
-            <Plus className="h-4 w-4 mr-1" /> Adicionar Tarefa
+        {canWrite && (
+          <Button onClick={handleAdicionarTarefa} size="sm" className="h-9" disabled={criandoTarefa}>
+            <Plus className="h-4 w-4 mr-1" /> {criandoTarefa ? "Criando..." : "Adicionar Tarefa"}
           </Button>
         )}
       </div>
@@ -475,7 +475,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
               key={s}
               status={s}
               cards={cardsCliente.filter((c) => c.status_card === s)}
-              onIniciar={abrirIniciar}
+              onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })}
               pagina={paginas[s] ?? 1}
               onPaginaChange={(p) => setPaginas((prev) => ({ ...prev, [s]: p }))}
             />
@@ -484,12 +484,10 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
         <DragOverlay>
           {activeId ? (() => {
             const c = cardsCliente.find((x) => x.id === activeId);
-            return c ? <CardItem card={c} onIniciar={abrirIniciar} /> : null;
+            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} /> : null;
           })() : null}
         </DragOverlay>
       </DndContext>
-
-      <IniciarTarefaDialog open={iniciarOpen} onOpenChange={setIniciarOpen} cardId={iniciarCardId} />
     </div>
   );
 }
