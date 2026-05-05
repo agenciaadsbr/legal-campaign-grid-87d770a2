@@ -474,7 +474,7 @@ export function DocumentosGlobaisManager() {
                             ) : (
                               <div
                                 className={cn(
-                                  "grid grid-cols-1 gap-2 max-h-[calc(100vh-320px)] min-h-[480px] overflow-y-auto pr-1",
+                                  "grid grid-cols-1 gap-2 auto-rows-fr max-h-[calc(100vh-320px)] min-h-[480px] overflow-y-auto pr-1",
                                   "[&::-webkit-scrollbar]:w-1.5",
                                   "[&::-webkit-scrollbar-track]:bg-transparent",
                                   "[&::-webkit-scrollbar-thumb]:bg-border",
@@ -606,13 +606,13 @@ function ItemGlobalCard({
   return (
     <Card
       className={cn(
-        "border-border",
+        "border-border flex flex-col h-full",
         !item.ativo && "opacity-60",
         selecionado && "ring-1 ring-primary/40 border-primary/40",
       )}
     >
-      <CardContent className="p-2.5">
-        <div className="flex items-start gap-2">
+      <CardContent className="p-2.5 flex flex-col flex-1 min-h-0">
+        <div className="flex items-start gap-2 flex-1 min-h-0">
           <div className="flex flex-col items-center gap-1 pt-0.5">
             <Checkbox
               checked={selecionado}
@@ -641,7 +641,7 @@ function ItemGlobalCard({
             </Button>
           </div>
 
-          <div className="flex-1 min-w-0">
+          <div className="flex flex-col flex-1 min-w-0 min-h-0">
             <div className="text-xs font-semibold truncate">{item.titulo}</div>
             <div className="flex flex-wrap items-center gap-1 mt-1">
               <Badge variant="outline" className="text-[9px] px-1 py-0">
@@ -669,7 +669,7 @@ function ItemGlobalCard({
             {item.descricao && (
               <div
                 className={cn(
-                  "text-[11px] text-muted-foreground mt-1 max-h-40 overflow-y-auto pr-1 whitespace-pre-wrap break-words",
+                  "text-[11px] text-muted-foreground mt-1 flex-1 min-h-0 overflow-y-auto pr-1 whitespace-pre-wrap break-words",
                   "[&::-webkit-scrollbar]:w-1.5",
                   "[&::-webkit-scrollbar-track]:bg-transparent",
                   "[&::-webkit-scrollbar-thumb]:bg-border",

@@ -1,33 +1,32 @@
-## Aumentar altura dos cards e adicionar scroll interno na descrição
+## Problema
 
-Referência: imagem do usuário (cards ocupando praticamente toda a altura útil da tela, ~700-800px), em vez dos atuais ~420px.
+Hoje cada `ItemGlobalCard` tem altura "natural" (auto), e a descrição é limitada a `max-h-40` (~160px) com scroll interno. Quando o card individual fica num grid com `min-h-[480px]` no contêiner pai, a descrição preenche apenas ~160px e sobra muito espaço vazio embaixo — exatamente o "corte pela metade" que aparece no print.
 
-### Arquivo afetado
-`src/components/configuracoes/DocumentosGlobaisManager.tsx`
+A imagem de referência mostra cards onde a área de texto **ocupa toda a altura disponível** do card, com scroll interno só quando o conteúdo passa do limite.
 
-### Mudanças
+## Correção
 
-**1. Container do grid de itens (linha 477)**
-Trocar `max-h-[420px]` por uma altura grande baseada em viewport para que cada card de bloco fique alto como no desenho vermelho:
+**Arquivo:** `src/components/configuracoes/DocumentosGlobaisManager.tsx`
 
-- De: `max-h-[420px] overflow-y-auto`
-- Para: `max-h-[calc(100vh-320px)] min-h-[480px] overflow-y-auto`
+1. **Card raiz (`ItemGlobalCard`)** — transformar em coluna flex de altura total:
+   - `<Card>` recebe `flex flex-col h-full`.
+   - `<CardContent>` recebe `flex flex-col flex-1 min-h-0 p-2.5`.
+   - O wrapper `flex items-start gap-2` vira `flex items-start gap-2 flex-1 min-h-0`.
+   - O wrapper interno `flex-1 min-w-0` passa a ser `flex flex-col flex-1 min-w-0 min-h-0`.
 
-Isso faz o card crescer até quase o final da tela (mantendo espaço para header/abas) e garante uma altura mínima confortável em telas menores.
+2. **Bloco da descrição** — deixar de ter altura fixa e passar a esticar:
+   - Trocar `max-h-40` por `flex-1 min-h-0` (mantendo `overflow-y-auto`, `whitespace-pre-wrap`, `break-words` e o estilo de scrollbar).
+   - Resultado: o texto preenche toda a altura restante do card; quando excede, aparece scroll interno.
 
-**2. Scroll interno na descrição do `ItemGlobalCard` (linhas 669-673)**
-Hoje a descrição usa `line-clamp-2` (corta em 2 linhas). Para permitir rolar e ler todo o texto colado em lote dentro do próprio card do item:
+3. **Grid pai dos itens (linhas 475-484)** — garantir que cada célula do grid estique:
+   - Adicionar `auto-rows-fr` ao grid (`grid grid-cols-1 gap-2 auto-rows-fr ...`) para que cada linha tenha altura igual e os cards ocupem toda a altura da linha.
+   - Manter `max-h-[calc(100vh-320px)] min-h-[480px] overflow-y-auto` para o scroll externo do bloco.
 
-- Remover `line-clamp-2`.
-- Envolver o texto em um bloco com altura máxima e scroll vertical próprio:
-  - `max-h-40 overflow-y-auto pr-1`
-  - `whitespace-pre-wrap break-words` (preserva quebras de linha do conteúdo colado em lote)
-  - Mesma estilização fina de scrollbar já usada no grid (`[&::-webkit-scrollbar]:w-1.5` etc.) para manter consistência visual com o tema escuro/claro.
+4. **Bump `public/version.json`** para o timestamp atual.
 
-**3. Bump de versão**
-Atualizar `public/version.json` com novo timestamp para forçar refresh do cliente.
+## Resultado esperado
 
-### Resultado esperado
-- Cada bloco (Acessos, Links, Reuniões, Materiais, Documentos) ocupa altura semelhante à dos retângulos vermelhos da imagem.
-- Dentro de cada item, o texto inserido em lote fica totalmente acessível via barra de rolagem interna do card, sem ser truncado em 2 linhas.
-- Tokens semânticos preservados (sem cores hardcoded).
+- Cada card preenche toda a altura disponível na sua linha (sem espaço morto embaixo).
+- A descrição ocupa todo o espaço sobrando entre o cabeçalho (título + badges) e a barra de ações.
+- Scroll interno aparece **só** quando o texto colado é maior que a altura do card.
+- Visual fica idêntico ao print de referência (cards altos, texto preenchendo tudo).
