@@ -26,16 +26,30 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search, Plus } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-function CardItem({ card, onIniciar }: { card: CardT; onIniciar: (id: string) => void }) {
+function CardItem({
+  card,
+  onIniciar,
+  selectionMode,
+  selected,
+  onToggleSelect,
+}: {
+  card: CardT;
+  onIniciar: (id: string) => void;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const { responsaveis, posts, updateCard } = useCRM();
   const { canWrite } = useAuth();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
