@@ -362,6 +362,88 @@ export function DemandaDetalheDialog({ demanda, onOpenChange, isRascunho }: Prop
             </CardHeader>
 
             <CardContent className="space-y-5">
+              {/* Categoria · Subtipo · Prioridade */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">Categoria</Label>
+                  <Select
+                    value={demanda.categoria}
+                    onValueChange={(v) =>
+                      updateDemanda(demanda.id, {
+                        categoria: v as DemandaCategoria,
+                        // Limpa subtipo se a categoria mudou
+                        subtipo: v === demanda.categoria ? demanda.subtipo : null,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIAS.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {CATEGORIA_LABEL[c]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Subtipo</Label>
+                  {demanda.categoria === "Personalizado" ? (
+                    <Input
+                      value={demanda.subtipo ?? ""}
+                      onChange={(e) =>
+                        updateDemanda(demanda.id, { subtipo: e.target.value || null })
+                      }
+                      placeholder="Descreva"
+                      className="h-9"
+                    />
+                  ) : (
+                    <Select
+                      value={demanda.subtipo ?? "__none__"}
+                      onValueChange={(v) =>
+                        updateDemanda(demanda.id, {
+                          subtipo: v === "__none__" ? null : v,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Selecionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Não definido —</SelectItem>
+                        {(CATEGORIA_SUBTIPOS[demanda.categoria] ?? []).map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs">Prioridade</Label>
+                  <Select
+                    value={demanda.prioridade}
+                    onValueChange={(v) =>
+                      updateDemanda(demanda.id, { prioridade: v as any })
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRIORIDADES.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {PRIORIDADE_LABEL[p]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               {/* Datas + Responsável */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
