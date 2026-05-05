@@ -143,9 +143,8 @@ export default function Dashboard() {
       {/* SEÇÃO 1 — Clientes */}
       <section className="space-y-3">
         <SectionHeader title="Clientes" subtitle="Visão geral da base" />
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
-          <KpiCard compact icon={Users} label="Total" value={clientesKpis.total} tone="primary"
-            hint={`${clientesKpis.pctAtivos}% ativos`} />
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+          <KpiCard compact icon={Users} label="Total" value={clientesKpis.total} tone="primary" />
           <KpiCard compact icon={Sparkles} label="Em onboarding" value={clientesKpis.onboarding} tone="info" />
           <KpiCard compact icon={UserCheck} label="Ativos" value={clientesKpis.ativos} tone="success" />
           <KpiCard compact icon={Pause} label="Pausados" value={clientesKpis.pausados} tone="warning" />
@@ -170,7 +169,7 @@ export default function Dashboard() {
       {/* SEÇÃO 3 — Demandas */}
       <section className="space-y-3">
         <SectionHeader title="Demandas internas" subtitle="Tarefas operacionais do time" />
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
           <KpiCard compact icon={ListChecks} label="Abertas" value={demandasKpis.abertas} tone="primary" />
           <KpiCard compact icon={AlertTriangle} label="Urgentes" value={demandasKpis.urgentes}
             tone={demandasKpis.urgentes > 0 ? "destructive" : "default"} />
