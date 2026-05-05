@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Demanda, getResponsaveisIds } from "@/store/demandas";
+import { Demanda, getResponsaveisIds, useDemandas } from "@/store/demandas";
 import { useCRM } from "@/store/crm";
 import {
   CATEGORIA_LABEL,
@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, type LucideIcon } from "lucide-react";
 import { ProjetoKanban } from "@/components/demandas/ProjetoKanban";
-import { NovaDemandaDialog } from "@/components/demandas/NovaDemandaDialog";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { AvatarStack } from "@/components/AvatarStack";
 import { cn } from "@/lib/utils";
