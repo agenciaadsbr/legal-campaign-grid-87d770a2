@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCRM } from "@/store/crm";
 import { useDemandas, useDemandasBootstrap } from "@/store/demandas";
 import { usePlanejamento, usePlanejamentoBootstrap } from "@/store/planejamento";
 import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao";
 import { useAuth } from "@/hooks/useAuth";
 import { useResponsavelAtual } from "@/hooks/useResponsavelAtual";
+import { supabase } from "@/integrations/supabase/client";
 import {
   buildUnifiedTasks, ordenarTarefas, parsePrazoLocal, type UnifiedTask,
 } from "@/lib/minhasTarefas";
@@ -12,7 +13,10 @@ import { MinhasTarefasFiltros, type FiltrosState } from "@/components/tarefas/Mi
 import { MinhasTarefasTabela } from "@/components/tarefas/MinhasTarefasTabela";
 import { ConcluirTarefaDialog } from "@/components/tarefas/ConcluirTarefaDialog";
 import { KpiCard } from "@/components/relatorios/KpiCard";
-import { AlertCircle, CheckCircle2, ListChecks, Zap } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { AlertCircle, CheckCircle2, ListChecks, Users, Zap } from "lucide-react";
 
 const FILTROS_INICIAIS: FiltrosState = {
   cliente: "all",
@@ -22,29 +26,74 @@ const FILTROS_INICIAIS: FiltrosState = {
   periodo: { preset: "todos", inicio: null, fim: null },
 };
 
+type Visualizacao = "minhas" | "todos" | string; // string = responsavel_id
+
 export default function MinhasTarefas() {
   useDemandasBootstrap();
   usePlanejamentoBootstrap();
   useDocumentacaoBootstrap();
 
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { responsavel, responsavelId } = useResponsavelAtual();
 
   const clientes = useCRM((s) => s.clientes);
   const cards = useCRM((s) => s.cards);
   const contratos = useCRM((s) => s.contratos);
+  const responsaveis = useCRM((s) => s.responsaveis);
   const demandas = useDemandas((s) => s.demandas);
   const planejamento = usePlanejamento((s) => s.itens);
   const documentacao = useDocumentacao((s) => s.itens);
 
   const [filtros, setFiltros] = useState<FiltrosState>(FILTROS_INICIAIS);
   const [taskAlvo, setTaskAlvo] = useState<UnifiedTask | null>(null);
+  const [visualizacao, setVisualizacao] = useState<Visualizacao>("minhas");
+
+  // Mapa responsavel_id -> auth.uid (para documentação no modo admin por usuário específico)
+  const [respToAuth, setRespToAuth] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancel = false;
+    supabase
+      .from("profiles")
+      .select("id, responsavel_id")
+      .not("responsavel_id", "is", null)
+      .then(({ data }) => {
+        if (cancel || !data) return;
+        const map: Record<string, string> = {};
+        for (const p of data as { id: string; responsavel_id: string | null }[]) {
+          if (p.responsavel_id) map[p.responsavel_id] = p.id;
+        }
+        setRespToAuth(map);
+      });
+    return () => { cancel = true; };
+  }, [isAdmin]);
+
+  // Resolve escopo passado ao builder
+  const { scopeResp, scopeAuth } = useMemo(() => {
+    if (!isAdmin || visualizacao === "minhas") {
+      return {
+        scopeResp: undefined as string[] | "all" | undefined,
+        scopeAuth: undefined as string[] | "all" | undefined,
+      };
+    }
+    if (visualizacao === "todos") {
+      return { scopeResp: "all" as const, scopeAuth: "all" as const };
+    }
+    // responsavel específico
+    const authUid = respToAuth[visualizacao];
+    return {
+      scopeResp: [visualizacao] as string[],
+      scopeAuth: authUid ? ([authUid] as string[]) : [],
+    };
+  }, [isAdmin, visualizacao, respToAuth]);
 
   const todasTarefas = useMemo(
     () =>
       buildUnifiedTasks({
         responsavelId,
         authUserId: user?.id ?? null,
+        scopeResponsaveisIds: scopeResp,
+        scopeAuthUserIds: scopeAuth,
         demandas,
         cards,
         planejamento,
@@ -52,7 +101,7 @@ export default function MinhasTarefas() {
         clientes,
         contratos,
       }),
-    [responsavelId, user?.id, demandas, cards, planejamento, documentacao, clientes, contratos],
+    [responsavelId, user?.id, scopeResp, scopeAuth, demandas, cards, planejamento, documentacao, clientes, contratos],
   );
 
   const tarefasFiltradas = useMemo(() => {
@@ -81,7 +130,6 @@ export default function MinhasTarefas() {
         const fimT = fim?.getTime() ?? null;
 
         if (isFuturo) {
-          // Inclui tudo até "fim", trazendo também atrasadas pendentes
           if (fimT !== null && pTime > fimT) return false;
           if (iniT !== null && pTime < iniT && t.status !== "atrasado") return false;
         } else if (isPassado || isCustom) {
@@ -107,20 +155,63 @@ export default function MinhasTarefas() {
     [todasTarefas],
   );
 
+  const responsaveisOrdenados = useMemo(
+    () => [...responsaveis].sort((a, b) => a.nome.localeCompare(b.nome)),
+    [responsaveis],
+  );
+
+  const responsavelSelecionado = useMemo(() => {
+    if (visualizacao === "minhas" || visualizacao === "todos") return null;
+    return responsaveis.find((r) => r.id === visualizacao) ?? null;
+  }, [visualizacao, responsaveis]);
+
+  const subtitulo = (() => {
+    if (!isAdmin || visualizacao === "minhas") {
+      return responsavel
+        ? <>Painel individual de <strong>{responsavel.nome}</strong> — apenas tarefas atribuídas a você</>
+        : "Suas tarefas em todos os clientes";
+    }
+    if (visualizacao === "todos") {
+      return <>Visão administrativa — tarefas de <strong>todos os usuários</strong></>;
+    }
+    return <>Visualizando tarefas de <strong>{responsavelSelecionado?.nome ?? "—"}</strong></>;
+  })();
+
+  const mostrarColunaResponsavel = isAdmin && visualizacao !== "minhas";
+
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold leading-tight">Minhas Tarefas</h1>
-          <p className="text-xs text-muted-foreground">
-            {responsavel
-              ? <>Painel individual de <strong>{responsavel.nome}</strong> — apenas tarefas atribuídas a você</>
-              : "Suas tarefas em todos os clientes"}
-          </p>
+          <p className="text-xs text-muted-foreground">{subtitulo}</p>
         </div>
+
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <Select value={visualizacao} onValueChange={(v) => setVisualizacao(v)}>
+              <SelectTrigger className="h-8 w-[240px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minhas">Minhas tarefas</SelectItem>
+                <SelectItem value="todos">Todos os usuários</SelectItem>
+                {responsaveisOrdenados.length > 0 && (
+                  <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Por responsável
+                  </div>
+                )}
+                {responsaveisOrdenados.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </header>
 
-      {!responsavelId && (
+      {!responsavelId && (!isAdmin || visualizacao === "minhas") && (
         <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
           Seu usuário ainda não está vinculado a um responsável da equipe. Peça a um administrador
           para fazer o vínculo em <strong>Configurações → Equipe & Acessos</strong>.
@@ -146,6 +237,7 @@ export default function MinhasTarefas() {
       <MinhasTarefasTabela
         tasks={tarefasFiltradas}
         onConcluir={(t) => setTaskAlvo(t)}
+        mostrarResponsavel={mostrarColunaResponsavel}
       />
 
       <ConcluirTarefaDialog
