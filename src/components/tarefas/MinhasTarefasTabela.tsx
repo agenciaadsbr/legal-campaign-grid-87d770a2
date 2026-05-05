@@ -82,6 +82,13 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
                   )}
                 >
                   <TableCell className="font-medium text-xs">{t.cliente_nome}</TableCell>
+                  {mostrarResponsavel && (
+                    <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">
+                      {t.responsaveis_ids.length > 0
+                        ? t.responsaveis_ids.map((id) => respMap.get(id) ?? "—").join(", ")
+                        : "—"}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="flex items-center gap-2 min-w-0">
                       <PrioridadeIcons task={t} />
