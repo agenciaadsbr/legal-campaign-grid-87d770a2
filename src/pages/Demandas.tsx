@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Zap } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useDemandas, useDemandasBootstrap, useDemandasStore, Demanda, getResponsaveisIds } from "@/store/demandas";
 import { useCRM, useCRMBootstrap } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
