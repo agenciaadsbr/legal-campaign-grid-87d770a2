@@ -1,33 +1,33 @@
-# Lote sempre salva como 1 item único
+## Aumentar altura dos cards e adicionar scroll interno na descrição
 
-## Problema
+Referência: imagem do usuário (cards ocupando praticamente toda a altura útil da tela, ~700-800px), em vez dos atuais ~420px.
 
-Hoje no diálogo "Adicionar em lote" das abas globais, o modo "Lista de itens" usa o `parseLoteTexto` para dividir o texto colado em N itens (no exemplo da tela: 3 itens detectados → 3 registros criados). O usuário quer que **cada lote adicionado gere apenas 1 item**, sem split.
+### Arquivo afetado
+`src/components/configuracoes/DocumentosGlobaisManager.tsx`
 
-## O que muda
+### Mudanças
 
-### `src/components/configuracoes/DocumentosGlobaisManager.tsx` — `DocumentoGlobalLoteDialog`
+**1. Container do grid de itens (linha 477)**
+Trocar `max-h-[420px]` por uma altura grande baseada em viewport para que cada card de bloco fique alto como no desenho vermelho:
 
-1. **Lógica `submit` (modo lista)**: substituir o loop que cria N itens por uma única chamada `create()`:
-   - `descricao` = texto colado integral (preserva exatamente como o usuário colou)
-   - `titulo` = título do primeiro item detectado pelo parser (ou `TITULO_MENSAGEM_PADRAO[bloco]` como fallback), truncado a 200 chars
-   - `url`, `login`, `senha` = do primeiro item detectado (se houver)
-   - `tipo` = valor selecionado no select
-   - Demais campos (escopo, bloco, categoria, aplicar_automatico, permissao_acesso, ativo) iguais à lógica atual
-   - Mantém check anti-duplicação por título dentro do mesmo escopo+bloco
-   - Mantém guarda anti-clique-duplo (`if (salvando) return`)
+- De: `max-h-[420px] overflow-y-auto`
+- Para: `max-h-[calc(100vh-320px)] min-h-[480px] overflow-y-auto`
 
-2. **UI**:
-   - Remover o badge "N item(ns) detectado(s)" (não faz mais sentido — sempre é 1)
-   - Botão muda de `Adicionar todos (N)` para `Adicionar` (no modo lista) e continua `Salvar mensagem` no modo mensagem
-   - `disabled` do botão passa a depender só de `texto.trim()` (não mais de `itensDetectados.length`)
+Isso faz o card crescer até quase o final da tela (mantendo espaço para header/abas) e garante uma altura mínima confortável em telas menores.
 
-3. **Modo "Mensagem completa"** continua exatamente como está (já era 1 item).
+**2. Scroll interno na descrição do `ItemGlobalCard` (linhas 669-673)**
+Hoje a descrição usa `line-clamp-2` (corta em 2 linhas). Para permitir rolar e ler todo o texto colado em lote dentro do próprio card do item:
 
-### `public/version.json`
+- Remover `line-clamp-2`.
+- Envolver o texto em um bloco com altura máxima e scroll vertical próprio:
+  - `max-h-40 overflow-y-auto pr-1`
+  - `whitespace-pre-wrap break-words` (preserva quebras de linha do conteúdo colado em lote)
+  - Mesma estilização fina de scrollbar já usada no grid (`[&::-webkit-scrollbar]:w-1.5` etc.) para manter consistência visual com o tema escuro/claro.
 
-Bump do timestamp.
+**3. Bump de versão**
+Atualizar `public/version.json` com novo timestamp para forçar refresh do cliente.
 
-## Resultado
-
-Cada clique em "Adicionar" cria **exatamente 1** item no bloco, independente de quantas URLs, "Login:"/"Senha:" ou linhas em branco existam no texto colado. O conteúdo completo fica preservado no campo descrição do item criado.
+### Resultado esperado
+- Cada bloco (Acessos, Links, Reuniões, Materiais, Documentos) ocupa altura semelhante à dos retângulos vermelhos da imagem.
+- Dentro de cada item, o texto inserido em lote fica totalmente acessível via barra de rolagem interna do card, sem ser truncado em 2 linhas.
+- Tokens semânticos preservados (sem cores hardcoded).

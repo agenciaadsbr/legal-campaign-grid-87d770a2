@@ -474,7 +474,7 @@ export function DocumentosGlobaisManager() {
                             ) : (
                               <div
                                 className={cn(
-                                  "grid grid-cols-1 gap-2 max-h-[420px] overflow-y-auto pr-1",
+                                  "grid grid-cols-1 gap-2 max-h-[calc(100vh-320px)] min-h-[480px] overflow-y-auto pr-1",
                                   "[&::-webkit-scrollbar]:w-1.5",
                                   "[&::-webkit-scrollbar-track]:bg-transparent",
                                   "[&::-webkit-scrollbar-thumb]:bg-border",
@@ -667,7 +667,16 @@ function ItemGlobalCard({
               )}
             </div>
             {item.descricao && (
-              <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+              <div
+                className={cn(
+                  "text-[11px] text-muted-foreground mt-1 max-h-40 overflow-y-auto pr-1 whitespace-pre-wrap break-words",
+                  "[&::-webkit-scrollbar]:w-1.5",
+                  "[&::-webkit-scrollbar-track]:bg-transparent",
+                  "[&::-webkit-scrollbar-thumb]:bg-border",
+                  "[&::-webkit-scrollbar-thumb]:rounded-full",
+                  "hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
+                )}
+              >
                 {item.descricao}
               </div>
             )}
