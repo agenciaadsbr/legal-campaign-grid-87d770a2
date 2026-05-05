@@ -1,88 +1,23 @@
 ## Objetivo
 
-Atualizar a aba **Documentos** das Configurações ("Documentos da empresa") para usar o **mesmo padrão visual e de UX** do bloco "Documentação" do **Projeto Completo** (cards por bloco, collapsible, busca, filtro por bloco, contadores, "Adicionar em lote"), mantendo:
+Fazer com que a aba **"Documentos padrão para clientes"** sempre exiba os 5 blocos colapsáveis (Acessos, Links importantes, Reuniões, Materiais enviados ao cliente, Documentos), exatamente como a aba **"Documentos internos da empresa"** já exibe — inclusive quando ainda não há nenhum documento cadastrado.
 
-- O **propósito atual** dos dois escopos:
-  - **Documentos padrão para clientes** → continuam sendo replicados nos clientes (via "Aplicar automaticamente" / botão "Aplicar padrão" na aba Documentação do cliente).
-  - **Documentos internos da empresa** → uso interno, **restritos a administradores** (aba e dados ficam visíveis apenas para `isAdmin`).
+## Causa atual
 
-## O que muda visualmente
+Em `src/components/configuracoes/DocumentosGlobaisManager.tsx` (linhas 215–221), há um early-return: quando `filtrados.length === 0`, a aba renderiza apenas a mensagem "Nenhum documento … encontrado com os filtros atuais", em vez da grade de blocos. Como a aba "padrão para clientes" começa sem itens, a grade nunca aparece. A aba "interno" mostra os blocos só porque já tem 1 item de bootstrap em "Acessos".
 
-Hoje a aba mostra uma **lista vertical** simples de cards. Vai virar uma **grade de blocos** (Acessos, Links, Reuniões, Materiais, Documentos), cada um com:
+## Mudanças
 
-- Cabeçalho colapsável com ícone + título do bloco + contador (badge).
-- Botão "Adicionar em lote".
-- Lista interna de itens com ações (editar, duplicar, ativar/desativar, excluir, mover ↑/↓).
-- Mesmo estilo de cards e tipografia da `DocumentacaoTab.tsx`.
+### 1. `src/components/configuracoes/DocumentosGlobaisManager.tsx`
 
-A toolbar superior ganha:
+- **Remover o early-return** de "Nenhum documento encontrado". A grade dos 5 blocos passa a renderizar sempre.
+- Cada bloco já tem internamente o estado vazio próprio ("Nenhum item neste bloco.") + botão "Adicionar neste bloco", então o usuário continua tendo feedback claro quando não houver itens.
+- **Manter** um aviso discreto apenas quando houver filtros ativos (busca/bloco/categoria) e nenhum item bater — exibido como uma faixa fina acima da grade, sem esconder os blocos. Quando não houver filtros, nada é exibido (a própria grade vazia comunica o estado).
 
-- Busca por título/descrição/URL.
-- Filtro "Todos os blocos" + "Categoria".
-- Botão "+ Adicionar" que abre primeiro um seletor de bloco (igual ao Projeto Completo) e depois o `DocumentoGlobalDialog`.
+### 2. `public/version.json`
 
-```text
-[Tabs: Padrão p/ clientes | Internos da empresa (só admin)]
-[🔍 Buscar...] [Bloco ▼] [Categoria ▼]                [+ Adicionar]
+- Bump do timestamp para invalidar cache.
 
-┌── 🔑 Acessos (3) ─────┐ ┌── 🔗 Links (5) ──────┐ ┌── 🎥 Reuniões (1) ──┐ ┌── 📤 Materiais (2) ──┐
-│ + Adicionar em lote   │ │ + Adicionar em lote  │ │ + Adicionar em lote │ │ + Adicionar em lote  │
-│ • item ...            │ │ • item ...           │ │ • item ...          │ │ • item ...           │
-└───────────────────────┘ └──────────────────────┘ └─────────────────────┘ └──────────────────────┘
-┌── 📄 Documentos (4) ──┐
-│ ...                    │
-└────────────────────────┘
-```
+## Resultado visual
 
-## Restrição de acesso (internos só admin)
-
-- A aba "Documentos internos da empresa" só é renderizada se `useAuth().isAdmin === true`.
-- Se um não-admin estiver com a aba "interno" ativa (ex.: vindo de URL/estado salvo), forçar fallback para "cliente".
-- O `DocumentoGlobalDialog` esconde a opção "Documento interno da empresa" no select de Escopo quando o usuário não é admin.
-- A página `Configuracoes.tsx` já restringe a aba "Documentos" a admin no menu lateral — manter. A restrição interna por escopo é uma camada extra de segurança no front.
-
-> Observação de segurança: a separação real continuará dependendo das policies da tabela `documentos_globais` no Supabase. O front oculta, mas se for preciso reforçar no banco, é um passo separado (posso propor depois se ainda não houver policy "interno = admin").
-
-## Comportamento mantido (sem regressão)
-
-- Escopo `cliente`:
-  - Flag "Aplicar automaticamente em novos clientes" continua existindo no diálogo.
-  - O botão "Aplicar padrão" da `DocumentacaoTab` do cliente continua puxando esses itens via `applyGlobalDefaults(clienteId)`.
-- Escopo `interno`:
-  - Não é replicado em clientes (já é o comportamento da store).
-  - Continua tendo o campo "Permissão de acesso" (todos / admin) dentro do escopo interno.
-- Reordenar (`reorder`), duplicar, ativar/desativar e excluir continuam funcionando igual (mesma store `useDocumentosGlobais`).
-
-## Arquivos a editar
-
-1. **`src/components/configuracoes/DocumentosGlobaisManager.tsx`** (reescrita do layout):
-   - Substituir `ListaDocumentos` vertical por uma grade de blocos no estilo `DocumentacaoTab`.
-   - Agrupar `filtrados` por `bloco` (`DOC_BLOCOS`).
-   - Componente interno `BlocoCard` com header colapsável, contador, botão "Adicionar em lote" e lista de `ItemGlobalCard`.
-   - Componente `ItemGlobalCard` reaproveitando o visual do `ItemCard` da `DocumentacaoTab` (mas usando os campos de `DocumentoGlobal` + badges "Aplica automático", "Inativo", "Somente admin").
-   - Toolbar com busca, filtro de bloco, filtro de categoria e botão "+ Adicionar" → abre `SeletorBlocoDialog` antes do `DocumentoGlobalDialog`.
-   - Esconder `TabsTrigger value="interno"` e `TabsContent value="interno"` quando `!isAdmin`. Forçar `escopo = "cliente"` nesse caso.
-   - Importar `useAuth` para obter `isAdmin`.
-
-2. **`src/components/configuracoes/DocumentoGlobalDialog.tsx`** (ajuste menor):
-   - Receber `bloco` inicial opcional (vindo do seletor) e pré-selecionar.
-   - Esconder a opção `"Documento interno da empresa"` no `Select` de escopo se `!isAdmin`.
-
-3. **`src/pages/Configuracoes.tsx`** — sem mudanças (a aba já está protegida por `isAdmin`).
-
-4. **`public/version.json`** — bump de timestamp.
-
-## Itens fora do escopo
-
-- Não vou criar "Adicionar em lote" funcional novo agora se ele não existir para documentos globais — se necessário, ele entra como um diálogo simples (igual o `DocumentacaoLoteDialog`) que cria N itens no mesmo bloco/escopo. **Confirme se quer "Adicionar em lote" funcional já neste passo** ou se ele pode ficar como botão visível desabilitado/"em breve".
-- Não vou alterar policies do Supabase nessa etapa — apenas a UI esconde/restringe.
-
-## Detalhes técnicos
-
-- `DOC_BLOCOS` e `DOC_BLOCO_LABEL` reutilizados de `@/store/documentacao`.
-- `BLOCO_ICON` (KeyRound, LinkIcon, Video, Send, Files) replicado/local — mesmo mapping de `DocumentacaoTab`.
-- `Collapsible` de `@/components/ui/collapsible`, `Card`/`CardContent`, `Badge`, `Button`, `Input`, `Select` — tudo já no projeto.
-- Tokens semânticos (`bg-card`, `text-foreground`, `border-border`, `text-primary`) — sem cores hex.
-- Reordenar continua via `reorder(id, 'up'|'down')` da store; ordenação é por `ordem` dentro do bloco filtrado (já é o que a store retorna).
-
-Aprovando, eu implemento exatamente isso.
+A aba "Documentos padrão para clientes" passa a abrir já com os 5 cards (Acessos 0, Links importantes 0, Reuniões 0, Materiais enviados ao cliente 0, Documentos 0), idêntica em estrutura à aba "Documentos internos da empresa" da segunda imagem enviada — preservando a regra de propagação automática para clientes (escopo `cliente`) e a restrição de admin para o escopo `interno`.
