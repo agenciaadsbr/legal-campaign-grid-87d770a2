@@ -9,10 +9,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, type LucideIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, CheckSquare, X, type LucideIcon } from "lucide-react";
 import { ProjetoKanban } from "@/components/demandas/ProjetoKanban";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { AvatarStack } from "@/components/AvatarStack";
+import { AtribuirResponsaveisPopover, ModoAtribuicao } from "@/components/demandas/AtribuirResponsaveisPopover";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface Props {
