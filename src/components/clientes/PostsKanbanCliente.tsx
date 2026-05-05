@@ -232,7 +232,7 @@ function CardItem({
           variant="default"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={handleIniciar}
-          className="mt-1.5 w-full h-7 text-xs gapEAR-1.5 gap-1.5"
+          className="mt-1.5 w-full h-7 text-xs gap-1.5"
         >
           <Play className="h-3 w-3" /> Iniciar tarefa
         </Button>
