@@ -45,9 +45,16 @@ export function AreaTab({
   const [filtroSubtipo, setFiltroSubtipo] = useState<string>("todos");
   const [filtroResp, setFiltroResp] = useState<string>("todos");
 
-  // Deep-link: abre o detalhe quando uma demanda inicial é fornecida
+  // Deep-link: abre o detalhe quando uma demanda inicial é fornecida.
+  // Se a demanda inicial veio recém-criada como rascunho ("Sem título"),
+  // marca como rascunho para habilitar auto-foco e descarte se vazia.
   useEffect(() => {
-    if (demandaInicial) setSelecionada(demandaInicial);
+    if (demandaInicial) {
+      setSelecionada(demandaInicial);
+      if (demandaInicial.titulo === "Sem título") {
+        setRascunhoId(demandaInicial.id);
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demandaInicial?.id]);
 
