@@ -249,72 +249,7 @@ export function DocumentosGlobaisManager() {
 
   // ----- Adicionar em lote -----
   const abrirLote = (bloco: DocBloco) => {
-    setLoteTexto("");
     setLoteState({ open: true, bloco });
-  };
-
-  const salvarLote = async () => {
-    if (!loteState.bloco) return;
-    if (loteSalvando) return; // guarda contra cliques duplicados
-    // 1) Quebra em linhas, normaliza e remove duplicatas dentro do próprio lote
-    const linhasUnicas = Array.from(
-      new Set(
-        loteTexto
-          .split(/\r?\n/)
-          .map((t) => t.trim())
-          .filter(Boolean),
-      ),
-    );
-    if (linhasUnicas.length === 0) {
-      toast.error("Informe ao menos um título");
-      return;
-    }
-    const bloco = loteState.bloco;
-    const tipo = TIPO_PADRAO_LOTE[bloco];
-
-    // 2) Remove títulos que já existem no mesmo escopo+bloco (case-insensitive)
-    const jaExistentes = new Set(
-      itens
-        .filter((i) => i.escopo === escopo && (i.bloco as DocBloco) === bloco)
-        .map((i) => i.titulo.trim().toLowerCase()),
-    );
-    const aCriar = linhasUnicas.filter(
-      (t) => !jaExistentes.has(t.toLowerCase()),
-    );
-    const ignorados = linhasUnicas.length - aCriar.length;
-
-    if (aCriar.length === 0) {
-      toast.info("Todos os títulos informados já existem neste bloco");
-      setLoteState({ open: false, bloco: null });
-      setLoteTexto("");
-      return;
-    }
-
-    setLoteSalvando(true);
-    // 3) Cria sequencialmente (await) para evitar corrida com o realtime
-    let criados = 0;
-    for (const titulo of aCriar) {
-      const id = await create({
-        escopo,
-        bloco: bloco as DocGlobalBloco,
-        tipo,
-        titulo,
-        categoria: "Outros",
-        aplicar_automatico: escopo === "cliente",
-        permissao_acesso: escopo === "interno" ? "admin" : "todos",
-        ativo: true,
-      });
-      if (id) criados += 1;
-    }
-    setLoteSalvando(false);
-    setLoteState({ open: false, bloco: null });
-    setLoteTexto("");
-    if (criados > 0) {
-      toast.success(
-        `${criados} item(ns) adicionado(s)` +
-          (ignorados > 0 ? ` · ${ignorados} ignorado(s) (já existiam)` : ""),
-      );
-    }
   };
 
   // ----- Copiar mensagem do bloco -----
