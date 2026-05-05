@@ -80,6 +80,7 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
     updateDemanda,
     addComentario,
     addAnexo,
+    removeAnexo,
     deleteDemanda,
     comentarios,
     historico,
@@ -90,6 +91,10 @@ export function DemandaDetalheDialog({ demanda, onOpenChange }: Props) {
   const [composerImg, setComposerImg] = useState<string | null>(null);
   const composerFileRef = useRef<HTMLInputElement>(null);
   const anexoFileRef = useRef<HTMLInputElement>(null);
+  const [previewAnexo, setPreviewAnexo] = useState<{ url: string; nome: string } | null>(null);
+  const [anexoParaRemover, setAnexoParaRemover] = useState<string | null>(null);
+  const [descricaoLocal, setDescricaoLocal] = useState("");
+  const descricaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cliente = demanda && clientes.find((c) => c.id === demanda.cliente_id);
   const meusComentarios = useMemo(
