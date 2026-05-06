@@ -273,7 +273,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       }
                     }}
                     placeholder="Ex: Criar landing page para campanha de inverno"
-                    className="text-base font-bold border-0 px-0 focus-visible:ring-0 h-auto"
+                    className="text-sm font-bold border-0 px-0 focus-visible:ring-0 h-auto"
                   />
                   <div className="text-xs text-muted-foreground mt-1">
                     {cliente?.nome_cliente ?? "—"} ·{" "}
