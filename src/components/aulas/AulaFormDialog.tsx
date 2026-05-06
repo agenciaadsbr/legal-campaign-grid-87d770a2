@@ -147,11 +147,12 @@ export function AulaFormDialog({ open, onOpenChange, aula }: Props) {
         anexo_nome: anexoNome.trim() || null,
       };
 
+      const sb = supabase as any;
       if (isEdit && aula) {
-        const { error } = await supabase.from("aulas").update(payload).eq("id", aula.id);
+        const { error } = await sb.from("aulas").update(payload).eq("id", aula.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await sb
           .from("aulas")
           .insert({ ...payload, created_by: user?.id ?? null });
         if (error) throw error;

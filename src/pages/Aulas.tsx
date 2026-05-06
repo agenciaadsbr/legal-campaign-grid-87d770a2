@@ -46,7 +46,7 @@ export default function Aulas() {
   const { data: aulas = [], isLoading } = useQuery({
     queryKey: ["aulas"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("aulas")
         .select("*")
         .order("categoria", { ascending: true })
@@ -69,7 +69,7 @@ export default function Aulas() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("aulas").delete().eq("id", id);
+      const { error } = await (supabase as any).from("aulas").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
