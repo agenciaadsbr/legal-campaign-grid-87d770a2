@@ -208,7 +208,7 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
                         </TableRow>
                       );
                     })}
-                  </>
+                  </Fragment>
                 );
               })}
             </TableBody>
