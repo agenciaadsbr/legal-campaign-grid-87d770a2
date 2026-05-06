@@ -198,6 +198,7 @@ interface State {
   moveCard: (cardId: string, novoStatus: StatusCard) => Promise<void>;
   updateCard: (id: string, patch: Partial<Card>) => Promise<void>;
   updatePost: (id: string, patch: Partial<Post>) => Promise<void>;
+  deleteCard: (cardId: string) => Promise<void>;
   iniciarTarefa: (
     cardId: string,
     payload: { responsaveis: string[]; data_agendada?: string | null; titulo?: string; descricao?: string | null; formato?: string | null; qtd_slides?: number | null },
@@ -379,6 +380,10 @@ function mapPost(row: any): Post {
     legenda: row.legenda ?? "",
     anexos: row.anexos ?? [],
     status: row.status,
+    data_agendamento: row.data_agendamento ?? undefined,
+    data_postagem: row.data_postagem ?? undefined,
+    link_post: row.link_post ?? undefined,
+    link_meister: row.link_meister ?? undefined,
     created_at: row.created_at,
   };
 }
@@ -775,7 +780,28 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.legenda !== undefined) dbPatch.legenda = patch.legenda;
     if (patch.status !== undefined) dbPatch.status = patch.status;
     if (patch.anexos !== undefined) dbPatch.anexos = patch.anexos;
+    if (patch.data_agendamento !== undefined) dbPatch.data_agendamento = patch.data_agendamento || null;
+    if (patch.data_postagem !== undefined) dbPatch.data_postagem = patch.data_postagem || null;
+    if (patch.link_post !== undefined) dbPatch.link_post = patch.link_post || null;
+    if (patch.link_meister !== undefined) dbPatch.link_meister = patch.link_meister || null;
     await supabase.from("posts").update(dbPatch).eq("id", id);
+    await get()._loadAll();
+  },
+
+  deleteCard: async (cardId) => {
+    // Apaga comentários dos posts deste card
+    const { data: postRows } = await supabase.from("posts").select("id").eq("card_id", cardId);
+    const postIds = (postRows ?? []).map((p: any) => p.id);
+    if (postIds.length > 0) {
+      await supabase.from("comentarios").delete().in("post_id", postIds);
+    }
+    await supabase.from("posts").delete().eq("card_id", cardId);
+    const { error } = await supabase.from("cards").delete().eq("id", cardId);
+    if (error) {
+      toast.error(`Falha ao excluir tarefa: ${error.message}`);
+      return;
+    }
+    toast.success("Tarefa excluída");
     await get()._loadAll();
   },
 

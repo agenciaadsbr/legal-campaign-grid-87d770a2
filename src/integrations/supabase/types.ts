@@ -905,9 +905,13 @@ export type Database = {
           card_id: string
           comentarios: Json
           created_at: string
+          data_agendamento: string | null
+          data_postagem: string | null
           formato: string | null
           id: string
           legenda: string | null
+          link_meister: string | null
+          link_post: string | null
           status: string
           titulo: string | null
           updated_at: string
@@ -917,9 +921,13 @@ export type Database = {
           card_id: string
           comentarios?: Json
           created_at?: string
+          data_agendamento?: string | null
+          data_postagem?: string | null
           formato?: string | null
           id?: string
           legenda?: string | null
+          link_meister?: string | null
+          link_post?: string | null
           status?: string
           titulo?: string | null
           updated_at?: string
@@ -929,9 +937,13 @@ export type Database = {
           card_id?: string
           comentarios?: Json
           created_at?: string
+          data_agendamento?: string | null
+          data_postagem?: string | null
           formato?: string | null
           id?: string
           legenda?: string | null
+          link_meister?: string | null
+          link_post?: string | null
           status?: string
           titulo?: string | null
           updated_at?: string

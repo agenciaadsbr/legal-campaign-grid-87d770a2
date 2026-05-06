@@ -26,6 +26,7 @@ import {
   FileText,
   CheckCircle2,
   Zap,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -57,8 +58,8 @@ export default function PostDetalhe() {
   const { postId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario, statusPostOptions } = useCRM();
-  const { canWrite } = useAuth();
+  const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario, deleteCard, statusPostOptions } = useCRM();
+  const { canWrite, isAdmin } = useAuth();
   const post = posts.find((p) => p.id === postId);
   const card = post && cards.find((c) => c.id === post.card_id);
 
@@ -155,6 +156,36 @@ export default function PostDetalhe() {
     }
   };
 
+  const copiarLink = async () => {
+    const PUBLISHED_ORIGIN = "https://legal-campaign-grid.lovable.app";
+    const isLovablePreview = /id-preview--.*\.lovable\.app$/.test(window.location.hostname);
+    const origin = isLovablePreview ? PUBLISHED_ORIGIN : window.location.origin;
+    const url = `${origin}/clientes/${card.cliente_id}/posts/${post.id}`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      toast.success("Link da tarefa copiado");
+    } catch {
+      toast.error("Falha ao copiar link");
+    }
+  };
+
+  const excluirTarefa = async () => {
+    const cidLocal = card.cliente_id;
+    await deleteCard(card.id);
+    navigate(`/clientes/${cidLocal}?tab=posts`);
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-3 animate-fade-in">
       <VoltarVisaoGeralButton onClick={voltarParaVisaoGeral} />
@@ -202,6 +233,42 @@ export default function PostDetalhe() {
                   {statusPostOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={copiarLink}
+                title="Copiar link da tarefa"
+                className="shrink-0"
+              >
+                <Link2 className="h-4 w-4" />
+              </Button>
+              {isAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive shrink-0"
+                      title="Excluir tarefa"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Anexos, comentários e o post serão removidos.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={excluirTarefa}>Excluir</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
         </CardHeader>
