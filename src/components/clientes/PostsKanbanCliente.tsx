@@ -177,7 +177,6 @@ function CardItem({
               onDoubleClick={canWrite && !isPlanejamento && !selectionMode ? startEdit : undefined}
               className={cn(
                 "text-sm font-medium leading-tight line-clamp-2 break-words",
-                isPlaceholderTitulo && isPlanejamento && "text-muted-foreground italic",
                 canWrite && !selectionMode && "cursor-text hover:text-primary transition-colors",
                 selectionMode && "pr-7",
               )}
