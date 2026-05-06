@@ -59,6 +59,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichTextView } from "@/components/RichTextView";
 import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralButton";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Props {
@@ -85,6 +86,27 @@ const isImageUrl = (url: string, nome?: string) => {
   if (url.startsWith("data:image")) return true;
   const n = (nome || url).toLowerCase();
   return /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/.test(n);
+};
+
+const isVideoUrl = (url: string, nome?: string) => {
+  if (url.startsWith("data:video")) return true;
+  const n = (nome || url).toLowerCase();
+  return /\.(mp4|webm|mov|mkv|m4v|avi|ogv)(\?|$)/.test(n);
+};
+
+const sanitizeFileName = (name: string) =>
+  name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+
+/** Extrai o path dentro do bucket "anexos" a partir de uma URL pública do Storage. */
+const extractAnexoStoragePath = (url: string): string | null => {
+  const marker = "/storage/v1/object/public/anexos/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  try {
+    return decodeURIComponent(url.slice(idx + marker.length).split("?")[0]);
+  } catch {
+    return url.slice(idx + marker.length).split("?")[0];
+  }
 };
 
 export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho }: Props) {
@@ -219,20 +241,46 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   const adicionarAnexo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
+    let okCount = 0;
+    const toastId = toast.loading(
+      files.length === 1 ? "Enviando anexo..." : `Enviando ${files.length} anexos...`
+    );
     try {
       for (const f of files) {
-        const url = await fileToDataUrl(f);
+        const safeName = sanitizeFileName(f.name);
+        const path = `demandas/${demanda.id}/${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}-${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from("anexos")
+          .upload(path, f, {
+            contentType: f.type || undefined,
+            upsert: false,
+            cacheControl: "3600",
+          });
+        if (upErr) {
+          console.error("[anexos] upload erro", upErr);
+          toast.error(`Falha ao enviar "${f.name}"`, { description: upErr.message });
+          continue;
+        }
+        const { data: pub } = supabase.storage.from("anexos").getPublicUrl(path);
         await addAnexo({
           demanda_id: demanda.id,
           nome: f.name,
-          url,
+          url: pub.publicUrl,
           mime: f.type || null,
           size: f.size,
         });
+        okCount += 1;
       }
-      toast.success(`${files.length} anexo(s) adicionado(s)`);
-    } catch {
-      toast.error("Falha ao adicionar anexo");
+      if (okCount > 0) {
+        toast.success(`${okCount} anexo(s) adicionado(s)`, { id: toastId });
+      } else {
+        toast.dismiss(toastId);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Falha ao adicionar anexo", { id: toastId });
     }
     e.target.value = "";
   };
@@ -643,6 +691,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                 <div className="flex flex-wrap gap-1.5">
                   {meusAnexos.map((a) => {
                     const img = isImageUrl(a.url, a.nome);
+                    const vid = !img && isVideoUrl(a.url, a.nome);
                     return (
                       <div
                         key={a.id}
@@ -660,6 +709,26 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                               alt={a.nome}
                               className="w-full h-full object-cover"
                             />
+                          </button>
+                        ) : vid ? (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewAnexo({ url: a.url, nome: a.nome })}
+                            className="block w-full h-full relative bg-black"
+                            title={a.nome}
+                          >
+                            <video
+                              src={a.url}
+                              preload="metadata"
+                              muted
+                              playsInline
+                              className="w-full h-full object-cover pointer-events-none"
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <span className="h-6 w-6 rounded-full bg-background/80 border border-border flex items-center justify-center">
+                                <span className="block w-0 h-0 border-y-[5px] border-y-transparent border-l-[7px] border-l-foreground ml-[2px]" />
+                              </span>
+                            </span>
                           </button>
                         ) : (
                           <a
@@ -943,11 +1012,20 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                 </div>
               </div>
               <div className="flex items-center justify-center bg-muted/30 rounded">
-                <img
-                  src={previewAnexo.url}
-                  alt={previewAnexo.nome}
-                  className="max-h-[80vh] max-w-full object-contain"
-                />
+                {isVideoUrl(previewAnexo.url, previewAnexo.nome) ? (
+                  <video
+                    src={previewAnexo.url}
+                    controls
+                    autoPlay
+                    className="max-h-[80vh] max-w-full"
+                  />
+                ) : (
+                  <img
+                    src={previewAnexo.url}
+                    alt={previewAnexo.nome}
+                    className="max-h-[80vh] max-w-full object-contain"
+                  />
+                )}
               </div>
             </div>
           )}
