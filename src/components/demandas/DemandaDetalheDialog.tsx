@@ -237,7 +237,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-4 md:p-5">
+      <DialogContent className="max-w-2xl w-[92vw] max-h-[78vh] overflow-y-auto p-4">
         <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
           <div className="mb-2">
@@ -245,7 +245,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           </div>
           {/* CARD 1 — Informações da Demanda */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">
@@ -369,7 +369,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-3">
               {/* Categoria · Subtipo · Prioridade */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
