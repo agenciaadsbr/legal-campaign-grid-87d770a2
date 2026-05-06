@@ -1,67 +1,69 @@
 ## Problema
 
-Após usar **"Selecionar cards" → "Iniciar tarefa"**, os cards (que agora estão na coluna **Criar**) não abrem mais o detalhe ao clicar. A edição individual deixa de funcionar.
+Cliente "Timidati advogados": após "Iniciar tarefa" os 12 cards vão para a coluna **Criar**, mas clicar em qualquer card não abre o detalhe do post.
 
-### Causa raiz em `src/components/clientes/PostsKanbanCliente.tsx`
+Conferi o banco — todos os 12 cards têm `post_id` correspondente em `posts`, então não é dado faltando. O problema é de comportamento de UI.
 
-No componente `CardItem` (linha 192):
+## Causa raiz em `src/components/clientes/PostsKanbanCliente.tsx`
+
+O `CardItem` envolve o `<div>` draggable do dnd-kit dentro de um `<Link>` (linha 185):
 
 ```tsx
-if (!post || selectionMode) return inner;
 return <Link to={`posts/${post.id}`}>{inner}</Link>;
 ```
 
-O card SÓ é envolvido por `<Link>` se `selectionMode === false` **e** o `post` correspondente já existir no estado local. Dois problemas:
+Esse padrão tem dois problemas conhecidos com `@dnd-kit/core`:
 
-1. **Durante o modo seleção** (e durante toda a execução de `iniciarSelecionados`, que é `async`), o card NUNCA tem Link — clicar só alterna seleção. Se o usuário clicar logo após mandar iniciar, nada abre.
-2. **Logo após `iniciarSelecionados`**, `_loadAll()` é chamado para refazer o estado a partir do banco. Durante o re-render, há janelas em que o card foi atualizado (status="Criar") antes do array `posts` ter sido refrescado, então `post` pode resolver para `undefined` em alguns ciclos e cair no ramo `return inner` (sem Link). Combinado com o handler `onClick` da linha 103-111 que faz `preventDefault` no modo seleção, fica preso.
+1. **Native HTML drag dos `<a>`**: tags `<a>` têm `draggable=true` por padrão. O `PointerSensor` do dnd-kit faz `preventDefault()` no `pointerdown` para suprimir esse drag nativo, e isso **cancela o `click` subsequente** do navegador. Resultado: clicar no card "não faz nada".
+2. **Concorrência drag/click**: mesmo com `activationConstraint: { distance: 5 }`, em alguns navegadores o `preventDefault` do pointerdown impede o click. Era intermitente; piorou agora que cards têm `useDraggable` ativo (status "Criar").
 
-Além disso, mesmo já fora do modo seleção, o handler de clique do `<div>` interno (linhas 103-111) ainda está condicional, mas o ramo `selectionMode` continua sendo o último estado vinculado se o componente não rerenderizar com `selectionMode=false` antes do clique.
+Fora do modo seleção isso afeta TODOS os cards. Em "Planejamento" o card era clicado mas o `Link` apontava para um post que existia → funcionava por sorte (sem listeners ativos em alguns ciclos). Após "Iniciar tarefa" os cards passam para "Criar" e ficam plenamente draggable, expondo o bug.
 
 ## Solução
 
-Tornar o card **sempre clicável para abrir detalhes** (independente do modo seleção) e usar o **checkbox** como única superfície de seleção em lote.
+Remover o `<Link>` e navegar programaticamente via `onClick` no `<div>` interno, com `useNavigate`. O dnd-kit já distingue corretamente click (sem mover) de drag (mover ≥5px) via `activationConstraint`, e o click handler só executa se o drag não tiver iniciado.
 
 ### `src/components/clientes/PostsKanbanCliente.tsx` — `CardItem`
 
-1. **Linha 192**: trocar `if (!post || selectionMode) return inner;` por:
+1. **Aceitar `clienteId` como prop** (passado pelo pai que já tem `useParams`), para montar a URL de destino.
+2. **Adicionar `useNavigate`** dentro do componente.
+3. **No `<div>` interno (linha 100)** adicionar:
    ```tsx
-   if (!post) return inner;
-   ```
-   O card vira Link sempre que existir post associado, inclusive em modo seleção.
-
-2. **Linhas 103-111** (`onClick` do `<div>`): remover o handler `onClick` por completo. O clique no corpo passa a propagar normalmente para o `<Link>` pai e abre os detalhes.
-
-3. **Linhas 122-132** (wrapper do `<Checkbox>`): aumentar a área de toque e garantir que o clique no checkbox NÃO navegue:
-   ```tsx
-   <div
-     className="absolute top-1.5 right-1.5 z-10 p-1"
-     onPointerDown={(e) => e.stopPropagation()}
-     onClick={(e) => {
+   onClick={(e) => {
+     if (selectionMode) {
        e.preventDefault();
        e.stopPropagation();
        onToggleSelect?.();
-     }}
-   >
-     <Checkbox checked={!!selected} className="bg-background" />
-   </div>
+       return;
+     }
+     if (!post || !clienteId) return;
+     navigate(`/clientes/${clienteId}/posts/${post.id}`);
+   }}
+   draggable={false}
    ```
+4. **Remover** as linhas 184-185:
+   ```tsx
+   if (!post) return inner;
+   return <Link to={`posts/${post.id}`}>{inner}</Link>;
+   ```
+   E retornar `inner` direto:
+   ```tsx
+   return inner;
+   ```
+5. **Remover o wrapper de checkbox** que tinha `onClick`/`onPointerDown` parando propagação (linhas 112-124) — manter apenas o `<Checkbox>` visual no canto, já que o clique no card todo trata seleção em modo seleção. Manter `onPointerDown` stop só para não iniciar drag a partir do checkbox visualmente.
+6. **Garantir `cursor-pointer`** no card também em modo seleção (e fora), mantendo `cursor-grab` apenas como estado de drag.
+7. No componente pai (`Coluna` e onde `CardItem` é renderizado nas linhas 242-251 e 612), passar `clienteId={clienteId}` para `CardItem`.
 
-4. **Linha 97** (`dragProps`): manter como está — drag-and-drop continua desativado em modo seleção.
+### Resultado esperado
 
-5. Remover a classe `cursor-pointer` aplicada ao card inteiro em modo seleção (linha 115). Manter `cursor-grab` quando fora do modo seleção; em modo seleção o card vira link normal.
-
-### Resultado
-
-- Em modo seleção:
-  - Clicar no **checkbox** (ou na área aumentada ao redor) → marca/desmarca.
-  - Clicar em **qualquer outro lugar** do card → abre detalhe individual.
-  - Botão "Iniciar tarefa (N)" continua iniciando os marcados em lote.
-- Após "Iniciar tarefa": cards na coluna Criar (e em qualquer outra coluna) abrem detalhes normalmente ao clique.
-- Fora do modo seleção: comportamento atual preservado (drag-and-drop + clique abre detalhes).
+- Clicar em qualquer card (em qualquer coluna, dentro ou fora do modo seleção) abre o detalhe do post.
+- Em modo seleção, o clique alterna seleção em vez de abrir.
+- Drag-and-drop continua funcionando fora do modo seleção (movimento ≥5px → drag; clique sem mover → navega).
+- Comportamento idêntico para os 12 cards do Timidati advogados após o "Iniciar tarefa".
 
 ## Não vai mexer
 
-- `iniciarSelecionados`, `podeIniciarSelecionados`, atribuição em lote de responsáveis, "Selecionar todos", "Limpar", "Sair".
-- `src/store/crm.ts`, `PostDetalhe`, `MinhasTarefas`, demais módulos.
-- Drag-and-drop fora do modo seleção, urgência, prazo, paginação.
+- `src/store/crm.ts`, `PostDetalhe`, `MinhasTarefas`.
+- `iniciarSelecionados`, `podeIniciarSelecionados`, atribuição em lote.
+- Drag-and-drop, paginação, urgência, prazo, badges.
+- Demais componentes/módulos.

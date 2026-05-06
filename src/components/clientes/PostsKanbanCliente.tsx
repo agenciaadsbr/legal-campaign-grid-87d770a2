@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useCRM, StatusCard, Card as CardT } from "@/store/crm";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -43,13 +43,16 @@ function CardItem({
   selectionMode,
   selected,
   onToggleSelect,
+  clienteId,
 }: {
   card: CardT;
   onIniciar: (id: string) => void;
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  clienteId?: string;
 }) {
+  const navigate = useNavigate();
   const { responsaveis, posts, updateCard } = useCRM();
   const { canWrite } = useAuth();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
@@ -96,13 +99,29 @@ function CardItem({
 
   const dragProps = selectionMode ? {} : { ...attributes, ...listeners };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (selectionMode) {
+      e.preventDefault();
+      e.stopPropagation();
+      onToggleSelect?.();
+      return;
+    }
+    if (!post || !clienteId) return;
+    const target = e.target as HTMLElement;
+    // Não navegar se clicou em um botão interno
+    if (target.closest("button")) return;
+    navigate(`/clientes/${clienteId}/posts/${post.id}`);
+  };
+
   const inner = (
     <div
       ref={setNodeRef}
       {...dragProps}
+      draggable={false}
+      onClick={handleCardClick}
       className={cn(
-        "group relative bg-card border rounded-lg p-2.5 mb-1.5 hover:border-primary/40 hover:shadow-sm transition-all",
-        !selectionMode && "cursor-grab active:cursor-grabbing",
+        "group relative bg-card border rounded-lg p-2.5 mb-1.5 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer",
+        !selectionMode && "active:cursor-grabbing",
         isUrgent && "border-l-2 border-l-amber-500",
         isAtrasadoStatus && "border-l-2 border-l-red-500",
         isDragging && "opacity-40",
@@ -110,15 +129,7 @@ function CardItem({
       )}
     >
       {selectionMode && (
-        <div
-          className="absolute top-1.5 right-1.5 z-10 p-1"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleSelect?.();
-          }}
-        >
+        <div className="absolute top-1.5 right-1.5 z-10 p-1 pointer-events-none">
           <Checkbox checked={!!selected} className="bg-background" />
         </div>
       )}
@@ -181,8 +192,7 @@ function CardItem({
     </div>
   );
 
-  if (!post) return inner;
-  return <Link to={`posts/${post.id}`}>{inner}</Link>;
+  return inner;
 }
 
 function Coluna({
@@ -194,6 +204,7 @@ function Coluna({
   selectionMode,
   selectedIds,
   onToggleSelect,
+  clienteId,
 }: {
   status: StatusCard;
   cards: CardT[];
@@ -203,6 +214,7 @@ function Coluna({
   selectionMode?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  clienteId?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status, disabled: selectionMode });
   const isAtrasado = status === "Atrasado";
@@ -247,6 +259,7 @@ function Coluna({
             selectionMode={selectionMode}
             selected={selectedIds?.has(c.id)}
             onToggleSelect={() => onToggleSelect?.(c.id)}
+            clienteId={clienteId}
           />
         ))}
       </div>
@@ -603,13 +616,14 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                   return next;
                 })
               }
+              clienteId={clienteId}
             />
           ))}
         </div>
         <DragOverlay>
           {activeId ? (() => {
             const c = cardsCliente.find((x) => x.id === activeId);
-            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} /> : null;
+            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} clienteId={clienteId} /> : null;
           })() : null}
         </DragOverlay>
       </DndContext>
