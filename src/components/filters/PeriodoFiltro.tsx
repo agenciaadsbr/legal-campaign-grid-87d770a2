@@ -117,13 +117,17 @@ export function PeriodoFiltro({ value, onChange, className }: Props) {
           <span className="text-xs">{labelAtual}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[480px] p-0">
-        <div className="grid grid-cols-2 gap-0">
-          <div className="border-r border-border p-2 space-y-3">
+      <PopoverContent
+        align="start"
+        collisionPadding={16}
+        className="p-0 w-[min(560px,calc(100vw-2rem))]"
+      >
+        <div className="flex">
+          <div className="w-[180px] shrink-0 border-r border-border p-2 space-y-2">
             {Object.entries(grupos).map(([grupo, items]) => (
               <div key={grupo}>
                 {grupo !== "—" && (
-                  <div className="px-2 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     {grupo}
                   </div>
                 )}
@@ -141,7 +145,7 @@ export function PeriodoFiltro({ value, onChange, className }: Props) {
                         setOpen(false);
                       }}
                       className={cn(
-                        "text-left text-xs px-2 py-1.5 rounded hover:bg-accent transition-colors",
+                        "text-left text-xs px-2 py-2 rounded hover:bg-accent transition-colors",
                         value.preset === p.value && "bg-accent text-accent-foreground font-medium",
                       )}
                     >
@@ -152,12 +156,13 @@ export function PeriodoFiltro({ value, onChange, className }: Props) {
               </div>
             ))}
           </div>
-          <div className="p-2">
+          <div className="flex-1 min-w-[320px] p-2">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 pb-1">
               Intervalo personalizado
             </div>
             <Calendar
               mode="range"
+              locale={ptBR}
               selected={{
                 from: value.inicio ?? undefined,
                 to: value.fim ?? undefined,
@@ -170,7 +175,7 @@ export function PeriodoFiltro({ value, onChange, className }: Props) {
                 });
               }}
               numberOfMonths={1}
-              className="p-0"
+              className="p-3 pointer-events-auto"
             />
             <div className="flex justify-end gap-2 pt-2">
               <Button
