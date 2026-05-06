@@ -109,9 +109,6 @@ export default function MinhasTarefas() {
     const buscaLower = busca.trim().toLowerCase();
     const ini = periodo.inicio;
     const fim = periodo.fim;
-    const isFuturo = ["hoje", "esta_semana", "prox_7", "prox_14", "prox_30"].includes(periodo.preset);
-    const isPassado = ["ult_7", "ult_14", "ult_30", "mes_passado"].includes(periodo.preset);
-    const isCustom = periodo.preset === "personalizado";
     const periodoAtivo = (ini !== null || fim !== null) && periodo.preset !== "todos";
 
     const filtradas = todasTarefas.filter((t) => {
@@ -129,13 +126,9 @@ export default function MinhasTarefas() {
         const iniT = ini?.getTime() ?? null;
         const fimT = fim?.getTime() ?? null;
 
-        if (isFuturo) {
-          if (fimT !== null && pTime > fimT) return false;
-          if (iniT !== null && pTime < iniT && t.status !== "atrasado") return false;
-        } else if (isPassado || isCustom) {
-          if (iniT !== null && pTime < iniT) return false;
-          if (fimT !== null && pTime > fimT) return false;
-        }
+        // Filtro estrito: tarefa precisa estar dentro do intervalo selecionado.
+        if (iniT !== null && pTime < iniT) return false;
+        if (fimT !== null && pTime > fimT) return false;
       }
       return true;
     });
