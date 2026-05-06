@@ -1,46 +1,46 @@
-## Objetivo
+## Problema identificado
 
-Permitir que **qualquer usuário autenticado** veja e edite **todas as demandas/tarefas** do sistema (incluindo abrir via link compartilhado), mantendo a página **"Minhas Tarefas"** filtrando apenas as tarefas atribuídas ao usuário logado.
+A aba "Posts" do cliente **Timidati advogados** está diferente do padrão do sistema porque os 12 cards no banco foram criados com o título genérico **"Criar Post"** em vez do padrão usado por todos os outros clientes: **"Post Mês X - Semana Y"**.
 
-## Causa raiz
+### Como isso afeta a tela
+O componente `PostsKanbanCliente.tsx` detecta o título "placeholder" via regex `^Post Mês \d+ - Semana \d+$`. Quando o título bate com esse padrão e o card está em "Planejamento", a UI mostra:
+- O texto cinza/itálico "Definir título da tarefa"
+- O botão "Iniciar tarefa" funcionando como esperado
 
-A política RLS atual em `demandas` (`auth_read_demandas`) só libera leitura para:
-- admin, OU
-- criador da demanda, OU
-- usuário presente em `responsaveis_ids` / `responsavel_id`
+Como os cards do Timidati têm título "Criar Post", o regex não bate e a aba aparece "fora do padrão" (mostra literal "Criar Post" em todos os 12 cards, sem o tratamento de placeholder).
 
-Por isso usuários comuns não veem tarefas em que não estão atribuídos — nem pelo link, nem em listas gerais.
+### Diagnóstico
+- Cliente Timidati (`b265e560-abd5-4a0e-9a39-0c3bd1bc16ba`): **12/12 cards** com título "Criar Post", todos em status "Planejamento", `posicao` 0–11.
+- Demais clientes: cards seguem padrão "Post Mês X - Semana Y" (ex.: cliente 44880f3b... mostra "Post Mês 1 - Semana 1" … "Post Mês 2 - Semana 2").
+- Outros clientes têm no máximo 1–2 cards com título customizado, o que é esperado (edições legítimas do usuário).
 
-## Mudanças
+## Correção
 
-### 1. Migração SQL — liberar leitura de demandas para todos autenticados
-
-Substituir a policy `auth_read_demandas` para que qualquer usuário autenticado leia qualquer demanda:
+Migração SQL única para padronizar os 12 cards do Timidati que ainda estão como rascunho ("Planejamento") e cujo título é exatamente "Criar Post":
 
 ```sql
-DROP POLICY IF EXISTS auth_read_demandas ON public.demandas;
-
-CREATE POLICY auth_read_demandas
-  ON public.demandas
-  FOR SELECT
-  TO authenticated
-  USING (true);
+UPDATE public.cards
+SET titulo = 'Post Mês ' || (floor(posicao / 4)::int + 1) || ' - Semana ' || ((posicao % 4) + 1),
+    updated_at = now()
+WHERE cliente_id = 'b265e560-abd5-4a0e-9a39-0c3bd1bc16ba'
+  AND status = 'Planejamento'
+  AND titulo = 'Criar Post';
 ```
 
-Políticas de INSERT/UPDATE/DELETE continuam iguais (já usam `can_write` / admin), então **edição segue restrita a admin/editor** — viewers só leem. Isso atende: "ver/editar todas as tarefas sem restrições" para usuários com permissão de escrita; viewers conseguem visualizar tudo.
+Resultado esperado:
+- posicao 0 → "Post Mês 1 - Semana 1"
+- posicao 1 → "Post Mês 1 - Semana 2"
+- … 
+- posicao 11 → "Post Mês 3 - Semana 4"
 
-### 2. "Minhas Tarefas" — sem alteração funcional
+Após o UPDATE, a aba Posts do Timidati passa a se comportar exatamente como a dos demais clientes (placeholder "Definir título da tarefa", botão "Iniciar tarefa", agrupamento por mês no filtro etc.).
 
-A página `src/pages/MinhasTarefas.tsx` (e `src/lib/minhasTarefas.ts`) já filtra no frontend pelas tarefas do usuário logado. Como agora o RLS retorna todas, o filtro client-side garante que esse módulo continue mostrando apenas as tarefas do próprio usuário. Vou revisar rapidamente o arquivo para confirmar que o filtro é por `responsavel_id` do usuário e não depende de "só veio o que é meu" pelo RLS — se depender, ajusto para filtrar explicitamente.
+## Escopo
 
-### 3. Sem mudanças no componente "Colar link da tarefa"
+- Apenas 1 migração SQL (não há mudança de código).
+- Nenhum outro cliente é afetado (filtro por `cliente_id` específico).
+- Cards já editados manualmente pelo usuário (com outro título) ficam intactos pelo filtro `titulo = 'Criar Post'`.
 
-Continua funcionando como está; apenas deixará de "abrir vazio" porque a demanda passará a ser carregada para qualquer usuário.
+## Investigar a causa raiz (opcional, fora deste fix)
 
-## Considerações de segurança
-
-- Leitura de demandas passa a ser global entre usuários autenticados (decisão explícita do usuário).
-- Edição/exclusão continuam restritas via `can_write` e `has_role(admin)`.
-- Comentários, anexos e histórico de demandas já têm `SELECT USING (true)` para autenticados — coerente com a nova política.
-
-Confirma para eu aplicar?
+Vale checar depois de onde veio o título "Criar Post" para esses cards (provavelmente uma criação manual em lote anterior à padronização). O código atual em `src/store/crm.ts` já gera o título correto ao criar rascunhos, então o problema não deve se repetir para novos clientes.
