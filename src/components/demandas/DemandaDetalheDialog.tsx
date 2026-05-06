@@ -41,7 +41,9 @@ import {
   Smile,
   AtSign,
   Paperclip,
+  Link2,
 } from "lucide-react";
+import { categoriaParaAba } from "@/lib/minhasTarefas";
 import {
   AlertDialog,
   AlertDialogAction,
