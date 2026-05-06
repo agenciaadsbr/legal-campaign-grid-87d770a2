@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { clearResponsavelCache } from "@/hooks/useResponsavelAtual";
+import { clearResponsavelCache } from "@/hooks/responsavelCache";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
