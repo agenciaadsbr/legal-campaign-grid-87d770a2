@@ -34,7 +34,7 @@ export default function MinhasTarefas() {
   useDocumentacaoBootstrap();
 
   const { user, isAdmin } = useAuth();
-  const { responsavel, responsavelId } = useResponsavelAtual();
+  const { responsavel, responsavelId, loading: loadingResp } = useResponsavelAtual();
 
   const clientes = useCRM((s) => s.clientes);
   const cards = useCRM((s) => s.cards);
@@ -211,7 +211,13 @@ export default function MinhasTarefas() {
         )}
       </header>
 
-      {!responsavelId && (!isAdmin || visualizacao === "minhas") && (
+      {loadingResp && !responsavelId && (!isAdmin || visualizacao === "minhas") && (
+        <div className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
+          Carregando suas tarefas…
+        </div>
+      )}
+
+      {!loadingResp && !responsavelId && (!isAdmin || visualizacao === "minhas") && (
         <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
           Seu usuário ainda não está vinculado a um responsável da equipe. Peça a um administrador
           para fazer o vínculo em <strong>Configurações → Equipe & Acessos</strong>.

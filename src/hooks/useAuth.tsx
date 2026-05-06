@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { clearResponsavelCache } from "@/hooks/useResponsavelAtual";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    clearResponsavelCache();
     await supabase.auth.signOut();
   };
 
