@@ -237,14 +237,14 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl w-[92vw] max-h-[94vh] overflow-hidden p-3 gap-2">
+      <DialogContent className="max-w-2xl w-[92vw] max-h-[90vh] overflow-hidden p-3 gap-2 flex flex-col">
         <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
-          <div>
+          <div className="shrink-0">
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
           {/* CARD 1 — Informações da Demanda */}
-          <Card className="flex flex-col min-h-0 overflow-hidden">
+          <Card className="shrink-0 overflow-hidden">
             <CardHeader className="pb-1.5 pt-2.5 px-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
