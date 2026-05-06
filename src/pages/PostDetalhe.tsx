@@ -233,6 +233,42 @@ export default function PostDetalhe() {
                   {statusPostOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={copiarLink}
+                title="Copiar link da tarefa"
+                className="shrink-0"
+              >
+                <Link2 className="h-4 w-4" />
+              </Button>
+              {isAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive shrink-0"
+                      title="Excluir tarefa"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Anexos, comentários e o post serão removidos.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={excluirTarefa}>Excluir</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
         </CardHeader>
