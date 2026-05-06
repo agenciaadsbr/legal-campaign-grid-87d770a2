@@ -237,13 +237,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[1100px] w-[95vw] max-h-[94vh] overflow-hidden p-3 gap-2 grid-rows-[auto_1fr]">
+      <DialogContent className="max-w-2xl w-[92vw] max-h-[94vh] overflow-hidden p-3 gap-2">
         <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
           <div>
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-[1.35fr_1fr] gap-3 min-h-0 overflow-hidden">
           {/* CARD 1 — Informações da Demanda */}
           <Card className="flex flex-col min-h-0 overflow-hidden">
             <CardHeader className="pb-1.5 pt-2.5 px-3">
@@ -370,7 +369,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-2.5 px-3 pb-3 overflow-y-auto min-h-0 flex-1">
+            <CardContent className="space-y-2.5 px-3 pb-3">
 
               {/* Categoria · Subtipo · Prioridade */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -698,8 +697,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           <CardHeader className="pb-1.5 pt-2.5 px-3">
             <CardTitle className="text-sm">Atividade</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 px-3 pb-3 flex-1 min-h-0 flex flex-col">
-            <div className="space-y-2 overflow-auto pr-1 flex-1 min-h-0">
+          <CardContent className="space-y-2 px-3 pb-3">
+            <div className="space-y-2">
               {meusComentarios.length === 0 && (
                 <div className="text-sm text-muted-foreground text-center py-6">
                   Sem comentários ainda
@@ -874,7 +873,6 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             )}
           </CardContent>
         </Card>
-        </div>
         </fieldset>
       </DialogContent>
 
