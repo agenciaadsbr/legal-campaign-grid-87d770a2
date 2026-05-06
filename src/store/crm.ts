@@ -197,6 +197,7 @@ interface State {
 
   moveCard: (cardId: string, novoStatus: StatusCard) => Promise<void>;
   updateCard: (id: string, patch: Partial<Card>) => Promise<void>;
+  deleteCard: (id: string) => Promise<void>;
   updatePost: (id: string, patch: Partial<Post>) => Promise<void>;
   iniciarTarefa: (
     cardId: string,
