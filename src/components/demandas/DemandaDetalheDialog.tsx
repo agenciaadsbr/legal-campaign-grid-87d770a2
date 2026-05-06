@@ -665,10 +665,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
 
               {/* Atividade / Briefing */}
-              <div className="border-t pt-2.5">
-                <Label className="text-xs">Atividade / Briefing</Label>
+              <div className="border-t pt-2">
+                <Label className="text-[11px]">Atividade / Briefing</Label>
                 <Textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Detalhes internos da demanda: contexto, requisitos, referências..."
                   value={descricaoLocal}
                   onChange={(e) => {
@@ -688,7 +688,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       updateDemanda(demanda.id, { descricao: descricaoLocal });
                     }
                   }}
-                  className="mt-1 min-h-[70px] text-sm"
+                  className="mt-1 min-h-[56px] text-xs"
                 />
               </div>
             </CardContent>
