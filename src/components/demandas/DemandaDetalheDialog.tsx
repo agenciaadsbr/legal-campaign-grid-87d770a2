@@ -237,15 +237,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl w-[92vw] max-h-[78vh] overflow-y-auto p-4">
+      <DialogContent className="max-w-[1100px] w-[95vw] max-h-[94vh] overflow-hidden p-3 gap-2 grid-rows-[auto_1fr]">
         <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
-          <div className="mb-2">
+          <div>
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-[1.35fr_1fr] gap-3 min-h-0 overflow-hidden">
           {/* CARD 1 — Informações da Demanda */}
-          <Card>
-            <CardHeader className="pb-2 pt-3 px-4">
+          <Card className="flex flex-col min-h-0 overflow-hidden">
+            <CardHeader className="pb-1.5 pt-2.5 px-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">

@@ -1,63 +1,29 @@
-## Problema
+Vou corrigir o `Detalhe da Demanda` para abrir centralizado, sem barra de rolagem no modal principal e com todos os campos/seções visíveis na viewport atual.
 
-Ao clicar no ícone de "abrir em nova aba" (ExternalLink) em **Minhas Tarefas**, o usuário é levado para `/clientes/:id/projeto?tab=...&demanda=:id`, o que abre o componente `DemandaDetalheDialog`. Esse dialog está hoje com:
+Plano de alteração:
 
-- `max-w-3xl` (768px) — muito largo
-- `max-h-[85vh]` (~85% da altura da viewport) — muito alto
-- `overflow-y-auto` no próprio container — gera rolagem interna em telas padrão
-- Padding herdado do `DialogContent` base (`p-6`) + padding adicional (`p-4 md:p-5`) = espaçamento exagerado
+1. Ajustar o container do modal em `src/components/demandas/DemandaDetalheDialog.tsx`
+   - Remover `overflow-y-auto` e a limitação que cria a barra do `DialogContent`.
+   - Usar altura controlada por viewport (`max-h`/`h` compatível com a tela), mantendo o modal centralizado.
+   - Ajustar largura para um padrão mais confortável sem voltar ao tamanho excessivo.
 
-Resultado: em viewports comuns (1366×768, 1498×861) o formulário ocupa quase toda a tela e ainda precisa rolar.
+2. Compactar o layout sem remover nada
+   - Reduzir paddings, gaps e margens desnecessárias nos cards, cabeçalho, seções, labels e inputs.
+   - Reduzir discretamente tamanhos de fonte onde houver excesso, preservando legibilidade.
+   - Reduzir altura dos campos de data/select/input e do bloco de anexos.
+   - Reduzir a altura do campo `Atividade / Briefing` para caber sem rolagem.
 
-## Correção
+3. Reorganizar visualmente dentro do layout existente
+   - Manter os mesmos campos, seções e funcionalidades: título, urgência, status, excluir, categoria, subtipo, prioridade, datas, responsáveis, anexos, briefing, comentários, composer e histórico.
+   - Usar uma composição mais compacta, provavelmente em duas áreas/colunas em telas desktop, para evitar que todo o conteúdo fique empilhado verticalmente.
+   - Manter comportamento responsivo: em telas menores, se não houver espaço físico suficiente, o layout continuará adaptado sem quebrar campos.
 
-Editar **um único arquivo** — `src/components/demandas/DemandaDetalheDialog.tsx`, linha 240:
+4. Remover barras internas desnecessárias relacionadas ao modal
+   - Eliminar a barra principal do formulário.
+   - Revisar o bloco de comentários (`max-h-80 overflow-auto`) para não exibir uma segunda barra grande dentro do modal no estado padrão; se houver muitos comentários, manter o conteúdo acessível de forma controlada sem afetar o formulário principal.
 
-**Antes:**
-```tsx
-<DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-4 md:p-5">
-```
-
-**Depois:**
-```tsx
-<DialogContent className="max-w-2xl w-[92vw] max-h-[78vh] overflow-y-auto p-4">
-```
-
-Mudanças:
-- `max-w-3xl` → `max-w-2xl` (768px → 672px) + `w-[92vw]` para responsividade em telas menores
-- `max-h-[85vh]` → `max-h-[78vh]` deixa respiro acima/abaixo
-- `p-4 md:p-5` → `p-4` (padding consistente e mais enxuto)
-- `overflow-y-auto` mantido como segurança caso o conteúdo cresça (ainda assim, com layout mais compacto não deverá haver rolagem em fluxos típicos)
-
-Adicionalmente, para garantir compactação interna, reduzir espaçamentos do `CardContent` (linha 372):
-
-**Antes:**
-```tsx
-<CardContent className="space-y-5">
-```
-**Depois:**
-```tsx
-<CardContent className="space-y-3">
-```
-
-E o `CardHeader` (linha 248):
-
-**Antes:**
-```tsx
-<CardHeader className="pb-3">
-```
-**Depois:**
-```tsx
-<CardHeader className="pb-2 pt-3 px-4">
-```
-
-## Resultado esperado
-
-- Dialog abre em ~672px de largura, centralizado, com altura natural ao conteúdo
-- Em viewports a partir de 1366×768 não há rolagem para os campos principais
-- Mantém responsividade em mobile via `w-[92vw]`
-- Nenhuma mudança de comportamento, apenas dimensionamento
-
-## Arquivo afetado
-
-- `src/components/demandas/DemandaDetalheDialog.tsx` (3 pequenas alterações de className)
+Resultado esperado:
+- O formulário abre centralizado.
+- A barra de rolagem principal do `Detalhe da Demanda` desaparece.
+- Todos os campos e seções continuam existindo e visíveis.
+- O modal fica compacto o suficiente para a viewport mostrada pelo usuário, sem remover funcionalidades ou alterar o fluxo existente.
