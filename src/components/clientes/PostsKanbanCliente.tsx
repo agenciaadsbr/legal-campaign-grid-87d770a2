@@ -43,13 +43,16 @@ function CardItem({
   selectionMode,
   selected,
   onToggleSelect,
+  clienteId,
 }: {
   card: CardT;
   onIniciar: (id: string) => void;
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  clienteId?: string;
 }) {
+  const navigate = useNavigate();
   const { responsaveis, posts, updateCard } = useCRM();
   const { canWrite } = useAuth();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
