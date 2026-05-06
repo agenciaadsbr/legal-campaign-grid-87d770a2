@@ -224,22 +224,10 @@ function CardItem({
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
 
-      {isPlanejamento && canWrite && !selectionMode ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="default"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={handleIniciar}
-          className="mt-1.5 w-full h-7 text-xs gap-1.5"
-        >
-          <Play className="h-3 w-3" /> Iniciar tarefa
-        </Button>
-      ) : (
-        <div className="mt-1.5 flex justify-end">
-          <StatusBadge status={card.status_card} />
-        </div>
-      )}
+      <div className="mt-1.5 flex justify-end">
+        <StatusBadge status={card.status_card} />
+      </div>
+
     </div>
   );
 
