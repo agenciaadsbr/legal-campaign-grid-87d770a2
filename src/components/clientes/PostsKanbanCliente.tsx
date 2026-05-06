@@ -181,7 +181,7 @@ function CardItem({
     </div>
   );
 
-  if (!post || selectionMode) return inner;
+  if (!post) return inner;
   return <Link to={`posts/${post.id}`}>{inner}</Link>;
 }
 
