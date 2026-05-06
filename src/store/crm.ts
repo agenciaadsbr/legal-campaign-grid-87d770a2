@@ -560,7 +560,7 @@ export const useCRM = create<State>()((set, get) => ({
       for (let s = 1; s <= 4; s++) {
         cardsPayload.push({
           cliente_id: inserted.id,
-          titulo: `Post Mês ${m} - Semana ${s}`,
+          titulo: "Criar Post",
           status: statusInicial,
           posicao: (m - 1) * 4 + (s - 1),
           responsaveis_ids: data.responsaveis ?? [],
