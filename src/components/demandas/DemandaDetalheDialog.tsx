@@ -238,6 +238,14 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     e.target.value = "";
   };
 
+  const MAX_ANEXO_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
+  const formatBytes = (b: number) => {
+    if (b >= 1024 ** 3) return `${(b / 1024 ** 3).toFixed(2)} GB`;
+    if (b >= 1024 ** 2) return `${(b / 1024 ** 2).toFixed(1)} MB`;
+    if (b >= 1024) return `${(b / 1024).toFixed(0)} KB`;
+    return `${b} B`;
+  };
+
   const adicionarAnexo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
@@ -247,6 +255,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     );
     try {
       for (const f of files) {
+        if (f.size > MAX_ANEXO_BYTES) {
+          toast.error(`"${f.name}" é muito grande`, {
+            description: `Tamanho ${formatBytes(f.size)} excede o limite de 5 GB por arquivo.`,
+          });
+          continue;
+        }
         const safeName = sanitizeFileName(f.name);
         const path = `demandas/${demanda.id}/${Date.now()}-${Math.random()
           .toString(36)
@@ -260,7 +274,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           });
         if (upErr) {
           console.error("[anexos] upload erro", upErr);
-          toast.error(`Falha ao enviar "${f.name}"`, { description: upErr.message });
+          const msg = (upErr.message || "").toLowerCase();
+          const isSize =
+            msg.includes("exceeded the maximum allowed size") ||
+            msg.includes("payload too large") ||
+            msg.includes("maximum allowed size");
+          toast.error(`Falha ao enviar "${f.name}"`, {
+            description: isSize
+              ? `Arquivo de ${formatBytes(f.size)} excede o limite do servidor. Se o problema continuar, faça upgrade do plano Supabase para liberar uploads maiores.`
+              : upErr.message,
+          });
           continue;
         }
         const { data: pub } = supabase.storage.from("anexos").getPublicUrl(path);
