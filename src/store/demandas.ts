@@ -320,6 +320,7 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async removeAnexo(id) {
+    const anexo = get().anexos.find((a) => a.id === id);
     const { error } = await supabase
       .from("anexos_demandas")
       .delete()
@@ -327,6 +328,22 @@ export const useDemandasStore = create<State>((set, get) => ({
     if (error) {
       toast.error("Erro ao remover anexo", { description: error.message });
       return;
+    }
+    // Best-effort: remove o arquivo do Storage se a URL apontar para o bucket "anexos".
+    if (anexo?.url) {
+      const marker = "/storage/v1/object/public/anexos/";
+      const idx = anexo.url.indexOf(marker);
+      if (idx !== -1) {
+        let path = anexo.url.slice(idx + marker.length).split("?")[0];
+        try {
+          path = decodeURIComponent(path);
+        } catch {
+          // ignore
+        }
+        supabase.storage.from("anexos").remove([path]).catch(() => {
+          /* ignore erros de cleanup */
+        });
+      }
     }
     set({ anexos: get().anexos.filter((a) => a.id !== id) });
     toast.success("Anexo removido");
