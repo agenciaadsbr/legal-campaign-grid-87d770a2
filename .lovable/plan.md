@@ -1,100 +1,63 @@
-# Diagnóstico — por que usuários não-admin não veem suas tarefas
+## Problema
 
-## Causa raiz (bug crítico de RLS)
+Ao clicar no ícone de "abrir em nova aba" (ExternalLink) em **Minhas Tarefas**, o usuário é levado para `/clientes/:id/projeto?tab=...&demanda=:id`, o que abre o componente `DemandaDetalheDialog`. Esse dialog está hoje com:
 
-A política `SELECT` da tabela `public.demandas` está comparando o **id do usuário autenticado** (`auth.uid()`) diretamente com colunas que armazenam o **id do responsável** (`responsaveis.id`):
+- `max-w-3xl` (768px) — muito largo
+- `max-h-[85vh]` (~85% da altura da viewport) — muito alto
+- `overflow-y-auto` no próprio container — gera rolagem interna em telas padrão
+- Padding herdado do `DialogContent` base (`p-6`) + padding adicional (`p-4 md:p-5`) = espaçamento exagerado
 
-```sql
-USING (
-  has_role(auth.uid(), 'admin')
-  OR criado_por      = auth.uid()
-  OR auth.uid() = ANY(responsaveis_ids)   --  comparação errada
-  OR responsavel_id  = auth.uid()         --  comparação errada
-)
+Resultado: em viewports comuns (1366×768, 1498×861) o formulário ocupa quase toda a tela e ainda precisa rolar.
+
+## Correção
+
+Editar **um único arquivo** — `src/components/demandas/DemandaDetalheDialog.tsx`, linha 240:
+
+**Antes:**
+```tsx
+<DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-4 md:p-5">
 ```
 
-No projeto, `auth.uid()` ≠ `responsaveis.id`. O vínculo correto é:
-
-```text
-auth.users.id  ──►  profiles.id
-                    profiles.responsavel_id  ──►  responsaveis.id  ──►  demandas.responsaveis_ids
+**Depois:**
+```tsx
+<DialogContent className="max-w-2xl w-[92vw] max-h-[78vh] overflow-y-auto p-4">
 ```
 
-Conferi no banco: todos os 11 usuários têm `profiles.responsavel_id` corretamente preenchido, e existem demandas atribuídas a eles. Mesmo assim a RLS rejeita, porque está comparando UUIDs de tabelas diferentes. Por isso, um editor (ex.: Robson) só consegue ler as demandas que ele mesmo criou, nunca as que foram atribuídas a ele por outra pessoa.
+Mudanças:
+- `max-w-3xl` → `max-w-2xl` (768px → 672px) + `w-[92vw]` para responsividade em telas menores
+- `max-h-[85vh]` → `max-h-[78vh]` deixa respiro acima/abaixo
+- `p-4 md:p-5` → `p-4` (padding consistente e mais enxuto)
+- `overflow-y-auto` mantido como segurança caso o conteúdo cresça (ainda assim, com layout mais compacto não deverá haver rolagem em fluxos típicos)
 
-## Causa secundária (UX/consistência)
+Adicionalmente, para garantir compactação interna, reduzir espaçamentos do `CardContent` (linha 372):
 
-- `useResponsavelAtual` retorna `responsavelId = null` enquanto a query a `profiles` ainda não respondeu. O `MinhasTarefas.tsx` já recalcula via `useMemo`, mas o estado de loading não é exibido — o usuário vê "0 tarefas" por uma fração de segundo e pode confundir com o bug.
-- O `cache` em memória de `useResponsavelAtual` é indexado por `auth.uid` (ok), mas não invalida ao trocar de usuário na mesma aba (improvável em produção, mas vale limpar no `signOut`).
-- Posts/Cards e Planejamento já têm RLS permissiva (todos autenticados leem), então a filtragem por responsável é feita só no front. Isso continua funcionando — o problema afeta principalmente **demandas**.
-
-# Plano de correção
-
-## 1. Migration SQL — corrigir a política `auth_read_demandas`
-
-Criar uma função `SECURITY DEFINER` que resolve o `responsavel_id` do usuário autenticado, e reescrever a política usando essa função. Isso evita recursão e mantém performance.
-
-```sql
--- Helper: retorna o responsavel_id vinculado ao auth.uid()
-create or replace function public.current_responsavel_id()
-returns uuid
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select responsavel_id
-    from public.profiles
-   where id = auth.uid()
-   limit 1
-$$;
-
--- Política antiga (errada)
-drop policy if exists auth_read_demandas on public.demandas;
-
--- Nova política (correta)
-create policy auth_read_demandas on public.demandas
-for select
-to authenticated
-using (
-  public.has_role(auth.uid(), 'admin')
-  or criado_por = auth.uid()
-  or public.current_responsavel_id() = any(responsaveis_ids)
-  or public.current_responsavel_id() = responsavel_id
-);
+**Antes:**
+```tsx
+<CardContent className="space-y-5">
+```
+**Depois:**
+```tsx
+<CardContent className="space-y-3">
 ```
 
-Tabelas relacionadas (`comentarios_demandas`, `anexos_demandas`, `historico_demandas`) já têm SELECT aberto a qualquer autenticado (`USING true`), então não precisam de mudança — quem não vê a demanda também não consegue agir nela porque a UI esconde.
+E o `CardHeader` (linha 248):
 
-## 2. Verificar consistência de outras tabelas
+**Antes:**
+```tsx
+<CardHeader className="pb-3">
+```
+**Depois:**
+```tsx
+<CardHeader className="pb-2 pt-3 px-4">
+```
 
-- `cards`, `posts`, `clientes`, `cliente_planejamento_itens`, `cliente_documentacao`, `contratos`, `responsaveis`, `profiles` (próprio): já permitem leitura ao autenticado adequado. Sem mudança.
-- `demandas` é a única com filtro por usuário no SELECT — e é exatamente onde o bug está.
+## Resultado esperado
 
-## 3. Pequenos ajustes no front (qualidade)
+- Dialog abre em ~672px de largura, centralizado, com altura natural ao conteúdo
+- Em viewports a partir de 1366×768 não há rolagem para os campos principais
+- Mantém responsividade em mobile via `w-[92vw]`
+- Nenhuma mudança de comportamento, apenas dimensionamento
 
-- `src/pages/MinhasTarefas.tsx`: mostrar um skeleton/aviso enquanto `useResponsavelAtual().loading === true` E `responsavelId` ainda for `null`, em vez de já renderizar a tabela vazia.
-- `src/hooks/useResponsavelAtual.ts`: limpar o `cache` em `signOut` (exportar uma função `clearResponsavelCache` chamada em `useAuth.signOut`) para evitar ID antigo em troca de usuário.
+## Arquivo afetado
 
-Nenhuma alteração de schema, nenhuma quebra de tipos.
-
-## 4. Validação após aplicar
-
-1. Logar como `robsonlobato31@gmail.com` (editor) → "Minhas Tarefas" deve listar as 4 demandas atribuídas + ~444 grupos de posts dos clientes onde ele é responsável.
-2. Logar como `agenciaadsbr@gmail.com` (admin) → comportamento permanece idêntico (vê tudo, e o seletor "Todos os usuários / por responsável" continua funcional).
-3. Conferir no Network que `GET /rest/v1/demandas` retorna as linhas esperadas (e não mais um array vazio) para o editor.
-
-# Detalhes técnicos
-
-- A função `current_responsavel_id()` é `STABLE SECURITY DEFINER` e fixa `search_path = public`, seguindo o mesmo padrão de `has_role`, evitando recursão de RLS (a função lê `profiles` com privilégios elevados, sem disparar a policy `users_read_own_profile`).
-- A política não usa subquery direta na tabela `demandas`, então não há risco de "infinite recursion".
-- Mantemos `criado_por = auth.uid()` para não quebrar quem criou a demanda mas ainda não foi adicionado como responsável.
-- Não há mudança nas políticas `INSERT/UPDATE/DELETE` (continuam usando `can_write` / `has_role(admin)`).
-
-# Arquivos previstos
-
-- Nova migration SQL (corrigir política + criar função helper).
-- `src/hooks/useResponsavelAtual.ts` — exportar `clearResponsavelCache`.
-- `src/hooks/useAuth.tsx` — chamar `clearResponsavelCache` no `signOut`.
-- `src/pages/MinhasTarefas.tsx` — exibir estado de carregamento quando `responsavelId` ainda não resolveu.
-- `public/version.json` — bump.
+- `src/components/demandas/DemandaDetalheDialog.tsx` (3 pequenas alterações de className)
