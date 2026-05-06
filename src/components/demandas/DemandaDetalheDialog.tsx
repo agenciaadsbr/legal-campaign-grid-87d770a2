@@ -369,10 +369,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-2.5 px-3 pb-3">
+            <CardContent className="space-y-2 px-3 pb-2.5">
 
               {/* Categoria · Subtipo · Prioridade */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>
                   <Label className="text-xs">Categoria</Label>
                   <Select
