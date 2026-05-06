@@ -145,12 +145,12 @@ export default function MinhasTarefas() {
   }, [todasTarefas, filtros]);
 
   const kpis = useMemo(() => {
-    const total = todasTarefas.length;
-    const pendentes = todasTarefas.filter((t) => t.status !== "concluido").length;
-    const atrasadas = todasTarefas.filter((t) => t.status === "atrasado").length;
-    const urgentes = todasTarefas.filter((t) => t.urgente && t.status !== "concluido").length;
+    const total = tarefasFiltradas.length;
+    const pendentes = tarefasFiltradas.filter((t) => t.status !== "concluido").length;
+    const atrasadas = tarefasFiltradas.filter((t) => t.status === "atrasado").length;
+    const urgentes = tarefasFiltradas.filter((t) => t.urgente && t.status !== "concluido").length;
     return { total, pendentes, atrasadas, urgentes };
-  }, [todasTarefas]);
+  }, [tarefasFiltradas]);
 
   const areasDisponiveis = useMemo(
     () => Array.from(new Set(todasTarefas.map((t) => t.area))),
