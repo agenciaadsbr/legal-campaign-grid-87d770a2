@@ -100,19 +100,9 @@ function CardItem({
     <div
       ref={setNodeRef}
       {...dragProps}
-      onClick={
-        selectionMode
-          ? (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleSelect?.();
-            }
-          : undefined
-      }
       className={cn(
         "group relative bg-card border rounded-lg p-2.5 mb-1.5 hover:border-primary/40 hover:shadow-sm transition-all",
         !selectionMode && "cursor-grab active:cursor-grabbing",
-        selectionMode && "cursor-pointer",
         isUrgent && "border-l-2 border-l-amber-500",
         isAtrasadoStatus && "border-l-2 border-l-red-500",
         isDragging && "opacity-40",
@@ -121,8 +111,10 @@ function CardItem({
     >
       {selectionMode && (
         <div
-          className="absolute top-2 right-2 z-10"
+          className="absolute top-1.5 right-1.5 z-10 p-1"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onToggleSelect?.();
           }}
@@ -189,7 +181,7 @@ function CardItem({
     </div>
   );
 
-  if (!post || selectionMode) return inner;
+  if (!post) return inner;
   return <Link to={`posts/${post.id}`}>{inner}</Link>;
 }
 
