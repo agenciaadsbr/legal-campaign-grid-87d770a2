@@ -26,6 +26,7 @@ import {
   FileText,
   CheckCircle2,
   Zap,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -57,8 +58,8 @@ export default function PostDetalhe() {
   const { postId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario, statusPostOptions } = useCRM();
-  const { canWrite } = useAuth();
+  const { posts, cards, comentarios, responsaveis, updatePost, updateCard, addComentario, updateComentario, deleteComentario, deleteCard, statusPostOptions } = useCRM();
+  const { canWrite, isAdmin } = useAuth();
   const post = posts.find((p) => p.id === postId);
   const card = post && cards.find((c) => c.id === post.card_id);
 
