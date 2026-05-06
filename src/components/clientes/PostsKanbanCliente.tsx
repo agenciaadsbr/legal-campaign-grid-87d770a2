@@ -53,14 +53,18 @@ function CardItem({
   clienteId?: string;
 }) {
   const navigate = useNavigate();
-  const { responsaveis, posts, updateCard } = useCRM();
-  const { canWrite } = useAuth();
+  const { responsaveis, posts, updateCard, deleteCard } = useCRM();
+  const { canWrite, isAdmin } = useAuth();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
   const post = posts.find((p) => p.card_id === card.id);
   const resps = responsaveis.filter((r) => card.responsaveis.includes(r.id));
   const isUrgent = !!card.is_urgent;
   const isPlanejamento = card.status_card === "Planejamento";
   const isAtrasadoStatus = card.status_card === "Atrasado";
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Track pointer-down position to distinguish click vs drag
+  const downPos = useRef<{ x: number; y: number } | null>(null);
 
   const tituloVisivel = card.titulo_card;
 
@@ -99,18 +103,33 @@ function CardItem({
 
   const dragProps = selectionMode ? {} : { ...attributes, ...listeners };
 
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handlePointerDownCapture = (e: React.PointerEvent) => {
+    downPos.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const navegarParaDetalhe = () => {
+    if (!post || !clienteId) return;
+    navigate(`/clientes/${clienteId}/posts/${post.id}`);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    // Ignorar clique em botões/checkbox internos
+    if (target.closest("button, [role='checkbox']")) return;
+
+    // Considerar drag se moveu mais de 5px
+    if (downPos.current) {
+      const dx = Math.abs(e.clientX - downPos.current.x);
+      const dy = Math.abs(e.clientY - downPos.current.y);
+      downPos.current = null;
+      if (dx > 5 || dy > 5) return;
+    }
+
     if (selectionMode) {
-      e.preventDefault();
-      e.stopPropagation();
       onToggleSelect?.();
       return;
     }
-    if (!post || !clienteId) return;
-    const target = e.target as HTMLElement;
-    // Não navegar se clicou em um botão interno
-    if (target.closest("button")) return;
-    navigate(`/clientes/${clienteId}/posts/${post.id}`);
+    navegarParaDetalhe();
   };
 
   const inner = (
@@ -118,7 +137,8 @@ function CardItem({
       ref={setNodeRef}
       {...dragProps}
       draggable={false}
-      onClick={handleCardClick}
+      onPointerDownCapture={handlePointerDownCapture}
+      onPointerUp={handlePointerUp}
       className={cn(
         "group relative bg-card border rounded-lg p-2.5 mb-1.5 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer",
         !selectionMode && "active:cursor-grabbing",
@@ -165,6 +185,23 @@ function CardItem({
               <Zap className={cn("h-3.5 w-3.5", isUrgent && "fill-current")} />
             </Button>
           )}
+          {isAdmin && !selectionMode && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setConfirmDelete(true);
+              }}
+              className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Excluir card"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -189,6 +226,31 @@ function CardItem({
         <StatusBadge status={card.status_card} />
       </div>
 
+      {isAdmin && (
+        <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir card de post?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. O card "{card.titulo_card}" e o post vinculado serão removidos permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await deleteCard(card.id);
+                  setConfirmDelete(false);
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 
