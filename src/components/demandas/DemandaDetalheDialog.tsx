@@ -238,7 +238,13 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   };
 
   const copiarLink = async () => {
-    const url = `${window.location.origin}/clientes/${demanda!.cliente_id}/projeto?tab=${categoriaParaAba(demanda!.categoria)}&demanda=${demanda!.id}`;
+    // Preview do Lovable (id-preview--*.lovable.app) exige login na plataforma.
+    // Quando o link é copiado a partir do preview, trocamos pelo domínio
+    // publicado (público) para que qualquer pessoa abra sem login Lovable.
+    const PUBLISHED_ORIGIN = "https://legal-campaign-grid.lovable.app";
+    const isLovablePreview = /id-preview--.*\.lovable\.app$/.test(window.location.hostname);
+    const origin = isLovablePreview ? PUBLISHED_ORIGIN : window.location.origin;
+    const url = `${origin}/clientes/${demanda!.cliente_id}/projeto?tab=${categoriaParaAba(demanda!.categoria)}&demanda=${demanda!.id}`;
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
