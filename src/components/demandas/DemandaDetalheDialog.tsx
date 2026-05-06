@@ -655,10 +655,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   })}
                   <button
                     onClick={() => anexoFileRef.current?.click()}
-                    className="flex flex-col items-center justify-center h-[72px] w-[72px] border border-dashed rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="flex flex-col items-center justify-center h-16 w-16 border border-dashed rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     title="Adicionar anexo"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Plus className="h-4 w-4" />
                     <span className="text-[9px] mt-0.5">Anexar</span>
                   </button>
                 </div>
