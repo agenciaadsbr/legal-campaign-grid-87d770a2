@@ -107,7 +107,7 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
                 const meta = GROUP_META[key];
                 const Icon = meta.icon;
                 return (
-                  <>
+                  <Fragment key={key}>
                     <TableRow key={`h-${key}`} className="hover:bg-transparent bg-muted/40 border-y border-border/60">
                       <TableCell colSpan={colSpan} className="!py-1.5">
                         <div className={cn("flex items-center gap-2 text-[10px] uppercase tracking-wider font-semibold", meta.className)}>
