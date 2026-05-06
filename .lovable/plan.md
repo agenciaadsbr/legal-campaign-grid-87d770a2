@@ -1,49 +1,67 @@
 ## Problema
 
-Na aba **Posts**, ao clicar em qualquer card (tanto os antigos `Post Mês X - Semana Y` quanto os novos `Criar Post`), os detalhes do post **não abrem mais**. O card está envolto por um `<Link>`, mas o título interno (`<span>` na linha 173-186 de `PostsKanbanCliente.tsx`) tem um `onClick={startEdit}` que chama `e.stopPropagation()` + `e.preventDefault()`, **bloqueando a navegação do Link**.
+Após usar **"Selecionar cards" → "Iniciar tarefa"**, os cards (que agora estão na coluna **Criar**) não abrem mais o detalhe ao clicar. A edição individual deixa de funcionar.
 
-Esse comportamento foi introduzido para permitir editar o título inline clicando nele — mas como o handler está ativo em todo clique simples (sempre que `canWrite && !selectionMode`), ele captura toda interação do usuário e impede a abertura dos detalhes.
+### Causa raiz em `src/components/clientes/PostsKanbanCliente.tsx`
+
+No componente `CardItem` (linha 192):
+
+```tsx
+if (!post || selectionMode) return inner;
+return <Link to={`posts/${post.id}`}>{inner}</Link>;
+```
+
+O card SÓ é envolvido por `<Link>` se `selectionMode === false` **e** o `post` correspondente já existir no estado local. Dois problemas:
+
+1. **Durante o modo seleção** (e durante toda a execução de `iniciarSelecionados`, que é `async`), o card NUNCA tem Link — clicar só alterna seleção. Se o usuário clicar logo após mandar iniciar, nada abre.
+2. **Logo após `iniciarSelecionados`**, `_loadAll()` é chamado para refazer o estado a partir do banco. Durante o re-render, há janelas em que o card foi atualizado (status="Criar") antes do array `posts` ter sido refrescado, então `post` pode resolver para `undefined` em alguns ciclos e cair no ramo `return inner` (sem Link). Combinado com o handler `onClick` da linha 103-111 que faz `preventDefault` no modo seleção, fica preso.
+
+Além disso, mesmo já fora do modo seleção, o handler de clique do `<div>` interno (linhas 103-111) ainda está condicional, mas o ramo `selectionMode` continua sendo o último estado vinculado se o componente não rerenderizar com `selectionMode=false` antes do clique.
 
 ## Solução
 
-Remover a edição inline do título por **clique simples**. Manter apenas:
+Tornar o card **sempre clicável para abrir detalhes** (independente do modo seleção) e usar o **checkbox** como única superfície de seleção em lote.
 
-- **Clique simples no card** → abre detalhes do post (comportamento original/esperado).
-- **Edição do título** → feita dentro da página de detalhes do post (já existe lá), conforme a regra que o usuário definiu anteriormente: "caso o usuário queira editar ele faz dentro dos detalhes da tarefa".
+### `src/components/clientes/PostsKanbanCliente.tsx` — `CardItem`
 
-## Mudanças
+1. **Linha 192**: trocar `if (!post || selectionMode) return inner;` por:
+   ```tsx
+   if (!post) return inner;
+   ```
+   O card vira Link sempre que existir post associado, inclusive em modo seleção.
 
-### `src/components/clientes/PostsKanbanCliente.tsx` — componente `CardItem`
+2. **Linhas 103-111** (`onClick` do `<div>`): remover o handler `onClick` por completo. O clique no corpo passa a propagar normalmente para o `<Link>` pai e abre os detalhes.
 
-1. **Remover handlers de edição inline no `<span>` do título** (linhas ~173-186):
-   - Remover `onPointerDown` que faz `stopPropagation`.
-   - Remover `onClick={startEdit}`.
-   - Remover `onDoubleClick={startEdit}`.
-   - Remover classes `cursor-text hover:text-primary` (volta a parecer texto normal dentro de um link clicável).
-   - Ajustar o `title` do span para apenas mostrar o título completo no hover.
+3. **Linhas 122-132** (wrapper do `<Checkbox>`): aumentar a área de toque e garantir que o clique no checkbox NÃO navegue:
+   ```tsx
+   <div
+     className="absolute top-1.5 right-1.5 z-10 p-1"
+     onPointerDown={(e) => e.stopPropagation()}
+     onClick={(e) => {
+       e.preventDefault();
+       e.stopPropagation();
+       onToggleSelect?.();
+     }}
+   >
+     <Checkbox checked={!!selected} className="bg-background" />
+   </div>
+   ```
 
-2. **Remover estado e funções não mais usados** no `CardItem`:
-   - `editingTitulo`, `setEditingTitulo`, `tituloDraft`, `setTituloDraft`.
-   - Função `startEdit` e `commitTitulo`.
-   - Bloco `editingTitulo ? <Input .../> : <span .../>` — manter apenas o `<span>`.
-   - `isPlaceholderTitulo` (não mais necessário).
+4. **Linha 97** (`dragProps`): manter como está — drag-and-drop continua desativado em modo seleção.
 
-3. **Manter inalterado**:
-   - O wrapper `<Link to={`posts/${post.id}`}>` na linha 234-235.
-   - Drag-and-drop (`useDraggable` + `dragProps`).
-   - Modo seleção (`selectionMode` + checkbox + toggle).
-   - Botão de urgência (`toggleUrgent`).
-   - StatusBadge, AvatarStack, prazo, formato, etc.
+5. Remover a classe `cursor-pointer` aplicada ao card inteiro em modo seleção (linha 115). Manter `cursor-grab` quando fora do modo seleção; em modo seleção o card vira link normal.
+
+### Resultado
+
+- Em modo seleção:
+  - Clicar no **checkbox** (ou na área aumentada ao redor) → marca/desmarca.
+  - Clicar em **qualquer outro lugar** do card → abre detalhe individual.
+  - Botão "Iniciar tarefa (N)" continua iniciando os marcados em lote.
+- Após "Iniciar tarefa": cards na coluna Criar (e em qualquer outra coluna) abrem detalhes normalmente ao clique.
+- Fora do modo seleção: comportamento atual preservado (drag-and-drop + clique abre detalhes).
 
 ## Não vai mexer
 
-- `src/store/crm.ts` — sem alterações.
-- `src/lib/minhasTarefas.ts` — sem alterações.
-- Outros módulos (Demandas, Briefing, Documentação, Planejamento, Dashboard, Relatórios) — intactos.
-- A página `PostDetalhe` continua permitindo editar o título do post normalmente.
-
-## Resultado esperado
-
-- Clicar em qualquer card de Post (em qualquer coluna: Planejamento, Criar, Revisar, Agendado) abre a página de detalhes do post.
-- O fluxo de "Selecionar cards" + "Iniciar tarefa" continua funcionando exatamente como está.
-- Edição de título só pode ser feita dentro dos detalhes do post.
+- `iniciarSelecionados`, `podeIniciarSelecionados`, atribuição em lote de responsáveis, "Selecionar todos", "Limpar", "Sair".
+- `src/store/crm.ts`, `PostDetalhe`, `MinhasTarefas`, demais módulos.
+- Drag-and-drop fora do modo seleção, urgência, prazo, paginação.
