@@ -52,6 +52,8 @@ function CardItem({
 }) {
   const { responsaveis, posts, updateCard } = useCRM();
   const { canWrite } = useAuth();
+  const { clienteId: clienteIdRota } = useParams();
+  const clienteIdLink = clienteIdRota ?? card.cliente_id;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
   const post = posts.find((p) => p.card_id === card.id);
   const resps = responsaveis.filter((r) => card.responsaveis.includes(r.id));
@@ -245,7 +247,7 @@ function CardItem({
   );
 
   if (!post || selectionMode) return inner;
-  return <Link to={`posts/${post.id}`}>{inner}</Link>;
+  return <Link to={`/clientes/${clienteIdLink}/posts/${post.id}`}>{inner}</Link>;
 }
 
 function Coluna({
