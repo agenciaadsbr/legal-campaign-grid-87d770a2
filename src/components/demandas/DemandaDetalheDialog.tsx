@@ -582,9 +582,9 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
 
               {/* Anexos */}
-              <div className="border-t pt-2.5">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-xs">Anexos</Label>
+              <div className="border-t pt-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label className="text-[11px]">Anexos</Label>
                   <input
                     ref={anexoFileRef}
                     type="file"
