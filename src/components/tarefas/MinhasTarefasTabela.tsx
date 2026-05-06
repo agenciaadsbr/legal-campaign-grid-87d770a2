@@ -5,11 +5,11 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ExternalLink } from "lucide-react";
+import { CheckCircle2, ExternalLink, AlertCircle, Clock, Circle, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ColorBadge } from "@/components/StatusBadge";
 import { PrioridadeIcons } from "./PrioridadeIcon";
-import type { UnifiedTask } from "@/lib/minhasTarefas";
+import type { UnifiedTask, TaskStatus } from "@/lib/minhasTarefas";
 import { STATUS_LABEL } from "@/lib/minhasTarefas";
 import { PRIORIDADE_COR, PRIORIDADE_LABEL } from "@/lib/demandas-categorias";
 import { useCRM } from "@/store/crm";
@@ -27,6 +27,24 @@ const STATUS_COR: Record<string, string> = {
   concluido: "hsl(var(--status-postado))",
 };
 
+type GroupKey = "urgente" | "atrasado" | "em_andamento" | "pendente" | "concluido";
+
+const GROUP_ORDER: GroupKey[] = ["urgente", "atrasado", "em_andamento", "pendente", "concluido"];
+
+const GROUP_META: Record<GroupKey, { label: string; icon: typeof Zap; className: string }> = {
+  urgente:      { label: "Urgentes",     icon: Zap,          className: "text-destructive" },
+  atrasado:     { label: "Atrasadas",    icon: AlertCircle,  className: "text-destructive" },
+  em_andamento: { label: "Em andamento", icon: Clock,        className: "text-info" },
+  pendente:     { label: "Pendentes",    icon: Circle,       className: "text-muted-foreground" },
+  concluido:    { label: "Concluídas",   icon: CheckCircle2, className: "text-emerald-500" },
+};
+
+function groupOf(t: UnifiedTask): GroupKey {
+  if (t.status === "concluido") return "concluido";
+  if (t.urgente) return "urgente";
+  return t.status as GroupKey;
+}
+
 function formatPrazo(p: string | null): string {
   if (!p) return "—";
   const d = new Date(p);
@@ -40,6 +58,18 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
     () => new Map(responsaveis.map((r) => [r.id, r.nome])),
     [responsaveis],
   );
+
+  const grupos = useMemo(() => {
+    const buckets: Record<GroupKey, UnifiedTask[]> = {
+      urgente: [], atrasado: [], em_andamento: [], pendente: [], concluido: [],
+    };
+    for (const t of tasks) buckets[groupOf(t)].push(t);
+    return GROUP_ORDER
+      .map((k) => ({ key: k, items: buckets[k] }))
+      .filter((g) => g.items.length > 0);
+  }, [tasks]);
+
+  const colSpan = mostrarResponsavel ? 8 : 7;
 
   if (tasks.length === 0) {
     return (
@@ -59,7 +89,7 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
     <Card>
       <CardContent className="p-0">
         <div className="overflow-auto">
-          <Table className="[&_th]:py-1 [&_th]:px-2 [&_th]:h-7 [&_th]:text-xs [&_td]:py-1 [&_td]:px-2">
+          <Table className="[&_th]:py-1.5 [&_th]:px-2 [&_th]:h-8 [&_th]:text-xs [&_td]:py-2 [&_td]:px-2 [&_td]:align-middle">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[160px]">Cliente</TableHead>
@@ -68,87 +98,119 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
                 <TableHead className="w-[120px]">Área</TableHead>
                 <TableHead className="w-[90px]">Prioridade</TableHead>
                 <TableHead className="w-[90px]">Prazo</TableHead>
-                <TableHead className="w-[110px]">Status</TableHead>
+                <TableHead className="w-[120px]">Status</TableHead>
                 <TableHead className="w-[120px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks.map((t) => (
-                <TableRow
-                  key={t.id}
-                  className={cn(
-                    t.status === "atrasado" && "bg-destructive/5",
-                    t.urgente && "bg-sky-500/5",
-                  )}
-                >
-                  <TableCell className="font-medium text-xs">{t.cliente_nome}</TableCell>
-                  {mostrarResponsavel && (
-                    <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">
-                      {t.responsaveis_ids.length > 0
-                        ? t.responsaveis_ids.map((id) => respMap.get(id) ?? "—").join(", ")
-                        : "—"}
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <PrioridadeIcons task={t} />
-                      <span className="text-xs truncate">{t.titulo}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs text-muted-foreground">{t.area}</span>
-                  </TableCell>
-                  <TableCell>
-                    <ColorBadge
-                      label={PRIORIDADE_LABEL[t.prioridade]}
-                      color={PRIORIDADE_COR[t.prioridade]}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <span className={cn("text-xs tabular-nums", t.status === "atrasado" && "text-destructive font-medium")}>
-                      {formatPrazo(t.prazo)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <ColorBadge label={STATUS_LABEL[t.status]} color={STATUS_COR[t.status]} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="inline-flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2"
-                        onClick={() => navigate(t.link)}
-                        title="Abrir no projeto do cliente"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </Button>
-                      {t.status !== "concluido" && (
-                        t.id.startsWith("posts:") ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => navigate(t.link)}
-                          >
-                            Abrir posts
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => onConcluir(t)}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                            Concluir
-                          </Button>
-                        )
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {grupos.map(({ key, items }) => {
+                const meta = GROUP_META[key];
+                const Icon = meta.icon;
+                return (
+                  <>
+                    <TableRow key={`h-${key}`} className="hover:bg-transparent bg-muted/40 border-y border-border/60">
+                      <TableCell colSpan={colSpan} className="!py-1.5">
+                        <div className={cn("flex items-center gap-2 text-[10px] uppercase tracking-wider font-semibold", meta.className)}>
+                          <Icon className="h-3.5 w-3.5" />
+                          <span>{meta.label}</span>
+                          <span className="text-muted-foreground/70 normal-case tracking-normal font-normal">
+                            ({items.length})
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {items.map((t) => {
+                      const isConcluido = t.status === "concluido";
+                      const isUrgente = key === "urgente";
+                      const isAtrasado = t.status === "atrasado";
+                      return (
+                        <TableRow
+                          key={t.id}
+                          className={cn(
+                            "transition-colors",
+                            isAtrasado && !isUrgente && "bg-destructive/5",
+                            isUrgente && "bg-destructive/5 border-l-2 border-l-destructive",
+                            isConcluido && "opacity-60",
+                          )}
+                        >
+                          <TableCell className={cn("font-medium text-xs", isConcluido && "text-muted-foreground")}>
+                            {t.cliente_nome}
+                          </TableCell>
+                          {mostrarResponsavel && (
+                            <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">
+                              {t.responsaveis_ids.length > 0
+                                ? t.responsaveis_ids.map((id) => respMap.get(id) ?? "—").join(", ")
+                                : "—"}
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <PrioridadeIcons task={t} />
+                              <span className={cn("text-xs truncate", isConcluido && "text-muted-foreground line-through decoration-muted-foreground/50")}>
+                                {t.titulo}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground">{t.area}</span>
+                          </TableCell>
+                          <TableCell>
+                            <ColorBadge
+                              label={PRIORIDADE_LABEL[t.prioridade]}
+                              color={PRIORIDADE_COR[t.prioridade]}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <span className={cn("text-xs tabular-nums", isAtrasado && "text-destructive font-medium")}>
+                              {formatPrazo(t.prazo)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="inline-flex min-w-[100px]">
+                              <ColorBadge label={STATUS_LABEL[t.status as TaskStatus]} color={STATUS_COR[t.status]} />
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="inline-flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => navigate(t.link)}
+                                title="Abrir no projeto do cliente"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Button>
+                              {t.status !== "concluido" && (
+                                t.id.startsWith("posts:") ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => navigate(t.link)}
+                                  >
+                                    Abrir posts
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => onConcluir(t)}
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                    Concluir
+                                  </Button>
+                                )
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
