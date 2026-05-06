@@ -1012,11 +1012,20 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                 </div>
               </div>
               <div className="flex items-center justify-center bg-muted/30 rounded">
-                <img
-                  src={previewAnexo.url}
-                  alt={previewAnexo.nome}
-                  className="max-h-[80vh] max-w-full object-contain"
-                />
+                {isVideoUrl(previewAnexo.url, previewAnexo.nome) ? (
+                  <video
+                    src={previewAnexo.url}
+                    controls
+                    autoPlay
+                    className="max-h-[80vh] max-w-full"
+                  />
+                ) : (
+                  <img
+                    src={previewAnexo.url}
+                    alt={previewAnexo.nome}
+                    className="max-h-[80vh] max-w-full object-contain"
+                  />
+                )}
               </div>
             </div>
           )}
