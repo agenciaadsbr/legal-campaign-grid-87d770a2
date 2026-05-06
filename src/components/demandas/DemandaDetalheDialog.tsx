@@ -845,7 +845,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
             {/* Histórico (colapsável discreto) */}
             {meuHistorico.length > 0 && (
-              <details className="text-xs">
+              <details className="text-xs shrink-0">
                 <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-1">
                   Ver histórico ({meuHistorico.length})
                 </summary>
