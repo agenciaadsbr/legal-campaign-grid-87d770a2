@@ -60,7 +60,7 @@ function CardItem({
   const isAtrasadoStatus = card.status_card === "Atrasado";
 
   const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
-  const tituloVisivel = isPlaceholderTitulo && isPlanejamento ? "Definir título da tarefa" : card.titulo_card;
+  const tituloVisivel = card.titulo_card;
 
   const [editingTitulo, setEditingTitulo] = useState(false);
   const [tituloDraft, setTituloDraft] = useState(isPlaceholderTitulo ? "" : card.titulo_card);
