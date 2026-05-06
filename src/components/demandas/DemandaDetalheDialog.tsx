@@ -87,6 +87,27 @@ const isImageUrl = (url: string, nome?: string) => {
   return /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/.test(n);
 };
 
+const isVideoUrl = (url: string, nome?: string) => {
+  if (url.startsWith("data:video")) return true;
+  const n = (nome || url).toLowerCase();
+  return /\.(mp4|webm|mov|mkv|m4v|avi|ogv)(\?|$)/.test(n);
+};
+
+const sanitizeFileName = (name: string) =>
+  name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+
+/** Extrai o path dentro do bucket "anexos" a partir de uma URL pública do Storage. */
+const extractAnexoStoragePath = (url: string): string | null => {
+  const marker = "/storage/v1/object/public/anexos/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  try {
+    return decodeURIComponent(url.slice(idx + marker.length).split("?")[0]);
+  } catch {
+    return url.slice(idx + marker.length).split("?")[0];
+  }
+};
+
 export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho }: Props) {
   const { clientes, responsaveis } = useCRM();
   const { user, isAdmin, canWrite } = useAuth();
