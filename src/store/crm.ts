@@ -197,7 +197,6 @@ interface State {
 
   moveCard: (cardId: string, novoStatus: StatusCard) => Promise<void>;
   updateCard: (id: string, patch: Partial<Card>) => Promise<void>;
-  deleteCard: (id: string) => Promise<void>;
   updatePost: (id: string, patch: Partial<Post>) => Promise<void>;
   iniciarTarefa: (
     cardId: string,
@@ -561,7 +560,7 @@ export const useCRM = create<State>()((set, get) => ({
       for (let s = 1; s <= 4; s++) {
         cardsPayload.push({
           cliente_id: inserted.id,
-          titulo: "Criar Post",
+          titulo: `Post Mês ${m} - Semana ${s}`,
           status: statusInicial,
           posicao: (m - 1) * 4 + (s - 1),
           responsaveis_ids: data.responsaveis ?? [],
@@ -746,18 +745,6 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
   },
 
-  deleteCard: async (id) => {
-    // Remove posts vinculados primeiro (FK lógica) e depois o card
-    await supabase.from("posts").delete().eq("card_id", id);
-    const { error } = await supabase.from("cards").delete().eq("id", id);
-    if (error) {
-      toast.error(`Falha ao excluir card: ${error.message}`);
-      return;
-    }
-    toast.success("Card excluído");
-    await get()._loadAll();
-  },
-
   updatePost: async (id, patch) => {
     const dbPatch: any = {};
     if (patch.titulo_post !== undefined) dbPatch.titulo = patch.titulo_post;
@@ -821,7 +808,7 @@ export const useCRM = create<State>()((set, get) => ({
       .from("cards")
       .insert({
         cliente_id,
-        titulo: "Criar Post",
+        titulo: `Post Mês ${mes} - Semana ${semana}`,
         status: statusInicial,
         posicao,
         responsaveis_ids: [],

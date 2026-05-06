@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCRM, StatusCard, Card as CardT } from "@/store/crm";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -26,7 +26,7 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X, Trash2 } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -34,16 +34,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -53,30 +43,44 @@ function CardItem({
   selectionMode,
   selected,
   onToggleSelect,
-  clienteId,
 }: {
   card: CardT;
   onIniciar: (id: string) => void;
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
-  clienteId?: string;
 }) {
-  const navigate = useNavigate();
-  const { responsaveis, posts, updateCard, deleteCard } = useCRM();
-  const { canWrite, isAdmin } = useAuth();
+  const { responsaveis, posts, updateCard } = useCRM();
+  const { canWrite } = useAuth();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
   const post = posts.find((p) => p.card_id === card.id);
   const resps = responsaveis.filter((r) => card.responsaveis.includes(r.id));
   const isUrgent = !!card.is_urgent;
   const isPlanejamento = card.status_card === "Planejamento";
   const isAtrasadoStatus = card.status_card === "Atrasado";
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Track pointer-down position to distinguish click vs drag
-  const downPos = useRef<{ x: number; y: number } | null>(null);
+  const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
+  const tituloVisivel = isPlaceholderTitulo && isPlanejamento ? "Definir título da tarefa" : card.titulo_card;
 
-  const tituloVisivel = card.titulo_card;
+  const [editingTitulo, setEditingTitulo] = useState(false);
+  const [tituloDraft, setTituloDraft] = useState(isPlaceholderTitulo ? "" : card.titulo_card);
+
+  const startEdit = (e: React.MouseEvent) => {
+    if (!canWrite) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setTituloDraft(isPlaceholderTitulo ? "" : card.titulo_card);
+    setEditingTitulo(true);
+  };
+
+  const commitTitulo = () => {
+    const novo = tituloDraft.trim();
+    setEditingTitulo(false);
+    if (!novo) return;
+    if (novo === card.titulo_card) return;
+    updateCard(card.id, { titulo_card: novo });
+    toast.success("Título atualizado");
+  };
 
   const due = card.data_agendada ? new Date(card.data_agendada) : null;
   let prazoState: "none" | "future" | "today" | "overdue" = "none";
@@ -113,45 +117,23 @@ function CardItem({
 
   const dragProps = selectionMode ? {} : { ...attributes, ...listeners };
 
-  const handlePointerDownCapture = (e: React.PointerEvent) => {
-    downPos.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const navegarParaDetalhe = () => {
-    if (!post || !clienteId) return;
-    navigate(`/clientes/${clienteId}/posts/${post.id}`);
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    const target = e.target as HTMLElement;
-    // Ignorar clique em botões/checkbox internos
-    if (target.closest("button, [role='checkbox']")) return;
-
-    // Considerar drag se moveu mais de 5px
-    if (downPos.current) {
-      const dx = Math.abs(e.clientX - downPos.current.x);
-      const dy = Math.abs(e.clientY - downPos.current.y);
-      downPos.current = null;
-      if (dx > 5 || dy > 5) return;
-    }
-
-    if (selectionMode) {
-      onToggleSelect?.();
-      return;
-    }
-    navegarParaDetalhe();
-  };
-
   const inner = (
     <div
       ref={setNodeRef}
       {...dragProps}
-      draggable={false}
-      onPointerDownCapture={handlePointerDownCapture}
-      onPointerUp={handlePointerUp}
+      onClick={
+        selectionMode
+          ? (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelect?.();
+            }
+          : undefined
+      }
       className={cn(
-        "group relative bg-card border rounded-lg p-2.5 mb-1.5 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer",
-        !selectionMode && "active:cursor-grabbing",
+        "group relative bg-card border rounded-lg p-2.5 mb-1.5 hover:border-primary/40 hover:shadow-sm transition-all",
+        !selectionMode && "cursor-grab active:cursor-grabbing",
+        selectionMode && "cursor-pointer",
         isUrgent && "border-l-2 border-l-amber-500",
         isAtrasadoStatus && "border-l-2 border-l-red-500",
         isDragging && "opacity-40",
@@ -159,22 +141,50 @@ function CardItem({
       )}
     >
       {selectionMode && (
-        <div className="absolute top-1.5 right-1.5 z-10 p-1 pointer-events-none">
+        <div
+          className="absolute top-2 right-2 z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect?.();
+          }}
+        >
           <Checkbox checked={!!selected} className="bg-background" />
         </div>
       )}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-1.5 flex-1 min-w-0">
           {isUrgent && <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />}
-          <span
-            title={card.titulo_card}
-            className={cn(
-              "text-sm font-medium leading-tight line-clamp-2 break-words",
-              selectionMode && "pr-7",
-            )}
-          >
-            {tituloVisivel}
-          </span>
+          {editingTitulo && !selectionMode ? (
+            <Input
+              autoFocus
+              value={tituloDraft}
+              onChange={(e) => setTituloDraft(e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onBlur={commitTitulo}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+                else if (e.key === "Escape") { e.preventDefault(); setEditingTitulo(false); }
+              }}
+              placeholder="Título da tarefa"
+              className="h-7 text-sm py-1 px-2"
+            />
+          ) : (
+            <span
+              title={canWrite && !selectionMode ? "Clique para editar o título" : card.titulo_card}
+              onPointerDown={(e) => { if (canWrite && !selectionMode) e.stopPropagation(); }}
+              onClick={canWrite && !selectionMode ? startEdit : undefined}
+              onDoubleClick={canWrite && !isPlanejamento && !selectionMode ? startEdit : undefined}
+              className={cn(
+                "text-sm font-medium leading-tight line-clamp-2 break-words",
+                isPlaceholderTitulo && isPlanejamento && "text-muted-foreground italic",
+                canWrite && !selectionMode && "cursor-text hover:text-primary transition-colors",
+                selectionMode && "pr-7",
+              )}
+            >
+              {tituloVisivel}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {canWrite && !isPlanejamento && !selectionMode && (
@@ -193,23 +203,6 @@ function CardItem({
               title={isUrgent ? "Remover urgência" : "Marcar como urgente"}
             >
               <Zap className={cn("h-3.5 w-3.5", isUrgent && "fill-current")} />
-            </Button>
-          )}
-          {isAdmin && !selectionMode && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setConfirmDelete(true);
-              }}
-              className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-              title="Excluir card"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
@@ -232,39 +225,27 @@ function CardItem({
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
 
-      <div className="mt-1.5 flex justify-end">
-        <StatusBadge status={card.status_card} />
-      </div>
-
-      {isAdmin && (
-        <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir card de post?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. O card "{card.titulo_card}" e o post vinculado serão removidos permanentemente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  await deleteCard(card.id);
-                  setConfirmDelete(false);
-                }}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      {isPlanejamento && canWrite && !selectionMode ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="default"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleIniciar}
+          className="mt-1.5 w-full h-7 text-xs gap-1.5"
+        >
+          <Play className="h-3 w-3" /> Iniciar tarefa
+        </Button>
+      ) : (
+        <div className="mt-1.5 flex justify-end">
+          <StatusBadge status={card.status_card} />
+        </div>
       )}
     </div>
   );
 
-  return inner;
+  if (!post || selectionMode) return inner;
+  return <Link to={`posts/${post.id}`}>{inner}</Link>;
 }
 
 function Coluna({
@@ -276,7 +257,6 @@ function Coluna({
   selectionMode,
   selectedIds,
   onToggleSelect,
-  clienteId,
 }: {
   status: StatusCard;
   cards: CardT[];
@@ -286,7 +266,6 @@ function Coluna({
   selectionMode?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
-  clienteId?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status, disabled: selectionMode });
   const isAtrasado = status === "Atrasado";
@@ -331,7 +310,6 @@ function Coluna({
             selectionMode={selectionMode}
             selected={selectedIds?.has(c.id)}
             onToggleSelect={() => onToggleSelect?.(c.id)}
-            clienteId={clienteId}
           />
         ))}
       </div>
@@ -435,7 +413,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
     const novo = await createCardRascunho({ cliente_id: clienteId, mes_referencia: mes });
     setCriandoTarefa(false);
     if (novo) {
-      toast.success("Tarefa criada");
+      navigate(`/clientes/${clienteId}/posts/${novo.postId}?focus=titulo`);
     }
   };
 
@@ -448,7 +426,12 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
     const card = cards.find((c) => c.id === String(e.active.id));
     if (!card) return;
     if (novoStatus === card.status_card) return;
+    const veioDePlanejamento = card.status_card === "Planejamento";
     moveCard(card.id, novoStatus as StatusCard);
+    if (veioDePlanejamento) {
+      const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
+      abrirDetalhe(card.id, { focusTitulo: isPlaceholderTitulo });
+    }
   };
 
   const respsSelLabel =
@@ -458,46 +441,9 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
       ? responsaveis.find((r) => r.id === filtroResps[0])?.nome ?? "1 responsável"
       : `${filtroResps.length} responsáveis`;
 
-  const resumoTarefa = useMemo(() => {
-    const total = cardsCliente.length;
-    let planejamento = 0, andamento = 0, concluidos = 0;
-    for (const c of cardsCliente) {
-      if (c.status_card === "Planejamento") planejamento++;
-      else if (c.status_card === "Postado") concluidos++;
-      else andamento++;
-    }
-    return { total, planejamento, andamento, concluidos };
-  }, [cardsCliente]);
-
-  const podeIniciarSelecionados = useMemo(() => {
-    if (selectedIds.size === 0) return false;
-    return cards.some((c) => selectedIds.has(c.id) && c.status_card === "Planejamento");
-  }, [cards, selectedIds]);
-
-  const iniciarSelecionados = async () => {
-    const alvos = cards.filter((c) => selectedIds.has(c.id) && c.status_card === "Planejamento");
-    if (alvos.length === 0) return;
-    await Promise.all(alvos.map((c) => updateCard(c.id, { status_card: "Criar" as StatusCard })));
-    toast.success(`${alvos.length} ${alvos.length === 1 ? "tarefa iniciada" : "tarefas iniciadas"}`);
-    setSelectedIds(new Set());
-    setSelectionMode(false);
-  };
-
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-220px)] overflow-hidden -mx-6 px-6 w-[calc(100%+3rem)]">
-      <div className="rounded-lg border bg-card px-3 py-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-        <div className="text-sm font-semibold">
-          Tarefa de Posts
-          <span className="text-muted-foreground font-normal"> · {resumoTarefa.total} {resumoTarefa.total === 1 ? "post" : "posts"} no contrato</span>
-        </div>
-        <div className="text-xs text-muted-foreground flex items-center gap-3 ml-auto">
-          <span>Planejamento: <span className="text-foreground font-medium">{resumoTarefa.planejamento}</span></span>
-          <span>Em andamento: <span className="text-foreground font-medium">{resumoTarefa.andamento}</span></span>
-          <span>Concluídos: <span className="text-foreground font-medium">{resumoTarefa.concluidos}</span></span>
-        </div>
-      </div>
       <div className="flex items-center gap-2 flex-wrap">
-
         <Select value={filtroMes} onValueChange={setFiltroMes}>
           <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -582,7 +528,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
             }}
           >
             <CheckSquare className="h-4 w-4 mr-1" />
-            {selectionMode ? "Cancelar seleção" : "Selecionar cards"}
+            {selectionMode ? "Cancelar seleção" : "Selecionar"}
           </Button>
         )}
 
@@ -612,16 +558,6 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
             {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
           </Badge>
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="default"
-              onClick={iniciarSelecionados}
-              disabled={!podeIniciarSelecionados}
-              className="gap-1.5"
-            >
-              <Play className="h-3.5 w-3.5" />
-              Iniciar tarefa{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-            </Button>
             <AtribuirResponsaveisPopover
               responsaveis={responsaveis}
               count={selectedIds.size}
@@ -688,14 +624,13 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                   return next;
                 })
               }
-              clienteId={clienteId}
             />
           ))}
         </div>
         <DragOverlay>
           {activeId ? (() => {
             const c = cardsCliente.find((x) => x.id === activeId);
-            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} clienteId={clienteId} /> : null;
+            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} /> : null;
           })() : null}
         </DragOverlay>
       </DndContext>
