@@ -156,6 +156,36 @@ export default function PostDetalhe() {
     }
   };
 
+  const copiarLink = async () => {
+    const PUBLISHED_ORIGIN = "https://legal-campaign-grid.lovable.app";
+    const isLovablePreview = /id-preview--.*\.lovable\.app$/.test(window.location.hostname);
+    const origin = isLovablePreview ? PUBLISHED_ORIGIN : window.location.origin;
+    const url = `${origin}/clientes/${card.cliente_id}/posts/${post.id}`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      toast.success("Link da tarefa copiado");
+    } catch {
+      toast.error("Falha ao copiar link");
+    }
+  };
+
+  const excluirTarefa = async () => {
+    const cidLocal = card.cliente_id;
+    await deleteCard(card.id);
+    navigate(`/clientes/${cidLocal}?tab=posts`);
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-3 animate-fade-in">
       <VoltarVisaoGeralButton onClick={voltarParaVisaoGeral} />
