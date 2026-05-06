@@ -374,7 +374,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               {/* Categoria · Subtipo · Prioridade */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>
-                  <Label className="text-xs">Categoria</Label>
+                  <Label className="text-[11px]">Categoria</Label>
                   <Select
                     value={demanda.categoria}
                     onValueChange={(v) =>
@@ -385,7 +385,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       })
                     }
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
