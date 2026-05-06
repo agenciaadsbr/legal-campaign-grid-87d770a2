@@ -354,6 +354,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={copiarLink}
+                    title="Copiar link da tarefa"
+                    className="shrink-0"
+                  >
+                    <Link2 className="h-4 w-4" />
+                  </Button>
                   {isAdmin && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
