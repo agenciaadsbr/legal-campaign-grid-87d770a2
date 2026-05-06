@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCRM, type Responsavel } from "@/store/crm";
+import { responsavelCache as cache, clearResponsavelCache } from "@/hooks/responsavelCache";
+
+export { clearResponsavelCache };
 
 /**
  * Resolve o `Responsavel` (tabela `responsaveis`) que corresponde ao
@@ -9,12 +12,6 @@ import { useCRM, type Responsavel } from "@/store/crm";
  *
  * Cacheado por sessão (memória) — só refaz a consulta quando o auth user muda.
  */
-const cache: Record<string, string | null> = {};
-
-/** Limpa o cache em memória (chamar no signOut para evitar carregar id antigo). */
-export function clearResponsavelCache() {
-  for (const k of Object.keys(cache)) delete cache[k];
-}
 
 export function useResponsavelAtual(): {
   responsavel: Responsavel | null;
