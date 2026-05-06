@@ -259,6 +259,7 @@ function Coluna({
             selectionMode={selectionMode}
             selected={selectedIds?.has(c.id)}
             onToggleSelect={() => onToggleSelect?.(c.id)}
+            clienteId={clienteId}
           />
         ))}
       </div>
