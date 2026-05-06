@@ -746,6 +746,18 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
   },
 
+  deleteCard: async (id) => {
+    // Remove posts vinculados primeiro (FK lógica) e depois o card
+    await supabase.from("posts").delete().eq("card_id", id);
+    const { error } = await supabase.from("cards").delete().eq("id", id);
+    if (error) {
+      toast.error(`Falha ao excluir card: ${error.message}`);
+      return;
+    }
+    toast.success("Card excluído");
+    await get()._loadAll();
+  },
+
   updatePost: async (id, patch) => {
     const dbPatch: any = {};
     if (patch.titulo_post !== undefined) dbPatch.titulo = patch.titulo_post;
