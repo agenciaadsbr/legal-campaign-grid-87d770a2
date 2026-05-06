@@ -509,12 +509,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                                 {lista.map((r) => (
                                   <div key={r.id} className="flex items-center gap-1.5">
                                     <div
-                                      className="h-7 w-7 rounded-full text-white text-[11px] font-semibold flex items-center justify-center"
+                                      className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center"
                                       style={{ backgroundColor: r.cor }}
                                     >
                                       {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                                     </div>
-                                    <span className="text-sm">{r.nome}</span>
+                                    <span className="text-xs">{r.nome}</span>
                                   </div>
                                 ))}
                               </div>
