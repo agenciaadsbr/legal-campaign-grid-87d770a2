@@ -412,7 +412,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
     const novo = await createCardRascunho({ cliente_id: clienteId, mes_referencia: mes });
     setCriandoTarefa(false);
     if (novo) {
-      navigate(`/clientes/${clienteId}/posts/${novo.postId}?focus=titulo`);
+      toast.success("Tarefa criada");
     }
   };
 
