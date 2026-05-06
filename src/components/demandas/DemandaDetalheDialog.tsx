@@ -370,7 +370,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2.5 px-3 pb-3 overflow-y-auto min-h-0 flex-1">
+
               {/* Categoria · Subtipo · Prioridade */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
@@ -580,7 +581,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
 
               {/* Anexos */}
-              <div className="border-t pt-4">
+              <div className="border-t pt-2.5">
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-xs">Anexos</Label>
                   <input
@@ -663,10 +664,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
 
               {/* Atividade / Briefing */}
-              <div className="border-t pt-4">
+              <div className="border-t pt-2.5">
                 <Label className="text-xs">Atividade / Briefing</Label>
                 <Textarea
-                  rows={5}
+                  rows={3}
                   placeholder="Detalhes internos da demanda: contexto, requisitos, referências..."
                   value={descricaoLocal}
                   onChange={(e) => {
@@ -686,24 +687,20 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       updateDemanda(demanda.id, { descricao: descricaoLocal });
                     }
                   }}
-                  className="mt-1.5"
+                  className="mt-1 min-h-[70px] text-sm"
                 />
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Visível apenas dentro deste card. O título principal acima é o
-                  que aparece no Kanban.
-                </p>
               </div>
             </CardContent>
           </Card>
         </fieldset>
 
         {/* CARD 2 — Atividade (comentários) */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Atividade</CardTitle>
+        <Card className="flex flex-col min-h-0 overflow-hidden">
+          <CardHeader className="pb-1.5 pt-2.5 px-3">
+            <CardTitle className="text-sm">Atividade</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2 max-h-80 overflow-auto pr-1">
+          <CardContent className="space-y-2 px-3 pb-3 flex-1 min-h-0 flex flex-col">
+            <div className="space-y-2 overflow-auto pr-1 flex-1 min-h-0">
               {meusComentarios.length === 0 && (
                 <div className="text-sm text-muted-foreground text-center py-6">
                   Sem comentários ainda
