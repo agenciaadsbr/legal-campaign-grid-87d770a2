@@ -691,6 +691,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                 <div className="flex flex-wrap gap-1.5">
                   {meusAnexos.map((a) => {
                     const img = isImageUrl(a.url, a.nome);
+                    const vid = !img && isVideoUrl(a.url, a.nome);
                     return (
                       <div
                         key={a.id}
@@ -708,6 +709,26 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                               alt={a.nome}
                               className="w-full h-full object-cover"
                             />
+                          </button>
+                        ) : vid ? (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewAnexo({ url: a.url, nome: a.nome })}
+                            className="block w-full h-full relative bg-black"
+                            title={a.nome}
+                          >
+                            <video
+                              src={a.url}
+                              preload="metadata"
+                              muted
+                              playsInline
+                              className="w-full h-full object-cover pointer-events-none"
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <span className="h-6 w-6 rounded-full bg-background/80 border border-border flex items-center justify-center">
+                                <span className="block w-0 h-0 border-y-[5px] border-y-transparent border-l-[7px] border-l-foreground ml-[2px]" />
+                              </span>
+                            </span>
                           </button>
                         ) : (
                           <a
