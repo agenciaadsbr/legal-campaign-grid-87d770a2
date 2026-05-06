@@ -237,14 +237,14 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl w-[92vw] max-h-[94vh] overflow-hidden p-3 gap-2">
+      <DialogContent className="max-w-2xl w-[92vw] max-h-[90vh] overflow-hidden p-3 gap-2 flex flex-col">
         <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
-          <div>
+          <div className="shrink-0">
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
           {/* CARD 1 — Informações da Demanda */}
-          <Card className="flex flex-col min-h-0 overflow-hidden">
+          <Card className="shrink-0 overflow-hidden">
             <CardHeader className="pb-1.5 pt-2.5 px-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
@@ -273,7 +273,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       }
                     }}
                     placeholder="Ex: Criar landing page para campanha de inverno"
-                    className="text-base font-bold border-0 px-0 focus-visible:ring-0 h-auto"
+                    className="text-sm font-bold border-0 px-0 focus-visible:ring-0 h-auto"
                   />
                   <div className="text-xs text-muted-foreground mt-1">
                     {cliente?.nome_cliente ?? "—"} ·{" "}
@@ -369,12 +369,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-2.5 px-3 pb-3">
+            <CardContent className="space-y-2 px-3 pb-2.5">
 
               {/* Categoria · Subtipo · Prioridade */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>
-                  <Label className="text-xs">Categoria</Label>
+                  <Label className="text-[11px]">Categoria</Label>
                   <Select
                     value={demanda.categoria}
                     onValueChange={(v) =>
@@ -385,7 +385,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       })
                     }
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -398,7 +398,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Subtipo</Label>
+                  <Label className="text-[11px]">Subtipo</Label>
                   {demanda.categoria === "Personalizado" ? (
                     <Input
                       value={demanda.subtipo ?? ""}
@@ -406,7 +406,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                         updateDemanda(demanda.id, { subtipo: e.target.value || null })
                       }
                       placeholder="Descreva"
-                      className="h-9"
+                      className="h-8 text-xs"
                     />
                   ) : (
                     <Select
@@ -417,7 +417,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                         })
                       }
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Selecionar" />
                       </SelectTrigger>
                       <SelectContent>
@@ -432,14 +432,14 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   )}
                 </div>
                 <div>
-                  <Label className="text-xs">Prioridade</Label>
+                  <Label className="text-[11px]">Prioridade</Label>
                   <Select
                     value={demanda.prioridade}
                     onValueChange={(v) =>
                       updateDemanda(demanda.id, { prioridade: v as any })
                     }
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -454,11 +454,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
 
               {/* Datas + Responsável */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-xs">Data início</Label>
+                  <Label className="text-[11px]">Data início</Label>
                   <Input
                     type="datetime-local"
+                    className="h-8 text-xs"
                     value={
                       demanda.data_inicio ? demanda.data_inicio.slice(0, 16) : ""
                     }
@@ -472,9 +473,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Data limite</Label>
+                  <Label className="text-[11px]">Data limite</Label>
                   <Input
                     type="datetime-local"
+                    className="h-8 text-xs"
                     value={
                       demanda.data_limite ? demanda.data_limite.slice(0, 16) : ""
                     }
@@ -490,13 +492,13 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
                 {/* Responsáveis (multi) */}
                 <div className="md:col-span-2">
-                  <Label className="text-xs">Responsáveis</Label>
+                  <Label className="text-[11px]">Responsáveis</Label>
                   <div className="mt-1">
                     <Popover>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1.5 -mx-2 transition-colors min-h-[40px] w-full"
+                          className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1 -mx-2 transition-colors min-h-[36px] w-full"
                           title="Clique para alterar os responsáveis"
                         >
                           {(() => {
@@ -507,12 +509,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                                 {lista.map((r) => (
                                   <div key={r.id} className="flex items-center gap-1.5">
                                     <div
-                                      className="h-7 w-7 rounded-full text-white text-[11px] font-semibold flex items-center justify-center"
+                                      className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center"
                                       style={{ backgroundColor: r.cor }}
                                     >
                                       {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                                     </div>
-                                    <span className="text-sm">{r.nome}</span>
+                                    <span className="text-xs">{r.nome}</span>
                                   </div>
                                 ))}
                               </div>
@@ -580,9 +582,9 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
 
               {/* Anexos */}
-              <div className="border-t pt-2.5">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-xs">Anexos</Label>
+              <div className="border-t pt-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label className="text-[11px]">Anexos</Label>
                   <input
                     ref={anexoFileRef}
                     type="file"
@@ -599,13 +601,13 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar anexo
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {meusAnexos.map((a) => {
                     const img = isImageUrl(a.url, a.nome);
                     return (
                       <div
                         key={a.id}
-                        className="group relative h-[72px] w-[72px] border rounded-lg overflow-hidden bg-muted/30"
+                        className="group relative h-16 w-16 border rounded-lg overflow-hidden bg-muted/30"
                       >
                         {img ? (
                           <button
@@ -653,20 +655,20 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   })}
                   <button
                     onClick={() => anexoFileRef.current?.click()}
-                    className="flex flex-col items-center justify-center h-[72px] w-[72px] border border-dashed rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="flex flex-col items-center justify-center h-16 w-16 border border-dashed rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     title="Adicionar anexo"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Plus className="h-4 w-4" />
                     <span className="text-[9px] mt-0.5">Anexar</span>
                   </button>
                 </div>
               </div>
 
               {/* Atividade / Briefing */}
-              <div className="border-t pt-2.5">
-                <Label className="text-xs">Atividade / Briefing</Label>
+              <div className="border-t pt-2">
+                <Label className="text-[11px]">Atividade / Briefing</Label>
                 <Textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Detalhes internos da demanda: contexto, requisitos, referências..."
                   value={descricaoLocal}
                   onChange={(e) => {
@@ -686,19 +688,19 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       updateDemanda(demanda.id, { descricao: descricaoLocal });
                     }
                   }}
-                  className="mt-1 min-h-[70px] text-sm"
+                  className="mt-1 min-h-[56px] text-xs"
                 />
               </div>
             </CardContent>
           </Card>
 
         {/* CARD 2 — Atividade (comentários) */}
-        <Card className="flex flex-col min-h-0 overflow-hidden">
-          <CardHeader className="pb-1.5 pt-2.5 px-3">
-            <CardTitle className="text-sm">Atividade</CardTitle>
+        <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <CardHeader className="pb-1 pt-2 px-3 shrink-0">
+            <CardTitle className="text-xs uppercase tracking-wide">Atividade</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 px-3 pb-3">
-            <div className="space-y-2">
+          <CardContent className="flex flex-col flex-1 min-h-0 px-3 pb-3 gap-2">
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-2">
               {meusComentarios.length === 0 && (
                 <div className="text-sm text-muted-foreground text-center py-6">
                   Sem comentários ainda
@@ -750,13 +752,13 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
             {/* Composer */}
             {canWrite && (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-hidden shrink-0">
                 <RichTextEditor
                   value={novoComentario}
                   onChange={setNovoComentario}
                   placeholder="Escreva um comentário..."
                   onEnterSubmit={enviar}
-                  minHeight="60px"
+                  minHeight="48px"
                 />
                 {composerImg && (
                   <div className="px-3 py-2 border-t bg-muted/30 flex items-center gap-2">
@@ -843,7 +845,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
             {/* Histórico (colapsável discreto) */}
             {meuHistorico.length > 0 && (
-              <details className="text-xs">
+              <details className="text-xs shrink-0">
                 <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-1">
                   Ver histórico ({meuHistorico.length})
                 </summary>
