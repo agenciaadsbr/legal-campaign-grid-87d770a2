@@ -59,28 +59,7 @@ function CardItem({
   const isPlanejamento = card.status_card === "Planejamento";
   const isAtrasadoStatus = card.status_card === "Atrasado";
 
-  const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
   const tituloVisivel = card.titulo_card;
-
-  const [editingTitulo, setEditingTitulo] = useState(false);
-  const [tituloDraft, setTituloDraft] = useState(isPlaceholderTitulo ? "" : card.titulo_card);
-
-  const startEdit = (e: React.MouseEvent) => {
-    if (!canWrite) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setTituloDraft(isPlaceholderTitulo ? "" : card.titulo_card);
-    setEditingTitulo(true);
-  };
-
-  const commitTitulo = () => {
-    const novo = tituloDraft.trim();
-    setEditingTitulo(false);
-    if (!novo) return;
-    if (novo === card.titulo_card) return;
-    updateCard(card.id, { titulo_card: novo });
-    toast.success("Título atualizado");
-  };
 
   const due = card.data_agendada ? new Date(card.data_agendada) : null;
   let prazoState: "none" | "future" | "today" | "overdue" = "none";
@@ -154,36 +133,15 @@ function CardItem({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-1.5 flex-1 min-w-0">
           {isUrgent && <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />}
-          {editingTitulo && !selectionMode ? (
-            <Input
-              autoFocus
-              value={tituloDraft}
-              onChange={(e) => setTituloDraft(e.target.value)}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onBlur={commitTitulo}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
-                else if (e.key === "Escape") { e.preventDefault(); setEditingTitulo(false); }
-              }}
-              placeholder="Título da tarefa"
-              className="h-7 text-sm py-1 px-2"
-            />
-          ) : (
-            <span
-              title={canWrite && !selectionMode ? "Clique para editar o título" : card.titulo_card}
-              onPointerDown={(e) => { if (canWrite && !selectionMode) e.stopPropagation(); }}
-              onClick={canWrite && !selectionMode ? startEdit : undefined}
-              onDoubleClick={canWrite && !isPlanejamento && !selectionMode ? startEdit : undefined}
-              className={cn(
-                "text-sm font-medium leading-tight line-clamp-2 break-words",
-                canWrite && !selectionMode && "cursor-text hover:text-primary transition-colors",
-                selectionMode && "pr-7",
-              )}
-            >
-              {tituloVisivel}
-            </span>
-          )}
+          <span
+            title={card.titulo_card}
+            className={cn(
+              "text-sm font-medium leading-tight line-clamp-2 break-words",
+              selectionMode && "pr-7",
+            )}
+          >
+            {tituloVisivel}
+          </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {canWrite && !isPlanejamento && !selectionMode && (
