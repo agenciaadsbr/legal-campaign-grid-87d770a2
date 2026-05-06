@@ -1,46 +1,46 @@
 ## Objetivo
 
-Adicionar um campo no topo do sistema (na header global) onde o usuário pode colar um link de tarefa e ser redirecionado direto para essa tarefa dentro do sistema, contornando a restrição de acesso do preview do Lovable.
+Permitir que **qualquer usuário autenticado** veja e edite **todas as demandas/tarefas** do sistema (incluindo abrir via link compartilhado), mantendo a página **"Minhas Tarefas"** filtrando apenas as tarefas atribuídas ao usuário logado.
 
-## Como funciona
+## Causa raiz
 
-1. Usuário copia o link da tarefa pelo botão "Copiar link" no detalhe da demanda (já existe).
-2. Em vez de abrir o link no navegador (que pode pedir login do Lovable no preview), ele cola o link no campo no topo do sistema (já dentro do Dash Tasks, autenticado).
-3. O sistema extrai o `clienteId`, a `tab` e o `id` da demanda do link colado e faz `navigate()` interno para a rota correspondente — abrindo o `DemandaDetalheDialog` automaticamente via o deep-link `?demanda={id}` que já está implementado em `ProjetoCliente.tsx`.
+A política RLS atual em `demandas` (`auth_read_demandas`) só libera leitura para:
+- admin, OU
+- criador da demanda, OU
+- usuário presente em `responsaveis_ids` / `responsavel_id`
 
-Funciona com qualquer formato de URL: preview Lovable, domínio publicado, custom domain ou path relativo. Só importa o trecho `/clientes/:clienteId/projeto?tab=...&demanda=...`.
+Por isso usuários comuns não veem tarefas em que não estão atribuídos — nem pelo link, nem em listas gerais.
 
 ## Mudanças
 
-### 1. Novo componente `src/components/AbrirTarefaPorLinkInput.tsx`
+### 1. Migração SQL — liberar leitura de demandas para todos autenticados
 
-- Input de busca com placeholder "Colar link da tarefa..." e ícone de lupa à esquerda (visual igual ao da referência: barra escura, arredondada, atalho `Ctrl+K` à direita).
-- Largura fixa razoável (~420px no desktop), centralizado na header.
-- Ao colar (`onPaste`) ou pressionar Enter:
-  - Faz parse do valor com `new URL(valor, window.location.origin)` (tolera path relativo).
-  - Valida que o pathname casa com `/clientes/:clienteId/projeto` (ou `/clientes/:clienteId`).
-  - Lê `tab` e `demanda` dos search params.
-  - Se válido: `navigate(\`/clientes/${clienteId}/projeto?tab=${tab}&demanda=${demandaId}\`)`, limpa o input e mostra `toast.success("Abrindo tarefa...")`.
-  - Se inválido: `toast.error("Link de tarefa inválido")`.
-- Atalho `Ctrl+K` / `Cmd+K` foca o input (listener global).
+Substituir a policy `auth_read_demandas` para que qualquer usuário autenticado leia qualquer demanda:
 
-### 2. Editar `src/components/AppLayout.tsx`
+```sql
+DROP POLICY IF EXISTS auth_read_demandas ON public.demandas;
 
-- Importar e renderizar `<AbrirTarefaPorLinkInput />` na header, posicionado no centro (entre o `Breadcrumb` e o cluster de botões da direita).
-- Em telas pequenas (< md), esconder o breadcrumb já é o comportamento atual; o input pode ficar `flex-1` com `max-w-md` e `mx-auto`.
-
-## Layout da header (resultado)
-
-```text
-[≡] [Breadcrumb...]      [🔍 Colar link da tarefa...  Ctrl+K]      [🔔] [🌙]
+CREATE POLICY auth_read_demandas
+  ON public.demandas
+  FOR SELECT
+  TO authenticated
+  USING (true);
 ```
 
-## O que NÃO muda
+Políticas de INSERT/UPDATE/DELETE continuam iguais (já usam `can_write` / admin), então **edição segue restrita a admin/editor** — viewers só leem. Isso atende: "ver/editar todas as tarefas sem restrições" para usuários com permissão de escrita; viewers conseguem visualizar tudo.
 
-- Botão "Copiar link" no `DemandaDetalheDialog` continua igual.
-- Rotas, autenticação, deep-link `?demanda=` em `ProjetoCliente.tsx` (já funciona).
-- Nada visual nos cards/dialogs de demanda.
+### 2. "Minhas Tarefas" — sem alteração funcional
 
-## Observação
+A página `src/pages/MinhasTarefas.tsx` (e `src/lib/minhasTarefas.ts`) já filtra no frontend pelas tarefas do usuário logado. Como agora o RLS retorna todas, o filtro client-side garante que esse módulo continue mostrando apenas as tarefas do próprio usuário. Vou revisar rapidamente o arquivo para confirmar que o filtro é por `responsavel_id` do usuário e não depende de "só veio o que é meu" pelo RLS — se depender, ajusto para filtrar explicitamente.
 
-Esse campo resolve o problema de "link pede login do Lovable" porque o redirecionamento acontece **dentro do app já autenticado** — o navegador nunca tenta abrir a URL externa do preview.
+### 3. Sem mudanças no componente "Colar link da tarefa"
+
+Continua funcionando como está; apenas deixará de "abrir vazio" porque a demanda passará a ser carregada para qualquer usuário.
+
+## Considerações de segurança
+
+- Leitura de demandas passa a ser global entre usuários autenticados (decisão explícita do usuário).
+- Edição/exclusão continuam restritas via `can_write` e `has_role(admin)`.
+- Comentários, anexos e histórico de demandas já têm `SELECT USING (true)` para autenticados — coerente com a nova política.
+
+Confirma para eu aplicar?
