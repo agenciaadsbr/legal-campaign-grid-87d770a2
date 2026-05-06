@@ -1,48 +1,61 @@
-## Problemas identificados
+## Diagnóstico
 
-### 1. Datas e links do post não salvam
-A tabela `posts` no banco **não tem** as colunas `data_agendamento`, `data_postagem`, `link_post` nem `link_meister`. Esses campos só existem na interface TypeScript. Quando o usuário altera "Data agendamento" / "Data postagem" / links, a UI atualiza por um instante, mas o `updatePost` no store ignora esses campos no `dbPatch` (linhas 772-780 de `src/store/crm.ts`) — nada é gravado, e o `_loadAll()` subsequente repõe o valor antigo. É por isso que o campo "não contabiliza em tempo real".
+A aba "Vídeos" do Projeto Completo abre uma demanda da categoria `EditorVideo`, e o detalhe da tarefa é renderizado por `DemandaDetalheDialog.tsx`. O bloco "Anexos" usa esta lógica (linhas 76–82, 219–238):
 
-### 2. Faltam ações no cabeçalho do detalhe (igual à imagem da Demanda)
-O detalhe do Post (`src/pages/PostDetalhe.tsx`) não tem o botão de **copiar link** da tarefa nem o botão de **excluir** a tarefa. A tela de Demanda já tem ambos (`DemandaDetalheDialog.tsx` linhas 363-405) e servirá de referência visual e funcional.
+```ts
+const fileToDataUrl = (f) => /* FileReader.readAsDataURL */;
+// ...
+const url = await fileToDataUrl(f);  // base64 enorme
+await addAnexo({ demanda_id, nome, url, mime, size });
+```
 
-## O que será feito
+Ou seja, o arquivo inteiro vira `data:` base64 e é gravado no campo `text` `anexos_demandas.url`. Para imagens pequenas funciona; para vídeos (dezenas/centenas de MB) o INSERT no Postgres estoura o limite e o arquivo "some" — não carrega nem persiste. Esse é o erro relatado.
 
-### A. Migração SQL — adicionar colunas em `posts`
+O bucket `anexos` (privado) já existe no Storage, mas hoje não é usado — todos os anexos vão direto para a coluna `url` em base64.
+
+## Correção
+
+Subir o arquivo para o Supabase Storage e gravar apenas a URL pública. Aplica-se a TODAS as categorias de demanda (vídeos, design, IA, personalizado etc.), não só vídeos — o bug é o mesmo.
+
+### 1. Tornar o bucket `anexos` público (migration)
+
+Para que `getPublicUrl()` retorne uma URL acessível direto no `<img>`/`<a download>`/`<video>` sem precisar de signed URL a cada render. Adicionar policies de leitura pública e upload/delete por usuários autenticados com permissão de escrita.
+
 ```sql
-alter table public.posts
-  add column if not exists data_agendamento date,
-  add column if not exists data_postagem    date,
-  add column if not exists link_post        text,
-  add column if not exists link_meister     text;
-```
-Sem alteração de RLS (políticas atuais já cobrem as colunas novas).
+update storage.buckets set public = true where id = 'anexos';
 
-### B. Store `src/store/crm.ts`
-1. **`mapPost`** (l. 373): ler `data_agendamento`, `data_postagem`, `link_post`, `link_meister` da linha do banco.
-2. **`updatePost`** (l. 772): adicionar ao `dbPatch` os 4 novos campos quando vierem no `patch` (mesmo padrão dos demais).
-3. Adicionar action **`deleteCard(cardId)`** que apaga `comentarios` (post desse card), `posts` e o `card` em si — equivalente ao `deleteDemanda`. Recarrega via `_loadAll()`.
+create policy "anexos_public_read" on storage.objects
+  for select using (bucket_id = 'anexos');
 
-### C. `src/pages/PostDetalhe.tsx`
-1. **Botão "Copiar link"** (ícone `Link2`) ao lado do `<Select>` de status. Reaproveita a mesma lógica do `copiarLink` da demanda: troca origin para o domínio publicado quando estiver no preview Lovable. URL gerada:
-   ```
-   {origin}/clientes/{cliente_id}/posts/{post.id}
-   ```
-2. **Botão "Excluir tarefa"** (ícone `Trash2`, vermelho), visível apenas para `isAdmin` (via `useAuth`), envolto em `AlertDialog` de confirmação com texto "Esta ação não pode ser desfeita. Anexos, comentários e o post serão removidos." No confirmar: chama `deleteCard(card.id)`, mostra toast e navega de volta para `/clientes/{clienteId}?tab=posts`.
-3. Os inputs de data e links continuam usando `updatePost` (já chamam corretamente — o conserto está no store).
+create policy "anexos_auth_insert" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'anexos' and public.can_write(auth.uid()));
 
-## Layout do cabeçalho (referência: imagem enviada)
-
-```text
-[Título da tarefa ............]   [⚡ Urgente] [● Status ▾] [🔗] [🗑]
+create policy "anexos_auth_delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'anexos' and public.can_write(auth.uid()));
 ```
 
-## Arquivos alterados
+### 2. `src/components/demandas/DemandaDetalheDialog.tsx`
 
-- `supabase/migrations/<novo>.sql` — adiciona 4 colunas em `posts`
-- `src/store/crm.ts` — `mapPost`, `updatePost`, novo `deleteCard` + tipo na interface `CRMState`
-- `src/pages/PostDetalhe.tsx` — botões copiar link e excluir no header
+Substituir `fileToDataUrl` por upload real em `adicionarAnexo`:
 
-## Fora de escopo
-- Realtime via Supabase Channels (não é necessário — o `_loadAll` já é chamado após cada `updatePost`; o "tempo real" do usuário é a persistência funcionando).
-- Mudanças visuais nas datas/links em si.
+- Para cada arquivo, gerar caminho `demandas/{demanda.id}/{timestamp}-{nomeSeguro}`.
+- `supabase.storage.from('anexos').upload(path, file, { contentType: file.type, upsert: false })`.
+- `supabase.storage.from('anexos').getPublicUrl(path).data.publicUrl`.
+- Chamar `addAnexo({ demanda_id, nome, url: publicUrl, mime, size })`.
+- Tratar erro do upload com toast e abortar o restante.
+
+Também ajustar o preview/render dos anexos para suportar vídeo:
+- Adicionar `isVideoUrl(url, nome)` (extensões mp4, webm, mov, mkv, m4v, avi).
+- No grid de miniaturas, se for vídeo, mostrar um `<video>` com `preload="metadata"` (sem controles, object-cover, clicável) e ao clicar abrir o lightbox `previewAnexo`.
+- No lightbox (`Dialog` na linha 921), se `isVideoUrl` renderizar `<video src controls className="max-h-[80vh]" />` em vez de `<img>`.
+
+### 3. `src/store/demandas.ts` — `removeAnexo`
+
+Antes do `delete` na tabela, extrair o `path` da URL pública (`/storage/v1/object/public/anexos/<path>`) do anexo correspondente em `get().anexos` e chamar `supabase.storage.from('anexos').remove([path])`. Se a URL não for do storage (anexos antigos em base64), pular o remove e seguir só com o delete da linha. Isso evita lixo no bucket.
+
+### Fora do escopo
+
+- Migrar anexos antigos em base64 já gravados na tabela: continuam funcionando (a URL é o próprio data:), só não há o que migrar a não ser que o usuário peça.
+- Comentários com imagem (`composerImg`) também usam base64 hoje — o usuário não pediu, mantenho como está; podemos atacar depois se quiser.
