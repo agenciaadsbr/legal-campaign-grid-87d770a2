@@ -1,46 +1,36 @@
-## Problema identificado
+## Causa raiz
 
-A aba "Posts" do cliente **Timidati advogados** está diferente do padrão do sistema porque os 12 cards no banco foram criados com o título genérico **"Criar Post"** em vez do padrão usado por todos os outros clientes: **"Post Mês X - Semana Y"**.
+A aba Posts do **Timidati Advogados** abria o card sem navegar para o detalhe porque:
 
-### Como isso afeta a tela
-O componente `PostsKanbanCliente.tsx` detecta o título "placeholder" via regex `^Post Mês \d+ - Semana \d+$`. Quando o título bate com esse padrão e o card está em "Planejamento", a UI mostra:
-- O texto cinza/itálico "Definir título da tarefa"
-- O botão "Iniciar tarefa" funcionando como esperado
+- O banco tem **1.096 cards** e **1.096 posts**.
+- O store carrega tudo com `supabase.from("posts").select("*")` e `supabase.from("cards").select("*")`, que usam o **limite default de 1000 linhas por query do PostgREST/Supabase**.
+- Os 96 registros excedentes (entre eles, os 12 cards/posts do Timidati) **não chegam ao frontend**.
+- Em `PostsKanbanCliente.tsx` (linha 247–248), o `<Link to="posts/...">` só envolve o card quando o `post` correspondente existe na store. Sem post, o card vira um `<div>` puro — clicar não abre o detalhe. Isso explica exatamente o sintoma relatado para o Timidati e potencialmente afetará qualquer cliente novo daqui pra frente.
 
-Como os cards do Timidati têm título "Criar Post", o regex não bate e a aba aparece "fora do padrão" (mostra literal "Criar Post" em todos os 12 cards, sem o tratamento de placeholder).
-
-### Diagnóstico
-- Cliente Timidati (`b265e560-abd5-4a0e-9a39-0c3bd1bc16ba`): **12/12 cards** com título "Criar Post", todos em status "Planejamento", `posicao` 0–11.
-- Demais clientes: cards seguem padrão "Post Mês X - Semana Y" (ex.: cliente 44880f3b... mostra "Post Mês 1 - Semana 1" … "Post Mês 2 - Semana 2").
-- Outros clientes têm no máximo 1–2 cards com título customizado, o que é esperado (edições legítimas do usuário).
+A migração SQL anterior (que padronizou os títulos do Timidati) não tinha relação com esse bug — era um problema separado de UI que coincidiu no mesmo cliente.
 
 ## Correção
 
-Migração SQL única para padronizar os 12 cards do Timidati que ainda estão como rascunho ("Planejamento") e cujo título é exatamente "Criar Post":
+Buscar `cards` e `posts` em **lotes paginados** no `loadFromSupabase` de `src/store/crm.ts`, removendo o teto de 1000 linhas. Isso conserta o Timidati e qualquer cliente futuro de uma vez.
 
-```sql
-UPDATE public.cards
-SET titulo = 'Post Mês ' || (floor(posicao / 4)::int + 1) || ' - Semana ' || ((posicao % 4) + 1),
-    updated_at = now()
-WHERE cliente_id = 'b265e560-abd5-4a0e-9a39-0c3bd1bc16ba'
-  AND status = 'Planejamento'
-  AND titulo = 'Criar Post';
-```
+### Mudança em `src/store/crm.ts`
 
-Resultado esperado:
-- posicao 0 → "Post Mês 1 - Semana 1"
-- posicao 1 → "Post Mês 1 - Semana 2"
-- … 
-- posicao 11 → "Post Mês 3 - Semana 4"
+1. Criar helper `fetchAll(table, orderBy?)` que busca via `.range(from, to)` em lotes de 1000 até receber menos que o tamanho do lote.
+2. Substituir as duas chamadas dentro do `Promise.all` (linhas 467–468):
+   - `supabase.from("cards").select("*").order("posicao")` → `fetchAll("cards", { column: "posicao", ascending: true })`
+   - `supabase.from("posts").select("*")` → `fetchAll("posts")`
+3. Adaptar para que `Promise.all` continue funcionando (o helper retorna `{ data, error }` no mesmo formato esperado pelo restante do código).
 
-Após o UPDATE, a aba Posts do Timidati passa a se comportar exatamente como a dos demais clientes (placeholder "Definir título da tarefa", botão "Iniciar tarefa", agrupamento por mês no filtro etc.).
+Por segurança, aplicar a mesma paginação para `comentarios` (também pode crescer rápido) — opcional, mas recomendado já que segue o mesmo padrão.
+
+### Validação após a mudança
+
+- Abrir a aba Posts do Timidati (`/clientes/d5b6975c.../?tab=posts`) e clicar em um card → deve navegar para `/clientes/.../posts/{post_id}`.
+- Verificar no DevTools/Network que apenas 2 requests adicionais a `cards` e `posts` (range 1000-1999) acontecem no boot.
+- Confirmar que outros clientes continuam funcionando.
 
 ## Escopo
 
-- Apenas 1 migração SQL (não há mudança de código).
-- Nenhum outro cliente é afetado (filtro por `cliente_id` específico).
-- Cards já editados manualmente pelo usuário (com outro título) ficam intactos pelo filtro `titulo = 'Criar Post'`.
-
-## Investigar a causa raiz (opcional, fora deste fix)
-
-Vale checar depois de onde veio o título "Criar Post" para esses cards (provavelmente uma criação manual em lote anterior à padronização). O código atual em `src/store/crm.ts` já gera o título correto ao criar rascunhos, então o problema não deve se repetir para novos clientes.
+- 1 arquivo alterado: `src/store/crm.ts` (apenas o `loadFromSupabase`).
+- Nenhuma mudança de schema, nenhuma migração SQL.
+- Nenhum impacto em RLS, autenticação ou outras telas (o resto da app já consome `cards`/`posts` da mesma store).
