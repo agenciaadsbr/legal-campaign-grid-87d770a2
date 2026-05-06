@@ -441,6 +441,30 @@ export const useCRM = create<State>()((set, get) => ({
 
   _loadAll: async () => {
     set({ loading: true });
+
+    // Busca todas as linhas de uma tabela em lotes (para furar o limite default
+    // de 1000 linhas do PostgREST/Supabase). Mantém o mesmo formato de retorno
+    // ({ data, error }) para compatibilidade com o resto do código.
+    const fetchAll = async (
+      table: "cards" | "posts" | "comentarios",
+      orderBy?: { column: string; ascending?: boolean },
+    ): Promise<{ data: any[]; error: any }> => {
+      const PAGE = 1000;
+      const all: any[] = [];
+      let from = 0;
+      while (true) {
+        let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
+        if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+        const { data, error } = await q;
+        if (error) return { data: all, error };
+        const rows = data ?? [];
+        all.push(...rows);
+        if (rows.length < PAGE) break;
+        from += PAGE;
+      }
+      return { data: all, error: null };
+    };
+
     const [
       responsaveisRes,
       clientesRes,
@@ -464,9 +488,9 @@ export const useCRM = create<State>()((set, get) => ({
       supabase.from("modelos_colunas").select("*").order("created_at"),
       supabase.from("status_options").select("*").order("ordem", { ascending: true }),
       supabase.from("nichos").select("*").order("label"),
-      supabase.from("cards").select("*").order("posicao"),
-      supabase.from("posts").select("*"),
-      supabase.from("comentarios").select("*").order("created_at"),
+      fetchAll("cards", { column: "posicao", ascending: true }),
+      fetchAll("posts"),
+      fetchAll("comentarios", { column: "created_at", ascending: true }),
       supabase.from("alertas").select("*").order("created_at", { ascending: false }),
       supabase.from("custom_fields").select("*").order("ordem"),
       supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
