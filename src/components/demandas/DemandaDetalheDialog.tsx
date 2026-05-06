@@ -398,7 +398,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Subtipo</Label>
+                  <Label className="text-[11px]">Subtipo</Label>
                   {demanda.categoria === "Personalizado" ? (
                     <Input
                       value={demanda.subtipo ?? ""}
@@ -406,7 +406,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                         updateDemanda(demanda.id, { subtipo: e.target.value || null })
                       }
                       placeholder="Descreva"
-                      className="h-9"
+                      className="h-8 text-xs"
                     />
                   ) : (
                     <Select
@@ -417,7 +417,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                         })
                       }
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Selecionar" />
                       </SelectTrigger>
                       <SelectContent>
@@ -432,14 +432,14 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   )}
                 </div>
                 <div>
-                  <Label className="text-xs">Prioridade</Label>
+                  <Label className="text-[11px]">Prioridade</Label>
                   <Select
                     value={demanda.prioridade}
                     onValueChange={(v) =>
                       updateDemanda(demanda.id, { prioridade: v as any })
                     }
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -454,11 +454,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
 
               {/* Datas + Responsável */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-xs">Data início</Label>
+                  <Label className="text-[11px]">Data início</Label>
                   <Input
                     type="datetime-local"
+                    className="h-8 text-xs"
                     value={
                       demanda.data_inicio ? demanda.data_inicio.slice(0, 16) : ""
                     }
