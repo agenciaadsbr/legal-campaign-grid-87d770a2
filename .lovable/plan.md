@@ -1,56 +1,55 @@
 ## Objetivo
 
-Ajustar o modal `DemandaDetalheDialog` (usado por todas as abas do Projeto Completo: Posts, Vídeos, Tráfego Pago, LP/Site, IA/Atendimento, Urgências/Outros) para abrir em formato compacto, centralizado, em **uma coluna**, sem barra de rolagem no formulário principal. Apenas a seção **Atividade** (lista de comentários) pode ter scroll interno.
+Adicionar a funcionalidade **Copiar link** dentro do modal "Detalhe da Tarefa" (`DemandaDetalheDialog`), gerando uma URL absoluta que reabre exatamente aquela tarefa no Projeto Completo do cliente correspondente — semelhante à opção "Copiar link" da imagem de referência.
 
-Sem alterar lógica, campos, categorias, responsáveis, status, anexos, comentários ou banco.
+## Onde
 
-## Arquivo a editar
+Arquivo: `src/components/demandas/DemandaDetalheDialog.tsx`
 
-- `src/components/demandas/DemandaDetalheDialog.tsx`
+A barra superior do modal (cabeçalho do Card 1 — Informações da Demanda), ao lado dos botões **Urgente**, **Status** e do ícone de **Excluir** (visível apenas para admin).
 
-## Mudanças propostas
+## Como o link é montado
 
-### 1. Container do Dialog
-- Manter `max-w-2xl w-[92vw]` (≈ 640px — dentro da faixa 560–680px pedida).
-- Manter `overflow-hidden` no `DialogContent` para o modal não rolar como um todo.
-- Trocar a estrutura interna do `DialogContent` de stack vertical livre para um **flex column com altura controlada**: `flex flex-col max-h-[90vh]`.
-  - `Voltar para Visão Geral`: `shrink-0`.
-  - **Card 1 (Informações)**: `shrink-0` — sem scroll, mostra todos os campos principais.
-  - **Card 2 (Atividade)**: `flex-1 min-h-0` — recebe todo o espaço restante e tem scroll interno apenas na lista de comentários.
+O projeto já usa esse padrão em `src/lib/minhasTarefas.ts`:
 
-### 2. Card 1 — Informações da Demanda (sem scroll, compacto)
-Reduzir densidade para caber tudo sem rolagem em viewports padrão (≥ 768px de altura):
-- `CardHeader`: manter `pb-1.5 pt-2.5 px-3`.
-- Input do título: `text-sm` (era `text-base`), `h-auto`.
-- Linha Categoria · Subtipo · Prioridade: `gap-2`, `SelectTrigger` `h-8 text-xs`, `Label` `text-[11px]`.
-- Linha Datas + Responsáveis: `gap-2`, inputs `h-8 text-xs`.
-- Bloco Responsáveis: reduzir `min-h-[40px]` → `min-h-[36px]`, avatar `h-6 w-6` (de `h-7 w-7`).
-- Bloco Anexos: thumbnails `h-16 w-16` (de `h-[72px]`), `gap-1.5`, `pt-2` no border-top.
-- Bloco Atividade / Briefing: `Textarea rows={2}` `min-h-[56px]`, `pt-2` no border-top.
-- `CardContent` do Card 1: `space-y-2 px-3 pb-2.5`.
+```
+/clientes/{cliente_id}/projeto?tab={aba}&demanda={id}
+```
 
-### 3. Card 2 — Atividade (scroll apenas aqui)
-- `Card className="flex flex-col flex-1 min-h-0 overflow-hidden"`.
-- `CardHeader`: `pb-1 pt-2 px-3` com título `text-xs uppercase tracking-wide`.
-- `CardContent`: `flex flex-col flex-1 min-h-0 px-3 pb-3 gap-2`.
-- **Lista de comentários**: container próprio `flex-1 min-h-0 overflow-y-auto pr-1 space-y-2` — esta é a única área com scroll.
-- **Composer (novo comentário)**: `shrink-0`, fica fixo no rodapé do card. Reduzir `RichTextEditor` `minHeight` de `60px` para `48px`.
-- **Histórico colapsável**: `shrink-0` abaixo do composer (mantém comportamento atual `<details>`).
+Onde `aba` vem da função `categoriaParaAba(demanda.categoria)` já exportada em `src/lib/minhasTarefas.ts`. A rota `/clientes/:id/projeto` já lê o `searchParams.get("demanda")` e abre o modal automaticamente (`src/pages/ProjetoCliente.tsx` linhas 160-164).
 
-### 4. Responsividade
-- Em telas menores (`< 640px`): manter `w-[92vw]` e `max-h-[90vh]`. Se ainda assim não couber, o scroll vertical do `DialogContent` é evitado, mas a lista de comentários (já com overflow) absorve o espaço — campos principais permanecem visíveis no topo sem rolagem.
+A URL final será absoluta:
+```
+`${window.location.origin}/clientes/${demanda.cliente_id}/projeto?tab=${categoriaParaAba(demanda.categoria)}&demanda=${demanda.id}`
+```
 
-## Validação visual
+## Mudanças
 
-Após a edição, testar abrindo "Nova tarefa" / "Editar" em cada aba do Projeto Completo:
-1. Posts, 2. Vídeos, 3. Tráfego Pago, 4. LP/Site, 5. IA/Atendimento, 6. Urgências/Outros, 7. Editar tarefa existente.
+1. **Imports** em `DemandaDetalheDialog.tsx`:
+   - Adicionar ícone `Link2` (ou `Link`) de `lucide-react`.
+   - Importar `categoriaParaAba` de `@/lib/minhasTarefas`.
 
-Em todos:
-- Modal centralizado, ~640px de largura, 1 coluna.
-- Sem barra de rolagem no formulário principal nem no `DialogContent`.
-- Todos os campos principais visíveis (título, urgente, status, categoria, subtipo, prioridade, datas, responsáveis, anexos, briefing).
-- Apenas a lista de comentários da seção Atividade rola internamente quando há histórico longo; composer permanece fixo no rodapé do card.
+2. **Handler `copiarLink`** dentro do componente:
+   - Monta a URL absoluta no formato acima.
+   - Usa `navigator.clipboard.writeText(url)`.
+   - `toast.success("Link da tarefa copiado")` em caso de sucesso e `toast.error("Falha ao copiar link")` no `catch`.
+   - Fallback: se `navigator.clipboard` indisponível, usar `document.execCommand("copy")` via textarea temporário.
 
-## Não alterado
+3. **Botão na UI**: inserir um `Button` no cluster de ações do cabeçalho (linhas ~284-368), entre o botão **Status** e o botão **Excluir**:
+   - `variant="ghost"`, `size="icon"`, `title="Copiar link da tarefa"`.
+   - Ícone `Link2` (h-4 w-4).
+   - Sempre visível (não depende de `canWrite` nem de `isAdmin`) — qualquer usuário que vê a tarefa pode copiar o link.
+   - Estilo consistente com os outros botões do header.
 
-- Nenhuma lógica, estado, store, campos, validação, persistência, RLS ou layout estrutural (continua 1 coluna, mesmas seções na mesma ordem).
+## O que NÃO muda
+
+- Layout compacto, single-column e sem barra de rolagem do formulário principal (regras já estabelecidas).
+- Nenhum campo, seção, comportamento de salvamento, lógica de rascunho, Card de Atividade ou estrutura existente.
+- Sem novos tokens de cor — usa apenas variantes do `Button` já existentes.
+- Sem alterações em rotas, store, banco ou tipos.
+
+## Verificação
+
+Após implementar:
+- Abrir uma tarefa em qualquer cliente → clicar no botão de link no header → URL é copiada → toast aparece.
+- Colar a URL em outra aba/janela → tarefa abre direto no modal correto, no cliente correto, na aba correta.

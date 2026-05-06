@@ -41,7 +41,9 @@ import {
   Smile,
   AtSign,
   Paperclip,
+  Link2,
 } from "lucide-react";
+import { categoriaParaAba } from "@/lib/minhasTarefas";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -235,6 +237,27 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     e.target.value = "";
   };
 
+  const copiarLink = async () => {
+    const url = `${window.location.origin}/clientes/${demanda!.cliente_id}/projeto?tab=${categoriaParaAba(demanda!.categoria)}&demanda=${demanda!.id}`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      toast.success("Link da tarefa copiado");
+    } catch {
+      toast.error("Falha ao copiar link");
+    }
+  };
+
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl w-[92vw] max-h-[90vh] overflow-hidden p-3 gap-2 flex flex-col">
@@ -331,6 +354,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={copiarLink}
+                    title="Copiar link da tarefa"
+                    className="shrink-0"
+                  >
+                    <Link2 className="h-4 w-4" />
+                  </Button>
                   {isAdmin && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
