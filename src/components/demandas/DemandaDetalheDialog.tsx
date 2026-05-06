@@ -692,7 +692,6 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
             </CardContent>
           </Card>
-        </fieldset>
 
         {/* CARD 2 — Atividade (comentários) */}
         <Card className="flex flex-col min-h-0 overflow-hidden">
@@ -876,6 +875,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           </CardContent>
         </Card>
         </div>
+        </fieldset>
       </DialogContent>
 
       {/* Lightbox de imagem do anexo */}
