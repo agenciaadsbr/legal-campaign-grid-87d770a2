@@ -95,7 +95,12 @@ export function PeriodoFiltro({ value, onChange, className }: Props) {
   const labelAtual = useMemo(() => {
     const p = PRESETS.find((x) => x.value === value.preset);
     if (value.preset === "personalizado" && value.inicio && value.fim) {
-      return `${value.inicio.toLocaleDateString("pt-BR")} – ${value.fim.toLocaleDateString("pt-BR")}`;
+      const ini = value.inicio.toLocaleDateString("pt-BR");
+      const fim = value.fim.toLocaleDateString("pt-BR");
+      return ini === fim ? ini : `${ini} – ${fim}`;
+    }
+    if (value.preset === "personalizado" && value.inicio && !value.fim) {
+      return value.inicio.toLocaleDateString("pt-BR");
     }
     return p?.label ?? "Período";
   }, [value]);
@@ -168,11 +173,23 @@ export function PeriodoFiltro({ value, onChange, className }: Props) {
                 to: value.fim ?? undefined,
               }}
               onSelect={(range) => {
-                onChange({
-                  preset: "personalizado",
-                  inicio: range?.from ?? null,
-                  fim: range?.to ?? null,
-                });
+                const from = range?.from ?? null;
+                const toRaw = range?.to ?? null;
+                // Se só clicou em um dia, usa o mesmo dia como fim (final do dia)
+                let fim: Date | null = null;
+                if (toRaw) {
+                  fim = new Date(toRaw);
+                  fim.setHours(23, 59, 59, 999);
+                } else if (from) {
+                  fim = new Date(from);
+                  fim.setHours(23, 59, 59, 999);
+                }
+                let inicio: Date | null = null;
+                if (from) {
+                  inicio = new Date(from);
+                  inicio.setHours(0, 0, 0, 0);
+                }
+                onChange({ preset: "personalizado", inicio, fim });
               }}
               numberOfMonths={1}
               className="p-3 pointer-events-auto"
