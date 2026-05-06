@@ -4,7 +4,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, FileText, Bell, BarChart3, Scale, LogOut, Settings, CheckSquare } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Bell, BarChart3, Scale, LogOut, Settings, CheckSquare, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const MENU_ITEMS: MenuItem[] = [
   { title: "Contratos", url: "/contratos", icon: FileText },
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
+  { title: "Aulas", url: "/aulas", icon: BookOpen },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
