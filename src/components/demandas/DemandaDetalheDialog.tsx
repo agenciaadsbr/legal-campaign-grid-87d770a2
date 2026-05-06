@@ -752,13 +752,13 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
             {/* Composer */}
             {canWrite && (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-hidden shrink-0">
                 <RichTextEditor
                   value={novoComentario}
                   onChange={setNovoComentario}
                   placeholder="Escreva um comentário..."
                   onEnterSubmit={enviar}
-                  minHeight="60px"
+                  minHeight="48px"
                 />
                 {composerImg && (
                   <div className="px-3 py-2 border-t bg-muted/30 flex items-center gap-2">
