@@ -204,6 +204,7 @@ function Coluna({
   selectionMode,
   selectedIds,
   onToggleSelect,
+  clienteId,
 }: {
   status: StatusCard;
   cards: CardT[];
@@ -213,6 +214,7 @@ function Coluna({
   selectionMode?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  clienteId?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status, disabled: selectionMode });
   const isAtrasado = status === "Atrasado";
