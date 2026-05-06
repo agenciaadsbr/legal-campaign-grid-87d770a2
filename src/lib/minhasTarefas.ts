@@ -63,7 +63,7 @@ function mapCategoriaArea(cat: string): string {
 }
 
 /** Mapeia categoria de demanda -> aba do Projeto Completo. */
-function categoriaParaAba(cat: string): string {
+export function categoriaParaAba(cat: string): string {
   switch (cat) {
     case "EditorVideo": return "videos";
     case "TrafegoPago": return "trafego";
