@@ -123,10 +123,19 @@ export default function MinhasTarefas() {
         const prazoDate = parsePrazoLocal(t.prazo);
         if (!prazoDate) return false;
         const pTime = prazoDate.getTime();
-        const iniT = ini?.getTime() ?? null;
-        const fimT = fim?.getTime() ?? null;
-
-        // Filtro estrito: tarefa precisa estar dentro do intervalo selecionado.
+        let iniT: number | null = null;
+        let fimT: number | null = null;
+        if (ini) {
+          const x = new Date(ini);
+          x.setHours(0, 0, 0, 0);
+          iniT = x.getTime();
+        }
+        if (fim) {
+          const x = new Date(fim);
+          x.setHours(23, 59, 59, 999);
+          fimT = x.getTime();
+        }
+        // Filtro estrito por dia
         if (iniT !== null && pTime < iniT) return false;
         if (fimT !== null && pTime > fimT) return false;
       }
