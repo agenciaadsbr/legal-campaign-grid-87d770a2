@@ -473,9 +473,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Data limite</Label>
+                  <Label className="text-[11px]">Data limite</Label>
                   <Input
                     type="datetime-local"
+                    className="h-8 text-xs"
                     value={
                       demanda.data_limite ? demanda.data_limite.slice(0, 16) : ""
                     }
@@ -491,13 +492,13 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
                 {/* Responsáveis (multi) */}
                 <div className="md:col-span-2">
-                  <Label className="text-xs">Responsáveis</Label>
+                  <Label className="text-[11px]">Responsáveis</Label>
                   <div className="mt-1">
                     <Popover>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1.5 -mx-2 transition-colors min-h-[40px] w-full"
+                          className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1 -mx-2 transition-colors min-h-[36px] w-full"
                           title="Clique para alterar os responsáveis"
                         >
                           {(() => {
