@@ -577,6 +577,16 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
             {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
           </Badge>
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="default"
+              onClick={iniciarSelecionados}
+              disabled={!podeIniciarSelecionados}
+              className="gap-1.5"
+            >
+              <Play className="h-3.5 w-3.5" />
+              Iniciar tarefa{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+            </Button>
             <AtribuirResponsaveisPopover
               responsaveis={responsaveis}
               count={selectedIds.size}
