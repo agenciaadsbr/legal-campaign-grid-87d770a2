@@ -547,7 +547,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
             }}
           >
             <CheckSquare className="h-4 w-4 mr-1" />
-            {selectionMode ? "Cancelar seleção" : "Selecionar"}
+            {selectionMode ? "Cancelar seleção" : "Selecionar cards"}
           </Button>
         )}
 
