@@ -1,61 +1,36 @@
 ## Diagnóstico
 
-A aba "Vídeos" do Projeto Completo abre uma demanda da categoria `EditorVideo`, e o detalhe da tarefa é renderizado por `DemandaDetalheDialog.tsx`. O bloco "Anexos" usa esta lógica (linhas 76–82, 219–238):
+O erro "The object exceeded the maximum allowed size" exibido no toast é retornado pelo próprio Supabase Storage **antes** de gravar o arquivo. Verifiquei o bucket `anexos` no banco:
 
-```ts
-const fileToDataUrl = (f) => /* FileReader.readAsDataURL */;
-// ...
-const url = await fileToDataUrl(f);  // base64 enorme
-await addAnexo({ demanda_id, nome, url, mime, size });
-```
+- `file_size_limit = NULL` → cai no limite **global** do projeto Supabase, que é de 50 MB por arquivo no plano padrão.
+- O vídeo `DEMISSÃO JUGEND.mp4` que o usuário tentou enviar passa desse limite, então o upload é rejeitado e nada é salvo.
 
-Ou seja, o arquivo inteiro vira `data:` base64 e é gravado no campo `text` `anexos_demandas.url`. Para imagens pequenas funciona; para vídeos (dezenas/centenas de MB) o INSERT no Postgres estoura o limite e o arquivo "some" — não carrega nem persiste. Esse é o erro relatado.
-
-O bucket `anexos` (privado) já existe no Storage, mas hoje não é usado — todos os anexos vão direto para a coluna `url` em base64.
+Não é bug de policy nem de código no front — o front está correto, mas o bucket precisa aceitar arquivos maiores.
 
 ## Correção
 
-Subir o arquivo para o Supabase Storage e gravar apenas a URL pública. Aplica-se a TODAS as categorias de demanda (vídeos, design, IA, personalizado etc.), não só vídeos — o bug é o mesmo.
+### 1. Migration: aumentar `file_size_limit` do bucket `anexos`
 
-### 1. Tornar o bucket `anexos` público (migration)
-
-Para que `getPublicUrl()` retorne uma URL acessível direto no `<img>`/`<a download>`/`<video>` sem precisar de signed URL a cada render. Adicionar policies de leitura pública e upload/delete por usuários autenticados com permissão de escrita.
+Subir o limite por arquivo do bucket para **5 GB** (5368709120 bytes), que é o teto máximo suportado pelo Supabase Storage. Isso cobre vídeos longos em alta resolução sem reaparecer esse erro.
 
 ```sql
-update storage.buckets set public = true where id = 'anexos';
-
-create policy "anexos_public_read" on storage.objects
-  for select using (bucket_id = 'anexos');
-
-create policy "anexos_auth_insert" on storage.objects
-  for insert to authenticated
-  with check (bucket_id = 'anexos' and public.can_write(auth.uid()));
-
-create policy "anexos_auth_delete" on storage.objects
-  for delete to authenticated
-  using (bucket_id = 'anexos' and public.can_write(auth.uid()));
+update storage.buckets
+   set file_size_limit = 5368709120  -- 5 GB
+ where id = 'anexos';
 ```
 
-### 2. `src/components/demandas/DemandaDetalheDialog.tsx`
+### 2. `DemandaDetalheDialog.tsx` — melhorar UX de erro e progresso
 
-Substituir `fileToDataUrl` por upload real em `adicionarAnexo`:
-
-- Para cada arquivo, gerar caminho `demandas/{demanda.id}/{timestamp}-{nomeSeguro}`.
-- `supabase.storage.from('anexos').upload(path, file, { contentType: file.type, upsert: false })`.
-- `supabase.storage.from('anexos').getPublicUrl(path).data.publicUrl`.
-- Chamar `addAnexo({ demanda_id, nome, url: publicUrl, mime, size })`.
-- Tratar erro do upload com toast e abortar o restante.
-
-Também ajustar o preview/render dos anexos para suportar vídeo:
-- Adicionar `isVideoUrl(url, nome)` (extensões mp4, webm, mov, mkv, m4v, avi).
-- No grid de miniaturas, se for vídeo, mostrar um `<video>` com `preload="metadata"` (sem controles, object-cover, clicável) e ao clicar abrir o lightbox `previewAnexo`.
-- No lightbox (`Dialog` na linha 921), se `isVideoUrl` renderizar `<video src controls className="max-h-[80vh]" />` em vez de `<img>`.
-
-### 3. `src/store/demandas.ts` — `removeAnexo`
-
-Antes do `delete` na tabela, extrair o `path` da URL pública (`/storage/v1/object/public/anexos/<path>`) do anexo correspondente em `get().anexos` e chamar `supabase.storage.from('anexos').remove([path])`. Se a URL não for do storage (anexos antigos em base64), pular o remove e seguir só com o delete da linha. Isso evita lixo no bucket.
+- Adicionar uma checagem client-side antes do upload: se `file.size > 5 GB`, mostrar toast claro ("Arquivo maior que 5 GB não é suportado") e pular esse arquivo, em vez de tentar e falhar feio.
+- Quando o erro do `supabase.storage.upload` contiver "exceeded the maximum allowed size" ou "Payload too large", traduzir para uma mensagem em PT clara informando o tamanho do arquivo e o limite.
+- Manter o estado de "Enviando..." que já existe; não precisa adicionar barra de progresso real agora (o SDK do supabase-js v2 ainda não expõe progresso de upload de forma estável). Posso fazer numa próxima iteração se o usuário quiser.
 
 ### Fora do escopo
 
-- Migrar anexos antigos em base64 já gravados na tabela: continuam funcionando (a URL é o próprio data:), só não há o que migrar a não ser que o usuário peça.
-- Comentários com imagem (`composerImg`) também usam base64 hoje — o usuário não pediu, mantenho como está; podemos atacar depois se quiser.
+- Aumentar o limite global do projeto Supabase: não é necessário, o `file_size_limit` por bucket sobrepõe o global para cima até o teto do plano.
+- Mudar para upload resumível (TUS): só vale a pena para arquivos > 1 GB com conexões instáveis; podemos atacar depois se aparecer necessidade.
+- Migrar anexos antigos em base64: continua fora do escopo.
+
+## Observação importante para o usuário
+
+O teto de 5 GB **por arquivo** depende também do plano do projeto Supabase. No plano Free o limite efetivo costuma ser menor (até ~50 MB por arquivo, mesmo configurando o bucket para mais). Se mesmo após esta correção o erro voltar para vídeos grandes, vai ser necessário **upgrade do plano do Supabase** (Pro ou superior) para liberar uploads de até 5 GB.
