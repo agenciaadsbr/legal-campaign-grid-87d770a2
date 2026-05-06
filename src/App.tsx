@@ -19,6 +19,7 @@ import Contratos from "./pages/Contratos";
 import Alertas from "./pages/Alertas";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
+import Aulas from "./pages/Aulas";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { useVersionCheck } from "./hooks/useVersionCheck";
@@ -59,6 +60,7 @@ const App = () => (
                 
                 <Route path="/alertas" element={<Alertas />} />
                 <Route path="/relatorios" element={<Relatorios />} />
+                <Route path="/aulas" element={<Aulas />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
               </Route>
               <Route path="*" element={<NotFound />} />
