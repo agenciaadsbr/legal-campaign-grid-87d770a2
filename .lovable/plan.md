@@ -1,34 +1,46 @@
-## Diagnóstico
+## Objetivo
 
-O site publicado em `https://legal-campaign-grid.lovable.app` **já é público** (verificado via publish settings: `effective_publish_visibility: public`). Não há restrição no app nem no Lovable Cloud.
+Adicionar um campo no topo do sistema (na header global) onde o usuário pode colar um link de tarefa e ser redirecionado direto para essa tarefa dentro do sistema, contornando a restrição de acesso do preview do Lovable.
 
-O motivo do "pedido para logar no Lovable" é que o link copiado vem do **preview do editor** (`id-preview--975e0162-...lovable.app`). URLs `id-preview--*.lovable.app` são protegidas pela própria plataforma Lovable e exigem login para acessar — isso não é controlável pelo app.
+## Como funciona
 
-A solução é fazer o botão **Copiar link** sempre gerar a URL no domínio publicado (público), mesmo quando o usuário estiver navegando pelo preview.
+1. Usuário copia o link da tarefa pelo botão "Copiar link" no detalhe da demanda (já existe).
+2. Em vez de abrir o link no navegador (que pode pedir login do Lovable no preview), ele cola o link no campo no topo do sistema (já dentro do Dash Tasks, autenticado).
+3. O sistema extrai o `clienteId`, a `tab` e o `id` da demanda do link colado e faz `navigate()` interno para a rota correspondente — abrindo o `DemandaDetalheDialog` automaticamente via o deep-link `?demanda={id}` que já está implementado em `ProjetoCliente.tsx`.
 
-## Mudança
+Funciona com qualquer formato de URL: preview Lovable, domínio publicado, custom domain ou path relativo. Só importa o trecho `/clientes/:clienteId/projeto?tab=...&demanda=...`.
 
-Arquivo: `src/components/demandas/DemandaDetalheDialog.tsx`
+## Mudanças
 
-Ajustar o handler `copiarLink` (linhas 240-241) para detectar quando o `window.location.hostname` é uma URL de preview do Lovable e, nesse caso, substituir pelo domínio publicado.
+### 1. Novo componente `src/components/AbrirTarefaPorLinkInput.tsx`
 
-```ts
-const PUBLISHED_ORIGIN = "https://legal-campaign-grid.lovable.app";
-const isLovablePreview = /id-preview--.*\.lovable\.app$/.test(window.location.hostname);
-const origin = isLovablePreview ? PUBLISHED_ORIGIN : window.location.origin;
-const url = `${origin}/clientes/${demanda!.cliente_id}/projeto?tab=${categoriaParaAba(demanda!.categoria)}&demanda=${demanda!.id}`;
+- Input de busca com placeholder "Colar link da tarefa..." e ícone de lupa à esquerda (visual igual ao da referência: barra escura, arredondada, atalho `Ctrl+K` à direita).
+- Largura fixa razoável (~420px no desktop), centralizado na header.
+- Ao colar (`onPaste`) ou pressionar Enter:
+  - Faz parse do valor com `new URL(valor, window.location.origin)` (tolera path relativo).
+  - Valida que o pathname casa com `/clientes/:clienteId/projeto` (ou `/clientes/:clienteId`).
+  - Lê `tab` e `demanda` dos search params.
+  - Se válido: `navigate(\`/clientes/${clienteId}/projeto?tab=${tab}&demanda=${demandaId}\`)`, limpa o input e mostra `toast.success("Abrindo tarefa...")`.
+  - Se inválido: `toast.error("Link de tarefa inválido")`.
+- Atalho `Ctrl+K` / `Cmd+K` foca o input (listener global).
+
+### 2. Editar `src/components/AppLayout.tsx`
+
+- Importar e renderizar `<AbrirTarefaPorLinkInput />` na header, posicionado no centro (entre o `Breadcrumb` e o cluster de botões da direita).
+- Em telas pequenas (< md), esconder o breadcrumb já é o comportamento atual; o input pode ficar `flex-1` com `max-w-md` e `mx-auto`.
+
+## Layout da header (resultado)
+
+```text
+[≡] [Breadcrumb...]      [🔍 Colar link da tarefa...  Ctrl+K]      [🔔] [🌙]
 ```
-
-Comportamento resultante:
-- Acessando pelo preview do editor → link copiado aponta para `legal-campaign-grid.lovable.app` (público, sem login Lovable).
-- Acessando pelo domínio publicado ou um custom domain → mantém o `window.location.origin` atual.
 
 ## O que NÃO muda
 
-- Nada no botão, layout ou autenticação do próprio app.
-- Configuração de publish (já está pública).
-- O acesso à tarefa continua exigindo login normal do Dash Tasks (Supabase auth) — isso é o login do app, não do Lovable.
+- Botão "Copiar link" no `DemandaDetalheDialog` continua igual.
+- Rotas, autenticação, deep-link `?demanda=` em `ProjetoCliente.tsx` (já funciona).
+- Nada visual nos cards/dialogs de demanda.
 
 ## Observação
 
-Se mais tarde você configurar um **custom domain** próprio (ex.: `app.suaempresa.com.br`), basta atualizar a constante `PUBLISHED_ORIGIN` para esse domínio.
+Esse campo resolve o problema de "link pede login do Lovable" porque o redirecionamento acontece **dentro do app já autenticado** — o navegador nunca tenta abrir a URL externa do preview.
