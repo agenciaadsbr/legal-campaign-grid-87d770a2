@@ -1,6 +1,7 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { AbrirTarefaPorLinkInput } from "./AbrirTarefaPorLinkInput";
 import { Button } from "@/components/ui/button";
 import { Bell, Moon, Sun } from "lucide-react";
 import { useTheme } from "./theme-provider";
@@ -65,7 +66,10 @@ export function AppLayout() {
                 ))}
               </BreadcrumbList>
             </Breadcrumb>
-            <div className="ml-auto flex items-center gap-1">
+            <div className="flex-1 flex justify-center px-2 sm:px-4">
+              <AbrirTarefaPorLinkInput />
+            </div>
+            <div className="flex items-center gap-1">
               <Link to="/alertas">
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-4 w-4" />
