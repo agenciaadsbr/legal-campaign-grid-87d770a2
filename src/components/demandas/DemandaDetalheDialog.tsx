@@ -601,13 +601,13 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar anexo
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {meusAnexos.map((a) => {
                     const img = isImageUrl(a.url, a.nome);
                     return (
                       <div
                         key={a.id}
-                        className="group relative h-[72px] w-[72px] border rounded-lg overflow-hidden bg-muted/30"
+                        className="group relative h-16 w-16 border rounded-lg overflow-hidden bg-muted/30"
                       >
                         {img ? (
                           <button
