@@ -11,6 +11,11 @@ import { useCRM, type Responsavel } from "@/store/crm";
  */
 const cache: Record<string, string | null> = {};
 
+/** Limpa o cache em memória (chamar no signOut para evitar carregar id antigo). */
+export function clearResponsavelCache() {
+  for (const k of Object.keys(cache)) delete cache[k];
+}
+
 export function useResponsavelAtual(): {
   responsavel: Responsavel | null;
   responsavelId: string | null;
