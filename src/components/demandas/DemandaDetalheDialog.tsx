@@ -875,6 +875,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             )}
           </CardContent>
         </Card>
+        </div>
       </DialogContent>
 
       {/* Lightbox de imagem do anexo */}
