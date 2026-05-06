@@ -425,12 +425,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
     const card = cards.find((c) => c.id === String(e.active.id));
     if (!card) return;
     if (novoStatus === card.status_card) return;
-    const veioDePlanejamento = card.status_card === "Planejamento";
     moveCard(card.id, novoStatus as StatusCard);
-    if (veioDePlanejamento) {
-      const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
-      abrirDetalhe(card.id, { focusTitulo: isPlaceholderTitulo });
-    }
   };
 
   const respsSelLabel =
