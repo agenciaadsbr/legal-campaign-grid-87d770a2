@@ -60,7 +60,7 @@ function CardItem({
   const isAtrasadoStatus = card.status_card === "Atrasado";
 
   const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
-  const tituloVisivel = isPlaceholderTitulo && isPlanejamento ? "Definir título da tarefa" : card.titulo_card;
+  const tituloVisivel = card.titulo_card;
 
   const [editingTitulo, setEditingTitulo] = useState(false);
   const [tituloDraft, setTituloDraft] = useState(isPlaceholderTitulo ? "" : card.titulo_card);
@@ -177,7 +177,6 @@ function CardItem({
               onDoubleClick={canWrite && !isPlanejamento && !selectionMode ? startEdit : undefined}
               className={cn(
                 "text-sm font-medium leading-tight line-clamp-2 break-words",
-                isPlaceholderTitulo && isPlanejamento && "text-muted-foreground italic",
                 canWrite && !selectionMode && "cursor-text hover:text-primary transition-colors",
                 selectionMode && "pr-7",
               )}
@@ -413,7 +412,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
     const novo = await createCardRascunho({ cliente_id: clienteId, mes_referencia: mes });
     setCriandoTarefa(false);
     if (novo) {
-      navigate(`/clientes/${clienteId}/posts/${novo.postId}?focus=titulo`);
+      toast.success("Tarefa criada");
     }
   };
 
@@ -426,12 +425,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
     const card = cards.find((c) => c.id === String(e.active.id));
     if (!card) return;
     if (novoStatus === card.status_card) return;
-    const veioDePlanejamento = card.status_card === "Planejamento";
     moveCard(card.id, novoStatus as StatusCard);
-    if (veioDePlanejamento) {
-      const isPlaceholderTitulo = /^Post Mês \d+ - Semana \d+$/i.test(card.titulo_card.trim());
-      abrirDetalhe(card.id, { focusTitulo: isPlaceholderTitulo });
-    }
   };
 
   const respsSelLabel =

@@ -808,7 +808,7 @@ export const useCRM = create<State>()((set, get) => ({
       .from("cards")
       .insert({
         cliente_id,
-        titulo: `Post Mês ${mes} - Semana ${semana}`,
+        titulo: "Criar Post",
         status: statusInicial,
         posicao,
         responsaveis_ids: [],
