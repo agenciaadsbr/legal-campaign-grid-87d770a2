@@ -1,34 +1,73 @@
-## Problema
+## Diagnóstico do estado atual
 
-Na aba **Posts** do cliente, o botão "Adicionar Tarefa" não está funcionando como esperado. Após análise:
+- Ao **criar um cliente** (`addCliente` em `src/store/crm.ts`, linhas ~556–584), o sistema **já gera automaticamente `meses × 4` cards** + posts no Supabase, com título `Post Mês X - Semana Y` e status `Planejamento`.
+- No **Kanban da aba Posts** (`PostsKanbanCliente.tsx`), cada card aparece como uma "tarefa" individual com botão **"Iniciar tarefa"** próprio (linhas 227-237). Já existe **modo de seleção em massa** (botão "Selecionar", linhas 514-527, 536-599) que hoje só atribui responsáveis.
+- No módulo **"Minhas Tarefas"** (`src/lib/minhasTarefas.ts`, linhas 185-279), os cards de posts **já são agrupados** em **1 tarefa única** por (cliente + responsável + contrato), com título tipo "Criar 12 posts". Ou seja, o conceito que o usuário descreve já existe parcialmente — falta apenas formalizar visualmente no Kanban e trocar o "Iniciar tarefa" individual por um **único botão em massa**.
 
-1. **Causa do "não funcionar":** o fluxo `handleAdicionarTarefa` em `src/components/clientes/PostsKanbanCliente.tsx` chama `createCardRascunho` (que cria card + post no Supabase) e em seguida navega para `/clientes/:id/posts/:postId?focus=titulo`. Porém o título salvo no banco é `Post Mês X - Semana Y` (placeholder), o que faz o card aparecer no Kanban com o texto "Definir título da tarefa" em itálico — visualmente parece que "nada aconteceu" se o usuário não percebe a navegação para o detalhe do post.
+Conclusão: **não precisa de nova tabela**. Os cards já são "filhos" naturais do contrato. Basta:
+1. Manter a geração automática (já está correta para Semestral=6m=24 cards, Trimestral=3m=12 cards, etc.).
+2. Substituir o botão "Iniciar tarefa" de cada card por **um botão único** ("Iniciar tarefa") que age sobre os cards selecionados.
+3. Adicionar um **cabeçalho "Tarefa de Posts"** no topo do Kanban mostrando "1 tarefa · N posts (X em planejamento, Y em andamento, Z concluídos)" para reforçar visualmente o conceito.
+4. Garantir que cards continuem **independentes** (drag & drop, status individual, prazos individuais — já é assim hoje).
 
-2. **Pedido do usuário:** todo card novo criado pelo botão deve já vir com o título **"Criar Post"** (em vez do placeholder `Post Mês X - Semana Y`). A edição do título passa a ser feita dentro dos detalhes da tarefa, não mais forçada na criação.
+## Mudanças
 
-## O que fazer
+### 1. `src/components/clientes/PostsKanbanCliente.tsx`
 
-### 1. `src/store/crm.ts` — função `createCardRascunho` (linhas ~782-839)
+**a) Remover o botão "Iniciar tarefa" individual de cada `CardItem`**
+- Linhas 227-242: substituir o bloco condicional `{isPlanejamento && canWrite && !selectionMode ? <Button…/> : <StatusBadge…/>}` por **apenas** o `StatusBadge` (sempre).
+- Remover prop `onIniciar` do `CardItem` e do `Coluna` (limpeza). O `DragOverlay` (linha 627) também perde esse prop.
 
-- Trocar o título inserido no `cards` e no `posts` de `` `Post Mês ${mes} - Semana ${semana}` `` para a constante **`"Criar Post"`**.
-- Manter o cálculo de `posicao`, `mes_referencia` e `numero_semana` como está (eles ainda são úteis para organização e exibição do "Post Mês X · Semana Y" no rodapé do card).
+**b) Cabeçalho "Tarefa de Posts" no topo do Kanban**
+- Logo acima da barra de filtros (antes da `<div className="flex items-center gap-2 flex-wrap">` da linha 440), inserir um card resumo:
+  ```
+  ┌──────────────────────────────────────────────────────┐
+  │ Tarefa de Posts · {N} posts no contrato              │
+  │ Planejamento: X · Em andamento: Y · Concluídos: Z    │
+  └──────────────────────────────────────────────────────┘
+  ```
+- Usa `cardsCliente` para contar; sem novas queries.
+- Texto curto e usando tokens semânticos (`bg-card`, `text-muted-foreground`).
 
-### 2. `src/components/clientes/PostsKanbanCliente.tsx`
+**c) Botão único "Iniciar tarefa" no modo de seleção**
+- No bloco do `selectionMode` (linhas 536-599), adicionar **antes** do `AtribuirResponsaveisPopover` um novo botão `<Button>Iniciar tarefa ({selectedIds.size})</Button>`.
+- Habilitado apenas quando `selectedIds.size > 0` **e** ao menos um dos selecionados está em status `Planejamento`.
+- Ao clicar: para cada card selecionado em `Planejamento`, chamar `updateCard(id, { status_card: "Criar" })` em paralelo (`Promise.all`). Cards já fora de "Planejamento" são ignorados (não regridem).
+- Toast: `"X tarefa(s) iniciada(s)"`.
+- Ao fim, limpar seleção e sair do `selectionMode`.
 
-- **`handleAdicionarTarefa`** (linha ~409): após criar o card, **não navegar mais automaticamente** para a tela de detalhe com `?focus=titulo`. Em vez disso:
-  - Mostrar um `toast.success("Tarefa criada")`.
-  - O card aparece imediatamente na coluna "Planejamento" (já há `_loadAll` ao final do `createCardRascunho`).
-  - O usuário clica no card quando quiser editar título/detalhes.
-- **`CardItem`** (linhas ~62-66, 173-186): ajustar a regra `isPlaceholderTitulo` para reconhecer também `"Criar Post"` como título "padrão editável" — assim continua funcionando o clique inline para editar o título no card, e o estilo em itálico não aparece (já que "Criar Post" é um título válido). Concretamente: remover o tratamento "Definir título da tarefa" e simplesmente exibir `card.titulo_card` normalmente; manter o `startEdit` no clique para edição inline do título.
-- **`onDragEnd`** (linhas ~429-434): remover o auto-redirect/foco no título ao mover um card de "Planejamento" para outra coluna. O título "Criar Post" já é válido, então não precisamos mais "forçar" o usuário a renomear.
-- **Botão "Iniciar tarefa"** dentro de cards em Planejamento (linhas ~228-243): manter, mas o `onIniciar` agora apenas abre o detalhe do post sem `focusTitulo`.
+**d) Tornar o modo de seleção mais visível para esse fluxo**
+- Renomear o botão `"Selecionar"` (linha 525) para `"Selecionar cards"` para deixar claro o propósito (iniciar/atribuir em massa).
 
-### 3. Migração de dados (opcional, **não incluída** por padrão)
+### 2. `src/store/crm.ts` — `addCliente` (linhas 556-584)
 
-Cards antigos com título no formato `Post Mês X - Semana Y` continuarão como estão. Se o usuário quiser, podemos rodar um `UPDATE cards SET titulo = 'Criar Post' WHERE titulo ~ '^Post Mês \d+ - Semana \d+$'` em uma migração separada — não vou fazer isso agora para não alterar dados existentes sem confirmação.
+- Manter a geração automática de `meses × 4` cards (já cobre Mensal=4, Trimestral=12, Semestral=24, Anual=48).
+- **Trocar o título** dos cards inseridos de `` `Post Mês ${m} - Semana ${s}` `` para **`"Criar Post"`** (alinhado com a regra atual de `createCardRascunho` aplicada na conversa anterior). A informação "Mês X · Semana Y" continua exibida no rodapé do card via `card.mes_referencia` / `card.numero_semana` (cálculo derivado de `posicao`, já existente em `mapCard`).
+- Sem mudança no schema.
+
+### 3. `src/lib/minhasTarefas.ts` — sem mudanças
+
+O agrupamento já produz **1 tarefa única** por (cliente + responsável + contrato) com título `"Criar N posts"`. Já está correto. Apenas confirmar visualmente que continua funcionando depois das mudanças no Kanban (não há impacto direto, pois esse arquivo lê `cards` direto).
+
+### 4. Outros módulos — **nenhuma mudança**
+
+- `Demandas`, `Planejamento`, `Documentação`, `Briefing`, `Dashboard`, `Relatórios`: **intocados**.
+- RLS, schema, edge functions: **intocados**.
+- Botões "Iniciar" de demandas / outras abas: **intocados**.
+
+## Detalhes técnicos
+
+- O status `"Planejamento"` é o gatilho do botão. Ao iniciar, o card vai para `"Criar"` (igual ao comportamento atual de `iniciarTarefa` mínimo, sem exigir prazo/responsável — usuário pode preencher depois clicando no card).
+- Cards travados em qualquer coluna (Revisar, Atrasado, etc.) **continuam parados** sem afetar os demais — comportamento já garantido por `status` ser por card.
+- Contagem "1 tarefa de N posts" em "Minhas Tarefas" já funciona via agrupamento existente.
+- Clientes **antigos** com cards titulados `Post Mês X - Semana Y` continuam funcionando; o título antigo permanece no banco (não há migração de dados nesta entrega para não alterar histórico). Apenas novos clientes terão "Criar Post".
 
 ## Resumo
 
-- Botão "Adicionar Tarefa" passa a criar o card com título **"Criar Post"** e exibi-lo direto no Kanban (com toast de confirmação), sem redirecionar.
-- Título pode ser editado clicando no card (inline) ou abrindo os detalhes da tarefa.
-- Sem mudanças no schema do banco; sem mudanças nas RLS.
+| Aspecto | Antes | Depois |
+|---|---|---|
+| Criação do cliente | Gera N cards (já fazia) com títulos "Post Mês X - Semana Y" | Gera N cards com título "Criar Post" |
+| Botão "Iniciar tarefa" | 1 por card em Planejamento | 1 único no modo de seleção, age em vários |
+| Cards independentes | Sim | Sim (sem mudanças) |
+| Contagem em "Minhas Tarefas" | Já mostra "Criar N posts" como 1 tarefa | Continua igual |
+| Outros módulos | — | Sem alterações |

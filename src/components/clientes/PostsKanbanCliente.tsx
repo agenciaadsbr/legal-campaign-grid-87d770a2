@@ -224,22 +224,10 @@ function CardItem({
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
 
-      {isPlanejamento && canWrite && !selectionMode ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="default"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={handleIniciar}
-          className="mt-1.5 w-full h-7 text-xs gap-1.5"
-        >
-          <Play className="h-3 w-3" /> Iniciar tarefa
-        </Button>
-      ) : (
-        <div className="mt-1.5 flex justify-end">
-          <StatusBadge status={card.status_card} />
-        </div>
-      )}
+      <div className="mt-1.5 flex justify-end">
+        <StatusBadge status={card.status_card} />
+      </div>
+
     </div>
   );
 
@@ -435,9 +423,46 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
       ? responsaveis.find((r) => r.id === filtroResps[0])?.nome ?? "1 responsável"
       : `${filtroResps.length} responsáveis`;
 
+  const resumoTarefa = useMemo(() => {
+    const total = cardsCliente.length;
+    let planejamento = 0, andamento = 0, concluidos = 0;
+    for (const c of cardsCliente) {
+      if (c.status_card === "Planejamento") planejamento++;
+      else if (c.status_card === "Postado") concluidos++;
+      else andamento++;
+    }
+    return { total, planejamento, andamento, concluidos };
+  }, [cardsCliente]);
+
+  const podeIniciarSelecionados = useMemo(() => {
+    if (selectedIds.size === 0) return false;
+    return cards.some((c) => selectedIds.has(c.id) && c.status_card === "Planejamento");
+  }, [cards, selectedIds]);
+
+  const iniciarSelecionados = async () => {
+    const alvos = cards.filter((c) => selectedIds.has(c.id) && c.status_card === "Planejamento");
+    if (alvos.length === 0) return;
+    await Promise.all(alvos.map((c) => updateCard(c.id, { status_card: "Criar" as StatusCard })));
+    toast.success(`${alvos.length} ${alvos.length === 1 ? "tarefa iniciada" : "tarefas iniciadas"}`);
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-220px)] overflow-hidden -mx-6 px-6 w-[calc(100%+3rem)]">
+      <div className="rounded-lg border bg-card px-3 py-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="text-sm font-semibold">
+          Tarefa de Posts
+          <span className="text-muted-foreground font-normal"> · {resumoTarefa.total} {resumoTarefa.total === 1 ? "post" : "posts"} no contrato</span>
+        </div>
+        <div className="text-xs text-muted-foreground flex items-center gap-3 ml-auto">
+          <span>Planejamento: <span className="text-foreground font-medium">{resumoTarefa.planejamento}</span></span>
+          <span>Em andamento: <span className="text-foreground font-medium">{resumoTarefa.andamento}</span></span>
+          <span>Concluídos: <span className="text-foreground font-medium">{resumoTarefa.concluidos}</span></span>
+        </div>
+      </div>
       <div className="flex items-center gap-2 flex-wrap">
+
         <Select value={filtroMes} onValueChange={setFiltroMes}>
           <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -522,7 +547,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
             }}
           >
             <CheckSquare className="h-4 w-4 mr-1" />
-            {selectionMode ? "Cancelar seleção" : "Selecionar"}
+            {selectionMode ? "Cancelar seleção" : "Selecionar cards"}
           </Button>
         )}
 
@@ -552,6 +577,16 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
             {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
           </Badge>
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="default"
+              onClick={iniciarSelecionados}
+              disabled={!podeIniciarSelecionados}
+              className="gap-1.5"
+            >
+              <Play className="h-3.5 w-3.5" />
+              Iniciar tarefa{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+            </Button>
             <AtribuirResponsaveisPopover
               responsaveis={responsaveis}
               count={selectedIds.size}
