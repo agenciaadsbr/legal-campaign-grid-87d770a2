@@ -200,6 +200,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     return () => {
       if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
       if (tituloTimer.current) clearTimeout(tituloTimer.current);
+      if (linkMeisterTimer.current) clearTimeout(linkMeisterTimer.current);
+      if (linkDriveTimer.current) clearTimeout(linkDriveTimer.current);
     };
   }, []);
 
