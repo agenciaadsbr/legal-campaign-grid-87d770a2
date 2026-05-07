@@ -179,9 +179,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   useEffect(() => {
     if (demanda) {
       setDescricaoLocal(demanda.descricao ?? "");
-      // Em rascunho, o título no banco vem como "Sem título" — mostrar vazio.
       const t = demanda.titulo === "Sem título" ? "" : demanda.titulo;
       setTituloLocal(t);
+      setLinkMeisterLocal(demanda.link_meister ?? "");
+      setLinkDriveLocal(demanda.link_drive ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demanda?.id]);
