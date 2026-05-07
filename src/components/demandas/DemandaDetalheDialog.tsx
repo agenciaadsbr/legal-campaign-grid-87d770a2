@@ -142,6 +142,18 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   const [tituloLocal, setTituloLocal] = useState("");
   const tituloTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tituloInputRef = useRef<HTMLInputElement>(null);
+  const [linkMeisterLocal, setLinkMeisterLocal] = useState("");
+  const [linkDriveLocal, setLinkDriveLocal] = useState("");
+  const linkMeisterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const linkDriveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const CATEGORIAS_COM_LINKS: DemandaCategoria[] = [
+    "EditorVideo",
+    "TrafegoPago",
+    "LandingPage",
+    "IAAtendimento",
+    "Personalizado",
+  ];
 
   const cliente = demanda && clientes.find((c) => c.id === demanda.cliente_id);
   const meusComentarios = useMemo(
@@ -167,9 +179,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   useEffect(() => {
     if (demanda) {
       setDescricaoLocal(demanda.descricao ?? "");
-      // Em rascunho, o título no banco vem como "Sem título" — mostrar vazio.
       const t = demanda.titulo === "Sem título" ? "" : demanda.titulo;
       setTituloLocal(t);
+      setLinkMeisterLocal(demanda.link_meister ?? "");
+      setLinkDriveLocal(demanda.link_drive ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demanda?.id]);
@@ -187,6 +200,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     return () => {
       if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
       if (tituloTimer.current) clearTimeout(tituloTimer.current);
+      if (linkMeisterTimer.current) clearTimeout(linkMeisterTimer.current);
+      if (linkDriveTimer.current) clearTimeout(linkDriveTimer.current);
     };
   }, []);
 
@@ -796,11 +811,76 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                 </div>
               </div>
 
+              {/* Links Meister / Drive (apenas categorias específicas) */}
+              {CATEGORIAS_COM_LINKS.includes(demanda.categoria) && (
+                <div className="border-t pt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {([
+                    {
+                      key: "link_meister" as const,
+                      label: "Link do Meister",
+                      value: linkMeisterLocal,
+                      setValue: setLinkMeisterLocal,
+                      timer: linkMeisterTimer,
+                      original: demanda.link_meister ?? "",
+                    },
+                    {
+                      key: "link_drive" as const,
+                      label: "Link do Drive",
+                      value: linkDriveLocal,
+                      setValue: setLinkDriveLocal,
+                      timer: linkDriveTimer,
+                      original: demanda.link_drive ?? "",
+                    },
+                  ]).map((field) => (
+                    <div key={field.key}>
+                      <Label className="text-[11px]">{field.label}</Label>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Input
+                          type="url"
+                          placeholder="https://..."
+                          value={field.value}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            field.setValue(v);
+                            if (field.timer.current) clearTimeout(field.timer.current);
+                            field.timer.current = setTimeout(() => {
+                              updateDemanda(demanda.id, { [field.key]: v.trim() || null } as any);
+                            }, 600);
+                          }}
+                          onBlur={() => {
+                            if (field.timer.current) {
+                              clearTimeout(field.timer.current);
+                              field.timer.current = null;
+                            }
+                            if (field.original !== field.value) {
+                              updateDemanda(demanda.id, {
+                                [field.key]: field.value.trim() || null,
+                              } as any);
+                            }
+                          }}
+                          className="h-8 text-xs"
+                        />
+                        {field.value.trim().startsWith("http") && (
+                          <a
+                            href={field.value.trim()}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-muted-foreground hover:text-foreground p-1"
+                            title={`Abrir ${field.label}`}
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Atividade / Briefing */}
               <div className="border-t pt-2">
                 <Label className="text-[11px]">Atividade / Briefing</Label>
                 <Textarea
-                  rows={2}
                   placeholder="Detalhes internos da demanda: contexto, requisitos, referências..."
                   value={descricaoLocal}
                   onChange={(e) => {
@@ -820,7 +900,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       updateDemanda(demanda.id, { descricao: descricaoLocal });
                     }
                   }}
-                  className="mt-1 min-h-[56px] text-xs"
+                  className="mt-1 h-32 max-h-32 min-h-0 resize-none overflow-y-auto text-xs"
                 />
               </div>
             </CardContent>

@@ -27,6 +27,8 @@ export interface Demanda {
   data_conclusao: string | null;
   precisa_aprovacao: boolean;
   aprovado_por: string | null;
+  link_meister: string | null;
+  link_drive: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -133,6 +135,8 @@ function normalizeDemanda(row: any): Demanda {
     categoria: migrarCategoria(row.categoria),
     responsaveis_ids,
     responsavel_id: row.responsavel_id ?? null,
+    link_meister: row.link_meister ?? null,
+    link_drive: row.link_drive ?? null,
   } as Demanda;
 }
 

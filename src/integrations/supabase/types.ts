@@ -702,6 +702,8 @@ export type Database = {
           data_limite: string | null
           descricao: string | null
           id: string
+          link_drive: string | null
+          link_meister: string | null
           precisa_aprovacao: boolean
           prioridade: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids: string[]
@@ -722,6 +724,8 @@ export type Database = {
           data_limite?: string | null
           descricao?: string | null
           id?: string
+          link_drive?: string | null
+          link_meister?: string | null
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids?: string[]
@@ -742,6 +746,8 @@ export type Database = {
           data_limite?: string | null
           descricao?: string | null
           id?: string
+          link_drive?: string | null
+          link_meister?: string | null
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids?: string[]
