@@ -27,6 +27,8 @@ export interface Demanda {
   data_conclusao: string | null;
   precisa_aprovacao: boolean;
   aprovado_por: string | null;
+  link_meister: string | null;
+  link_drive: string | null;
   created_at: string;
   updated_at: string;
 }
