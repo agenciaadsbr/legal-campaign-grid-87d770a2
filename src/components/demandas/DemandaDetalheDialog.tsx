@@ -1007,6 +1007,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             )}
           </CardContent>
         </Card>
+          </div>
         </fieldset>
       </DialogContent>
 
