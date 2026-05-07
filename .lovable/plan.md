@@ -1,26 +1,64 @@
-## Problema
+## Objetivo
 
-Ao abrir "Detalhes da tarefa" pelo ícone de atalho em **Minhas Tarefas**, o conteúdo do dialog fica cortado na base (campo "Atividade / Briefing" e o composer de comentários ficam parcialmente invisíveis), porque não há barra de rolagem para o conteúdo total.
+1. Adicionar dois campos de URL — **Link do Meister** e **Link do Drive** — ao formulário "Detalhes da Tarefa" (`DemandaDetalheDialog`) **apenas** quando a categoria da demanda for uma destas:
+   - Vídeo (`EditorVideo`)
+   - Tráfego Pago (`TrafegoPago`)
+   - Landing Page / Site (`LandingPage`)
+   - IA / Atendimento (`IAAtendimento`)
+   - Urgência / Outro (`Personalizado`)
 
-## Causa
+2. Tornar o campo **Atividade / Briefing** com altura fixa (sem o "puxador" de redimensionamento) e scroll interno quando o texto crescer.
 
-Em `src/components/demandas/DemandaDetalheDialog.tsx` (linha 340), o `DialogContent` está configurado com `max-h-[90vh] overflow-hidden flex flex-col`. Dentro dele:
+## Mudanças
 
-- O **Card 1** (informações + anexos + briefing) usa `shrink-0` → cresce livremente conforme conteúdo.
-- O **Card 2** (Atividade/comentários) usa `flex-1 min-h-0` com scroll interno.
+### 1. Banco — novos campos em `demandas`
 
-Quando o Card 1 é alto (vários anexos, briefing longo), ele "empurra" o Card 2 e ultrapassa o limite do dialog. Como o `DialogContent` está `overflow-hidden`, o excesso é cortado e o usuário não consegue rolar.
+Migration adicionando duas colunas opcionais:
 
-## Correção
+```sql
+alter table public.demandas
+  add column if not exists link_meister text,
+  add column if not exists link_drive text;
+```
 
-Em `src/components/demandas/DemandaDetalheDialog.tsx`:
+Sem alterar RLS (campos ficam sob as políticas existentes da tabela).
 
-1. Manter o botão "Voltar para Visão Geral" fixo no topo (`shrink-0`).
-2. Envolver os dois cards (Card 1 + Card 2) em um container `flex-1 min-h-0 overflow-y-auto` para que todo o corpo do dialog ganhe uma única barra de rolagem vertical.
-3. Remover o scroll interno separado do Card 2 (o composer de comentários e a lista passam a rolar junto com o restante), e tirar `flex-1 / min-h-0 / overflow-hidden` que forçavam altura fixa nesse card.
-4. Ajustar o `DialogContent` para continuar com `max-h-[90vh]` e `flex flex-col`, mas o `overflow-hidden` permanece apenas para conter os cantos arredondados — o scroll real fica no wrapper interno.
+### 2. `src/store/demandas.ts`
+
+- Adicionar `link_meister: string | null` e `link_drive: string | null` à interface `Demanda`.
+- `normalizeDemanda` propaga os dois campos (já vêm via `...row`, garantir defaults `null`).
+- `createDemanda` / `createRascunho` aceitam e gravam os campos quando enviados.
+- `updateDemanda` já encaminha qualquer patch parcial — basta funcionar via tipagem.
+
+### 3. `src/components/demandas/DemandaDetalheDialog.tsx`
+
+**Links Meister / Drive** (novo bloco):
+
+- Criar constante local `CATEGORIAS_COM_LINKS = ["EditorVideo","TrafegoPago","LandingPage","IAAtendimento","Personalizado"]`.
+- Renderizar o bloco logo após o card de Anexos e antes do "Atividade / Briefing", apenas se `CATEGORIAS_COM_LINKS.includes(demanda.categoria)`.
+- Dois `Input type="url"` lado a lado (grid 2 colunas em md, empilha em mobile), com label `Link do Meister` e `Link do Drive`.
+- Estado local com debounce de 600 ms (mesmo padrão do `descricaoLocal`) para não disparar update a cada tecla.
+- Quando preenchido, mostrar pequeno ícone-link (`<a target="_blank">`) ao lado do input para abrir.
+
+**Briefing fixo + scroll interno** (linhas 799-825):
+
+- Substituir o `<Textarea rows={2} className="mt-1 min-h-[56px] text-xs" />` por:
+  - `className="mt-1 h-32 max-h-32 resize-none overflow-y-auto text-xs"` (altura fixa ~128 px, sem handle de resize, scroll vertical interno).
+- Manter toda a lógica de debounce/onBlur intacta.
+
+### 4. Sem mudanças em outras telas
+
+Kanban, listas e cards continuam usando os mesmos campos existentes; os novos só aparecem dentro do dialog conforme regra de categoria.
+
+## Detalhes técnicos
+
+- Tipagem dos novos campos é `string | null` para alinhar com Postgres `text` nullable.
+- Patch de update envia `null` quando o input fica vazio (para limpar o valor no banco).
+- Validação leve: se o usuário digitar algo que não comece com `http`, mostramos o ícone de link como desabilitado (sem bloquear o save — campo é livre).
+- Os `Input` reutilizam `@/components/ui/input` para herdar tokens semânticos do tema (sem cores hardcoded).
 
 ## Fora de escopo
 
-- Nenhuma mudança de regra de negócio, dados, filtros ou outros módulos.
-- Layout, paddings, cores e tipografia preservados.
+- Não exibir os links em outras visões (kanban, listas).
+- Sem migração de dados antigos (campos novos começam vazios).
+- Sem alteração de regras de acesso/RLS.
