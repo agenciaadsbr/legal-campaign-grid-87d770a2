@@ -827,12 +827,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           </Card>
 
         {/* CARD 2 — Atividade (comentários) */}
-        <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <Card className="shrink-0 overflow-hidden">
           <CardHeader className="pb-1 pt-2 px-3 shrink-0">
             <CardTitle className="text-xs uppercase tracking-wide">Atividade</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col flex-1 min-h-0 px-3 pb-3 gap-2">
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-2">
+          <CardContent className="flex flex-col px-3 pb-3 gap-2">
+            <div className="space-y-2">
               {meusComentarios.length === 0 && (
                 <div className="text-sm text-muted-foreground text-center py-6">
                   Sem comentários ainda
