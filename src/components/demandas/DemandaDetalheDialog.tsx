@@ -142,6 +142,18 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   const [tituloLocal, setTituloLocal] = useState("");
   const tituloTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tituloInputRef = useRef<HTMLInputElement>(null);
+  const [linkMeisterLocal, setLinkMeisterLocal] = useState("");
+  const [linkDriveLocal, setLinkDriveLocal] = useState("");
+  const linkMeisterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const linkDriveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const CATEGORIAS_COM_LINKS: DemandaCategoria[] = [
+    "EditorVideo",
+    "TrafegoPago",
+    "LandingPage",
+    "IAAtendimento",
+    "Personalizado",
+  ];
 
   const cliente = demanda && clientes.find((c) => c.id === demanda.cliente_id);
   const meusComentarios = useMemo(
