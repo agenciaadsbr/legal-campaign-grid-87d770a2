@@ -126,6 +126,54 @@ export type Database = {
         }
         Relationships: []
       }
+      aulas: {
+        Row: {
+          anexo_nome: string | null
+          anexo_url: string | null
+          categoria: string | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          ordem: number
+          thumbnail_url: string | null
+          tipo_video: string
+          titulo: string
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          anexo_nome?: string | null
+          anexo_url?: string | null
+          categoria?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          ordem?: number
+          thumbnail_url?: string | null
+          tipo_video?: string
+          titulo: string
+          updated_at?: string
+          video_url: string
+        }
+        Update: {
+          anexo_nome?: string | null
+          anexo_url?: string | null
+          categoria?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          ordem?: number
+          thumbnail_url?: string | null
+          tipo_video?: string
+          titulo?: string
+          updated_at?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
       cards: {
         Row: {
           cliente_id: string
