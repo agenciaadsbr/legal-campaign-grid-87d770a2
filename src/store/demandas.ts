@@ -135,6 +135,8 @@ function normalizeDemanda(row: any): Demanda {
     categoria: migrarCategoria(row.categoria),
     responsaveis_ids,
     responsavel_id: row.responsavel_id ?? null,
+    link_meister: row.link_meister ?? null,
+    link_drive: row.link_drive ?? null,
   } as Demanda;
 }
 
