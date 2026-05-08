@@ -151,8 +151,14 @@ export default function MinhasTarefas() {
     const pendentes = tarefasFiltradas.filter((t) => t.status !== "concluido").length;
     const atrasadas = tarefasFiltradas.filter((t) => t.status === "atrasado").length;
     const urgentes = tarefasFiltradas.filter((t) => t.urgente && t.status !== "concluido").length;
-    return { total, pendentes, atrasadas, urgentes };
+    const aguardando = tarefasFiltradas.filter((t) => t.aguardando_liberacao && t.status !== "concluido").length;
+    return { total, pendentes, atrasadas, urgentes, aguardando };
   }, [tarefasFiltradas]);
+
+  const tarefasAguardando = useMemo(
+    () => tarefasFiltradas.filter((t) => t.aguardando_liberacao && t.status !== "concluido"),
+    [tarefasFiltradas],
+  );
 
   const areasDisponiveis = useMemo(
     () => Array.from(new Set(todasTarefas.map((t) => t.area))),
