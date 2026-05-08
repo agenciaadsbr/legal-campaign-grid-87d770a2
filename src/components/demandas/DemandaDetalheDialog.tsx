@@ -440,11 +440,23 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   </Button>
                   <Select
                     value={demanda.status}
-                    onValueChange={(v) =>
-                      updateDemanda(demanda.id, { status: v as any })
-                    }
+                    disabled={aguardando}
+                    onValueChange={(v) => {
+                      if (aguardando) {
+                        toast.error("Tarefa bloqueada", {
+                          description: tituloPaiAguardando
+                            ? `Aguardando conclusão de: ${tituloPaiAguardando}`
+                            : "Esta tarefa depende de outra etapa.",
+                        });
+                        return;
+                      }
+                      updateDemanda(demanda.id, { status: v as any });
+                    }}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger
+                      className="w-40"
+                      title={aguardando ? `Aguardando: ${tituloPaiAguardando}` : undefined}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
