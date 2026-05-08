@@ -125,6 +125,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     historico,
     anexos,
     demandas,
+    dependencies,
   } = useDemandas();
 
   // Fonte de verdade reativa: lê a demanda viva do store pelo id, para que
