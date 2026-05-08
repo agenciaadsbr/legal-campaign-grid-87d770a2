@@ -16,7 +16,7 @@ import { KpiCard } from "@/components/relatorios/KpiCard";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, CheckCircle2, ListChecks, Users, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle2, ListChecks, Lock, Users, Zap } from "lucide-react";
 
 const FILTROS_INICIAIS: FiltrosState = {
   cliente: "all",
