@@ -1,51 +1,58 @@
-## Diagnóstico
+## Problema
 
-O erro atual não é mais apenas o bucket de vídeos. Ao tentar salvar uma aula, o Supabase retorna:
+Usuários **não-admin (editor)** não conseguem remover anexos das demandas dentro do "Projeto Completo" do cliente.
 
-`Could not find the table 'public.aulas' in the schema cache`
+## Causa raiz
 
-Confirmei que a tabela `public.aulas` não existe no banco atual. Por isso falha tanto com YouTube quanto com upload do computador: o vídeo até pode ter URL, mas o cadastro da aula não consegue ser salvo porque a tabela de persistência está ausente.
+A tabela `public.anexos_demandas` tem RLS configurado assim:
 
-## Plano de correção
+- SELECT: liberado para autenticados
+- INSERT/UPDATE: `can_write(auth.uid())` (admin + editor) ✅
+- **DELETE: `has_role(auth.uid(), 'admin')`** ❌ — só admin
 
-1. **Criar a tabela `public.aulas` no Supabase**
-   - Campos compatíveis com o formulário e a tela atual:
-     - `id`
-     - `titulo`
-     - `descricao`
-     - `tipo_video` (`youtube`, `drive`, `upload`)
-     - `video_url`
-     - `categoria`
-     - `ordem`
-     - `thumbnail_url`
-     - `anexo_url`
-     - `anexo_nome`
-     - `created_by`
-     - `created_at`
-     - `updated_at`
-   - Criar trigger para atualizar `updated_at` automaticamente.
-   - Criar índices para ordenação/listagem por categoria, ordem e data de criação.
+Resultado: quando um editor clica em "Remover anexo" no `DemandaDetalheDialog`, o Supabase rejeita o `delete` silenciosamente (0 linhas afetadas) e o arquivo continua aparecendo. O frontend chama `supabase.from("anexos_demandas").delete().eq("id", id)` em `src/store/demandas.ts` e o erro de RLS pode nem ser retornado, dependendo do caso.
 
-2. **Adicionar RLS/políticas de acesso na tabela**
-   - Leitura (`SELECT`): usuários autenticados podem visualizar aulas.
-   - Criação/edição/exclusão (`INSERT`, `UPDATE`, `DELETE`): apenas usuários com permissão de escrita via `public.can_write(auth.uid())`, seguindo o padrão já usado no projeto.
+Esse mesmo padrão (somente admin pode deletar) provavelmente bloqueia editores em fluxos parecidos, mas o pedido é específico para anexos.
 
-3. **Ajustar o frontend para ficar mais robusto**
-   - Validar URLs de YouTube antes de salvar, para evitar cadastro com link inválido.
-   - Normalizar links do YouTube/Drive no player, incluindo URLs com parâmetros extras.
-   - Melhorar mensagens de erro para diferenciar:
-     - erro ao enviar arquivo;
-     - erro ao salvar aula;
-     - URL inválida.
+## Correção
 
-4. **Atualizar os tipos Supabase do projeto**
-   - Incluir a tabela `aulas` em `src/integrations/supabase/types.ts` para o app reconhecer a estrutura recém-criada.
+### 1. Migration de banco
+
+Substituir a policy de DELETE de `anexos_demandas` por uma que permita admins e editores:
+
+```sql
+DROP POLICY IF EXISTS admin_anexos_demandas_delete ON public.anexos_demandas;
+
+CREATE POLICY rw_anexos_demandas_delete
+ON public.anexos_demandas
+FOR DELETE
+TO authenticated
+USING (public.can_write(auth.uid()));
+```
+
+Isso alinha o DELETE com o INSERT/UPDATE já existentes (ambos usam `can_write`), permitindo que **admin + editor** removam anexos. Viewers continuam sem permissão.
+
+### 2. Garantir feedback de erro no frontend
+
+Em `src/store/demandas.ts`, função `removeAnexo`, adicionar verificação extra: quando o `delete` retorna 0 linhas (caso de RLS bloqueando sem erro explícito), mostrar toast de "sem permissão". Isso evita silêncio em casos futuros.
+
+```ts
+const { error, count } = await supabase
+  .from("anexos_demandas")
+  .delete({ count: "exact" })
+  .eq("id", id);
+
+if (error) { /* toast erro */ return; }
+if (count === 0) {
+  toast.error("Você não tem permissão para remover este anexo");
+  return;
+}
+```
+
+### 3. Storage bucket "anexos"
+
+O cleanup do arquivo no bucket já é best-effort (`.catch(() => {})`) então não precisa mudar — se o editor não tiver permissão de delete no bucket, o registro do banco some e o arquivo vira órfão (aceitável). Caso queira limpar de verdade, adicionamos depois uma policy de DELETE no `storage.objects` para `bucket_id = 'anexos'` com `can_write`.
 
 ## Resultado esperado
 
-Depois da correção:
-
-- Aulas com link do YouTube poderão ser salvas e reproduzidas.
-- Aulas com vídeo enviado pelo computador poderão ser salvas e reproduzidas.
-- A tela `/aulas` deixará de cair no erro de tabela ausente.
-- O bucket `aulas-assets` já existente continuará sendo usado para vídeos, thumbnails e anexos.
+Editores passam a remover anexos de demandas normalmente, com feedback claro caso algo dê errado.
