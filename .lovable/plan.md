@@ -1,58 +1,166 @@
-## Problema
+## Workflow Encadeado entre Demandas
 
-Usuários **não-admin (editor)** não conseguem remover anexos das demandas dentro do "Projeto Completo" do cliente.
+Adicionar continuidade operacional entre demandas do Projeto Completo, sem alterar tarefas existentes nem quebrar nada que já funciona. Tudo é **aditivo**: novas tabelas, novo status virtual, novos campos opcionais no modal.
 
-## Causa raiz
+---
 
-A tabela `public.anexos_demandas` tem RLS configurado assim:
+### 1. Banco de dados (migration aditiva)
 
-- SELECT: liberado para autenticados
-- INSERT/UPDATE: `can_write(auth.uid())` (admin + editor) ✅
-- **DELETE: `has_role(auth.uid(), 'admin')`** ❌ — só admin
+**Nova tabela `task_dependencies`**
+- `id`
+- `task_id` (uuid → demandas.id) — tarefa que depende
+- `depends_on_task_id` (uuid → demandas.id) — tarefa-pai
+- `modo_liberacao` `'automatico' | 'manual'` (default `'automatico'`)
+- `liberado` boolean (default false)
+- `liberado_em` timestamp
+- `created_at`
+- RLS: leitura para autenticados; insert/update/delete para `can_write`
 
-Resultado: quando um editor clica em "Remover anexo" no `DemandaDetalheDialog`, o Supabase rejeita o `delete` silenciosamente (0 linhas afetadas) e o arquivo continua aparecendo. O frontend chama `supabase.from("anexos_demandas").delete().eq("id", id)` em `src/store/demandas.ts` e o erro de RLS pode nem ser retornado, dependendo do caso.
+**Novo status virtual `AGUARDANDO_DEPENDENCIA`**
+- Não alterar o enum `demanda_status` (evita migração destrutiva).
+- Implementar como **estado derivado**: a demanda está "aguardando" se existe linha em `task_dependencies` onde `task_id = demanda.id` e `liberado = false`.
+- Persistir o status original em `demandas.status` normalmente (ex.: `Planejamento`); a UI mostra badge "Aguardando dependência" quando a tarefa está bloqueada.
 
-Esse mesmo padrão (somente admin pode deletar) provavelmente bloqueia editores em fluxos parecidos, mas o pedido é específico para anexos.
+**Trigger de liberação automática**
+- Em `AFTER UPDATE` em `demandas`: quando `status` muda para `Concluido` ou `Entregue`, marcar `task_dependencies.liberado = true` para todas as filhas com `modo_liberacao = 'automatico'`.
+- Registrar entrada em `historico_demandas` (`acao = 'dependencia_liberada'`).
 
-## Correção
+**Compatibilidade**
+- Demandas antigas: nenhuma linha em `task_dependencies` → comportamento idêntico ao atual.
+- Nada removido, nada renomeado.
 
-### 1. Migration de banco
+---
 
-Substituir a policy de DELETE de `anexos_demandas` por uma que permita admins e editores:
+### 2. Store (`src/store/demandas.ts`)
 
-```sql
-DROP POLICY IF EXISTS admin_anexos_demandas_delete ON public.anexos_demandas;
+- Adicionar `dependencies: TaskDependency[]` ao state e carregar junto com demandas.
+- Helpers:
+  - `isAguardandoDependencia(demandaId)` → boolean
+  - `getDependenciaPai(demandaId)` → Demanda | null
+  - `getProximasEtapas(demandaId)` → Demanda[]
+- Ações:
+  - `createDemandaComProxima(input, proxima?)` — cria demanda principal e, se `proxima` estiver presente, cria a filha + linha em `task_dependencies`.
+  - `liberarDependenciaManual(taskId)` — marca `liberado = true`.
+- Realtime: subscribe em `task_dependencies` para refletir liberações.
 
-CREATE POLICY rw_anexos_demandas_delete
-ON public.anexos_demandas
-FOR DELETE
-TO authenticated
-USING (public.can_write(auth.uid()));
+---
+
+### 3. Modal de criação/edição (`DemandaDetalheDialog` + form de criação)
+
+Adicionar **nova seção "Workflow / Continuidade"** ao final do form:
+
+- ☑ **Criar próxima etapa vinculada** (collapsed por padrão)
+- Quando marcado, expandir bloco com os mesmos campos da criação de demanda:
+  - título, categoria, subtipo, responsáveis, prioridade, prazo, descrição, link_meister, link_drive
+- ☑ **Bloquear execução até concluir esta tarefa** (default: ligado)
+- Modo de liberação: radio `Automático` / `Manual`
+- **Herança de dados** (checkboxes individuais):
+  - ☑ reaproveitar descrição
+  - ☑ reaproveitar links (meister/drive)
+  - ☑ reaproveitar anexos (copia linhas em `anexos_demandas` para a nova demanda)
+
+Na edição de uma demanda já existente, mostrar a mesma seção para permitir adicionar uma próxima etapa depois.
+
+---
+
+### 4. UI de bloqueio operacional
+
+Em `DemandaDetalheDialog` quando `isAguardandoDependencia(d.id)`:
+
+- Badge cinza com cadeado "Aguardando: <título da pai>" (clicável → abre a pai).
+- Desabilitar:
+  - botão "Iniciar"
+  - mudança de status para `Criar`/`Revisar`/`Entregue`/`Concluido`
+  - drag-and-drop de coluna no Kanban
+- Tooltip nos controles desabilitados: "Esta tarefa depende da conclusão de: <título>".
+- **Continua editável**: título, descrição, responsáveis, prazo, anexos, comentários, links, checklist.
+
+No `DemandCard`:
+- Ícone 🔒 quando aguardando dependência.
+- Ícone 🔗 quando a demanda tem `proximas_etapas.length > 0`.
+
+---
+
+### 5. Seção "Etapas relacionadas" no modal
+
+Bloco visual mostrando a cadeia:
+
+```
+← Etapa anterior: 🎥 Editar vídeo (Concluído)
+   Atual:        📈 Subir campanha
+→ Próxima:       🚀 Publicar Meta (Aguardando)
 ```
 
-Isso alinha o DELETE com o INSERT/UPDATE já existentes (ambos usam `can_write`), permitindo que **admin + editor** removam anexos. Viewers continuam sem permissão.
+Cada item é clicável e abre o modal correspondente.
 
-### 2. Garantir feedback de erro no frontend
+---
 
-Em `src/store/demandas.ts`, função `removeAnexo`, adicionar verificação extra: quando o `delete` retorna 0 linhas (caso de RLS bloqueando sem erro explícito), mostrar toast de "sem permissão". Isso evita silêncio em casos futuros.
+### 6. Liberação manual
 
-```ts
-const { error, count } = await supabase
-  .from("anexos_demandas")
-  .delete({ count: "exact" })
-  .eq("id", id);
+Quando uma demanda com filhos `modo_liberacao = 'manual'` é concluída, mostrar **toast com ação**:
 
-if (error) { /* toast erro */ return; }
-if (count === 0) {
-  toast.error("Você não tem permissão para remover este anexo");
-  return;
-}
-```
+> "Deseja liberar agora: Criar campanha Google Ads?" [Liberar] [Depois]
 
-### 3. Storage bucket "anexos"
+Também botão "Liberar agora" dentro do modal da filha, visível apenas para `can_write`.
 
-O cleanup do arquivo no bucket já é best-effort (`.catch(() => {})`) então não precisa mudar — se o editor não tiver permissão de delete no bucket, o registro do banco some e o arquivo vira órfão (aceitável). Caso queira limpar de verdade, adicionamos depois uma policy de DELETE no `storage.objects` para `bucket_id = 'anexos'` com `can_write`.
+---
 
-## Resultado esperado
+### 7. Regras de prazo
 
-Editores passam a remover anexos de demandas normalmente, com feedback claro caso algo dê errado.
+Em `auto_marcar_demanda_atrasada` e `marcar_demandas_atrasadas`: adicionar cláusula que **ignora** demandas com dependência não liberada (`NOT EXISTS (SELECT 1 FROM task_dependencies WHERE task_id = demandas.id AND liberado = false)`).
+
+Quando dependência for liberada, o `data_limite` continua o mesmo (regra simples). Se o usuário quiser, edita manualmente. _Opção futura_: recalcular prazo a partir da liberação — fora do escopo desta entrega.
+
+---
+
+### 8. Minhas Tarefas, Dashboard, Relatórios
+
+- **MinhasTarefasTabela**: adicionar nova seção colapsável **🔒 Aguardando liberação**, separada de Pendentes/Atrasadas/Concluídas. Tarefas aguardando contam no total geral mas não em "atrasadas".
+- **Dashboard / RelatoriosDemandas**:
+  - novo KPI "Aguardando liberação"
+  - lista "Gargalos por responsável" (quem tem mais filhas bloqueadas pelas suas pais)
+  - "Tempo médio de liberação" (média de `liberado_em - created_at` da dependência)
+- Filtros existentes ganham opção "Aguardando dependência".
+
+---
+
+### 9. Indicadores visuais nos Kanbans
+
+- `DemandCard` e `ProjetoKanban`: badges 🔗 (tem próxima) e 🔒 (aguardando).
+- No Kanban, cards bloqueados têm `cursor-not-allowed` e não são `draggable`.
+
+---
+
+### Detalhes técnicos
+
+**Arquivos a criar:**
+- `supabase/migrations/<timestamp>_workflow_dependencies.sql` — tabela, índices, RLS, trigger.
+- `src/lib/workflow.ts` — helpers e tipos (`TaskDependency`, `isBloqueada`, etc).
+- `src/components/demandas/WorkflowSection.tsx` — bloco "Próxima etapa" no modal.
+- `src/components/demandas/EtapasRelacionadas.tsx` — visual da cadeia.
+
+**Arquivos a editar (adicionar, não remover):**
+- `src/store/demandas.ts` — state, ações, realtime.
+- `src/components/demandas/DemandaDetalheDialog.tsx` — seção workflow, bloqueio operacional, etapas relacionadas, botão liberar manual.
+- `src/components/demandas/DemandCard.tsx` — badges 🔗 / 🔒.
+- `src/components/demandas/DemandasKanban.tsx` e `ProjetoKanban.tsx` — bloquear DnD para aguardando.
+- `src/components/tarefas/MinhasTarefasTabela.tsx` — seção "Aguardando liberação".
+- `src/components/demandas/DashboardDemandasSection.tsx` e `RelatoriosDemandas.tsx` — novos KPIs.
+- `src/lib/minhasTarefas.ts` — agrupar `aguardando` separadamente.
+
+**Não alterado:**
+- enum `demanda_status` no Postgres
+- estrutura existente de `demandas`, `anexos_demandas`, `comentarios_demandas`, `historico_demandas`
+- comportamento de demandas sem dependência
+
+---
+
+### Entrega incremental sugerida
+
+1. Migration + store + helpers.
+2. Modal: seção "Workflow" + criação encadeada + herança.
+3. Bloqueio operacional + badges nos cards + Kanban.
+4. Etapas relacionadas + liberação manual + ajustes de prazo.
+5. Minhas Tarefas + Dashboard + Relatórios.
+
+Cada etapa é independente e o sistema permanece funcional após cada uma.
