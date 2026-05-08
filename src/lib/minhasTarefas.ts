@@ -4,6 +4,7 @@ import type { Card as PostCard, Cliente, Contrato } from "@/store/crm";
 import type { PlanItem } from "@/store/planejamento";
 import type { DocumentacaoItem } from "@/store/documentacao";
 import { CATEGORIA_LABEL } from "@/lib/demandas-categorias";
+import { isAguardandoDependencia, type TaskDependency } from "@/lib/workflow";
 
 export type TaskFonte = "demanda" | "post" | "planejamento" | "documentacao";
 export type TaskStatus = "pendente" | "em_andamento" | "atrasado" | "concluido";
@@ -25,6 +26,8 @@ export interface UnifiedTask {
   link: string;
   /** Permite reuso de anexos no fluxo de delegação (apenas demanda). */
   origem_categoria?: string | null;
+  /** True se a demanda tem dependência ainda não liberada. */
+  aguardando_liberacao?: boolean;
 }
 
 const PRIO_RANK: Record<TaskPrioridade, number> = {
@@ -109,12 +112,15 @@ interface BuildArgs {
   documentacao: DocumentacaoItem[];
   clientes: Cliente[];
   contratos?: Contrato[];
+  /** Dependências entre tarefas para marcar bloqueio. */
+  dependencies?: TaskDependency[];
 }
 
 export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
   const {
     responsavelId, authUserId, demandas, cards, planejamento, documentacao,
     clientes, contratos = [], scopeResponsaveisIds, scopeAuthUserIds,
+    dependencies = [],
   } = args;
 
   // Define o conjunto de responsáveis "visíveis"
@@ -178,6 +184,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           responsaveis_ids: getResponsaveisIds(d),
           link: `/clientes/${d.cliente_id}/projeto?tab=${categoriaParaAba(d.categoria)}&demanda=${d.id}`,
           origem_categoria: d.categoria,
+          aguardando_liberacao: isAguardandoDependencia(d.id, dependencies),
         });
       });
   }

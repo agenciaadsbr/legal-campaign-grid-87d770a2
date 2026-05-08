@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Demanda, useDemandas } from "@/store/demandas";
 import {
   STATUS_DEMANDA,
@@ -9,6 +9,8 @@ import {
 import { DemandCard } from "./DemandCard";
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
+import { isAguardandoDependencia } from "@/lib/workflow";
+import { toast } from "sonner";
 
 interface Props {
   demandas: Demanda[];
@@ -21,11 +23,24 @@ interface Props {
 export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, onToggleSelect }: Props) {
   const moveStatus = useDemandas((s) => s.moveStatus);
   const updateDemanda = useDemandas((s) => s.updateDemanda);
+  const dependencies = useDemandas((s) => s.dependencies);
   const [dragOver, setDragOver] = useState<DemandaStatus | null>(null);
+
+  const bloqueadas = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of demandas) {
+      if (isAguardandoDependencia(d.id, dependencies)) set.add(d.id);
+    }
+    return set;
+  }, [demandas, dependencies]);
 
   const iniciar = (e: React.MouseEvent, d: Demanda) => {
     e.preventDefault();
     e.stopPropagation();
+    if (bloqueadas.has(d.id)) {
+      toast.error("Aguardando liberação da etapa anterior");
+      return;
+    }
     updateDemanda(d.id, {
       status: "Criar",
       data_inicio: new Date().toISOString(),
@@ -49,7 +64,13 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
               if (selectionMode) return;
               e.preventDefault();
               const id = e.dataTransfer.getData("text/demanda");
-              if (id) moveStatus(id, status);
+              if (id) {
+                if (bloqueadas.has(id)) {
+                  toast.error("Aguardando liberação da etapa anterior");
+                } else {
+                  moveStatus(id, status);
+                }
+              }
               setDragOver(null);
             }}
             className={`rounded-lg bg-muted/30 p-2 min-h-[400px] transition-colors ${
@@ -76,10 +97,14 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
                   key={d.id}
                   demanda={d}
                   onClick={() => onOpen(d)}
-                  draggable={!selectionMode}
-                  onDragStart={(e) =>
-                    e.dataTransfer.setData("text/demanda", d.id)
-                  }
+                  draggable={!selectionMode && !bloqueadas.has(d.id)}
+                  onDragStart={(e) => {
+                    if (bloqueadas.has(d.id)) {
+                      e.preventDefault();
+                      return;
+                    }
+                    e.dataTransfer.setData("text/demanda", d.id);
+                  }}
                   selectionMode={selectionMode}
                   selected={selectedIds?.has(d.id)}
                   onToggleSelect={() => onToggleSelect?.(d.id)}

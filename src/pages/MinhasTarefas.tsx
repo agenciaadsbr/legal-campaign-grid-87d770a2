@@ -16,7 +16,7 @@ import { KpiCard } from "@/components/relatorios/KpiCard";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, CheckCircle2, ListChecks, Users, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle2, ListChecks, Lock, Users, Zap } from "lucide-react";
 
 const FILTROS_INICIAIS: FiltrosState = {
   cliente: "all",
@@ -41,6 +41,7 @@ export default function MinhasTarefas() {
   const contratos = useCRM((s) => s.contratos);
   const responsaveis = useCRM((s) => s.responsaveis);
   const demandas = useDemandas((s) => s.demandas);
+  const dependencies = useDemandas((s) => s.dependencies);
   const planejamento = usePlanejamento((s) => s.itens);
   const documentacao = useDocumentacao((s) => s.itens);
 
@@ -100,8 +101,9 @@ export default function MinhasTarefas() {
         documentacao,
         clientes,
         contratos,
+        dependencies,
       }),
-    [responsavelId, user?.id, scopeResp, scopeAuth, demandas, cards, planejamento, documentacao, clientes, contratos],
+    [responsavelId, user?.id, scopeResp, scopeAuth, demandas, cards, planejamento, documentacao, clientes, contratos, dependencies],
   );
 
   const tarefasFiltradas = useMemo(() => {
@@ -149,8 +151,14 @@ export default function MinhasTarefas() {
     const pendentes = tarefasFiltradas.filter((t) => t.status !== "concluido").length;
     const atrasadas = tarefasFiltradas.filter((t) => t.status === "atrasado").length;
     const urgentes = tarefasFiltradas.filter((t) => t.urgente && t.status !== "concluido").length;
-    return { total, pendentes, atrasadas, urgentes };
+    const aguardando = tarefasFiltradas.filter((t) => t.aguardando_liberacao && t.status !== "concluido").length;
+    return { total, pendentes, atrasadas, urgentes, aguardando };
   }, [tarefasFiltradas]);
+
+  const tarefasAguardando = useMemo(
+    () => tarefasFiltradas.filter((t) => t.aguardando_liberacao && t.status !== "concluido"),
+    [tarefasFiltradas],
+  );
 
   const areasDisponiveis = useMemo(
     () => Array.from(new Set(todasTarefas.map((t) => t.area))),
@@ -226,13 +234,15 @@ export default function MinhasTarefas() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
         <KpiCard compact icon={ListChecks} label="Total" value={kpis.total} tone="primary" />
         <KpiCard compact icon={CheckCircle2} label="Pendentes" value={kpis.pendentes} tone="info" />
         <KpiCard compact icon={AlertCircle} label="Atrasadas" value={kpis.atrasadas}
           tone={kpis.atrasadas > 0 ? "destructive" : "default"} />
         <KpiCard compact icon={Zap} label="Urgentes" value={kpis.urgentes}
           tone={kpis.urgentes > 0 ? "destructive" : "default"} />
+        <KpiCard compact icon={Lock} label="Aguardando" value={kpis.aguardando}
+          tone={kpis.aguardando > 0 ? "warning" : "default"} />
       </div>
 
       <MinhasTarefasFiltros
@@ -247,6 +257,23 @@ export default function MinhasTarefas() {
         onConcluir={(t) => setTaskAlvo(t)}
         mostrarResponsavel={mostrarColunaResponsavel}
       />
+
+      {tarefasAguardando.length > 0 && (
+        <section className="space-y-2 pt-2">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4 text-amber-500" />
+            <h2 className="text-sm font-semibold">Aguardando liberação</h2>
+            <span className="text-xs text-muted-foreground">
+              ({tarefasAguardando.length}) — bloqueadas até a etapa anterior ser concluída
+            </span>
+          </div>
+          <MinhasTarefasTabela
+            tasks={tarefasAguardando}
+            onConcluir={(t) => setTaskAlvo(t)}
+            mostrarResponsavel={mostrarColunaResponsavel}
+          />
+        </section>
+      )}
 
       <ConcluirTarefaDialog
         task={taskAlvo}
