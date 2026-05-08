@@ -76,6 +76,7 @@ interface State {
   comentarios: ComentarioDemanda[];
   anexos: AnexoDemanda[];
   historico: HistoricoDemanda[];
+  dependencies: TaskDependency[];
   loaded: boolean;
   loading: boolean;
 
@@ -89,8 +90,6 @@ interface State {
   ) => Promise<string | null>;
   /**
    * Cria um rascunho silencioso (sem toast) e retorna o objeto Demanda já normalizado.
-   * Usado pelo fluxo de "formulário único": a tarefa nasce no banco e o usuário
-   * preenche tudo direto no DemandaDetalheDialog.
    */
   createRascunho: (args: {
     cliente_id: string;
@@ -100,7 +99,6 @@ interface State {
   updateDemanda: (id: string, patch: Partial<Demanda>) => Promise<void>;
   deleteDemanda: (id: string) => Promise<void>;
   moveStatus: (id: string, status: DemandaStatus) => Promise<void>;
-  /** Atribui múltiplos responsáveis a uma demanda. */
   assign: (id: string, responsaveis_ids: string[]) => Promise<void>;
   addComentario: (
     demanda_id: string,
@@ -111,6 +109,25 @@ interface State {
   addAnexo: (a: Omit<AnexoDemanda, "id" | "created_at">) => Promise<void>;
   removeAnexo: (id: string) => Promise<void>;
   approveDemanda: (id: string, aprovado_por: string) => Promise<void>;
+  /**
+   * Cria uma próxima etapa vinculada a uma tarefa pai.
+   * Opcionalmente herda anexos da pai (cópia das linhas em anexos_demandas).
+   */
+  createProximaEtapa: (
+    paiId: string,
+    proxima: Partial<Omit<Demanda, "responsaveis_ids">> & {
+      titulo: string;
+      cliente_id: string;
+      responsaveis_ids?: string[];
+    },
+    options?: {
+      modo_liberacao?: ModoLiberacao;
+      bloquear?: boolean;
+      herdar_anexos?: boolean;
+    }
+  ) => Promise<string | null>;
+  /** Marca manualmente uma dependência como liberada. */
+  liberarDependencia: (dependencyId: string) => Promise<void>;
 }
 
 /**
