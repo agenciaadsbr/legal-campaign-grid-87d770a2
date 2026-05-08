@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Demanda, useDemandas, getResponsaveisIds } from "@/store/demandas";
+import { isAguardandoDependencia, getDemandasPais } from "@/lib/workflow";
+import { WorkflowSection } from "./WorkflowSection";
+import { EtapasRelacionadas } from "./EtapasRelacionadas";
 import { useCRM } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -122,6 +125,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     historico,
     anexos,
     demandas,
+    dependencies,
   } = useDemandas();
 
   // Fonte de verdade reativa: lê a demanda viva do store pelo id, para que
@@ -231,6 +235,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   if (!demanda) return null;
 
   const isUrgente = demanda.prioridade === "Urgente";
+  const aguardando = isAguardandoDependencia(demanda.id, dependencies);
+  const paisAguardando = aguardando
+    ? getDemandasPais(demanda.id, dependencies, demandas).filter((p) => {
+        const dep = dependencies.find(
+          (d) => d.task_id === demanda.id && d.depends_on_task_id === p.id,
+        );
+        return dep && !dep.liberado;
+      })
+    : [];
+  const tituloPaiAguardando = paisAguardando[0]?.titulo;
 
   const enviar = async () => {
     if (!user) return;
@@ -359,6 +373,21 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+          {aguardando && (
+            <div className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 flex items-start gap-2 text-xs">
+              <span className="mt-0.5">🔒</span>
+              <div className="flex-1">
+                <div className="font-semibold">Aguardando etapa anterior</div>
+                <div className="text-muted-foreground">
+                  Esta tarefa só pode ser iniciada/concluída após:{" "}
+                  <span className="font-medium text-foreground">
+                    {tituloPaiAguardando ?? "tarefa anterior"}
+                  </span>
+                  . Você ainda pode editar descrição, anexos, comentários e responsáveis.
+                </div>
+              </div>
+            </div>
+          )}
           {/* CARD 1 — Informações da Demanda */}
           <Card className="shrink-0 overflow-hidden">
             <CardHeader className="pb-1.5 pt-2.5 px-3">
@@ -426,11 +455,23 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   </Button>
                   <Select
                     value={demanda.status}
-                    onValueChange={(v) =>
-                      updateDemanda(demanda.id, { status: v as any })
-                    }
+                    disabled={aguardando}
+                    onValueChange={(v) => {
+                      if (aguardando) {
+                        toast.error("Tarefa bloqueada", {
+                          description: tituloPaiAguardando
+                            ? `Aguardando conclusão de: ${tituloPaiAguardando}`
+                            : "Esta tarefa depende de outra etapa.",
+                        });
+                        return;
+                      }
+                      updateDemanda(demanda.id, { status: v as any });
+                    }}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger
+                      className="w-40"
+                      title={aguardando ? `Aguardando: ${tituloPaiAguardando}` : undefined}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1087,6 +1128,9 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             )}
           </CardContent>
         </Card>
+
+        <EtapasRelacionadas demanda={demanda} />
+        {canWrite && <WorkflowSection pai={demanda} />}
           </div>
         </fieldset>
       </DialogContent>

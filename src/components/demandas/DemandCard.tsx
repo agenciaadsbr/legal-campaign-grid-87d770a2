@@ -1,4 +1,4 @@
-import { Demanda, getResponsaveisIds } from "@/store/demandas";
+import { Demanda, getResponsaveisIds, useDemandas } from "@/store/demandas";
 import {
   PRIORIDADE_COR,
   PRIORIDADE_LABEL,
@@ -6,9 +6,10 @@ import {
   STATUS_DEMANDA_LABEL,
   CATEGORIA_LABEL,
 } from "@/lib/demandas-categorias";
+import { isAguardandoDependencia, getFilhas } from "@/lib/workflow";
 import { useCRM } from "@/store/crm";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, AlertTriangle } from "lucide-react";
+import { Calendar, AlertTriangle, Lock, Link2 } from "lucide-react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ export function DemandCard({
   onToggleSelect,
 }: Props) {
   const { clientes, responsaveis } = useCRM();
+  const dependencies = useDemandas((s) => s.dependencies);
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
   const respIds = getResponsaveisIds(demanda);
   const resps = responsaveis.filter((r) => respIds.includes(r.id));
@@ -42,6 +44,8 @@ export function DemandCard({
   const dataLimite = demanda.data_limite ? new Date(demanda.data_limite) : null;
   const atrasada = demanda.status === "Atrasado";
   const urgente = demanda.prioridade === "Urgente";
+  const aguardando = isAguardandoDependencia(demanda.id, dependencies);
+  const temFilhas = getFilhas(demanda.id, dependencies).length > 0;
 
   const handleClick = () => {
     if (selectionMode) {
@@ -81,15 +85,27 @@ export function DemandCard({
         <div className={cn("text-sm font-semibold leading-tight line-clamp-2 flex-1", selectionMode && "pr-7")}>
           {demanda.titulo}
         </div>
-        {urgente && !selectionMode && (
-          <Badge
-            className="text-[10px] px-1.5 py-0 h-5 shrink-0"
-            style={{ background: PRIORIDADE_COR.Urgente, color: "white" }}
-          >
-            <AlertTriangle className="h-3 w-3 mr-0.5" />
-            URGENTE
-          </Badge>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {aguardando && (
+            <span title="Aguardando etapa anterior" className="text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {temFilhas && (
+            <span title="Possui próxima etapa vinculada" className="text-muted-foreground">
+              <Link2 className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {urgente && !selectionMode && (
+            <Badge
+              className="text-[10px] px-1.5 py-0 h-5"
+              style={{ background: PRIORIDADE_COR.Urgente, color: "white" }}
+            >
+              <AlertTriangle className="h-3 w-3 mr-0.5" />
+              URGENTE
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="text-xs text-muted-foreground truncate">

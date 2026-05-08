@@ -7,6 +7,7 @@ import type {
   DemandaPrioridade,
   DemandaCategoria,
 } from "@/lib/demandas-categorias";
+import type { TaskDependency, ModoLiberacao } from "@/lib/workflow";
 
 export interface Demanda {
   id: string;
@@ -75,6 +76,7 @@ interface State {
   comentarios: ComentarioDemanda[];
   anexos: AnexoDemanda[];
   historico: HistoricoDemanda[];
+  dependencies: TaskDependency[];
   loaded: boolean;
   loading: boolean;
 
@@ -88,8 +90,6 @@ interface State {
   ) => Promise<string | null>;
   /**
    * Cria um rascunho silencioso (sem toast) e retorna o objeto Demanda já normalizado.
-   * Usado pelo fluxo de "formulário único": a tarefa nasce no banco e o usuário
-   * preenche tudo direto no DemandaDetalheDialog.
    */
   createRascunho: (args: {
     cliente_id: string;
@@ -99,7 +99,6 @@ interface State {
   updateDemanda: (id: string, patch: Partial<Demanda>) => Promise<void>;
   deleteDemanda: (id: string) => Promise<void>;
   moveStatus: (id: string, status: DemandaStatus) => Promise<void>;
-  /** Atribui múltiplos responsáveis a uma demanda. */
   assign: (id: string, responsaveis_ids: string[]) => Promise<void>;
   addComentario: (
     demanda_id: string,
@@ -110,6 +109,25 @@ interface State {
   addAnexo: (a: Omit<AnexoDemanda, "id" | "created_at">) => Promise<void>;
   removeAnexo: (id: string) => Promise<void>;
   approveDemanda: (id: string, aprovado_por: string) => Promise<void>;
+  /**
+   * Cria uma próxima etapa vinculada a uma tarefa pai.
+   * Opcionalmente herda anexos da pai (cópia das linhas em anexos_demandas).
+   */
+  createProximaEtapa: (
+    paiId: string,
+    proxima: Partial<Omit<Demanda, "responsaveis_ids">> & {
+      titulo: string;
+      cliente_id: string;
+      responsaveis_ids?: string[];
+    },
+    options?: {
+      modo_liberacao?: ModoLiberacao;
+      bloquear?: boolean;
+      herdar_anexos?: boolean;
+    }
+  ) => Promise<string | null>;
+  /** Marca manualmente uma dependência como liberada. */
+  liberarDependencia: (dependencyId: string) => Promise<void>;
 }
 
 /**
@@ -145,23 +163,26 @@ export const useDemandasStore = create<State>((set, get) => ({
   comentarios: [],
   anexos: [],
   historico: [],
+  dependencies: [],
   loaded: false,
   loading: false,
 
   async load() {
     if (get().loading) return;
     set({ loading: true });
-    const [d, c, a, h] = await Promise.all([
+    const [d, c, a, h, deps] = await Promise.all([
       supabase.from("demandas").select("*").order("created_at", { ascending: false }),
       supabase.from("comentarios_demandas").select("*").order("created_at"),
       supabase.from("anexos_demandas").select("*").order("created_at"),
       supabase.from("historico_demandas").select("*").order("created_at", { ascending: false }),
+      (supabase as any).from("task_dependencies").select("*").order("created_at"),
     ]);
     set({
       demandas: (d.data ?? []).map(normalizeDemanda),
       comentarios: (c.data ?? []) as ComentarioDemanda[],
       anexos: (a.data ?? []) as AnexoDemanda[],
       historico: (h.data ?? []) as HistoricoDemanda[],
+      dependencies: ((deps as any)?.data ?? []) as TaskDependency[],
       loaded: true,
       loading: false,
     });
@@ -364,6 +385,106 @@ export const useDemandasStore = create<State>((set, get) => ({
       data_conclusao: new Date().toISOString(),
     });
   },
+
+  async createProximaEtapa(paiId, proxima, options) {
+    const modo: ModoLiberacao = options?.modo_liberacao ?? "automatico";
+    const bloquear = options?.bloquear !== false;
+    const herdarAnexos = !!options?.herdar_anexos;
+
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id ?? null;
+    const responsaveis_ids = proxima.responsaveis_ids ?? [];
+
+    const payload: any = {
+      cliente_id: proxima.cliente_id,
+      titulo: proxima.titulo,
+      categoria: proxima.categoria ?? "Personalizado",
+      subtipo: proxima.subtipo ?? null,
+      descricao: proxima.descricao ?? null,
+      status: proxima.status ?? "Planejamento",
+      prioridade: proxima.prioridade ?? "Media",
+      responsaveis_ids,
+      responsavel_id: responsaveis_ids[0] ?? null,
+      criado_por: uid,
+      data_limite: proxima.data_limite ?? null,
+      data_inicio: null,
+      data_conclusao: null,
+      precisa_aprovacao: proxima.precisa_aprovacao ?? false,
+      link_meister: proxima.link_meister ?? null,
+      link_drive: proxima.link_drive ?? null,
+    };
+    const { data: novaRow, error } = await supabase
+      .from("demandas")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao criar próxima etapa", { description: error.message });
+      return null;
+    }
+    const nova = normalizeDemanda(novaRow);
+    set({ demandas: [nova, ...get().demandas] });
+
+    if (bloquear) {
+      const { data: depRow, error: depErr } = await (supabase as any)
+        .from("task_dependencies")
+        .insert({
+          task_id: nova.id,
+          depends_on_task_id: paiId,
+          modo_liberacao: modo,
+          liberado: false,
+        })
+        .select()
+        .single();
+      if (depErr) {
+        toast.error("Erro ao vincular dependência", { description: depErr.message });
+      } else if (depRow) {
+        set({ dependencies: [...get().dependencies, depRow as TaskDependency] });
+      }
+    }
+
+    if (herdarAnexos) {
+      const anexosPai = get().anexos.filter((a) => a.demanda_id === paiId);
+      for (const a of anexosPai) {
+        const { data: aIns } = await supabase
+          .from("anexos_demandas")
+          .insert({
+            demanda_id: nova.id,
+            nome: a.nome,
+            url: a.url,
+            mime: a.mime,
+            size: a.size,
+          })
+          .select()
+          .single();
+        if (aIns) set({ anexos: [...get().anexos, aIns as AnexoDemanda] });
+      }
+    }
+
+    toast.success("Próxima etapa criada");
+    return nova.id;
+  },
+
+  async liberarDependencia(dependencyId) {
+    const dep = get().dependencies.find((x) => x.id === dependencyId);
+    if (!dep) return;
+    const { data, error } = await (supabase as any)
+      .from("task_dependencies")
+      .update({ liberado: true, liberado_em: new Date().toISOString() })
+      .eq("id", dependencyId)
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao liberar dependência", { description: error.message });
+      return;
+    }
+    set({
+      dependencies: get().dependencies.map((x) =>
+        x.id === dependencyId ? (data as TaskDependency) : x
+      ),
+    });
+    toast.success("Dependência liberada");
+  },
 }));
 
 export function useDemandasBootstrap() {
@@ -390,6 +511,11 @@ export function useDemandasBootstrap() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "historico_demandas" },
+        () => load()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "task_dependencies" },
         () => load()
       )
       .subscribe();
