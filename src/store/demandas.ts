@@ -163,23 +163,26 @@ export const useDemandasStore = create<State>((set, get) => ({
   comentarios: [],
   anexos: [],
   historico: [],
+  dependencies: [],
   loaded: false,
   loading: false,
 
   async load() {
     if (get().loading) return;
     set({ loading: true });
-    const [d, c, a, h] = await Promise.all([
+    const [d, c, a, h, deps] = await Promise.all([
       supabase.from("demandas").select("*").order("created_at", { ascending: false }),
       supabase.from("comentarios_demandas").select("*").order("created_at"),
       supabase.from("anexos_demandas").select("*").order("created_at"),
       supabase.from("historico_demandas").select("*").order("created_at", { ascending: false }),
+      (supabase as any).from("task_dependencies").select("*").order("created_at"),
     ]);
     set({
       demandas: (d.data ?? []).map(normalizeDemanda),
       comentarios: (c.data ?? []) as ComentarioDemanda[],
       anexos: (a.data ?? []) as AnexoDemanda[],
       historico: (h.data ?? []) as HistoricoDemanda[],
+      dependencies: ((deps as any)?.data ?? []) as TaskDependency[],
       loaded: true,
       loading: false,
     });
