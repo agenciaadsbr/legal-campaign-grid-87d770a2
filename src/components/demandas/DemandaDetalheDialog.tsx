@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Demanda, useDemandas, getResponsaveisIds } from "@/store/demandas";
+import { isAguardandoDependencia, getDemandasPais } from "@/lib/workflow";
+import { WorkflowSection } from "./WorkflowSection";
+import { EtapasRelacionadas } from "./EtapasRelacionadas";
 import { useCRM } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import {
