@@ -325,12 +325,16 @@ export const useDemandasStore = create<State>((set, get) => ({
 
   async removeAnexo(id) {
     const anexo = get().anexos.find((a) => a.id === id);
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from("anexos_demandas")
-      .delete()
+      .delete({ count: "exact" })
       .eq("id", id);
     if (error) {
       toast.error("Erro ao remover anexo", { description: error.message });
+      return;
+    }
+    if (count === 0) {
+      toast.error("Você não tem permissão para remover este anexo");
       return;
     }
     // Best-effort: remove o arquivo do Storage se a URL apontar para o bucket "anexos".
