@@ -23,11 +23,24 @@ interface Props {
 export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, onToggleSelect }: Props) {
   const moveStatus = useDemandas((s) => s.moveStatus);
   const updateDemanda = useDemandas((s) => s.updateDemanda);
+  const dependencies = useDemandas((s) => s.dependencies);
   const [dragOver, setDragOver] = useState<DemandaStatus | null>(null);
+
+  const bloqueadas = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of demandas) {
+      if (isAguardandoDependencia(d.id, dependencies)) set.add(d.id);
+    }
+    return set;
+  }, [demandas, dependencies]);
 
   const iniciar = (e: React.MouseEvent, d: Demanda) => {
     e.preventDefault();
     e.stopPropagation();
+    if (bloqueadas.has(d.id)) {
+      toast.error("Aguardando liberação da etapa anterior");
+      return;
+    }
     updateDemanda(d.id, {
       status: "Criar",
       data_inicio: new Date().toISOString(),
