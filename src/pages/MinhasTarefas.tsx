@@ -101,8 +101,9 @@ export default function MinhasTarefas() {
         documentacao,
         clientes,
         contratos,
+        dependencies,
       }),
-    [responsavelId, user?.id, scopeResp, scopeAuth, demandas, cards, planejamento, documentacao, clientes, contratos],
+    [responsavelId, user?.id, scopeResp, scopeAuth, demandas, cards, planejamento, documentacao, clientes, contratos, dependencies],
   );
 
   const tarefasFiltradas = useMemo(() => {
