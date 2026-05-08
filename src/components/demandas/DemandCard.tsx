@@ -85,15 +85,27 @@ export function DemandCard({
         <div className={cn("text-sm font-semibold leading-tight line-clamp-2 flex-1", selectionMode && "pr-7")}>
           {demanda.titulo}
         </div>
-        {urgente && !selectionMode && (
-          <Badge
-            className="text-[10px] px-1.5 py-0 h-5 shrink-0"
-            style={{ background: PRIORIDADE_COR.Urgente, color: "white" }}
-          >
-            <AlertTriangle className="h-3 w-3 mr-0.5" />
-            URGENTE
-          </Badge>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {aguardando && (
+            <span title="Aguardando etapa anterior" className="text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {temFilhas && (
+            <span title="Possui próxima etapa vinculada" className="text-muted-foreground">
+              <Link2 className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {urgente && !selectionMode && (
+            <Badge
+              className="text-[10px] px-1.5 py-0 h-5"
+              style={{ background: PRIORIDADE_COR.Urgente, color: "white" }}
+            >
+              <AlertTriangle className="h-3 w-3 mr-0.5" />
+              URGENTE
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="text-xs text-muted-foreground truncate">
