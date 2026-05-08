@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Demanda, useDemandas } from "@/store/demandas";
 import {
   STATUS_DEMANDA,
@@ -9,6 +9,8 @@ import {
 import { DemandCard } from "./DemandCard";
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
+import { isAguardandoDependencia } from "@/lib/workflow";
+import { toast } from "sonner";
 
 interface Props {
   demandas: Demanda[];
