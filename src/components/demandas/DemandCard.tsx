@@ -36,6 +36,7 @@ export function DemandCard({
   onToggleSelect,
 }: Props) {
   const { clientes, responsaveis } = useCRM();
+  const dependencies = useDemandas((s) => s.dependencies);
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
   const respIds = getResponsaveisIds(demanda);
   const resps = responsaveis.filter((r) => respIds.includes(r.id));
@@ -43,6 +44,8 @@ export function DemandCard({
   const dataLimite = demanda.data_limite ? new Date(demanda.data_limite) : null;
   const atrasada = demanda.status === "Atrasado";
   const urgente = demanda.prioridade === "Urgente";
+  const aguardando = isAguardandoDependencia(demanda.id, dependencies);
+  const temFilhas = getFilhas(demanda.id, dependencies).length > 0;
 
   const handleClick = () => {
     if (selectionMode) {
