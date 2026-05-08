@@ -1128,6 +1128,9 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             )}
           </CardContent>
         </Card>
+
+        <EtapasRelacionadas demanda={demanda} />
+        {canWrite && <WorkflowSection pai={demanda} />}
           </div>
         </fieldset>
       </DialogContent>
