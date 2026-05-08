@@ -112,12 +112,15 @@ interface BuildArgs {
   documentacao: DocumentacaoItem[];
   clientes: Cliente[];
   contratos?: Contrato[];
+  /** Dependências entre tarefas para marcar bloqueio. */
+  dependencies?: TaskDependency[];
 }
 
 export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
   const {
     responsavelId, authUserId, demandas, cards, planejamento, documentacao,
     clientes, contratos = [], scopeResponsaveisIds, scopeAuthUserIds,
+    dependencies = [],
   } = args;
 
   // Define o conjunto de responsáveis "visíveis"
