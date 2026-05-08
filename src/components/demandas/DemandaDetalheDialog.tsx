@@ -235,6 +235,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   if (!demanda) return null;
 
   const isUrgente = demanda.prioridade === "Urgente";
+  const aguardando = isAguardandoDependencia(demanda.id, dependencies);
+  const paisAguardando = aguardando
+    ? getDemandasPais(demanda.id, dependencies, demandas).filter((p) => {
+        const dep = dependencies.find(
+          (d) => d.task_id === demanda.id && d.depends_on_task_id === p.id,
+        );
+        return dep && !dep.liberado;
+      })
+    : [];
+  const tituloPaiAguardando = paisAguardando[0]?.titulo;
 
   const enviar = async () => {
     if (!user) return;
