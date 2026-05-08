@@ -1,4 +1,4 @@
-import { Demanda, getResponsaveisIds } from "@/store/demandas";
+import { Demanda, getResponsaveisIds, useDemandas } from "@/store/demandas";
 import {
   PRIORIDADE_COR,
   PRIORIDADE_LABEL,
@@ -6,9 +6,10 @@ import {
   STATUS_DEMANDA_LABEL,
   CATEGORIA_LABEL,
 } from "@/lib/demandas-categorias";
+import { isAguardandoDependencia, getFilhas } from "@/lib/workflow";
 import { useCRM } from "@/store/crm";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, AlertTriangle } from "lucide-react";
+import { Calendar, AlertTriangle, Lock, Link2 } from "lucide-react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
