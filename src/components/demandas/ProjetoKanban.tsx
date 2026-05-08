@@ -97,10 +97,14 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
                   key={d.id}
                   demanda={d}
                   onClick={() => onOpen(d)}
-                  draggable={!selectionMode}
-                  onDragStart={(e) =>
-                    e.dataTransfer.setData("text/demanda", d.id)
-                  }
+                  draggable={!selectionMode && !bloqueadas.has(d.id)}
+                  onDragStart={(e) => {
+                    if (bloqueadas.has(d.id)) {
+                      e.preventDefault();
+                      return;
+                    }
+                    e.dataTransfer.setData("text/demanda", d.id);
+                  }}
                   selectionMode={selectionMode}
                   selected={selectedIds?.has(d.id)}
                   onToggleSelect={() => onToggleSelect?.(d.id)}
