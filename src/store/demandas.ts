@@ -485,6 +485,7 @@ export const useDemandasStore = create<State>((set, get) => ({
     });
     toast.success("Dependência liberada");
   },
+}));
 
 export function useDemandasBootstrap() {
   const load = useDemandasStore((s) => s.load);
@@ -510,6 +511,11 @@ export function useDemandasBootstrap() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "historico_demandas" },
+        () => load()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "task_dependencies" },
         () => load()
       )
       .subscribe();
