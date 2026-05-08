@@ -184,6 +184,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           responsaveis_ids: getResponsaveisIds(d),
           link: `/clientes/${d.cliente_id}/projeto?tab=${categoriaParaAba(d.categoria)}&demanda=${d.id}`,
           origem_categoria: d.categoria,
+          aguardando_liberacao: isAguardandoDependencia(d.id, dependencies),
         });
       });
   }
