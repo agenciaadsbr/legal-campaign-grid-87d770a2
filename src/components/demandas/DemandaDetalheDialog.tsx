@@ -1140,12 +1140,12 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
         <DialogContent className="max-w-5xl p-2 bg-background">
           {previewAnexo && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between px-2 pt-1">
-                <span className="text-sm font-medium truncate">{previewAnexo.nome}</span>
+              <div className="flex items-center justify-between gap-3 px-2 pr-12 pt-1">
+                <span className="min-w-0 text-sm font-medium truncate">{previewAnexo.nome}</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    className="text-xs text-primary hover:underline px-2"
+                    className="shrink-0 text-xs text-primary hover:underline px-2"
                     onClick={async () => {
                       try {
                         const response = await fetch(previewAnexo.url);
