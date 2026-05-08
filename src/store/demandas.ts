@@ -7,6 +7,7 @@ import type {
   DemandaPrioridade,
   DemandaCategoria,
 } from "@/lib/demandas-categorias";
+import type { TaskDependency, ModoLiberacao } from "@/lib/workflow";
 
 export interface Demanda {
   id: string;
