@@ -1143,21 +1143,30 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               <div className="flex items-center justify-between px-2 pt-1">
                 <span className="text-sm font-medium truncate">{previewAnexo.nome}</span>
                 <div className="flex items-center gap-1">
-                  <a
-                    href={previewAnexo.url}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
                     className="text-xs text-primary hover:underline px-2"
-                  >
-                    Abrir em nova aba
-                  </a>
-                  <a
-                    href={previewAnexo.url}
-                    download={previewAnexo.nome}
-                    className="text-xs text-primary hover:underline px-2"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(previewAnexo.url);
+                        if (!response.ok) throw new Error("download falhou");
+                        const blob = await response.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = blobUrl;
+                        a.download = previewAnexo.nome;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(blobUrl);
+                      } catch (err) {
+                        console.error("[anexo] download erro", err);
+                        toast.error("Falha ao baixar anexo");
+                      }
+                    }}
                   >
                     Baixar
-                  </a>
+                  </button>
                 </div>
               </div>
               <div className="flex items-center justify-center bg-muted/30 rounded">
