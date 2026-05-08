@@ -41,6 +41,7 @@ export default function MinhasTarefas() {
   const contratos = useCRM((s) => s.contratos);
   const responsaveis = useCRM((s) => s.responsaveis);
   const demandas = useDemandas((s) => s.demandas);
+  const dependencies = useDemandas((s) => s.dependencies);
   const planejamento = usePlanejamento((s) => s.itens);
   const documentacao = useDocumentacao((s) => s.itens);
 
