@@ -64,7 +64,13 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
               if (selectionMode) return;
               e.preventDefault();
               const id = e.dataTransfer.getData("text/demanda");
-              if (id) moveStatus(id, status);
+              if (id) {
+                if (bloqueadas.has(id)) {
+                  toast.error("Aguardando liberação da etapa anterior");
+                } else {
+                  moveStatus(id, status);
+                }
+              }
               setDragOver(null);
             }}
             className={`rounded-lg bg-muted/30 p-2 min-h-[400px] transition-colors ${
