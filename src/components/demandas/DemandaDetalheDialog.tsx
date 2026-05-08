@@ -373,6 +373,21 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+          {aguardando && (
+            <div className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 flex items-start gap-2 text-xs">
+              <span className="mt-0.5">🔒</span>
+              <div className="flex-1">
+                <div className="font-semibold">Aguardando etapa anterior</div>
+                <div className="text-muted-foreground">
+                  Esta tarefa só pode ser iniciada/concluída após:{" "}
+                  <span className="font-medium text-foreground">
+                    {tituloPaiAguardando ?? "tarefa anterior"}
+                  </span>
+                  . Você ainda pode editar descrição, anexos, comentários e responsáveis.
+                </div>
+              </div>
+            </div>
+          )}
           {/* CARD 1 — Informações da Demanda */}
           <Card className="shrink-0 overflow-hidden">
             <CardHeader className="pb-1.5 pt-2.5 px-3">
