@@ -26,6 +26,7 @@ import {
   RadioGroupItem,
 } from "@/components/ui/radio-group";
 import { Plus, Link2, ChevronDown, ChevronUp } from "lucide-react";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import type { ModoLiberacao } from "@/lib/workflow";
 
 interface Props {
@@ -44,6 +45,7 @@ export function WorkflowSection({ pai }: Props) {
   const [prazo, setPrazo] = useState<string>("");
   const [bloquear, setBloquear] = useState(true);
   const [modo, setModo] = useState<ModoLiberacao>("automatico");
+  const [descricao, setDescricao] = useState<string>("");
   const [herdarDescricao, setHerdarDescricao] = useState(false);
   const [herdarLinks, setHerdarLinks] = useState(false);
   const [herdarAnexos, setHerdarAnexos] = useState(false);
@@ -55,9 +57,20 @@ export function WorkflowSection({ pai }: Props) {
     setPrazo("");
     setBloquear(true);
     setModo("automatico");
+    setDescricao("");
     setHerdarDescricao(false);
     setHerdarLinks(false);
     setHerdarAnexos(false);
+  };
+
+  const toggleHerdarDescricao = (v: boolean) => {
+    setHerdarDescricao(v);
+    if (v) {
+      const base = (pai.descricao ?? "").trim();
+      if (base && !descricao.trim()) setDescricao(pai.descricao ?? "");
+    } else {
+      if (descricao === (pai.descricao ?? "")) setDescricao("");
+    }
   };
 
   const salvar = async () => {
@@ -73,7 +86,7 @@ export function WorkflowSection({ pai }: Props) {
           subtipo: subtipo.trim() || null,
           prioridade,
           data_limite: prazo ? new Date(prazo).toISOString() : null,
-          descricao: herdarDescricao ? pai.descricao : null,
+          descricao: descricao.trim() ? descricao : null,
           link_meister: herdarLinks ? pai.link_meister : null,
           link_drive: herdarLinks ? pai.link_drive : null,
         },
@@ -181,6 +194,18 @@ export function WorkflowSection({ pai }: Props) {
             />
           </div>
 
+          <div>
+            <Label className="text-[11px]">Atividade / Briefing</Label>
+            <div className="border rounded-md overflow-hidden">
+              <RichTextEditor
+                value={descricao}
+                onChange={setDescricao}
+                placeholder="Detalhes internos da próxima tarefa: contexto, requisitos, referências…"
+                minHeight="80px"
+              />
+            </div>
+          </div>
+
           <div className="border-t pt-2 space-y-2">
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <Checkbox checked={bloquear} onCheckedChange={(v) => setBloquear(!!v)} />
@@ -206,8 +231,8 @@ export function WorkflowSection({ pai }: Props) {
               Reaproveitar desta tarefa
             </div>
             <label className="flex items-center gap-2 text-xs cursor-pointer">
-              <Checkbox checked={herdarDescricao} onCheckedChange={(v) => setHerdarDescricao(!!v)} />
-              Descrição / briefing
+              <Checkbox checked={herdarDescricao} onCheckedChange={(v) => toggleHerdarDescricao(!!v)} />
+              Descrição / briefing (preenche o campo acima)
             </label>
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <Checkbox checked={herdarLinks} onCheckedChange={(v) => setHerdarLinks(!!v)} />

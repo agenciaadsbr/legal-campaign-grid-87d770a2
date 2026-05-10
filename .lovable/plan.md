@@ -1,19 +1,29 @@
-## Corrigir ações do lightbox de Anexos
+## Adicionar campo "Atividade / Briefing" no Workflow / Continuidade
 
-Arquivo: `src/components/demandas/DemandaDetalheDialog.tsx` (linhas 1145–1161, lightbox do anexo).
+**Arquivo:** `src/components/demandas/WorkflowSection.tsx`
 
 ### Mudanças
 
-1. **Remover** o link "Abrir em nova aba" (`<a target="_blank">`) — apenas deletar o elemento.
+1. **Novo estado** `descricao` (string) no formulário do Workflow.
 
-2. **Substituir o `<a download>`** por um `<button>` que faz download real via blob:
-   - Handler `async` faz `fetch(previewAnexo.url)` → `response.blob()` → cria `URL.createObjectURL(blob)` → cria `<a>` temporário com `download={previewAnexo.nome}` → `click()` → remove e `revokeObjectURL`.
-   - O bucket `anexos` é público no Supabase Storage, mas é cross-origin em relação ao app, então o atributo `download` é ignorado pelo navegador hoje (causa abertura em nova aba/visualização em vez de download). Buscar como blob primeiro força o download real.
-   - Try/catch com `toast.error("Falha ao baixar anexo")` em caso de erro de rede.
-   - Estilo mantido (`text-xs text-primary hover:underline px-2`).
+2. **Novo campo no UI** (RichTextEditor, igual ao usado no formulário principal de demandas), posicionado logo abaixo do campo "Prazo" e antes do bloco "Bloquear execução":
+   - Label: "Atividade / Briefing"
+   - Placeholder: "Detalhes internos da próxima tarefa: contexto, requisitos, referências…"
+   - Altura compacta para caber no painel lateral.
 
-### Fora do escopo
+3. **Lógica de "Reaproveitar → Descrição / briefing"** (checkbox `herdarDescricao`):
+   - Quando o usuário marcar a checkbox, **pré-preencher** o campo `descricao` com `pai.descricao` (apenas se o campo estiver vazio, para não sobrescrever edição manual).
+   - Quando desmarcar, **limpar** o campo se ele ainda estiver idêntico ao briefing herdado (caso contrário manter a edição do usuário).
+   - O texto fica editável: o usuário pode herdar e ajustar antes de criar.
 
-- Outras telas de anexo (não há outras com esses dois botões).
-- Mudanças no upload, remoção, ou listagem de anexos.
-- Mudanças de design / layout do lightbox.
+4. **Ao salvar** (`createProximaEtapa`):
+   - Sempre enviar `descricao: descricao.trim() ? descricao : null` (em vez do antigo `herdarDescricao ? pai.descricao : null`).
+   - Demais campos (links, anexos, bloqueio) permanecem como estão.
+
+5. **Reset** após criar/cancelar: zerar também `descricao`.
+
+### Fora de escopo
+
+- Links (Meister/Drive) e Anexos continuam funcionando via checkbox de herança como hoje.
+- Não alterar `createProximaEtapa` no store nem schema.
+- Não mexer no formulário principal de demandas.
