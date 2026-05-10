@@ -86,7 +86,7 @@ export function WorkflowSection({ pai }: Props) {
           subtipo: subtipo.trim() || null,
           prioridade,
           data_limite: prazo ? new Date(prazo).toISOString() : null,
-          descricao: herdarDescricao ? pai.descricao : null,
+          descricao: descricao.trim() ? descricao : null,
           link_meister: herdarLinks ? pai.link_meister : null,
           link_drive: herdarLinks ? pai.link_drive : null,
         },
