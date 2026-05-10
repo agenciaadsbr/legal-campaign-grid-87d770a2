@@ -57,9 +57,20 @@ export function WorkflowSection({ pai }: Props) {
     setPrazo("");
     setBloquear(true);
     setModo("automatico");
+    setDescricao("");
     setHerdarDescricao(false);
     setHerdarLinks(false);
     setHerdarAnexos(false);
+  };
+
+  const toggleHerdarDescricao = (v: boolean) => {
+    setHerdarDescricao(v);
+    if (v) {
+      const base = (pai.descricao ?? "").trim();
+      if (base && !descricao.trim()) setDescricao(pai.descricao ?? "");
+    } else {
+      if (descricao === (pai.descricao ?? "")) setDescricao("");
+    }
   };
 
   const salvar = async () => {
