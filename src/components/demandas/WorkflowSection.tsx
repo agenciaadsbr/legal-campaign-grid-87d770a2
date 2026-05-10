@@ -26,6 +26,7 @@ import {
   RadioGroupItem,
 } from "@/components/ui/radio-group";
 import { Plus, Link2, ChevronDown, ChevronUp } from "lucide-react";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import type { ModoLiberacao } from "@/lib/workflow";
 
 interface Props {
