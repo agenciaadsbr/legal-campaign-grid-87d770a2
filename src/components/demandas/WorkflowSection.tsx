@@ -194,6 +194,18 @@ export function WorkflowSection({ pai }: Props) {
             />
           </div>
 
+          <div>
+            <Label className="text-[11px]">Atividade / Briefing</Label>
+            <div className="border rounded-md overflow-hidden">
+              <RichTextEditor
+                value={descricao}
+                onChange={setDescricao}
+                placeholder="Detalhes internos da próxima tarefa: contexto, requisitos, referências…"
+                minHeight="80px"
+              />
+            </div>
+          </div>
+
           <div className="border-t pt-2 space-y-2">
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <Checkbox checked={bloquear} onCheckedChange={(v) => setBloquear(!!v)} />
