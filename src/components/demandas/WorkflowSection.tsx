@@ -45,6 +45,7 @@ export function WorkflowSection({ pai }: Props) {
   const [prazo, setPrazo] = useState<string>("");
   const [bloquear, setBloquear] = useState(true);
   const [modo, setModo] = useState<ModoLiberacao>("automatico");
+  const [descricao, setDescricao] = useState<string>("");
   const [herdarDescricao, setHerdarDescricao] = useState(false);
   const [herdarLinks, setHerdarLinks] = useState(false);
   const [herdarAnexos, setHerdarAnexos] = useState(false);
