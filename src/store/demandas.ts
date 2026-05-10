@@ -407,7 +407,7 @@ export const useDemandasStore = create<State>((set, get) => ({
       responsavel_id: responsaveis_ids[0] ?? null,
       criado_por: uid,
       data_limite: proxima.data_limite ?? null,
-      data_inicio: null,
+      data_inicio: proxima.data_inicio ?? null,
       data_conclusao: null,
       precisa_aprovacao: proxima.precisa_aprovacao ?? false,
       link_meister: proxima.link_meister ?? null,
