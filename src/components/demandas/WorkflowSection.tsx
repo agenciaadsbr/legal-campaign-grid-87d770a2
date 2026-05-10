@@ -231,8 +231,8 @@ export function WorkflowSection({ pai }: Props) {
               Reaproveitar desta tarefa
             </div>
             <label className="flex items-center gap-2 text-xs cursor-pointer">
-              <Checkbox checked={herdarDescricao} onCheckedChange={(v) => setHerdarDescricao(!!v)} />
-              Descrição / briefing
+              <Checkbox checked={herdarDescricao} onCheckedChange={(v) => toggleHerdarDescricao(!!v)} />
+              Descrição / briefing (preenche o campo acima)
             </label>
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <Checkbox checked={herdarLinks} onCheckedChange={(v) => setHerdarLinks(!!v)} />
