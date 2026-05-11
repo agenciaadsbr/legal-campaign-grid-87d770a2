@@ -30,6 +30,9 @@ export interface Demanda {
   aprovado_por: string | null;
   link_meister: string | null;
   link_drive: string | null;
+  origem?: "manual" | "automatica" | "template_operacional";
+  template_id?: string | null;
+  marcado_ja_possui?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -155,6 +158,9 @@ function normalizeDemanda(row: any): Demanda {
     responsavel_id: row.responsavel_id ?? null,
     link_meister: row.link_meister ?? null,
     link_drive: row.link_drive ?? null,
+    origem: row.origem ?? "manual",
+    template_id: row.template_id ?? null,
+    marcado_ja_possui: !!row.marcado_ja_possui,
   } as Demanda;
 }
 
