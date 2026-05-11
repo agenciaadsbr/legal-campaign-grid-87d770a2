@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { generateText } from "npm:ai@^5.0.0";
+import { generateText } from "npm:ai";
 import { corsHeaders, jsonResponse, createLovableAiGatewayProvider, defaultModelFor, CURATED_MODELS } from "../_shared/ai-gateway.ts";
 
 Deno.serve(async (req) => {

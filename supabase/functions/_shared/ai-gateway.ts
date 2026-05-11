@@ -1,5 +1,5 @@
 // Helper compartilhado para chamar o Lovable AI Gateway via Vercel AI SDK
-import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@^1.0.0";
+import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 
 export const createLovableAiGatewayProvider = (lovableApiKey: string) =>
   createOpenAICompatible({

@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { generateText, Output } from "npm:ai@^5.0.0";
-import { z } from "npm:zod@^3.23.8";
+import { generateText, Output } from "npm:ai";
+import { z } from "npm:zod";
 import { corsHeaders, jsonResponse, createLovableAiGatewayProvider, defaultModelFor, estimateCost } from "../_shared/ai-gateway.ts";
 
 const DEFAULT_PROMPT =

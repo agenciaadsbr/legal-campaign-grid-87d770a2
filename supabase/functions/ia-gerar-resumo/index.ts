@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { generateText } from "npm:ai@^5.0.0";
+import { generateText } from "npm:ai";
 import { corsHeaders, jsonResponse, createLovableAiGatewayProvider, defaultModelFor, estimateCost } from "../_shared/ai-gateway.ts";
 
 const PROMPTS_DEFAULT: Record<string, string> = {
