@@ -51,6 +51,8 @@ interface State {
   load: () => Promise<void>;
   upsertConfig: (data: Partial<IAConfig> & { provider: string }) => Promise<void>;
   upsertPrompt: (data: Partial<IAPrompt> & { tipo: string; conteudo: string }) => Promise<void>;
+  testConnection: (provider: string) => Promise<{ ok: boolean; latency_ms?: number; error?: string }>;
+  refreshModels: (provider: string) => Promise<ModeloDisponivel[]>;
 }
 
 export const useIAConfig = create<State>((set, get) => ({
@@ -88,16 +90,6 @@ export const useIAConfig = create<State>((set, get) => ({
     toast.success("Modelos atualizados");
     await get().load();
     return data?.modelos ?? [];
-  },
-      (supabase as any).from("ia_prompts").select("*"),
-      (supabase as any).from("ia_logs").select("*").order("created_at", { ascending: false }).limit(100),
-    ]);
-    set({
-      configs: (c.data ?? []) as IAConfig[],
-      prompts: (p.data ?? []) as IAPrompt[],
-      logs: (l.data ?? []) as IALog[],
-      loaded: true,
-    });
   },
   upsertConfig: async (data) => {
     const existing = get().configs.find((c) => c.provider === data.provider);
