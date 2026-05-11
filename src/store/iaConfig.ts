@@ -62,6 +62,34 @@ export const useIAConfig = create<State>((set, get) => ({
     const [c, p, l] = await Promise.all([
       (supabase as any).from("ia_config").select("*"),
       (supabase as any).from("ia_prompts").select("*"),
+      (supabase as any).from("ia_logs").select("*").order("created_at", { ascending: false }).limit(500),
+    ]);
+    set({
+      configs: (c.data ?? []) as IAConfig[],
+      prompts: (p.data ?? []) as IAPrompt[],
+      logs: (l.data ?? []) as IALog[],
+      loaded: true,
+    });
+  },
+  testConnection: async (provider: string) => {
+    const { data, error } = await (supabase as any).functions.invoke("ia-test-connection", { body: { provider } });
+    if (error) { toast.error(error.message); return { ok: false }; }
+    if (data?.ok) {
+      toast.success(`Conectado · ${data.latency_ms}ms`);
+      await get().load();
+    } else {
+      toast.error(data?.error || "Falha na conexão");
+    }
+    return data ?? { ok: false };
+  },
+  refreshModels: async (provider: string) => {
+    const { data, error } = await (supabase as any).functions.invoke("ia-list-models", { body: { provider } });
+    if (error) { toast.error(error.message); return []; }
+    toast.success("Modelos atualizados");
+    await get().load();
+    return data?.modelos ?? [];
+  },
+      (supabase as any).from("ia_prompts").select("*"),
       (supabase as any).from("ia_logs").select("*").order("created_at", { ascending: false }).limit(100),
     ]);
     set({
