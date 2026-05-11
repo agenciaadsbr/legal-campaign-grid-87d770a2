@@ -30,6 +30,12 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DataContratacaoCell,
+  StatusRelacionamentoCell,
+  StatusPerformanceCell,
+  LinkRelatorioCell,
+} from "@/components/clientes/ClienteCellEditors";
 
 export type SortKey = "cliente" | "status" | "nicho" | "periodo";
 export type SortDir = "asc" | "desc";
@@ -430,6 +436,10 @@ export function ClientesGeralTable({
                         </div>
                       </TableHead>
                       <TableHead className="text-center w-[110px]">Onboarding</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Contratação</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Relacionamento</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Performance</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Relatório</TableHead>
                       {acoesSlot && <TableHead className="text-right">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -718,6 +728,18 @@ export function ClientesGeralTable({
                             )}
                           </TableCell>
 
+                          <TableCell className="whitespace-nowrap">
+                            <DataContratacaoCell clienteId={cliente.id} value={cliente.data_contratacao} />
+                          </TableCell>
+                          <TableCell>
+                            <StatusRelacionamentoCell clienteId={cliente.id} value={cliente.status_relacionamento} />
+                          </TableCell>
+                          <TableCell>
+                            <StatusPerformanceCell clienteId={cliente.id} value={cliente.status_performance} />
+                          </TableCell>
+                          <TableCell>
+                            <LinkRelatorioCell clienteId={cliente.id} value={cliente.link_relatorio} />
+                          </TableCell>
                           {acoesSlot && (
                             <TableCell className="text-right">{acoesSlot(cliente.id)}</TableCell>
                           )}
