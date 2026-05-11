@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useIAConfig, useIAConfigBootstrap } from "@/store/iaConfig";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,17 +14,10 @@ const TIPOS_PROMPT = [
   { value: "tarefas_sugeridas", label: "Geração de tarefas sugeridas" },
 ];
 
-const PROVIDERS = [
-  { value: "gemini", label: "Google Gemini" },
-  { value: "gpt", label: "OpenAI GPT" },
-];
-
 export function IAConfigManager() {
   useIAConfigBootstrap();
-  const configs = useIAConfig((s) => s.configs);
   const prompts = useIAConfig((s) => s.prompts);
   const logs = useIAConfig((s) => s.logs);
-  const upsertConfig = useIAConfig((s) => s.upsertConfig);
   const upsertPrompt = useIAConfig((s) => s.upsertPrompt);
 
   return (
