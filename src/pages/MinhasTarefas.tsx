@@ -17,6 +17,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { AlertCircle, CheckCircle2, ListChecks, Lock, Users, Zap } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TarefasSugeridasTab } from "@/components/tarefas/TarefasSugeridasTab";
 
 const FILTROS_INICIAIS: FiltrosState = {
   cliente: "all",
@@ -193,7 +195,7 @@ export default function MinhasTarefas() {
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold leading-tight">Minhas Tarefas</h1>
+          <h1 className="text-xl font-bold leading-tight">Central de Tarefas</h1>
           <p className="text-xs text-muted-foreground">{subtitulo}</p>
         </div>
 
@@ -220,6 +222,18 @@ export default function MinhasTarefas() {
           </div>
         )}
       </header>
+
+      <Tabs defaultValue="tarefas">
+        <TabsList className="h-8">
+          <TabsTrigger value="tarefas" className="text-xs h-7">Tarefas</TabsTrigger>
+          <TabsTrigger value="sugeridas" className="text-xs h-7">Tarefas Sugeridas</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="sugeridas" className="mt-3">
+          <TarefasSugeridasTab />
+        </TabsContent>
+
+        <TabsContent value="tarefas" className="mt-3 space-y-3">
 
       {loadingResp && !responsavelId && (!isAdmin || visualizacao === "minhas") && (
         <div className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
@@ -280,6 +294,8 @@ export default function MinhasTarefas() {
         open={!!taskAlvo}
         onOpenChange={(o) => !o && setTaskAlvo(null)}
       />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
