@@ -1,180 +1,117 @@
-Plano de implementação por fases para evoluir o Dash Tasks em uma central operacional, sem quebrar nada do que já existe. Cada fase é **aditiva**: novas colunas, novas tabelas, novas abas e novas áreas, sempre com migrações compatíveis (colunas nullable, defaults seguros) e sem mexer em layout, Kanbans, filtros, tarefas ou dados atuais.
+# Painel de IA — Novo layout + Ativação real
 
-A regra geral em todas as fases:
-- Migrações apenas com `ADD COLUMN ... NULL` ou `CREATE TABLE IF NOT EXISTS`.
-- Nada de `DROP`, `RENAME` físico ou alteração de tipos existentes.
-- RLS nas tabelas novas seguindo o padrão atual (`auth_read_*` + `can_write` / `has_role admin`).
-- Renomeações são **apenas visuais** (label no front), nunca no banco nem em rotas.
+Manter tudo aditivo: a aba "IA" em Configurações ganha um novo card por provedor com o layout da imagem, e por baixo passa a chamar edge functions reais usando o **Lovable AI Gateway** (que já cobre tanto modelos `google/gemini-*` quanto `openai/gpt-*` com uma única chave gerenciada `LOVABLE_API_KEY` — sem pedir chave para o usuário).
 
 ---
 
-## Fase 1 — Novas colunas em Clientes (gerenciais)
+## 1. Novo layout do card de provedor (igual à imagem)
 
-Objetivo: enriquecer a listagem de clientes sem alterar tabela, filtros ou badges atuais.
+Refatorar `src/components/configuracoes/IAConfigManager.tsx` — aba "Provedor" passa a renderizar um `ProviderCard` por provider (Gemini, GPT) com a mesma estrutura visual da referência:
 
-Migração (aditiva em `public.clientes`):
-- `data_contratacao date NULL`
-- `status_relacionamento text NULL` (valores aceitos no front: Bom / Neutro / Crítico)
-- `status_performance text NULL` (Alto / Médio / Baixo)
-- `link_relatorio text NULL`
+**Header do card:**
+- Ícone (Sparkles) + título: "OpenAI / GPT — Análise com IA" / "Google Gemini — Análise com IA"
+- Subtítulo curto explicando o uso
+- Botões à direita:
+  - `Insights I.A: Ativado/Desativado` (toggle visual — controla campo `ativo` na tabela `ia_config`)
+  - `Testar Conexão` → chama edge function `ia-test-connection`
+  - `Atualizar Configuração` → re-busca lista de modelos disponíveis (edge function `ia-list-models`)
+  - `Desconectar` → seta `ativo=false`
 
-Front:
-- `ClientesGeralTable.tsx`: adicionar 4 novas colunas ao final, ocultas por padrão via o sistema de `colunas_cliente` existente (admin liga quando quiser). Não tocar nas colunas atuais nem na ordenação atual.
-- Edição inline reaproveitando o padrão já existente das colunas customizadas.
-- Badges leves usando tokens semânticos (`bg-muted`, variantes do `ColorBadge`) — sem cores hardcoded.
-- "Período de contrato" continua exatamente como está.
+**Linha de status:**
+- Bolinha verde + "Conectado" / cinza + "Desconectado"
+- "N modelos disponíveis" (vindo da edge function `ia-list-models`, cacheado em `ia_config.modelos_disponiveis` jsonb)
+- À direita: label "Modelo" + `<Select>` com a lista de modelos retornada (ex: "GPT-4o mini · rápido e barato"). Ao mudar, salva em `ia_config.model`.
 
-Validação: abrir `/clientes`, conferir que tudo carrega igual e que as novas colunas aparecem só quando habilitadas.
+**Mini-gráfico de consumo:**
+- "Consumo · {período}" + sparkline (componente leve via `recharts` `<LineChart>` mini, sem eixos)
+- Range buttons: Hoje · Ontem · 3D · 5D · 7D · 15D · 30D · 60D · 90D (estado local)
+- À direita: custo total agregado (ex: "$0.0098") + "{N} chamadas"
+- Dados vêm de agregação client-side da tabela `ia_logs` filtrada por `provider` e período
 
----
-
-## Fase 2 — Reestruturar Documentação (apenas visual)
-
-Objetivo: separar reuniões de documentação operacional, sem migrar dados.
-
-- A aba `Documentação` no Projeto Completo passa a se chamar **"Acessos, Links e Materiais"** (somente label em `ClienteDetalhe.tsx` / `DocumentacaoTab.tsx`).
-- Dentro da aba, agrupar visualmente por categoria já existente em `cliente_documentacao.bloco` / `tipo`, criando seções: Acessos, Links importantes, Materiais enviados, Relatórios, CRM / Automação, Outros.
-- Itens sem categoria caem em "Outros" — nada é movido fisicamente.
-- Zero mudanças em `documentos_globais` ou nas regras de aplicação automática.
-
-Validação: documentos antigos continuam aparecendo, edição/upload continuam funcionando.
+As abas existentes "Prompts" e "Logs / consumo" continuam intactas.
 
 ---
 
-## Fase 3 — Nova aba "Reuniões" no Projeto Completo
+## 2. Ativar IA de verdade — Edge Functions + Lovable AI Gateway
 
-Objetivo: central de reuniões por cliente.
+Habilitar Lovable AI Gateway (provisiona `LOVABLE_API_KEY` automaticamente — não pedimos chave ao usuário).
 
-Migração (novas tabelas):
-- `reunioes` (id, cliente_id, titulo, data timestamptz, tipo text, link_tldv text, transcricao text, observacoes text, responsavel_id uuid, resumo_cliente text, resumo_tarefas text, criado_por, created_at, updated_at).
-- RLS: leitura para autenticados, insert/update via `can_write`, delete via admin (mesmo padrão de `demandas`).
-- Trigger `set_updated_at`.
+Criar 4 edge functions em `supabase/functions/`:
 
-Front:
-- Nova aba "Reuniões" em `ClienteDetalhe` (após Documentação).
-- Componente `ReunioesTab.tsx` em `src/components/projeto/`: lista ordenada por data desc, card com título/data/tipo/responsável.
-- Dialog `ReuniaoDialog.tsx` com botões: Ver transcrição, Editar, Gerar resumo cliente, Gerar resumo tarefas (na Fase 3 estes dois últimos abrem só os campos de texto — IA entra na Fase 8).
-- Store `src/store/reunioes.ts` no padrão Zustand do projeto.
+### `ia-test-connection`
+- Body: `{ provider: "gemini" | "gpt" }`
+- Faz uma chamada mínima (1 token) ao gateway com o modelo default do provider para validar.
+- Retorna `{ ok, latency_ms, error? }`.
 
-Validação: aba aparece, criar/editar/listar funciona, demais abas intactas.
+### `ia-list-models`
+- Body: `{ provider }`
+- Retorna lista curada de modelos suportados pelo gateway para o provider, cada um com `{ id, label, descricao_curta }` (ex.: `gpt-5-mini` → "rápido e barato"). Lista mantida server-side; sem chamada externa cara.
 
----
+### `ia-gerar-resumo`
+- Body: `{ tipo: "resumo_cliente" | "resumo_operacional", transcricao, contexto? }`
+- Carrega o prompt ativo de `ia_prompts` (tipo correspondente) + config ativa de `ia_config`.
+- Chama gateway via Vercel AI SDK (`generateText`) com modelo e prompt configurados.
+- Insere registro em `ia_logs` com tokens/custo estimado.
+- Retorna `{ texto, tokens_input, tokens_output, custo, modelo }`.
 
-## Fase 4 — Estrutura de Resumos (manual)
+### `ia-gerar-tarefas`
+- Body: `{ reuniao_id, transcricao, cliente_id }`
+- Usa `Output.object` (AI SDK) com schema Zod: `{ tarefas: [{ titulo, descricao, categoria, prioridade, prazo_sugerido, responsavel_sugerido_hint }] }`.
+- Insere as tarefas em `tarefas_sugeridas` com `status='pendente'` e `reuniao_id` ligado.
+- Loga em `ia_logs`.
+- Retorna `{ count, tarefas }`.
 
-Objetivo: separar resumo cliente x resumo operacional, ainda sem IA.
+Helper compartilhado `supabase/functions/_shared/ai-gateway.ts` com `createLovableAiGatewayProvider` (padrão Lovable AI).
 
-- Já contemplado nos campos `resumo_cliente` e `resumo_tarefas` da Fase 3.
-- No `ReuniaoDialog`, dois `RichTextEditor` separados, cada um com botão "Copiar" (cliente: pronto pra mandar no grupo; tarefas: pronto pra virar tarefas sugeridas).
-- Sem chamadas a IA.
-
-Validação: usuário consegue preencher manualmente e copiar.
-
----
-
-## Fase 5 — Tarefas Sugeridas
-
-Objetivo: camada intermediária entre reunião e tarefa real.
-
-Migração (nova tabela `tarefas_sugeridas`):
-- Campos: id, cliente_id, reuniao_id (nullable), titulo, descricao, categoria, responsavel_sugerido_id, prioridade, prazo_sugerido, origem text default 'reuniao', status text default 'aguardando_aprovacao', demanda_id (preenchido ao converter), criado_por, aprovado_por, created_at, updated_at.
-- Status aceitos: `aguardando_aprovacao | aprovada | rejeitada | convertida`.
-- RLS: leitura autenticados; insert via `can_write`; update/delete só admin (gestores) — controle gerencial.
-
-Front:
-- Nova aba "Tarefas Sugeridas" dentro da Central de Tarefas (Fase 6). Acessível também como botão dentro da reunião.
-- Ações: Aprovar (cria registro em `demandas` reutilizando o store atual + grava `demanda_id` e `status='convertida'`), Rejeitar, Editar.
-- Conversão preserva vínculo: a demanda criada herda título/descrição/categoria/responsável/prazo e ganha campo `origem_reuniao_id` (ver migração abaixo).
-
-Migração extra (aditiva em `demandas`):
-- `origem_reuniao_id uuid NULL`
-- `origem_sugestao_id uuid NULL`
-
-Validação: aprovar uma sugestão gera demanda real visível no Kanban atual, sem alterar fluxo de criação manual.
+Todas com CORS, validação Zod do body, RLS-friendly (verificam JWT do chamador).
 
 ---
 
-## Fase 6 — Evoluir "Minhas Tarefas" → "Central de Tarefas"
+## 3. Integração no fluxo existente (sem quebrar nada)
 
-Objetivo: agrupar tudo numa central, sem remover a página atual.
-
-- Manter rota `/minhas-tarefas` funcionando.
-- Renomear visualmente para "Central de Tarefas" no sidebar e no título da página.
-- Dentro da página, transformar o conteúdo atual em uma aba "Minhas Tarefas" e adicionar abas:
-  - Minhas Tarefas (conteúdo atual intacto)
-  - Todas as Tarefas (lista global — reutiliza `useDemandas`)
-  - Tarefas Sugeridas (Fase 5)
-  - Ciclos (placeholder na Fase 6, estrutura na Fase 6.x futura)
-  - Criar Tarefa (abre o dialog atual de criação)
-- Nenhuma alteração de comportamento na aba "Minhas Tarefas".
-
-Validação: usuário acessa o link antigo e cai na mesma experiência; novas abas aparecem ao lado.
+- **`ReuniaoDialog.tsx`**: adicionar dois botões opcionais ao lado dos campos de resumo:
+  - "Gerar resumo cliente com IA" → chama `ia-gerar-resumo` e preenche o textarea
+  - "Gerar resumo operacional com IA" → idem
+  - "Gerar tarefas sugeridas" → chama `ia-gerar-tarefas`, depois recarrega `useTarefasSugeridas`
+- Botões só aparecem se há `ia_config` ativo correspondente.
+- Geração manual continua funcionando exatamente como hoje (parsing de texto). IA é aditiva.
 
 ---
 
-## Fase 7 — Base de Responsabilidades da Equipe
+## 4. Banco de dados (migração aditiva)
 
-Objetivo: preparar terreno para sugestões automáticas de responsável.
+Adicionar à `ia_config`:
+- `modelos_disponiveis jsonb` (cache da lista de modelos curada)
+- `ultima_verificacao timestamptz` (preenchida pelo Testar Conexão)
+- `latency_ms int` (idem)
 
-Migração:
-- Nova tabela `responsabilidades_equipe` (id, profile_id, cargo text, areas text[], skills text[], setores text[], responsabilidades text, observacoes, created_at, updated_at).
-- RLS: leitura autenticados; insert/update/delete só admin.
-
-Front:
-- Nova aba em `Configurações` chamada "Responsabilidades da Equipe" (admin only, padrão das outras tabs admin).
-- CRUD simples por usuário com chips para áreas/skills/setores. Exemplos pré-cadastráveis: vídeos, tráfego, LP, design, IA, atendimento, CRM.
-
-Validação: dados salvam, apenas admin acessa.
+Nenhuma coluna existente alterada. `ia_logs` já tem `tokens_input/output/custo` — basta começar a popular.
 
 ---
 
-## Fase 8 — Preparação para IA (sem ativar automações)
+## 5. Detalhes técnicos
 
-Objetivo: estrutura de chaves, prompts e logs.
+**Stack:**
+- Edge functions: Deno + `npm:ai` + `npm:@ai-sdk/openai-compatible` + `npm:zod`
+- Frontend: novo `ProviderCard` reutilizável dentro de `IAConfigManager.tsx`, sparkline com `recharts` (já no projeto), botões/select via shadcn (já existentes), tokens semânticos (`text-emerald-500` para Conectado, `text-muted-foreground`, etc.)
+- Custo estimado client-side a partir de tabela de preços hardcoded por modelo (mesmo fallback que o gateway usa).
 
-Migração:
-- `ia_config` (id, provider text [gemini|gpt], model text, ativo bool, created_at, updated_at) — sem armazenar keys.
-- `ia_prompts` (id, tipo text [resumo_cliente|resumo_operacional|tarefas_sugeridas], conteudo text, ativo bool, updated_at).
-- `ia_logs` (id, tipo text, input_resumo text, tokens_input int, tokens_output int, custo numeric, modelo text, created_at, criado_por).
-- RLS: admin para escrita; leitura autenticados em prompts/config; logs só admin.
+**Modelos curados expostos no Select:**
+- GPT: `gpt-5-nano` (rápido/barato), `gpt-5-mini` (default), `gpt-5` (qualidade)
+- Gemini: `gemini-2.5-flash-lite`, `gemini-2.5-flash` (default), `gemini-2.5-pro`
 
-Secrets (via tool de secrets, não banco): `GEMINI_API_KEY`, `OPENAI_API_KEY` — adicionar somente quando o usuário confirmar e fornecer. **Nada é chamado ainda**, só estrutura.
+**Segurança:** `LOVABLE_API_KEY` só vive nas edge functions. Frontend nunca a vê. Nenhuma chave pedida ao usuário.
 
-Front:
-- Nova sub-aba em `Configurações` → "IA": provider ativo, modelo, edição dos prompts, visualização de logs/consumo. Botões de "Gerar resumo" continuam não chamando IA (fica para fase futura de ativação).
-
-Validação: telas existem, salvam config; nenhum efeito colateral em fluxos atuais.
+**Compatibilidade:** Layout atual da aba IA (Provider/Prompts/Logs) preservado — só o conteúdo da sub-aba "Provedor" muda. Stores `useIAConfig` ganham `testConnection`, `refreshModels`, `getConsumo(provider, periodo)`. Métodos antigos intactos.
 
 ---
 
-## Fase 9 — Regras de segurança aplicadas continuamente
+## Ordem de execução
 
-Em cada PR/fase:
-- Rodar `supabase--linter` após cada migração.
-- Garantir que toda nova tabela tem RLS habilitada e políticas equivalentes ao padrão atual.
-- Nunca usar `DROP`, `TRUNCATE`, `ALTER COLUMN TYPE` em tabelas existentes.
-- Nada de cores hardcoded — usar tokens semânticos do `index.css`.
-
----
-
-## Fase 10 — Validação final por fase
-
-Checklist obrigatório antes de avançar:
-- `/clientes` carrega e ordena igual.
-- Projeto Completo abre, todas as abas antigas funcionam.
-- Kanban de Demandas e de Posts intactos.
-- `/minhas-tarefas` mostra as mesmas tarefas de antes.
-- Filtros, badges e responsáveis sem regressão.
-- `supabase--linter` sem novos avisos críticos.
-
----
-
-## Resumo técnico (referência rápida)
-
-Tabelas novas: `reunioes`, `tarefas_sugeridas`, `responsabilidades_equipe`, `ia_config`, `ia_prompts`, `ia_logs`.
-Colunas novas:
-- `clientes`: `data_contratacao`, `status_relacionamento`, `status_performance`, `link_relatorio`.
-- `demandas`: `origem_reuniao_id`, `origem_sugestao_id`.
-Stores novos: `src/store/reunioes.ts`, `src/store/tarefasSugeridas.ts`, `src/store/responsabilidades.ts`, `src/store/ia.ts`.
-Componentes novos: `ReunioesTab`, `ReuniaoDialog`, `TarefasSugeridasTab`, `CentralTarefasTabs`, `ResponsabilidadesEquipeManager`, `IAConfigManager`.
-Renomeações **somente visuais**: "Documentação" → "Acessos, Links e Materiais"; "Minhas Tarefas" → "Central de Tarefas".
+1. Migração: 3 colunas em `ia_config`.
+2. Habilitar Lovable AI Gateway.
+3. Criar `_shared/ai-gateway.ts` + 4 edge functions.
+4. Refatorar `IAConfigManager.tsx` com novo `ProviderCard` (header + status + sparkline).
+5. Estender `useIAConfig` com helpers de teste/modelos/consumo.
+6. Adicionar botões de IA no `ReuniaoDialog.tsx`.
+7. Validar visualmente vs. screenshot e testar `ia-test-connection`.
