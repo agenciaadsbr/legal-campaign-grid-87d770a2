@@ -1,4 +1,6 @@
-// Helper compartilhado para chamar o Lovable AI Gateway via Vercel AI SDK
+// Helpers compartilhados para chamar provedores de IA
+// - Gemini: via Lovable AI Gateway (LOVABLE_API_KEY)
+// - GPT/OpenAI: via API direta da OpenAI (OPENAI_API_KEY)
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 
 export const createLovableAiGatewayProvider = (lovableApiKey: string) =>
@@ -8,6 +10,15 @@ export const createLovableAiGatewayProvider = (lovableApiKey: string) =>
     headers: {
       "Lovable-API-Key": lovableApiKey,
       "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+    },
+  });
+
+export const createOpenAIDirectProvider = (apiKey: string) =>
+  createOpenAICompatible({
+    name: "openai",
+    baseURL: "https://api.openai.com/v1",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
     },
   });
 
@@ -52,4 +63,30 @@ export function estimateCost(provider: string, modelId: string, tokensIn: number
   if (!m?.pricing) return 0;
   // pricing é por 1M tokens
   return (tokensIn / 1_000_000) * m.pricing.input + (tokensOut / 1_000_000) * m.pricing.output;
+}
+
+// Mapeia o id curado (com prefixo) para o id real esperado pelo provider
+export function resolveRealModelId(provider: string, curatedId: string): string {
+  if (provider === "gpt") return curatedId.replace(/^openai\//, "");
+  return curatedId; // Lovable Gateway aceita "google/..." direto
+}
+
+// Retorna o cliente AI SDK apropriado para o provider escolhido
+// Lança Error com mensagem amigável se a chave necessária estiver ausente.
+export function getProviderClient(provider: string) {
+  if (provider === "gpt") {
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) {
+      throw new Error(
+        "OPENAI_API_KEY não configurada. Adicione a chave da OpenAI nas secrets do projeto."
+      );
+    }
+    return createOpenAIDirectProvider(apiKey);
+  }
+  // gemini (e fallback) via Lovable AI Gateway
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) {
+    throw new Error("LOVABLE_API_KEY não configurada.");
+  }
+  return createLovableAiGatewayProvider(apiKey);
 }

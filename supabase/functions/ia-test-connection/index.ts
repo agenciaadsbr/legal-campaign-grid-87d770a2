@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { generateText } from "npm:ai";
-import { corsHeaders, jsonResponse, createLovableAiGatewayProvider, defaultModelFor, CURATED_MODELS } from "../_shared/ai-gateway.ts";
+import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId, CURATED_MODELS } from "../_shared/ai-gateway.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -13,16 +13,21 @@ Deno.serve(async (req) => {
     if (!CURATED_MODELS[provider]) return jsonResponse({ error: "Provider inválido" }, 400);
 
     const modelId = body?.model || defaultModelFor(provider);
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) return jsonResponse({ ok: false, error: "LOVABLE_API_KEY não configurada" }, 500);
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
+    let client;
+    try {
+      client = getProviderClient(provider);
+    } catch (e) {
+      return jsonResponse({ ok: false, error: (e as Error).message }, 400);
+    }
+
+    const realModel = resolveRealModelId(provider, modelId);
     const t0 = Date.now();
     let ok = false;
     let errMsg: string | null = null;
     try {
       const r = await generateText({
-        model: gateway(modelId),
+        model: client(realModel),
         prompt: "ping",
         maxOutputTokens: 5,
       });
@@ -32,7 +37,6 @@ Deno.serve(async (req) => {
     }
     const latency_ms = Date.now() - t0;
 
-    // Persistir resultado em ia_config
     if (ok) {
       const supaUrl = Deno.env.get("SUPABASE_URL")!;
       const anon = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;

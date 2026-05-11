@@ -10,7 +10,7 @@ const PROVIDERS_META: Record<string, { titulo: string; descricao: string }> = {
   gpt: {
     titulo: "OpenAI / GPT — Análise com IA",
     descricao:
-      "Provedor conectado para gerar resumos de reuniões, sugerir tarefas e produzir insights operacionais. Tudo é executado via Lovable AI Gateway.",
+      "Provedor conectado via chave própria da OpenAI (OPENAI_API_KEY) para gerar resumos, sugerir tarefas e produzir insights. Cobrança vai direto na sua conta da OpenAI.",
   },
   gemini: {
     titulo: "Google Gemini — Análise com IA",
