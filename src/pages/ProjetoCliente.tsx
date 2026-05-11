@@ -61,7 +61,9 @@ import {
   CalendarRange,
   AlertTriangle,
   Mic,
+  Rocket,
 } from "lucide-react";
+import { OperacionalTab } from "@/components/projeto/OperacionalTab";
 import { ReunioesTab } from "@/components/projeto/ReunioesTab";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -99,6 +101,8 @@ function filtrarPorArea(demandas: Demanda[], area: string): Demanda[] {
       return demandas.filter((d) => d.categoria === "Briefing");
     case "planejamento":
       return demandas.filter((d) => d.categoria === "Planejamento");
+    case "operacional":
+      return demandas.filter((d) => d.categoria === "Operacional");
     case "urgencias":
       return demandas.filter(
         (d) => URGENCIA_OUTRO_CATS.includes(d.categoria) || d.prioridade === "Urgente",
@@ -239,6 +243,7 @@ export default function ProjetoCliente() {
             <TabsTrigger value="trafego" className="gap-1"><Megaphone className="h-3.5 w-3.5" /> Tráfego Pago</TabsTrigger>
             <TabsTrigger value="lp" className="gap-1"><Globe className="h-3.5 w-3.5" /> LP / Site</TabsTrigger>
             <TabsTrigger value="ia" className="gap-1"><Bot className="h-3.5 w-3.5" /> IA / Atendimento</TabsTrigger>
+            <TabsTrigger value="operacional" className="gap-1"><Rocket className="h-3.5 w-3.5" /> Operacional</TabsTrigger>
             <TabsTrigger value="urgencias" className="gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Urgências</TabsTrigger>
             <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Acessos, Links e Materiais</TabsTrigger>
             <TabsTrigger value="reunioes" className="gap-1"><Mic className="h-3.5 w-3.5" /> Reuniões</TabsTrigger>
@@ -309,6 +314,15 @@ export default function ProjetoCliente() {
             demandas={filtrarPorArea(demandasCli, "ia")}
             categoria="IAAtendimento"
             demandaInicial={abaDemandaDeepLink === "ia" ? demandaDeepLink : null}
+          />
+        </TabsContent>
+
+        {/* ============== OPERACIONAL ============== */}
+        <TabsContent value="operacional" className="mt-4">
+          <OperacionalTab
+            clienteId={clienteId!}
+            demandas={filtrarPorArea(demandasCli, "operacional")}
+            demandaInicial={abaDemandaDeepLink === "operacional" ? demandaDeepLink : null}
           />
         </TabsContent>
 
