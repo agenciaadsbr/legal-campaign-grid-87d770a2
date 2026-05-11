@@ -60,7 +60,9 @@ import {
   ClipboardList,
   CalendarRange,
   AlertTriangle,
+  Mic,
 } from "lucide-react";
+import { ReunioesTab } from "@/components/projeto/ReunioesTab";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -239,6 +241,7 @@ export default function ProjetoCliente() {
             <TabsTrigger value="ia" className="gap-1"><Bot className="h-3.5 w-3.5" /> IA / Atendimento</TabsTrigger>
             <TabsTrigger value="urgencias" className="gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Urgências</TabsTrigger>
             <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Acessos, Links e Materiais</TabsTrigger>
+            <TabsTrigger value="reunioes" className="gap-1"><Mic className="h-3.5 w-3.5" /> Reuniões</TabsTrigger>
             <TabsTrigger value="briefing" className="gap-1"><ClipboardList className="h-3.5 w-3.5" /> Briefing</TabsTrigger>
             <TabsTrigger value="planejamento" className="gap-1"><CalendarRange className="h-3.5 w-3.5" /> Planejamento</TabsTrigger>
             <TabsTrigger value="atividades" className="gap-1"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
@@ -329,6 +332,11 @@ export default function ProjetoCliente() {
             novoOpenExterno={novoDocOpen}
             onNovoOpenChangeExterno={setNovoDocOpen}
           />
+        </TabsContent>
+
+        {/* ============== REUNIÕES ============== */}
+        <TabsContent value="reunioes" className="mt-4">
+          <ReunioesTab clienteId={clienteId!} />
         </TabsContent>
 
         {/* ============== BRIEFING ============== */}
