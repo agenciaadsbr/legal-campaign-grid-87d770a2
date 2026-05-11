@@ -62,6 +62,14 @@ export interface Cliente {
   plano?: string | null;
   /** Valor de venda do contrato (R$). */
   valor_venda?: number | null;
+  /** Data em que o cliente foi contratado (gerencial, opcional). */
+  data_contratacao?: string | null;
+  /** Status de relacionamento: Bom | Neutro | Crítico */
+  status_relacionamento?: string | null;
+  /** Status de performance: Alto | Médio | Baixo */
+  status_performance?: string | null;
+  /** URL de relatório externo (PowerDash, Recarga Wise, etc.) */
+  link_relatorio?: string | null;
 }
 
 export interface Contrato {
@@ -294,6 +302,10 @@ function mapCliente(
     plano: row.plano ?? null,
     valor_venda: row.valor_venda ?? null,
     nicho_extra: row.nicho_extra ?? null,
+    data_contratacao: row.data_contratacao ?? null,
+    status_relacionamento: row.status_relacionamento ?? null,
+    status_performance: row.status_performance ?? null,
+    link_relatorio: row.link_relatorio ?? null,
   };
 }
 
@@ -660,6 +672,10 @@ export const useCRM = create<State>()((set, get) => ({
     if ((patch as any).plano !== undefined) dbPatch.plano = (patch as any).plano ?? null;
     if ((patch as any).valor_venda !== undefined) dbPatch.valor_venda = (patch as any).valor_venda ?? null;
     if ((patch as any).nicho_extra !== undefined) dbPatch.nicho_extra = (patch as any).nicho_extra ?? null;
+    if ((patch as any).data_contratacao !== undefined) dbPatch.data_contratacao = (patch as any).data_contratacao || null;
+    if ((patch as any).status_relacionamento !== undefined) dbPatch.status_relacionamento = (patch as any).status_relacionamento || null;
+    if ((patch as any).status_performance !== undefined) dbPatch.status_performance = (patch as any).status_performance || null;
+    if ((patch as any).link_relatorio !== undefined) dbPatch.link_relatorio = (patch as any).link_relatorio || null;
     // Unificado: status_cliente e status_global são o mesmo campo (ciclo de vida)
     const novoStatusUnificado =
       (patch as any).status_global ?? (patch.status_cliente as any);
