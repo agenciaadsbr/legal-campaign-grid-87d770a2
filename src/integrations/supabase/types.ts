@@ -764,6 +764,8 @@ export type Database = {
           id: string
           link_drive: string | null
           link_meister: string | null
+          marcado_ja_possui: boolean
+          origem: string
           origem_reuniao_id: string | null
           origem_sugestao_id: string | null
           precisa_aprovacao: boolean
@@ -772,6 +774,7 @@ export type Database = {
           responsavel_id: string | null
           status: Database["public"]["Enums"]["demanda_status"]
           subtipo: string | null
+          template_id: string | null
           titulo: string
           updated_at: string
         }
@@ -788,6 +791,8 @@ export type Database = {
           id?: string
           link_drive?: string | null
           link_meister?: string | null
+          marcado_ja_possui?: boolean
+          origem?: string
           origem_reuniao_id?: string | null
           origem_sugestao_id?: string | null
           precisa_aprovacao?: boolean
@@ -796,6 +801,7 @@ export type Database = {
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
           subtipo?: string | null
+          template_id?: string | null
           titulo: string
           updated_at?: string
         }
@@ -812,6 +818,8 @@ export type Database = {
           id?: string
           link_drive?: string | null
           link_meister?: string | null
+          marcado_ja_possui?: boolean
+          origem?: string
           origem_reuniao_id?: string | null
           origem_sugestao_id?: string | null
           precisa_aprovacao?: boolean
@@ -820,6 +828,7 @@ export type Database = {
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
           subtipo?: string | null
+          template_id?: string | null
           titulo?: string
           updated_at?: string
         }
@@ -1117,6 +1126,62 @@ export type Database = {
           label?: string
         }
         Relationships: []
+      }
+      operational_templates: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          created_at: string
+          depends_on_template_id: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          ordem: number
+          permite_dependencia: boolean
+          prioridade: Database["public"]["Enums"]["demanda_prioridade"]
+          responsavel_padrao_id: string | null
+          status_inicial: Database["public"]["Enums"]["demanda_status"]
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string
+          depends_on_template_id?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          permite_dependencia?: boolean
+          prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
+          responsavel_padrao_id?: string | null
+          status_inicial?: Database["public"]["Enums"]["demanda_status"]
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string
+          depends_on_template_id?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          permite_dependencia?: boolean
+          prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
+          responsavel_padrao_id?: string | null
+          status_inicial?: Database["public"]["Enums"]["demanda_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_templates_depends_on_template_id_fkey"
+            columns: ["depends_on_template_id"]
+            isOneToOne: false
+            referencedRelation: "operational_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {
@@ -1561,6 +1626,7 @@ export type Database = {
         | "IAAtendimento"
         | "Briefing"
         | "Planejamento"
+        | "Operacional"
       demanda_prioridade: "Baixa" | "Media" | "Alta" | "Urgente"
       demanda_status:
         | "Planejamento"
@@ -1736,6 +1802,7 @@ export const Constants = {
         "IAAtendimento",
         "Briefing",
         "Planejamento",
+        "Operacional",
       ],
       demanda_prioridade: ["Baixa", "Media", "Alta", "Urgente"],
       demanda_status: [
