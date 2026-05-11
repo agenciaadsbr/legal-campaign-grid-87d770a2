@@ -41,14 +41,17 @@ Deno.serve(async (req) => {
     const { data: prompts } = await supa.from("ia_prompts").select("*").eq("tipo", "tarefas_sugeridas").eq("ativo", true).limit(1);
     const systemPrompt = prompts?.[0]?.conteudo?.trim() || DEFAULT_PROMPT;
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) return jsonResponse({ error: "LOVABLE_API_KEY não configurada" }, 500);
-
-    const gateway = createLovableAiGatewayProvider(apiKey);
+    let client;
+    try {
+      client = getProviderClient(cfg.provider);
+    } catch (e) {
+      return jsonResponse({ error: (e as Error).message }, 400);
+    }
     const modelId = cfg.model || defaultModelFor(cfg.provider);
+    const realModel = resolveRealModelId(cfg.provider, modelId);
 
     const result = await generateText({
-      model: gateway(modelId),
+      model: client(realModel),
       system: systemPrompt,
       prompt: `Extraia as tarefas desta reunião:\n\n${transcricao}`,
       experimental_output: Output.object({ schema: Schema }),
