@@ -117,7 +117,50 @@ export function ReuniaoDialog({
     toast.success(`${count} tarefa(s) sugerida(s) criada(s)`);
   };
 
-  return (
+  const gerarResumoIA = async (tipo: "resumo_cliente" | "resumo_operacional") => {
+    if (!transcricao.trim()) {
+      toast.error("Cole a transcrição da reunião primeiro");
+      return;
+    }
+    setIaBusy(tipo === "resumo_cliente" ? "cliente" : "operacional");
+    try {
+      const { data, error } = await supabase.functions.invoke("ia-gerar-resumo", {
+        body: { tipo, transcricao, contexto: titulo },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (tipo === "resumo_cliente") setResumoCliente(data.texto ?? "");
+      else setResumoTarefas(data.texto ?? "");
+      toast.success(`Resumo gerado · ${data.modelo}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao gerar resumo");
+    } finally {
+      setIaBusy(null);
+    }
+  };
+
+  const gerarTarefasIA = async () => {
+    const base = transcricao.trim() || resumoTarefas.trim();
+    if (!base) {
+      toast.error("Cole a transcrição ou o resumo de tarefas primeiro");
+      return;
+    }
+    setIaBusy("tarefas");
+    try {
+      const { data, error } = await supabase.functions.invoke("ia-gerar-tarefas", {
+        body: { cliente_id: clienteId, reuniao_id: reuniao?.id ?? null, transcricao: base },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.count} tarefa(s) sugerida(s) criada(s) por IA`);
+      await reloadSugeridas();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao gerar tarefas");
+    } finally {
+      setIaBusy(null);
+    }
+  };
+
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
