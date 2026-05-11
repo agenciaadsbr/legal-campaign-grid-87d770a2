@@ -275,7 +275,7 @@ export function DocumentacaoTab({
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start"
       >
         <div className="hidden print:block text-lg font-semibold col-span-full">
-          Documentação e Acessos — {cliente?.nome_cliente}
+          Acessos, Links e Materiais — {cliente?.nome_cliente}
         </div>
         {DOC_BLOCOS.map((bloco) => {
           const lista = porBloco.get(bloco) ?? [];
