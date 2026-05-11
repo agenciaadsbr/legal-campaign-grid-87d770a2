@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Rocket, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useDemandas, type Demanda } from "@/store/demandas";
-import { gerarEstruturaOperacional } from "@/store/operationalTemplates";
+import { gerarEstruturaOperacional, useOperationalTemplates, useOperationalTemplatesBootstrap } from "@/store/operationalTemplates";
 import { AreaTab } from "@/components/projeto/AreaTab";
 import { toast } from "sonner";
 
@@ -17,6 +17,20 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
   const { isAdmin } = useAuth();
   const reload = useDemandas((s) => s.load);
   const [generating, setGenerating] = useState(false);
+
+  useOperationalTemplatesBootstrap();
+  const templates = useOperationalTemplates((s) => s.templates);
+
+  const demandasOrdenadas = useMemo(() => {
+    const ordemMap = new Map(templates.map((t) => [t.id, t.ordem]));
+    return [...demandas].sort((a, b) => {
+      const oa = a.template_id ? (ordemMap.get(a.template_id) ?? 9999) : 9999;
+      const ob = b.template_id ? (ordemMap.get(b.template_id) ?? 9999) : 9999;
+      if (oa !== ob) return oa - ob;
+      // fallback: manter ordem original se mesma ordem
+      return 0;
+    });
+  }, [demandas, templates]);
 
   const handleGerar = async () => {
     setGenerating(true);
@@ -47,7 +61,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
         titulo="Operacional"
         icone={Rocket}
         clienteId={clienteId}
-        demandas={demandas}
+        demandas={demandasOrdenadas}
         categoria={"Operacional" as any}
         emptyHint='Nenhuma tarefa operacional ainda. Use "Gerar estrutura operacional" para criar o pacote padrão de onboarding.'
         demandaInicial={demandaInicial ?? null}
