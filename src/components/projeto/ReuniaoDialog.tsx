@@ -167,6 +167,38 @@ export function ReuniaoDialog({
     }
   };
 
+  const processarReuniao = async (modo: "novo" | "substituir" | "manter", sobrescreverResumos: boolean) => {
+    if (!reuniao) { toast.error("Salve a reunião antes de processar"); return; }
+    if (!transcricao.trim()) { toast.error("Cole a transcrição primeiro"); return; }
+    setIaBusy("processar");
+    try {
+      const { data, error } = await supabase.functions.invoke("ia-processar-reuniao", {
+        body: { reuniao_id: reuniao.id, modo, sobrescrever_resumos: sobrescreverResumos },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.resumo_cliente && (sobrescreverResumos || !resumoCliente)) setResumoCliente(data.resumo_cliente);
+      if (data?.resumo_operacional && (sobrescreverResumos || !resumoTarefas)) setResumoTarefas(data.resumo_operacional);
+      setIaStatus(data.status);
+      setIaProcessedAt(new Date().toISOString());
+      await reloadSugeridas();
+      toast.success(`Processado · ${data.tarefas_inseridas} tarefa(s) sugerida(s)${data.tarefas_substituidas ? `, ${data.tarefas_substituidas} substituída(s)` : ""}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao processar reunião");
+    } finally {
+      setIaBusy(null);
+    }
+  };
+
+  const handleProcessarClick = () => {
+    if (!reuniao) { toast.error("Salve a reunião antes de processar"); return; }
+    if (iaProcessedAt || resumoCliente || resumoTarefas) {
+      setReprocDialog(true);
+    } else {
+      processarReuniao("novo", false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
