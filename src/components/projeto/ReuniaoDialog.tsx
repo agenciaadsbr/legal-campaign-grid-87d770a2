@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Copy, Sparkles, Plus, Wand2, Loader2 } from "lucide-react";
+import { Copy, Sparkles, Plus, Wand2, Loader2, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export function ReuniaoDialog({
   open,
@@ -32,7 +33,10 @@ export function ReuniaoDialog({
   const createSugerida = useTarefasSugeridas((s) => s.create);
   useIAConfigBootstrap();
   const iaAtivo = useIAConfig((s) => s.configs.some((c) => c.ativo));
-  const [iaBusy, setIaBusy] = useState<null | "cliente" | "operacional" | "tarefas">(null);
+  const [iaBusy, setIaBusy] = useState<null | "cliente" | "operacional" | "tarefas" | "processar">(null);
+  const [reprocDialog, setReprocDialog] = useState(false);
+  const [iaStatus, setIaStatus] = useState<any>(null);
+  const [iaProcessedAt, setIaProcessedAt] = useState<string | null>(null);
 
   const [titulo, setTitulo] = useState("");
   const [data, setData] = useState("");
@@ -55,6 +59,8 @@ export function ReuniaoDialog({
       setTranscricao(reuniao?.transcricao ?? "");
       setResumoCliente(reuniao?.resumo_cliente ?? "");
       setResumoTarefas(reuniao?.resumo_tarefas ?? "");
+      setIaStatus((reuniao as any)?.ia_status ?? null);
+      setIaProcessedAt((reuniao as any)?.ia_processed_at ?? null);
     }
   }, [open, reuniao]);
 
@@ -161,6 +167,38 @@ export function ReuniaoDialog({
     }
   };
 
+  const processarReuniao = async (modo: "novo" | "substituir" | "manter", sobrescreverResumos: boolean) => {
+    if (!reuniao) { toast.error("Salve a reunião antes de processar"); return; }
+    if (!transcricao.trim()) { toast.error("Cole a transcrição primeiro"); return; }
+    setIaBusy("processar");
+    try {
+      const { data, error } = await supabase.functions.invoke("ia-processar-reuniao", {
+        body: { reuniao_id: reuniao.id, modo, sobrescrever_resumos: sobrescreverResumos },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.resumo_cliente && (sobrescreverResumos || !resumoCliente)) setResumoCliente(data.resumo_cliente);
+      if (data?.resumo_operacional && (sobrescreverResumos || !resumoTarefas)) setResumoTarefas(data.resumo_operacional);
+      setIaStatus(data.status);
+      setIaProcessedAt(new Date().toISOString());
+      await reloadSugeridas();
+      toast.success(`Processado · ${data.tarefas_inseridas} tarefa(s) sugerida(s)${data.tarefas_substituidas ? `, ${data.tarefas_substituidas} substituída(s)` : ""}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao processar reunião");
+    } finally {
+      setIaBusy(null);
+    }
+  };
+
+  const handleProcessarClick = () => {
+    if (!reuniao) { toast.error("Salve a reunião antes de processar"); return; }
+    if (iaProcessedAt || resumoCliente || resumoTarefas) {
+      setReprocDialog(true);
+    } else {
+      processarReuniao("novo", false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -197,6 +235,30 @@ export function ReuniaoDialog({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Processamento IA — orquestrador dos 2 agentes */}
+        <div className="mt-3 border border-border rounded-md bg-muted/30 p-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 text-xs">
+              <span className="font-medium flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> Processamento IA</span>
+              <StatusPill ok={iaStatus?.cliente?.ok} label="Resumo cliente" />
+              <StatusPill ok={iaStatus?.operacional?.ok} label="Resumo operacional" />
+              <StatusPill ok={iaStatus?.tarefas?.ok} label="Tarefas" />
+              {iaProcessedAt && (
+                <span className="text-muted-foreground text-[11px]">· última: {new Date(iaProcessedAt).toLocaleString("pt-BR")}</span>
+              )}
+            </div>
+            <div className="flex gap-1.5">
+              <Button size="sm" className="h-7 text-xs" onClick={handleProcessarClick} disabled={iaBusy !== null || !reuniao}>
+                {iaBusy === "processar"
+                  ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  : iaProcessedAt ? <RefreshCw className="h-3.5 w-3.5 mr-1" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                {iaProcessedAt ? "Reprocessar IA" : "Processar reunião com IA"}
+              </Button>
+            </div>
+          </div>
+          {!reuniao && <p className="text-[11px] text-muted-foreground mt-2">Salve a reunião primeiro para processar com IA.</p>}
         </div>
 
         <Tabs defaultValue="resumos" className="mt-2">
@@ -270,6 +332,41 @@ export function ReuniaoDialog({
           <Button onClick={handleSave}><Sparkles className="h-4 w-4 mr-1" /> Salvar reunião</Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={reprocDialog} onOpenChange={setReprocDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reprocessar reunião com IA</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(resumoCliente || resumoTarefas) && "Os resumos atuais serão sobrescritos. "}
+              Como tratar as tarefas sugeridas pendentes desta reunião?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2 text-xs">
+            <button className="text-left border border-border rounded p-2 hover:bg-muted/40" onClick={() => { setReprocDialog(false); processarReuniao("manter", true); }}>
+              <div className="font-medium">Manter tarefas existentes</div>
+              <div className="text-muted-foreground">Não cria novas tarefas. Atualiza só os resumos.</div>
+            </button>
+            <button className="text-left border border-border rounded p-2 hover:bg-muted/40" onClick={() => { setReprocDialog(false); processarReuniao("substituir", true); }}>
+              <div className="font-medium">Substituir tarefas pendentes</div>
+              <div className="text-muted-foreground">Remove as tarefas ainda não aprovadas e gera novas. Tarefas já aprovadas não são tocadas.</div>
+            </button>
+            <button className="text-left border border-border rounded p-2 hover:bg-muted/40" onClick={() => { setReprocDialog(false); processarReuniao("novo", true); }}>
+              <div className="font-medium">Gerar novas separadamente</div>
+              <div className="text-muted-foreground">Mantém as existentes e adiciona as novas em paralelo.</div>
+            </button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
+}
+
+function StatusPill({ ok, label }: { ok: boolean | null | undefined; label: string }) {
+  if (ok === true) return <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-3 w-3" /> {label}</span>;
+  if (ok === false) return <span className="inline-flex items-center gap-1 text-destructive"><AlertTriangle className="h-3 w-3" /> {label}</span>;
+  return <span className="inline-flex items-center gap-1 text-muted-foreground"><AlertTriangle className="h-3 w-3" /> {label}</span>;
 }
