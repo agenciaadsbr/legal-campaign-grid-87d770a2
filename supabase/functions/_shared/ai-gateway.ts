@@ -33,9 +33,12 @@ export const CURATED_MODELS: Record<string, Array<{ id: string; label: string; d
     { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro · alta qualidade", descricao: "Tarefas complexas", pricing: { input: 1.25, output: 10 } },
   ],
   gpt: [
-    { id: "openai/gpt-5-nano", label: "GPT-5 nano · rápido e barato", descricao: "Mais barato, alto volume", pricing: { input: 0.05, output: 0.4 } },
-    { id: "openai/gpt-5-mini", label: "GPT-5 mini · equilibrado", descricao: "Padrão recomendado", pricing: { input: 0.25, output: 2 } },
-    { id: "openai/gpt-5", label: "GPT-5 · alta qualidade", descricao: "Tarefas complexas", pricing: { input: 1.25, output: 10 } },
+    { id: "openai/gpt-4o-mini", label: "GPT-4o mini · rápido e barato", descricao: "Mais barato, alto volume", pricing: { input: 0.15, output: 0.6 } },
+    { id: "openai/gpt-4o", label: "GPT-4o · qualidade alta", descricao: "Multimodal de alta qualidade", pricing: { input: 2.5, output: 10 } },
+    { id: "openai/gpt-4.1-mini", label: "GPT-4.1 mini · contexto longo", descricao: "Janela longa, custo baixo", pricing: { input: 0.4, output: 1.6 } },
+    { id: "openai/gpt-4.1", label: "GPT-4.1 · raciocínio forte", descricao: "Raciocínio e código", pricing: { input: 2, output: 8 } },
+    { id: "openai/gpt-5-mini", label: "GPT-5 mini · novo", descricao: "Geração mais recente, equilibrado", pricing: { input: 0.25, output: 2 } },
+    { id: "openai/gpt-5", label: "GPT-5 · top de linha", descricao: "Máxima qualidade", pricing: { input: 1.25, output: 10 } },
   ],
 };
 
