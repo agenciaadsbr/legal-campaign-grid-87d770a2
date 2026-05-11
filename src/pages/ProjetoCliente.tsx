@@ -238,7 +238,7 @@ export default function ProjetoCliente() {
             <TabsTrigger value="lp" className="gap-1"><Globe className="h-3.5 w-3.5" /> LP / Site</TabsTrigger>
             <TabsTrigger value="ia" className="gap-1"><Bot className="h-3.5 w-3.5" /> IA / Atendimento</TabsTrigger>
             <TabsTrigger value="urgencias" className="gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Urgências</TabsTrigger>
-            <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Documentação</TabsTrigger>
+            <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Acessos, Links e Materiais</TabsTrigger>
             <TabsTrigger value="briefing" className="gap-1"><ClipboardList className="h-3.5 w-3.5" /> Briefing</TabsTrigger>
             <TabsTrigger value="planejamento" className="gap-1"><CalendarRange className="h-3.5 w-3.5" /> Planejamento</TabsTrigger>
             <TabsTrigger value="atividades" className="gap-1"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
@@ -423,7 +423,7 @@ function VisaoGeral({
     { key: "trafego", titulo: "Tráfego Pago", icone: Megaphone, total: trafego.total, pendentes: trafego.pendentes, atrasadas: trafego.atrasadas, responsaveis: trafego.resps, onVerDetalhes: () => onNavegar("trafego") },
     { key: "lp", titulo: "LP / Site", icone: Globe, total: lp.total, pendentes: lp.pendentes, atrasadas: lp.atrasadas, responsaveis: lp.resps, onVerDetalhes: () => onNavegar("lp") },
     { key: "ia", titulo: "IA / Atendimento", icone: Bot, total: ia.total, pendentes: ia.pendentes, atrasadas: ia.atrasadas, responsaveis: ia.resps, onVerDetalhes: () => onNavegar("ia") },
-    { key: "documentacao", titulo: "Documentação", icone: FolderOpen, total: docsCli.length, pendentes: 0, atrasadas: 0, responsaveis: [], onVerDetalhes: () => onNavegar("documentacao") },
+    { key: "documentacao", titulo: "Acessos, Links e Materiais", icone: FolderOpen, total: docsCli.length, pendentes: 0, atrasadas: 0, responsaveis: [], onVerDetalhes: () => onNavegar("documentacao") },
     { key: "briefing", titulo: "Briefing", icone: ClipboardList, total: briefing.total, pendentes: briefing.pendentes, atrasadas: briefing.atrasadas, responsaveis: briefing.resps, onVerDetalhes: () => onNavegar("briefing") },
     { key: "planejamento", titulo: "Planejamento", icone: CalendarRange, total: planejamento.total, pendentes: planejamento.pendentes, atrasadas: planejamento.atrasadas, responsaveis: planejamento.resps, onVerDetalhes: () => onNavegar("planejamento") },
     { key: "urgencias", titulo: "Urgências / Outros", icone: AlertTriangle, total: urgencias.total, pendentes: urgencias.pendentes, atrasadas: urgencias.atrasadas, responsaveis: urgencias.resps, onVerDetalhes: () => onNavegar("urgencias") },
