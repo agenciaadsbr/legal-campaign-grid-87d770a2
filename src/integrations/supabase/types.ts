@@ -397,9 +397,11 @@ export type Database = {
           campos_personalizados: Json
           created_at: string
           data_ativacao: string | null
+          data_contratacao: string | null
           data_inicio_onboarding: string | null
           descricao: string | null
           id: string
+          link_relatorio: string | null
           logo_url: string | null
           nicho: string | null
           nicho_extra: string | null
@@ -410,6 +412,8 @@ export type Database = {
           responsaveis_ids: string[]
           status: string
           status_cliente: string
+          status_performance: string | null
+          status_relacionamento: string | null
           updated_at: string
           valor_venda: number | null
         }
@@ -417,9 +421,11 @@ export type Database = {
           campos_personalizados?: Json
           created_at?: string
           data_ativacao?: string | null
+          data_contratacao?: string | null
           data_inicio_onboarding?: string | null
           descricao?: string | null
           id?: string
+          link_relatorio?: string | null
           logo_url?: string | null
           nicho?: string | null
           nicho_extra?: string | null
@@ -430,6 +436,8 @@ export type Database = {
           responsaveis_ids?: string[]
           status?: string
           status_cliente?: string
+          status_performance?: string | null
+          status_relacionamento?: string | null
           updated_at?: string
           valor_venda?: number | null
         }
@@ -437,9 +445,11 @@ export type Database = {
           campos_personalizados?: Json
           created_at?: string
           data_ativacao?: string | null
+          data_contratacao?: string | null
           data_inicio_onboarding?: string | null
           descricao?: string | null
           id?: string
+          link_relatorio?: string | null
           logo_url?: string | null
           nicho?: string | null
           nicho_extra?: string | null
@@ -450,6 +460,8 @@ export type Database = {
           responsaveis_ids?: string[]
           status?: string
           status_cliente?: string
+          status_performance?: string | null
+          status_relacionamento?: string | null
           updated_at?: string
           valor_venda?: number | null
         }
