@@ -1,138 +1,128 @@
-## Objetivo
 
-Separar a IA atual (que mistura objetivos) em **dois agentes totalmente independentes**, cada um com seu próprio provider, modelo, prompt, temperatura e contexto adicional. Tudo o que já existe (configs de provider, prompts antigos, fluxo de reunião, tarefas sugeridas, logs) é mantido — apenas adicionamos a nova camada de "agentes".
+# Estrutura Operacional Automática no Projeto do Cliente
 
----
+Implementação incremental e segura, sem remover/alterar nada do que já funciona (posts automáticos, kanbans atuais, layout, workflows).
 
-## 1. Banco de dados (nova tabela `ia_agentes`)
+## Resumo da arquitetura
 
-Criar tabela dedicada para os agentes (não mexe em `ia_config` nem `ia_prompts`):
+Reutilizamos a infraestrutura existente de `demandas` (categorias, status, kanban, dependências, workflow encadeado, anexos, comentários, atividades). Adicionamos:
 
-```text
-ia_agentes
-- id uuid pk
-- tipo text  ('resumo_cliente' | 'operacional')   UNIQUE
-- nome text                                        ('Agente Resumo Cliente', 'Agente Operacional')
-- provider text                                    ('gpt' | 'gemini')
-- model text
-- prompt text                                      (system prompt completo, editável)
-- temperatura numeric default 0.4
-- contexto_adicional text                          (instruções extras opcionais)
-- regras_categorizacao text  (apenas operacional, nullable)
-- regras_responsaveis text   (apenas operacional, nullable)
-- ativo boolean default true
-- created_at / updated_at
-```
+- Nova categoria **`Operacional`** no enum `demanda_categoria`.
+- Nova tabela **`operational_templates`** (cards padrão de onboarding).
+- Nova flag **`origem`** + **`marcado_ja_possui`** em `demandas` para rastrear cards gerados automaticamente.
+- Nova aba **🚀 Operacional** dentro de `ProjetoCliente`, reaproveitando `AreaTab` (mesmo Kanban visual já existente).
+- Geração automática ao criar cliente novo + botão manual para clientes antigos.
 
-RLS: leitura para `authenticated`, escrita só para `admin` (mesmo padrão de `ia_config`).
-
-Seed inicial: inserir 2 linhas (`resumo_cliente` e `operacional`) já preenchidas com prompts de boas práticas e provider/modelo da `ia_config` ativa.
-
-Adicionar coluna em `reunioes` para rastrear processamento:
-
-```text
-reunioes
-+ ia_processed_at timestamptz null
-+ ia_status jsonb default '{}'  -- { cliente: 'ok'|'erro'|null, operacional: 'ok'|'erro'|null, tarefas: 'ok'|'erro'|null, msg?: string }
-```
+Nada do existente é apagado: cards antigos continuam intactos, posts automáticos seguem inalterados, demais abas e configurações não mudam.
 
 ---
 
-## 2. Edge Functions
+## FASE 1 — Banco (migration única e segura)
 
-**Manter** `ia-gerar-resumo`, `ia-gerar-tarefas`, `ia-test-connection`, `ia-list-models` (sem mudanças de comportamento).
+1. `ALTER TYPE demanda_categoria ADD VALUE IF NOT EXISTS 'Operacional';`
+2. `ALTER TABLE demandas ADD COLUMN IF NOT EXISTS origem text NOT NULL DEFAULT 'manual';`  
+   Valores: `'manual' | 'automatica' | 'template_operacional'`.
+3. `ALTER TABLE demandas ADD COLUMN IF NOT EXISTS template_id uuid;` (referência opcional ao template usado).
+4. `ALTER TABLE demandas ADD COLUMN IF NOT EXISTS marcado_ja_possui boolean NOT NULL DEFAULT false;`
+5. Criar tabela `operational_templates`:
+   - `id`, `nome`, `ordem int`, `categoria text default 'Operacional'`, `prioridade demanda_prioridade default 'Media'`, `status_inicial demanda_status default 'Planejamento'`, `ativo bool default true`, `responsavel_padrao_id uuid null`, `permite_dependencia bool default true`, `depends_on_template_id uuid null`, `descricao text`, `created_at`, `updated_at`.
+   - RLS: leitura para `authenticated`; insert/update/delete apenas `admin` (mesmo padrão de `demanda_categorias_custom`).
+   - Trigger `set_updated_at`.
+6. Seed dos 14 templates de onboarding na ordem fornecida (Criar Drive e Acessos … Agendar Reunião Performance), todos `Operacional / Media / Planejamento / ativo=true`.
 
-**Adicionar `ia-processar-reuniao`** (orquestrador novo):
-- Input: `{ reuniao_id, modo: 'novo' | 'substituir' | 'manter' }`
-- Lê transcrição da reunião e os 2 agentes da `ia_agentes`.
-- Dispara em **paralelo** (`Promise.allSettled`):
-  - **Agente 1 (resumo_cliente)** → `generateText` com seu provider/modelo/prompt/temperatura → grava `reunioes.resumo_cliente`.
-  - **Agente 2 (operacional)** → 2 chamadas sequenciais com o **mesmo agente** (mesma config, contextos diferentes):
-    1. `generateText` resumo operacional detalhado → grava `reunioes.resumo_tarefas`.
-    2. `generateText` + `experimental_output` (schema Zod) extraindo tarefas + responsável sugerido (consultando `responsabilidades_equipe` para mapear skills/setores) → insere em `tarefas_sugeridas`.
-- Antes de inserir tarefas: se já existem com `reuniao_id` e `status='aguardando_aprovacao'`, respeita `modo`:
-  - `manter` → não insere nada novo.
-  - `substituir` → deleta as antigas ainda não aprovadas e insere as novas.
-  - `novo` (default) → insere em paralelo às existentes.
-  - **Nunca** toca tarefas com status diferente de `aguardando_aprovacao`.
-- Atualiza `reunioes.ia_processed_at` e `ia_status` por etapa.
-- Grava 1 log em `ia_logs` por agente (com `tipo='agente_cliente'` e `tipo='agente_operacional'`).
+Atualizar `src/lib/demandas-categorias.ts` para incluir `"Operacional"` em `DemandaCategoria`, `CATEGORIA_LABEL` (`"Operacional"`), `CATEGORIA_SUBTIPOS` (`["Onboarding", "Outro"]`) e em `CATEGORIAS`. **Não** mexer em mapeamentos existentes (Designer/Tecnologia continuam como hoje).
 
-Ambos agentes rodam **isolados** — sem compartilhar memória/contexto entre si.
+## FASE 2 — Aba Operacional + Kanban
 
----
+- Em `src/pages/ProjetoCliente.tsx`, inserir novo `TabsTrigger value="operacional"` (ícone Rocket) **entre `ia` e `urgencias`**, e `TabsContent` correspondente.
+- Conteúdo usa o mesmo `AreaTab` já usado nas outras áreas, com filtro `categoria === "Operacional"`. Isso herda automaticamente: drag-and-drop, responsáveis, prioridade, anexos, comentários, dependências, workflow encadeado.
+- Em `filtrarPorArea` adicionar `case "operacional": return demandas.filter(d => d.categoria === "Operacional");`.
+- Colunas Kanban: as colunas pedidas (`Planejamento, A Fazer, Em andamento, Revisão, Entregue, Concluído, Atrasado`) serão mapeadas no `AreaTab` para os status reais já existentes (`Planejamento, Criar, Revisar, Entregue, Concluido, Atrasado`). "A Fazer" = `Criar`, "Em andamento" = nova coluna virtual (status `Criar` com flag `data_inicio` definida) ou — se preferirem fidelidade total — adicionar `'EmAndamento'` e `'Revisao'` ao enum `demanda_status` na mesma migration. **Decisão sugerida:** manter os status atuais e apenas relabelar visualmente, evitando migração maior.
 
-## 3. Frontend — Configurações → IA → nova aba "Agentes"
+## FASE 3 — Templates operacionais
 
-Em `src/components/configuracoes/IAConfigManager.tsx`, adicionar TabsTrigger **"Agentes"** ao lado de Provedor/Prompts/Logs (mantém os existentes).
+- Tabela `operational_templates` (Fase 1) + seed inicial.
+- Store Zustand `src/store/operationalTemplates.ts` com CRUD (admin).
 
-Novo componente `IAAgentesManager.tsx` com 2 cards lado a lado:
+## FASE 4 — Configurações administrativas
 
-**Card 1 — Agente Resumo Cliente**
-- Nome (input)
-- Provider (select: GPT / Gemini)
-- Modelo (select dependente do provider, reutiliza `CURATED_MODELS`)
-- Temperatura (slider 0–1)
-- Prompt (textarea grande, com placeholder explicando objetivo "simplificar para WhatsApp")
-- Contexto adicional (textarea curto)
-- Botão "Salvar"
+- Em `src/pages/Configuracoes.tsx`, adicionar nova aba **"Estruturas automáticas"** (somente admins, mesmo padrão de `IAConfigManager`).
+- Componente novo `src/components/configuracoes/EstruturasAutomaticasManager.tsx` para listar/editar/ativar/desativar/reordenar templates, definir responsável padrão e dependências.
+- Nenhuma outra área de Configurações é tocada.
 
-**Card 2 — Agente Operacional**
-- Mesmos campos +
-- Regras de categorização (textarea)
-- Regras de responsáveis (textarea, com hint "consulta Configurações → Responsabilidades da Equipe")
+## FASE 5 — Geração automática ao criar cliente
 
-Store novo: `src/store/iaAgentes.ts` (Zustand), espelhando o padrão do `iaConfig.ts`.
+- Em `src/store/crm.ts`, no fluxo de criação de cliente, **manter** geração de posts atual e **adicionar**, após sucesso, chamada a `gerarEstruturaOperacional(clienteId)`:
+  - Lê `operational_templates WHERE ativo = true ORDER BY ordem`.
+  - Insere uma `demanda` por template com: `categoria='Operacional'`, `status='Criar'` (= "A Fazer"), `prioridade='Media'`, `origem='template_operacional'`, `template_id=<id>`, `responsaveis_ids` do `responsavel_padrao_id` quando houver, `subtipo='Onboarding'`.
+  - Se o template tiver `depends_on_template_id`, registra dependência em `task_dependencies` após criação.
+- Posts automáticos não são alterados.
 
----
+## FASE 6 — Botão "Cliente já possui"
 
-## 4. Frontend — `ReuniaoDialog.tsx`
+- Em `DemandCard` (ou no `DemandaDetalheDialog`), exibir botão **✔ Cliente já possui** apenas quando `origem === 'template_operacional'` e `marcado_ja_possui === false`.
+- Ao clicar:
+  - `update demandas set status='Concluido', marcado_ja_possui=true, data_conclusao=now() where id=...`
+  - `insert into historico_demandas` com `acao='marcado_ja_possui'`.
+  - Append em descrição/observação: "Marcado como já existente pelo cliente".
+  - Card permanece no banco (nunca deletado).
 
-Manter tudo que existe. **Adicionar** acima da Tabs uma nova seção compacta "Processamento IA":
+## FASE 7 — Workflow encadeado
 
-```text
-┌─ Processamento IA ──────────────────────────────────────┐
-│ ✅ Resumo cliente   ✅ Resumo operacional   ⚠ Tarefas  │
-│ Última execução: 11/05/2026 15:42                       │
-│ [✨ Processar reunião com IA]   [🔄 Reprocessar]        │
-└─────────────────────────────────────────────────────────┘
-```
+- Cards operacionais já herdam `task_dependencies`, `liberar_dependencias_automaticas` e o sistema de workflow existente.
+- Esta fase apenas garante o `depends_on_template_id` no seed/templates para preparar encadeamentos futuros (Criar LP → Ativar Google, etc.). Sem ativar automações novas agora.
 
-Comportamento:
-- Botão **"Processar reunião com IA"** chama `ia-processar-reuniao` com `modo='novo'`. Habilitado se houver transcrição e a reunião já estiver salva.
-- Se a reunião já tiver `ia_processed_at`, o botão vira **"Reprocessar IA"** e abre um pequeno diálogo de confirmação:
-  - "Já existem tarefas sugeridas para esta reunião." → opções `Substituir` / `Manter` / `Gerar novas separadamente`.
-  - Resumos manuais editados: confirma antes de sobrescrever (`resumo_cliente`/`resumo_tarefas` não vazios → pergunta).
-- Indicadores ✅/⚠ vêm de `reunioes.ia_status`.
-- Os botões antigos "Gerar com IA" individuais permanecem (compatibilidade), mas passam a usar o agente correspondente automaticamente.
+## FASE 8 — Clientes antigos
 
----
+- Nenhuma geração retroativa automática.
+- Dentro da aba Operacional, botão admin **"Gerar estrutura operacional"** (visível só para `admin`):
+  - Verifica se já existem demandas `origem='template_operacional'` para o cliente; se sim, gera apenas as faltantes (idempotente).
+  - Toast com nº de cards criados.
 
-## 5. Tarefas sugeridas — responsáveis
+## FASE 9 — Segurança
 
-`ia-processar-reuniao` carrega `responsabilidades_equipe` (cargo, areas, skills, setores) e injeta como contexto no Agente Operacional. O schema Zod das tarefas ganha `responsavel_sugerido_id` (uuid opcional). Inserção em `tarefas_sugeridas` preenche `responsavel_sugerido_id` quando a IA retornar match. Nunca delega automaticamente — apenas sugere; aprovação manual continua igual.
+- Migration usa `IF NOT EXISTS` / `ADD VALUE IF NOT EXISTS` para idempotência.
+- Nenhum `DROP`, nenhum delete em `posts`/`cards`/`demandas` existentes.
+- RLS de `operational_templates` espelha padrão admin já em uso.
+- `origem default 'manual'` garante que demandas antigas continuam classificadas como manuais.
 
----
+## FASE 10 — Dashboards e Minhas Tarefas
 
-## 6. Logs
+- Como cards operacionais são `demandas`, já aparecem em `MinhasTarefas`, dashboards de demandas, filtros por responsável/período/prioridade — sem mudanças nesses módulos.
+- Apenas validar que `CATEGORIA_LABEL["Operacional"]` aparece corretamente nos filtros existentes.
 
-`ia_logs` ganha registros com `tipo` em `agente_cliente`, `agente_operacional`, `agente_operacional_tarefas`. Exibidos na aba Logs/consumo já existente sem mudanças de UI além do novo tipo aparecendo.
+## FASE 11 — Ordem de execução
 
----
-
-## Garantias de não regressão
-
-- `ia_config`, `ia_prompts`, `ia-gerar-resumo`, `ia-gerar-tarefas`, `IAProviderCard`, fluxo atual de "Gerar com IA" individual: **inalterados**.
-- Nenhuma mudança de layout fora da nova seção "Processamento IA" no modal e da nova aba "Agentes" em Configurações.
-- Tarefas já aprovadas nunca são tocadas.
-- Sem sobrescrever conteúdo manual sem confirmação.
+1. Migration (Fase 1) + atualizar `demandas-categorias.ts` + tipos Supabase regenerados.
+2. Store `operationalTemplates` + seed validado.
+3. Aba Operacional + integração com `AreaTab` (Fase 2).
+4. Configurações → Estruturas automáticas (Fase 4).
+5. Hook de geração automática em criação de cliente (Fase 5).
+6. Botão "Cliente já possui" (Fase 6).
+7. Botão "Gerar estrutura operacional" para clientes antigos (Fase 8).
+8. QA: criar cliente novo (verificar 14 cards + posts), cliente antigo (sem cards até clicar no botão), marcar "já possui", drag-and-drop, dashboards, Minhas Tarefas.
+9. Publicar.
 
 ---
 
-## Ordem de implementação
+## Arquivos a criar
 
-1. Migração SQL (`ia_agentes` + colunas em `reunioes` + seed).
-2. Store `iaAgentes.ts` + componente `IAAgentesManager.tsx` + nova aba em `IAConfigManager`.
-3. Edge function `ia-processar-reuniao`.
-4. Seção "Processamento IA" + botões no `ReuniaoDialog`.
-5. Diálogo de confirmação anti-duplicidade / anti-sobrescrita.
+- `supabase/migrations/<timestamp>_operacional.sql`
+- `src/store/operationalTemplates.ts`
+- `src/components/configuracoes/EstruturasAutomaticasManager.tsx`
+- `src/components/projeto/OperacionalTab.tsx` (wrapper fino sobre `AreaTab` com botão admin "Gerar estrutura operacional")
+
+## Arquivos a editar (mínimo necessário)
+
+- `src/lib/demandas-categorias.ts` — adicionar `Operacional`.
+- `src/pages/ProjetoCliente.tsx` — nova aba + filtro.
+- `src/store/demandas.ts` — suportar campos `origem`, `template_id`, `marcado_ja_possui`; helper `gerarEstruturaOperacional`; helper `marcarJaPossui`.
+- `src/store/crm.ts` — chamar `gerarEstruturaOperacional` após criar cliente.
+- `src/pages/Configuracoes.tsx` — nova aba admin.
+- `src/components/demandas/DemandCard.tsx` ou `DemandaDetalheDialog.tsx` — botão "Cliente já possui".
+
+## Riscos & mitigação
+
+- **Enum `demanda_categoria`**: `ADD VALUE` não pode rodar dentro de transação implícita junto com seed que use o valor — separar seeds em segunda etapa do mesmo arquivo via `COMMIT;` ou rodar seeds via insert-tool depois da migration.
+- **Tipos Supabase**: regenerados automaticamente após migration aprovada.
+- **Compatibilidade de status**: mantemos enum atual; relabelagem é só visual no Kanban operacional.
