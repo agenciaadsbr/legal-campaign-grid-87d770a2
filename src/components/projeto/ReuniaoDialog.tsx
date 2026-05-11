@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Copy, Sparkles, Plus, Wand2, Loader2 } from "lucide-react";
+import { Copy, Sparkles, Plus, Wand2, Loader2, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export function ReuniaoDialog({
   open,
@@ -32,7 +33,10 @@ export function ReuniaoDialog({
   const createSugerida = useTarefasSugeridas((s) => s.create);
   useIAConfigBootstrap();
   const iaAtivo = useIAConfig((s) => s.configs.some((c) => c.ativo));
-  const [iaBusy, setIaBusy] = useState<null | "cliente" | "operacional" | "tarefas">(null);
+  const [iaBusy, setIaBusy] = useState<null | "cliente" | "operacional" | "tarefas" | "processar">(null);
+  const [reprocDialog, setReprocDialog] = useState(false);
+  const [iaStatus, setIaStatus] = useState<any>(null);
+  const [iaProcessedAt, setIaProcessedAt] = useState<string | null>(null);
 
   const [titulo, setTitulo] = useState("");
   const [data, setData] = useState("");
@@ -55,6 +59,8 @@ export function ReuniaoDialog({
       setTranscricao(reuniao?.transcricao ?? "");
       setResumoCliente(reuniao?.resumo_cliente ?? "");
       setResumoTarefas(reuniao?.resumo_tarefas ?? "");
+      setIaStatus((reuniao as any)?.ia_status ?? null);
+      setIaProcessedAt((reuniao as any)?.ia_processed_at ?? null);
     }
   }, [open, reuniao]);
 
