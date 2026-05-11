@@ -764,6 +764,8 @@ export type Database = {
           id: string
           link_drive: string | null
           link_meister: string | null
+          origem_reuniao_id: string | null
+          origem_sugestao_id: string | null
           precisa_aprovacao: boolean
           prioridade: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids: string[]
@@ -786,6 +788,8 @@ export type Database = {
           id?: string
           link_drive?: string | null
           link_meister?: string | null
+          origem_reuniao_id?: string | null
+          origem_sugestao_id?: string | null
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids?: string[]
@@ -808,6 +812,8 @@ export type Database = {
           id?: string
           link_drive?: string | null
           link_meister?: string | null
+          origem_reuniao_id?: string | null
+          origem_sugestao_id?: string | null
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids?: string[]
@@ -922,6 +928,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ia_config: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          model: string | null
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          model?: string | null
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          model?: string | null
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ia_logs: {
+        Row: {
+          created_at: string
+          criado_por: string | null
+          custo: number | null
+          id: string
+          input_resumo: string | null
+          modelo: string | null
+          tipo: string
+          tokens_input: number | null
+          tokens_output: number | null
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string | null
+          custo?: number | null
+          id?: string
+          input_resumo?: string | null
+          modelo?: string | null
+          tipo: string
+          tokens_input?: number | null
+          tokens_output?: number | null
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string | null
+          custo?: number | null
+          id?: string
+          input_resumo?: string | null
+          modelo?: string | null
+          tipo?: string
+          tokens_input?: number | null
+          tokens_output?: number | null
+        }
+        Relationships: []
+      }
+      ia_prompts: {
+        Row: {
+          ativo: boolean
+          conteudo: string
+          created_at: string
+          id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          conteudo?: string
+          created_at?: string
+          id?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          conteudo?: string
+          created_at?: string
+          id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       modelos_colunas: {
         Row: {
@@ -1071,6 +1167,45 @@ export type Database = {
           },
         ]
       }
+      responsabilidades_equipe: {
+        Row: {
+          areas: string[]
+          cargo: string | null
+          created_at: string
+          id: string
+          observacoes: string | null
+          profile_id: string
+          responsabilidades: string | null
+          setores: string[]
+          skills: string[]
+          updated_at: string
+        }
+        Insert: {
+          areas?: string[]
+          cargo?: string | null
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          profile_id: string
+          responsabilidades?: string | null
+          setores?: string[]
+          skills?: string[]
+          updated_at?: string
+        }
+        Update: {
+          areas?: string[]
+          cargo?: string | null
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          profile_id?: string
+          responsabilidades?: string | null
+          setores?: string[]
+          skills?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       responsaveis: {
         Row: {
           avatar_url: string | null
@@ -1098,6 +1233,57 @@ export type Database = {
           id?: string
           nome?: string
           permissao?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
+      reunioes: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          criado_por: string | null
+          data: string
+          id: string
+          link_tldv: string | null
+          observacoes: string | null
+          responsavel_id: string | null
+          resumo_cliente: string | null
+          resumo_tarefas: string | null
+          tipo: string | null
+          titulo: string
+          transcricao: string | null
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          criado_por?: string | null
+          data?: string
+          id?: string
+          link_tldv?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          resumo_cliente?: string | null
+          resumo_tarefas?: string | null
+          tipo?: string | null
+          titulo: string
+          transcricao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          criado_por?: string | null
+          data?: string
+          id?: string
+          link_tldv?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          resumo_cliente?: string | null
+          resumo_tarefas?: string | null
+          tipo?: string | null
+          titulo?: string
+          transcricao?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1149,6 +1335,63 @@ export type Database = {
           id?: string
           label?: string
           ordem?: number
+        }
+        Relationships: []
+      }
+      tarefas_sugeridas: {
+        Row: {
+          aprovado_por: string | null
+          categoria: string | null
+          cliente_id: string
+          created_at: string
+          criado_por: string | null
+          demanda_id: string | null
+          descricao: string | null
+          id: string
+          origem: string
+          prazo_sugerido: string | null
+          prioridade: string | null
+          responsavel_sugerido_id: string | null
+          reuniao_id: string | null
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          aprovado_por?: string | null
+          categoria?: string | null
+          cliente_id: string
+          created_at?: string
+          criado_por?: string | null
+          demanda_id?: string | null
+          descricao?: string | null
+          id?: string
+          origem?: string
+          prazo_sugerido?: string | null
+          prioridade?: string | null
+          responsavel_sugerido_id?: string | null
+          reuniao_id?: string | null
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          aprovado_por?: string | null
+          categoria?: string | null
+          cliente_id?: string
+          created_at?: string
+          criado_por?: string | null
+          demanda_id?: string | null
+          descricao?: string | null
+          id?: string
+          origem?: string
+          prazo_sugerido?: string | null
+          prioridade?: string | null
+          responsavel_sugerido_id?: string | null
+          reuniao_id?: string | null
+          status?: string
+          titulo?: string
+          updated_at?: string
         }
         Relationships: []
       }
