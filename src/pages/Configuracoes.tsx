@@ -6,6 +6,8 @@ import { EquipeAcessosManager } from "@/components/EquipeAcessosManager";
 import { MeuPerfil } from "@/components/MeuPerfil";
 import { ConfiguracoesDemandasManager } from "@/components/ConfiguracoesDemandasManager";
 import { DocumentosGlobaisManager } from "@/components/configuracoes/DocumentosGlobaisManager";
+import { ResponsabilidadesEquipeManager } from "@/components/configuracoes/ResponsabilidadesEquipeManager";
+import { IAConfigManager } from "@/components/configuracoes/IAConfigManager";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Configuracoes() {
@@ -28,6 +30,8 @@ export default function Configuracoes() {
           {isAdmin && <TabsTrigger value="equipe" className="text-xs h-7">Equipe & Acessos</TabsTrigger>}
           {isAdmin && <TabsTrigger value="demandas" className="text-xs h-7">Demandas</TabsTrigger>}
           {isAdmin && <TabsTrigger value="documentos" className="text-xs h-7">Documentos</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="responsabilidades" className="text-xs h-7">Responsabilidades</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="ia" className="text-xs h-7">IA</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="perfil" className="mt-3">
@@ -62,6 +66,18 @@ export default function Configuracoes() {
         {isAdmin && (
           <TabsContent value="documentos" className="mt-3">
             <DocumentosGlobaisManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="responsabilidades" className="mt-3">
+            <ResponsabilidadesEquipeManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="ia" className="mt-3">
+            <IAConfigManager />
           </TabsContent>
         )}
       </Tabs>
