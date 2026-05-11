@@ -3,11 +3,21 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export interface ModeloDisponivel {
+  id: string;
+  label: string;
+  descricao?: string;
+  pricing?: { input: number; output: number };
+}
+
 export interface IAConfig {
   id: string;
   provider: string;
   model: string | null;
   ativo: boolean;
+  modelos_disponiveis: ModeloDisponivel[] | null;
+  ultima_verificacao: string | null;
+  latency_ms: number | null;
   created_at: string;
   updated_at: string;
 }
