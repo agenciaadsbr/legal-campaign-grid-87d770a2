@@ -28,7 +28,11 @@ export function ReuniaoDialog({
   const create = useReunioes((s) => s.create);
   const update = useReunioes((s) => s.update);
   const responsaveis = useCRM((s) => s.responsaveis);
+  const reloadSugeridas = useTarefasSugeridas((s) => s.load);
   const createSugerida = useTarefasSugeridas((s) => s.create);
+  useIAConfigBootstrap();
+  const iaAtivo = useIAConfig((s) => s.configs.some((c) => c.ativo));
+  const [iaBusy, setIaBusy] = useState<null | "cliente" | "operacional" | "tarefas">(null);
 
   const [titulo, setTitulo] = useState("");
   const [data, setData] = useState("");
