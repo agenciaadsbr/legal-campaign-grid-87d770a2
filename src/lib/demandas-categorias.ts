@@ -8,7 +8,8 @@ export type DemandaCategoria =
   | "Personalizado"
   | "IAAtendimento"
   | "Briefing"
-  | "Planejamento";
+  | "Planejamento"
+  | "Operacional";
 
 export const CATEGORIA_LABEL: Record<DemandaCategoria, string> = {
   Designer: "Designer",
@@ -21,6 +22,7 @@ export const CATEGORIA_LABEL: Record<DemandaCategoria, string> = {
   IAAtendimento: "IA / Atendimento",
   Briefing: "Briefing",
   Planejamento: "Planejamento",
+  Operacional: "Operacional",
 };
 
 export const CATEGORIA_SUBTIPOS: Record<DemandaCategoria, string[]> = {
@@ -85,6 +87,7 @@ export const CATEGORIA_SUBTIPOS: Record<DemandaCategoria, string[]> = {
   ],
   Briefing: ["Reunião inicial", "Atualização", "Revisão", "Outro"],
   Planejamento: ["Mensal", "Trimestral", "Campanha", "Lançamento", "Outro"],
+  Operacional: ["Onboarding", "Acessos", "Configuração", "Outro"],
 };
 
 export const CATEGORIAS: DemandaCategoria[] = [
@@ -99,6 +102,7 @@ export const CATEGORIAS: DemandaCategoria[] = [
   "IAAtendimento",
   "Briefing",
   "Planejamento",
+  "Operacional",
   "Suporte",
   "Personalizado",
 ];
