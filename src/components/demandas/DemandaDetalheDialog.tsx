@@ -498,6 +498,32 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   >
                     <Link2 className="h-4 w-4" />
                   </Button>
+                  {(demanda as any).origem === "template_operacional" &&
+                    !(demanda as any).marcado_ja_possui &&
+                    demanda.status !== "Concluido" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0 gap-1"
+                        title="Marcar como já existente no cliente"
+                        onClick={async () => {
+                          const obs = "Marcado como já existente pelo cliente";
+                          const novaDescricao = demanda.descricao
+                            ? `${demanda.descricao}\n\n— ${obs}`
+                            : `— ${obs}`;
+                          await updateDemanda(demanda.id, {
+                            status: "Concluido",
+                            data_conclusao: new Date().toISOString(),
+                            descricao: novaDescricao,
+                            ...({ marcado_ja_possui: true } as any),
+                          });
+                          toast.success("Marcado como já existente");
+                        }}
+                      >
+                        ✔ Cliente já possui
+                      </Button>
+                    )}
                   {isAdmin && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

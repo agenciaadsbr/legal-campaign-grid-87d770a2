@@ -8,6 +8,7 @@ import { ConfiguracoesDemandasManager } from "@/components/ConfiguracoesDemandas
 import { DocumentosGlobaisManager } from "@/components/configuracoes/DocumentosGlobaisManager";
 import { ResponsabilidadesEquipeManager } from "@/components/configuracoes/ResponsabilidadesEquipeManager";
 import { IAConfigManager } from "@/components/configuracoes/IAConfigManager";
+import { EstruturasAutomaticasManager } from "@/components/configuracoes/EstruturasAutomaticasManager";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Configuracoes() {
@@ -32,6 +33,7 @@ export default function Configuracoes() {
           {isAdmin && <TabsTrigger value="documentos" className="text-xs h-7">Documentos</TabsTrigger>}
           {isAdmin && <TabsTrigger value="responsabilidades" className="text-xs h-7">Responsabilidades</TabsTrigger>}
           {isAdmin && <TabsTrigger value="ia" className="text-xs h-7">IA</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="estruturas" className="text-xs h-7">Estruturas automáticas</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="perfil" className="mt-3">
@@ -78,6 +80,12 @@ export default function Configuracoes() {
         {isAdmin && (
           <TabsContent value="ia" className="mt-3">
             <IAConfigManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="estruturas" className="mt-3">
+            <EstruturasAutomaticasManager />
           </TabsContent>
         )}
       </Tabs>

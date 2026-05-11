@@ -658,6 +658,17 @@ export const useCRM = create<State>()((set, get) => ({
       console.warn("Erro inesperado ao aplicar documentos padrão", e);
     }
 
+    // ===== Aplicar estrutura operacional automática (templates) =====
+    try {
+      const { gerarEstruturaOperacional } = await import("@/store/operationalTemplates");
+      const n = await gerarEstruturaOperacional(inserted.id);
+      if (n > 0) {
+        console.info(`[onboarding] ${n} cards operacionais criados para o cliente ${inserted.id}`);
+      }
+    } catch (e) {
+      console.warn("Falha ao gerar estrutura operacional automática", e);
+    }
+
     await get()._loadAll();
     return inserted.id;
   },
