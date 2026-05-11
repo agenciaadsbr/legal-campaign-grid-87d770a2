@@ -210,9 +210,17 @@ export function ReuniaoDialog({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-xs">Resumo cliente <span className="text-muted-foreground">(curto, estilo ata, pronto pro grupo)</span></Label>
-                <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copiar(resumoCliente, "Resumo cliente")}>
-                  <Copy className="h-3 w-3 mr-1" /> Copiar
-                </Button>
+                <div className="flex gap-1">
+                  {iaAtivo && (
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => gerarResumoIA("resumo_cliente")} disabled={iaBusy !== null}>
+                      {iaBusy === "cliente" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                      Gerar com IA
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copiar(resumoCliente, "Resumo cliente")}>
+                    <Copy className="h-3 w-3 mr-1" /> Copiar
+                  </Button>
+                </div>
               </div>
               <Textarea rows={5} value={resumoCliente} onChange={(e) => setResumoCliente(e.target.value)} placeholder="O que foi alinhado, próximos passos pelo cliente..." />
             </div>
@@ -221,11 +229,23 @@ export function ReuniaoDialog({
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-xs">Resumo tarefas <span className="text-muted-foreground">(detalhado, operacional, pronto para virar tarefas)</span></Label>
                 <div className="flex gap-1">
+                  {iaAtivo && (
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => gerarResumoIA("resumo_operacional")} disabled={iaBusy !== null}>
+                      {iaBusy === "operacional" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                      Gerar com IA
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copiar(resumoTarefas, "Resumo tarefas")}>
                     <Copy className="h-3 w-3 mr-1" /> Copiar
                   </Button>
+                  {iaAtivo && (
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={gerarTarefasIA} disabled={iaBusy !== null}>
+                      {iaBusy === "tarefas" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                      Tarefas com IA
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={gerarSugestaoRapida} disabled={!reuniao}>
-                    <Plus className="h-3 w-3 mr-1" /> Gerar tarefas sugeridas
+                    <Plus className="h-3 w-3 mr-1" /> Gerar manual
                   </Button>
                 </div>
               </div>
