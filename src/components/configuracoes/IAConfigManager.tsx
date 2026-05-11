@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Save } from "lucide-react";
 import { IAProviderCard } from "./IAProviderCard";
+import { IAAgentesManager } from "./IAAgentesManager";
 
 const TIPOS_PROMPT = [
   { value: "resumo_cliente", label: "Resumo cliente (estilo ata, curto)" },
@@ -31,6 +32,7 @@ export function IAConfigManager() {
         <Tabs defaultValue="provider">
           <TabsList className="h-8">
             <TabsTrigger value="provider" className="text-xs h-7">Provedor</TabsTrigger>
+            <TabsTrigger value="agentes" className="text-xs h-7">Agentes</TabsTrigger>
             <TabsTrigger value="prompts" className="text-xs h-7">Prompts</TabsTrigger>
             <TabsTrigger value="logs" className="text-xs h-7">Logs / consumo</TabsTrigger>
           </TabsList>
@@ -38,6 +40,10 @@ export function IAConfigManager() {
           <TabsContent value="provider" className="mt-3 space-y-3">
             <IAProviderCard provider="gpt" />
             <IAProviderCard provider="gemini" />
+          </TabsContent>
+
+          <TabsContent value="agentes" className="mt-3">
+            <IAAgentesManager />
           </TabsContent>
 
           <TabsContent value="prompts" className="mt-3 space-y-3">
