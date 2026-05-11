@@ -3,11 +3,21 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export interface ModeloDisponivel {
+  id: string;
+  label: string;
+  descricao?: string;
+  pricing?: { input: number; output: number };
+}
+
 export interface IAConfig {
   id: string;
   provider: string;
   model: string | null;
   ativo: boolean;
+  modelos_disponiveis: ModeloDisponivel[] | null;
+  ultima_verificacao: string | null;
+  latency_ms: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +51,8 @@ interface State {
   load: () => Promise<void>;
   upsertConfig: (data: Partial<IAConfig> & { provider: string }) => Promise<void>;
   upsertPrompt: (data: Partial<IAPrompt> & { tipo: string; conteudo: string }) => Promise<void>;
+  testConnection: (provider: string) => Promise<{ ok: boolean; latency_ms?: number; error?: string }>;
+  refreshModels: (provider: string) => Promise<ModeloDisponivel[]>;
 }
 
 export const useIAConfig = create<State>((set, get) => ({
@@ -52,7 +64,7 @@ export const useIAConfig = create<State>((set, get) => ({
     const [c, p, l] = await Promise.all([
       (supabase as any).from("ia_config").select("*"),
       (supabase as any).from("ia_prompts").select("*"),
-      (supabase as any).from("ia_logs").select("*").order("created_at", { ascending: false }).limit(100),
+      (supabase as any).from("ia_logs").select("*").order("created_at", { ascending: false }).limit(500),
     ]);
     set({
       configs: (c.data ?? []) as IAConfig[],
@@ -60,6 +72,24 @@ export const useIAConfig = create<State>((set, get) => ({
       logs: (l.data ?? []) as IALog[],
       loaded: true,
     });
+  },
+  testConnection: async (provider: string) => {
+    const { data, error } = await (supabase as any).functions.invoke("ia-test-connection", { body: { provider } });
+    if (error) { toast.error(error.message); return { ok: false }; }
+    if (data?.ok) {
+      toast.success(`Conectado · ${data.latency_ms}ms`);
+      await get().load();
+    } else {
+      toast.error(data?.error || "Falha na conexão");
+    }
+    return data ?? { ok: false };
+  },
+  refreshModels: async (provider: string) => {
+    const { data, error } = await (supabase as any).functions.invoke("ia-list-models", { body: { provider } });
+    if (error) { toast.error(error.message); return []; }
+    toast.success("Modelos atualizados");
+    await get().load();
+    return data?.modelos ?? [];
   },
   upsertConfig: async (data) => {
     const existing = get().configs.find((c) => c.provider === data.provider);

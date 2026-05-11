@@ -2,13 +2,11 @@ import { useEffect, useState } from "react";
 import { useIAConfig, useIAConfigBootstrap } from "@/store/iaConfig";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save } from "lucide-react";
+import { IAProviderCard } from "./IAProviderCard";
 
 const TIPOS_PROMPT = [
   { value: "resumo_cliente", label: "Resumo cliente (estilo ata, curto)" },
@@ -16,17 +14,10 @@ const TIPOS_PROMPT = [
   { value: "tarefas_sugeridas", label: "Geração de tarefas sugeridas" },
 ];
 
-const PROVIDERS = [
-  { value: "gemini", label: "Google Gemini" },
-  { value: "gpt", label: "OpenAI GPT" },
-];
-
 export function IAConfigManager() {
   useIAConfigBootstrap();
-  const configs = useIAConfig((s) => s.configs);
   const prompts = useIAConfig((s) => s.prompts);
   const logs = useIAConfig((s) => s.logs);
-  const upsertConfig = useIAConfig((s) => s.upsertConfig);
   const upsertPrompt = useIAConfig((s) => s.upsertPrompt);
 
   return (
@@ -34,7 +25,7 @@ export function IAConfigManager() {
       <CardHeader className="p-4"><CardTitle className="text-sm">Inteligência Artificial</CardTitle></CardHeader>
       <CardContent className="p-4 pt-0">
         <p className="text-xs text-muted-foreground mb-3">
-          Estrutura preparada para IA. As chaves de API devem ser cadastradas como secrets — nada é executado automaticamente ainda.
+          IA conectada via Lovable AI Gateway — sem necessidade de cadastrar chaves manualmente. Ative o provedor desejado, escolha o modelo e use os botões dentro das reuniões para gerar resumos e tarefas.
         </p>
 
         <Tabs defaultValue="provider">
@@ -45,10 +36,8 @@ export function IAConfigManager() {
           </TabsList>
 
           <TabsContent value="provider" className="mt-3 space-y-3">
-            {PROVIDERS.map((p) => {
-              const c = configs.find((x) => x.provider === p.value);
-              return <ProviderRow key={p.value} provider={p} cfg={c} onSave={upsertConfig} />;
-            })}
+            <IAProviderCard provider="gpt" />
+            <IAProviderCard provider="gemini" />
           </TabsContent>
 
           <TabsContent value="prompts" className="mt-3 space-y-3">
@@ -80,32 +69,6 @@ export function IAConfigManager() {
         </Tabs>
       </CardContent>
     </Card>
-  );
-}
-
-function ProviderRow({ provider, cfg, onSave }: any) {
-  const [model, setModel] = useState(cfg?.model ?? "");
-  const [ativo, setAtivo] = useState(cfg?.ativo ?? false);
-  useEffect(() => { setModel(cfg?.model ?? ""); setAtivo(cfg?.ativo ?? false); }, [cfg]);
-  return (
-    <div className="border border-border rounded p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm font-medium">{provider.label}</div>
-          <div className="text-[10px] text-muted-foreground">Provider id: {provider.value}</div>
-        </div>
-        <Switch checked={ativo} onCheckedChange={setAtivo} />
-      </div>
-      <div className="flex gap-2 items-end">
-        <div className="flex-1">
-          <Label className="text-xs">Modelo</Label>
-          <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder={provider.value === "gemini" ? "gemini-2.5-flash" : "gpt-4o-mini"} className="h-8" />
-        </div>
-        <Button size="sm" onClick={() => onSave({ provider: provider.value, model, ativo })}>
-          <Save className="h-3.5 w-3.5 mr-1" /> Salvar
-        </Button>
-      </div>
-    </div>
   );
 }
 

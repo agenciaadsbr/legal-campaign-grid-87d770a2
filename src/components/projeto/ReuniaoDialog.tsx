@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useReunioes, type Reuniao } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
 import { useTarefasSugeridas } from "@/store/tarefasSugeridas";
+import { useIAConfig, useIAConfigBootstrap } from "@/store/iaConfig";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -10,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Copy, Sparkles, Plus } from "lucide-react";
+import { Copy, Sparkles, Plus, Wand2, Loader2 } from "lucide-react";
 
 export function ReuniaoDialog({
   open,
@@ -26,7 +28,11 @@ export function ReuniaoDialog({
   const create = useReunioes((s) => s.create);
   const update = useReunioes((s) => s.update);
   const responsaveis = useCRM((s) => s.responsaveis);
+  const reloadSugeridas = useTarefasSugeridas((s) => s.load);
   const createSugerida = useTarefasSugeridas((s) => s.create);
+  useIAConfigBootstrap();
+  const iaAtivo = useIAConfig((s) => s.configs.some((c) => c.ativo));
+  const [iaBusy, setIaBusy] = useState<null | "cliente" | "operacional" | "tarefas">(null);
 
   const [titulo, setTitulo] = useState("");
   const [data, setData] = useState("");
@@ -111,6 +117,50 @@ export function ReuniaoDialog({
     toast.success(`${count} tarefa(s) sugerida(s) criada(s)`);
   };
 
+  const gerarResumoIA = async (tipo: "resumo_cliente" | "resumo_operacional") => {
+    if (!transcricao.trim()) {
+      toast.error("Cole a transcrição da reunião primeiro");
+      return;
+    }
+    setIaBusy(tipo === "resumo_cliente" ? "cliente" : "operacional");
+    try {
+      const { data, error } = await supabase.functions.invoke("ia-gerar-resumo", {
+        body: { tipo, transcricao, contexto: titulo },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (tipo === "resumo_cliente") setResumoCliente(data.texto ?? "");
+      else setResumoTarefas(data.texto ?? "");
+      toast.success(`Resumo gerado · ${data.modelo}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao gerar resumo");
+    } finally {
+      setIaBusy(null);
+    }
+  };
+
+  const gerarTarefasIA = async () => {
+    const base = transcricao.trim() || resumoTarefas.trim();
+    if (!base) {
+      toast.error("Cole a transcrição ou o resumo de tarefas primeiro");
+      return;
+    }
+    setIaBusy("tarefas");
+    try {
+      const { data, error } = await supabase.functions.invoke("ia-gerar-tarefas", {
+        body: { cliente_id: clienteId, reuniao_id: reuniao?.id ?? null, transcricao: base },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.count} tarefa(s) sugerida(s) criada(s) por IA`);
+      await reloadSugeridas();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao gerar tarefas");
+    } finally {
+      setIaBusy(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -160,9 +210,17 @@ export function ReuniaoDialog({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-xs">Resumo cliente <span className="text-muted-foreground">(curto, estilo ata, pronto pro grupo)</span></Label>
-                <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copiar(resumoCliente, "Resumo cliente")}>
-                  <Copy className="h-3 w-3 mr-1" /> Copiar
-                </Button>
+                <div className="flex gap-1">
+                  {iaAtivo && (
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => gerarResumoIA("resumo_cliente")} disabled={iaBusy !== null}>
+                      {iaBusy === "cliente" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                      Gerar com IA
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copiar(resumoCliente, "Resumo cliente")}>
+                    <Copy className="h-3 w-3 mr-1" /> Copiar
+                  </Button>
+                </div>
               </div>
               <Textarea rows={5} value={resumoCliente} onChange={(e) => setResumoCliente(e.target.value)} placeholder="O que foi alinhado, próximos passos pelo cliente..." />
             </div>
@@ -171,11 +229,23 @@ export function ReuniaoDialog({
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-xs">Resumo tarefas <span className="text-muted-foreground">(detalhado, operacional, pronto para virar tarefas)</span></Label>
                 <div className="flex gap-1">
+                  {iaAtivo && (
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => gerarResumoIA("resumo_operacional")} disabled={iaBusy !== null}>
+                      {iaBusy === "operacional" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                      Gerar com IA
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copiar(resumoTarefas, "Resumo tarefas")}>
                     <Copy className="h-3 w-3 mr-1" /> Copiar
                   </Button>
+                  {iaAtivo && (
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={gerarTarefasIA} disabled={iaBusy !== null}>
+                      {iaBusy === "tarefas" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                      Tarefas com IA
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={gerarSugestaoRapida} disabled={!reuniao}>
-                    <Plus className="h-3 w-3 mr-1" /> Gerar tarefas sugeridas
+                    <Plus className="h-3 w-3 mr-1" /> Gerar manual
                   </Button>
                 </div>
               </div>
