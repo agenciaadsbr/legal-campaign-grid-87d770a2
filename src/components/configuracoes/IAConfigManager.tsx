@@ -81,32 +81,6 @@ export function IAConfigManager() {
   );
 }
 
-function ProviderRow({ provider, cfg, onSave }: any) {
-  const [model, setModel] = useState(cfg?.model ?? "");
-  const [ativo, setAtivo] = useState(cfg?.ativo ?? false);
-  useEffect(() => { setModel(cfg?.model ?? ""); setAtivo(cfg?.ativo ?? false); }, [cfg]);
-  return (
-    <div className="border border-border rounded p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm font-medium">{provider.label}</div>
-          <div className="text-[10px] text-muted-foreground">Provider id: {provider.value}</div>
-        </div>
-        <Switch checked={ativo} onCheckedChange={setAtivo} />
-      </div>
-      <div className="flex gap-2 items-end">
-        <div className="flex-1">
-          <Label className="text-xs">Modelo</Label>
-          <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder={provider.value === "gemini" ? "gemini-2.5-flash" : "gpt-4o-mini"} className="h-8" />
-        </div>
-        <Button size="sm" onClick={() => onSave({ provider: provider.value, model, ativo })}>
-          <Save className="h-3.5 w-3.5 mr-1" /> Salvar
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function PromptRow({ tipo, prompt, onSave }: any) {
   const [conteudo, setConteudo] = useState(prompt?.conteudo ?? "");
   const [ativo, setAtivo] = useState(prompt?.ativo ?? true);
