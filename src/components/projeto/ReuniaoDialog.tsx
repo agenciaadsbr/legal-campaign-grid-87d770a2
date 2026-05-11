@@ -237,6 +237,30 @@ export function ReuniaoDialog({
           </div>
         </div>
 
+        {/* Processamento IA — orquestrador dos 2 agentes */}
+        <div className="mt-3 border border-border rounded-md bg-muted/30 p-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 text-xs">
+              <span className="font-medium flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> Processamento IA</span>
+              <StatusPill ok={iaStatus?.cliente?.ok} label="Resumo cliente" />
+              <StatusPill ok={iaStatus?.operacional?.ok} label="Resumo operacional" />
+              <StatusPill ok={iaStatus?.tarefas?.ok} label="Tarefas" />
+              {iaProcessedAt && (
+                <span className="text-muted-foreground text-[11px]">· última: {new Date(iaProcessedAt).toLocaleString("pt-BR")}</span>
+              )}
+            </div>
+            <div className="flex gap-1.5">
+              <Button size="sm" className="h-7 text-xs" onClick={handleProcessarClick} disabled={iaBusy !== null || !reuniao}>
+                {iaBusy === "processar"
+                  ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  : iaProcessedAt ? <RefreshCw className="h-3.5 w-3.5 mr-1" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                {iaProcessedAt ? "Reprocessar IA" : "Processar reunião com IA"}
+              </Button>
+            </div>
+          </div>
+          {!reuniao && <p className="text-[11px] text-muted-foreground mt-2">Salve a reunião primeiro para processar com IA.</p>}
+        </div>
+
         <Tabs defaultValue="resumos" className="mt-2">
           <TabsList className="h-8">
             <TabsTrigger value="resumos" className="text-xs h-7">Resumos</TabsTrigger>
@@ -308,6 +332,41 @@ export function ReuniaoDialog({
           <Button onClick={handleSave}><Sparkles className="h-4 w-4 mr-1" /> Salvar reunião</Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={reprocDialog} onOpenChange={setReprocDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reprocessar reunião com IA</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(resumoCliente || resumoTarefas) && "Os resumos atuais serão sobrescritos. "}
+              Como tratar as tarefas sugeridas pendentes desta reunião?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2 text-xs">
+            <button className="text-left border border-border rounded p-2 hover:bg-muted/40" onClick={() => { setReprocDialog(false); processarReuniao("manter", true); }}>
+              <div className="font-medium">Manter tarefas existentes</div>
+              <div className="text-muted-foreground">Não cria novas tarefas. Atualiza só os resumos.</div>
+            </button>
+            <button className="text-left border border-border rounded p-2 hover:bg-muted/40" onClick={() => { setReprocDialog(false); processarReuniao("substituir", true); }}>
+              <div className="font-medium">Substituir tarefas pendentes</div>
+              <div className="text-muted-foreground">Remove as tarefas ainda não aprovadas e gera novas. Tarefas já aprovadas não são tocadas.</div>
+            </button>
+            <button className="text-left border border-border rounded p-2 hover:bg-muted/40" onClick={() => { setReprocDialog(false); processarReuniao("novo", true); }}>
+              <div className="font-medium">Gerar novas separadamente</div>
+              <div className="text-muted-foreground">Mantém as existentes e adiciona as novas em paralelo.</div>
+            </button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
+}
+
+function StatusPill({ ok, label }: { ok: boolean | null | undefined; label: string }) {
+  if (ok === true) return <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-3 w-3" /> {label}</span>;
+  if (ok === false) return <span className="inline-flex items-center gap-1 text-destructive"><AlertTriangle className="h-3 w-3" /> {label}</span>;
+  return <span className="inline-flex items-center gap-1 text-muted-foreground"><AlertTriangle className="h-3 w-3" /> {label}</span>;
 }
