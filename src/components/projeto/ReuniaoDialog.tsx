@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useReunioes, type Reuniao } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
 import { useTarefasSugeridas } from "@/store/tarefasSugeridas";
+import { useIAConfig, useIAConfigBootstrap } from "@/store/iaConfig";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -10,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Copy, Sparkles, Plus } from "lucide-react";
+import { Copy, Sparkles, Plus, Wand2, Loader2 } from "lucide-react";
 
 export function ReuniaoDialog({
   open,
