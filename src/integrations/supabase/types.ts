@@ -934,24 +934,33 @@ export type Database = {
           ativo: boolean
           created_at: string
           id: string
+          latency_ms: number | null
           model: string | null
+          modelos_disponiveis: Json | null
           provider: string
+          ultima_verificacao: string | null
           updated_at: string
         }
         Insert: {
           ativo?: boolean
           created_at?: string
           id?: string
+          latency_ms?: number | null
           model?: string | null
+          modelos_disponiveis?: Json | null
           provider: string
+          ultima_verificacao?: string | null
           updated_at?: string
         }
         Update: {
           ativo?: boolean
           created_at?: string
           id?: string
+          latency_ms?: number | null
           model?: string | null
+          modelos_disponiveis?: Json | null
           provider?: string
+          ultima_verificacao?: string | null
           updated_at?: string
         }
         Relationships: []
