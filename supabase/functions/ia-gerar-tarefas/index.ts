@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { generateText, Output } from "npm:ai";
 import { z } from "npm:zod";
-import { corsHeaders, jsonResponse, createLovableAiGatewayProvider, defaultModelFor, estimateCost } from "../_shared/ai-gateway.ts";
+import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId, estimateCost } from "../_shared/ai-gateway.ts";
 
 const DEFAULT_PROMPT =
   "Você é um assistente que extrai tarefas acionáveis a partir de transcrições/resumos de reuniões. Retorne apenas tarefas claras, com título curto e descrição objetiva. Categorias possíveis: IAAtendimento, Trafego, Video, Personalizado, Urgencia, LP. Prioridades: baixa, media, alta, urgente. Em português.";
