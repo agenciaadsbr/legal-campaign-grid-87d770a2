@@ -929,6 +929,54 @@ export type Database = {
           },
         ]
       }
+      ia_agentes: {
+        Row: {
+          ativo: boolean
+          contexto_adicional: string | null
+          created_at: string
+          id: string
+          model: string | null
+          nome: string
+          prompt: string
+          provider: string
+          regras_categorizacao: string | null
+          regras_responsaveis: string | null
+          temperatura: number
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          contexto_adicional?: string | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          nome: string
+          prompt?: string
+          provider: string
+          regras_categorizacao?: string | null
+          regras_responsaveis?: string | null
+          temperatura?: number
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          contexto_adicional?: string | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          nome?: string
+          prompt?: string
+          provider?: string
+          regras_categorizacao?: string | null
+          regras_responsaveis?: string | null
+          temperatura?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ia_config: {
         Row: {
           ativo: boolean
@@ -1251,6 +1299,8 @@ export type Database = {
           created_at: string
           criado_por: string | null
           data: string
+          ia_processed_at: string | null
+          ia_status: Json
           id: string
           link_tldv: string | null
           observacoes: string | null
@@ -1267,6 +1317,8 @@ export type Database = {
           created_at?: string
           criado_por?: string | null
           data?: string
+          ia_processed_at?: string | null
+          ia_status?: Json
           id?: string
           link_tldv?: string | null
           observacoes?: string | null
@@ -1283,6 +1335,8 @@ export type Database = {
           created_at?: string
           criado_por?: string | null
           data?: string
+          ia_processed_at?: string | null
+          ia_status?: Json
           id?: string
           link_tldv?: string | null
           observacoes?: string | null
