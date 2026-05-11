@@ -34,7 +34,7 @@ export function IAConfigManager() {
       <CardHeader className="p-4"><CardTitle className="text-sm">Inteligência Artificial</CardTitle></CardHeader>
       <CardContent className="p-4 pt-0">
         <p className="text-xs text-muted-foreground mb-3">
-          Estrutura preparada para IA. As chaves de API devem ser cadastradas como secrets — nada é executado automaticamente ainda.
+          IA conectada via Lovable AI Gateway — sem necessidade de cadastrar chaves manualmente. Ative o provedor desejado, escolha o modelo e use os botões dentro das reuniões para gerar resumos e tarefas.
         </p>
 
         <Tabs defaultValue="provider">
@@ -45,10 +45,8 @@ export function IAConfigManager() {
           </TabsList>
 
           <TabsContent value="provider" className="mt-3 space-y-3">
-            {PROVIDERS.map((p) => {
-              const c = configs.find((x) => x.provider === p.value);
-              return <ProviderRow key={p.value} provider={p} cfg={c} onSave={upsertConfig} />;
-            })}
+            <IAProviderCard provider="gpt" />
+            <IAProviderCard provider="gemini" />
           </TabsContent>
 
           <TabsContent value="prompts" className="mt-3 space-y-3">
