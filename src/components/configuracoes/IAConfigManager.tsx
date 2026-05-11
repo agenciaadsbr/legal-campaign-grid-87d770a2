@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save } from "lucide-react";
+import { IAProviderCard } from "./IAProviderCard";
 
 const TIPOS_PROMPT = [
   { value: "resumo_cliente", label: "Resumo cliente (estilo ata, curto)" },
