@@ -65,11 +65,11 @@ export const useIAConfig = create<State>((set, get) => ({
     const existing = get().configs.find((c) => c.provider === data.provider);
     if (existing) {
       const { error } = await (supabase as any).from("ia_config").update(data).eq("id", existing.id);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       set({ configs: get().configs.map((c) => (c.id === existing.id ? { ...c, ...data } as IAConfig : c)) });
     } else {
       const { data: row, error } = await (supabase as any).from("ia_config").insert(data).select().single();
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       set({ configs: [...get().configs, row as IAConfig] });
     }
     toast.success("Configuração de IA salva");
@@ -78,11 +78,11 @@ export const useIAConfig = create<State>((set, get) => ({
     const existing = get().prompts.find((p) => p.tipo === data.tipo);
     if (existing) {
       const { error } = await (supabase as any).from("ia_prompts").update(data).eq("id", existing.id);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       set({ prompts: get().prompts.map((p) => (p.id === existing.id ? { ...p, ...data } as IAPrompt : p)) });
     } else {
       const { data: row, error } = await (supabase as any).from("ia_prompts").insert(data).select().single();
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       set({ prompts: [...get().prompts, row as IAPrompt] });
     }
     toast.success("Prompt salvo");
