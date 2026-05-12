@@ -173,7 +173,7 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
 
   // Adiciona o card de Planejamento fixo se não existir um com esse título para este cliente
   const jaTemPlanejamento = existentesArray.some(
-    (d) => d.titulo === "Checklist de Onboarding"
+    (d) => d.titulo === "Checklist de Onboarding" && (d.categoria === "Planejamento" || d.categoria === "Operacional")
   );
 
   if (!jaTemPlanejamento) {
