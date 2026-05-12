@@ -222,40 +222,40 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
       origem: "template_operacional",
     });
   }
-225: 
-226:   const jaTemAnuncioImagem = existentesArray.some((d) => d.titulo === "Anúncio imagem - Tema 1");
-227:   if (!jaTemAnuncioImagem) {
-228:     payload.push({
-229:       cliente_id: clienteId,
-230:       titulo: "Anúncio imagem - Tema 1",
-231:       categoria: "Operacional",
-232:       subtipo: "Onboarding",
-233:       status: "Criar",
-234:       prioridade: "Media",
-235:       responsaveis_ids: [],
-236:       responsavel_id: null,
-237:       criado_por: uid,
-238:       precisa_aprovacao: false,
-239:       origem: "template_operacional",
-240:     });
-241:   }
-242: 
-243:   const jaTemAnuncioIA = existentesArray.some((d) => d.titulo === "Anúncio I.A. - Tema 1");
-244:   if (!jaTemAnuncioIA) {
-245:     payload.push({
-246:       cliente_id: clienteId,
-247:       titulo: "Anúncio I.A. - Tema 1",
-248:       categoria: "Operacional",
-249:       subtipo: "Onboarding",
-250:       status: "Criar",
-251:       prioridade: "Media",
-252:       responsaveis_ids: [],
-253:       responsavel_id: null,
-254:       criado_por: uid,
-255:       precisa_aprovacao: false,
-256:       origem: "template_operacional",
-257:     });
-258:   }
+
+  const jaTemAnuncioImagem = existentesArray.some((d) => d.titulo === "Anúncio imagem - Tema 1");
+  if (!jaTemAnuncioImagem) {
+    payload.push({
+      cliente_id: clienteId,
+      titulo: "Anúncio imagem - Tema 1",
+      categoria: "Operacional",
+      subtipo: "Onboarding",
+      status: "Criar",
+      prioridade: "Media",
+      responsaveis_ids: [],
+      responsavel_id: null,
+      criado_por: uid,
+      precisa_aprovacao: false,
+      origem: "template_operacional",
+    });
+  }
+
+  const jaTemAnuncioIA = existentesArray.some((d) => d.titulo === "Anúncio I.A. - Tema 1");
+  if (!jaTemAnuncioIA) {
+    payload.push({
+      cliente_id: clienteId,
+      titulo: "Anúncio I.A. - Tema 1",
+      categoria: "Operacional",
+      subtipo: "Onboarding",
+      status: "Criar",
+      prioridade: "Media",
+      responsaveis_ids: [],
+      responsavel_id: null,
+      criado_por: uid,
+      precisa_aprovacao: false,
+      origem: "template_operacional",
+    });
+  }
 
   if (payload.length === 0) return 0;
 
