@@ -159,7 +159,7 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
     cliente_id: clienteId,
     titulo: t.nome,
     descricao: t.descricao,
-    categoria: "Operacional" as any,
+    categoria: "Operacional",
     subtipo: "Onboarding",
     status: t.status_inicial,
     prioridade: t.prioridade,
