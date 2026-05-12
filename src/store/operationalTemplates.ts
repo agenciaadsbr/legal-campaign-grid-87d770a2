@@ -223,6 +223,40 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
     });
   }
 
+  const jaTemAnuncioImagem = existentesArray.some((d) => d.titulo === "Anúncio imagem - Tema 1");
+  if (!jaTemAnuncioImagem) {
+    payload.push({
+      cliente_id: clienteId,
+      titulo: "Anúncio imagem - Tema 1",
+      categoria: "Operacional",
+      subtipo: "Onboarding",
+      status: "Criar",
+      prioridade: "Media",
+      responsaveis_ids: [],
+      responsavel_id: null,
+      criado_por: uid,
+      precisa_aprovacao: false,
+      origem: "template_operacional",
+    });
+  }
+
+  const jaTemAnuncioIA = existentesArray.some((d) => d.titulo === "Anúncio I.A. - Tema 1");
+  if (!jaTemAnuncioIA) {
+    payload.push({
+      cliente_id: clienteId,
+      titulo: "Anúncio I.A. - Tema 1",
+      categoria: "Operacional",
+      subtipo: "Onboarding",
+      status: "Criar",
+      prioridade: "Media",
+      responsaveis_ids: [],
+      responsavel_id: null,
+      criado_por: uid,
+      precisa_aprovacao: false,
+      origem: "template_operacional",
+    });
+  }
+
   if (payload.length === 0) return 0;
 
   const { data: criados, error } = await (supabase as any)
