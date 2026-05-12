@@ -504,6 +504,18 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   >
                     <Link2 className="h-4 w-4" />
                   </Button>
+                  {canWrite && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setDuplicarOpen(true)}
+                      title="Duplicar tarefa"
+                      className="shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
                   {(demanda as any).origem === "template_operacional" &&
                     !(demanda as any).marcado_ja_possui &&
                     demanda.status !== "Concluido" && (
