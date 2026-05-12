@@ -83,7 +83,7 @@ interface State {
   loaded: boolean;
   loading: boolean;
 
-  load: () => Promise<void>;
+  load: (silent?: boolean) => Promise<void>;
   createDemanda: (
     d: Partial<Omit<Demanda, "responsaveis_ids">> & {
       cliente_id: string;
@@ -182,9 +182,8 @@ export const useDemandasStore = create<State>((set, get) => ({
   loaded: false,
   loading: false,
 
-  async load() {
-    if (get().loading) return;
-    set({ loading: true });
+  async load(silent = false) {
+    if (!silent) set({ loading: true });
     const [d, c, a, h, deps] = await Promise.all([
       supabase.from("demandas").select("*").order("created_at", { ascending: false }),
       supabase.from("comentarios_demandas").select("*").order("created_at"),
@@ -600,27 +599,27 @@ export function useDemandasBootstrap() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "demandas" },
-        () => load()
+        () => load(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "comentarios_demandas" },
-        () => load()
+        () => load(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "anexos_demandas" },
-        () => load()
+        () => load(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "historico_demandas" },
-        () => load()
+        () => load(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "task_dependencies" },
-        () => load()
+        () => load(true)
       )
       .subscribe();
     return () => {
