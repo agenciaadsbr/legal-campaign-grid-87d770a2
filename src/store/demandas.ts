@@ -83,7 +83,7 @@ interface State {
   loaded: boolean;
   loading: boolean;
 
-  load: () => Promise<void>;
+  load: (silent?: boolean) => Promise<void>;
   createDemanda: (
     d: Partial<Omit<Demanda, "responsaveis_ids">> & {
       cliente_id: string;
