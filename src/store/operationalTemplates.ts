@@ -155,11 +155,15 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
 
   const aCriar = (tpls as OperationalTemplate[]).filter((t) => !jaUsados.has(t.id));
   
+  const jaTemPlanejamento = existentesArray.some(
+    (d) => d.titulo === "Checklist de Onboarding"
+  );
+  
   const payload: any[] = aCriar.map((t) => ({
     cliente_id: clienteId,
     titulo: t.nome,
     descricao: t.descricao,
-    categoria: "Operacional" as any,
+    categoria: "Operacional",
     subtipo: "Onboarding",
     status: t.status_inicial,
     prioridade: t.prioridade,
@@ -170,11 +174,6 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
     origem: "template_operacional",
     template_id: t.id,
   }));
-
-  // Adiciona o card de Planejamento fixo se não existir um com esse título para este cliente
-  const jaTemPlanejamento = existentesArray.some(
-    (d) => d.titulo === "Checklist de Onboarding"
-  );
 
   if (!jaTemPlanejamento) {
     const checklistText = `*Etapa 1: 
@@ -212,7 +211,7 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
       cliente_id: clienteId,
       titulo: "Checklist de Onboarding",
       descricao: checklistText,
-      categoria: "Planejamento",
+      categoria: "Operacional",
       subtipo: "Onboarding",
       status: "Planejamento",
       prioridade: "Media",
