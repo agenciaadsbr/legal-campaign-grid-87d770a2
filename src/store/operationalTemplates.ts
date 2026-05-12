@@ -155,6 +155,10 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
 
   const aCriar = (tpls as OperationalTemplate[]).filter((t) => !jaUsados.has(t.id));
   
+  const jaTemPlanejamento = existentesArray.some(
+    (d) => d.titulo === "Checklist de Onboarding"
+  );
+  
   const payload: any[] = aCriar.map((t) => ({
     cliente_id: clienteId,
     titulo: t.nome,
