@@ -599,27 +599,27 @@ export function useDemandasBootstrap() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "demandas" },
-        () => load()
+        () => load(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "comentarios_demandas" },
-        () => load()
+        () => load(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "anexos_demandas" },
-        () => load()
+        () => load(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "historico_demandas" },
-        () => load()
+        () => load(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "task_dependencies" },
-        () => load()
+        () => load(true)
       )
       .subscribe();
     return () => {
