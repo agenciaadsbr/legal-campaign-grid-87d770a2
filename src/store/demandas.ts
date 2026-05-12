@@ -131,6 +131,15 @@ interface State {
   ) => Promise<string | null>;
   /** Marca manualmente uma dependência como liberada. */
   liberarDependencia: (dependencyId: string) => Promise<void>;
+  /**
+   * Duplica uma demanda existente. Cria nova linha em `demandas` com os
+   * mesmos campos editáveis (status reset para Planejamento) e, opcionalmente,
+   * replica anexos e dependências pai (workflow).
+   */
+  duplicarDemanda: (
+    id: string,
+    options?: { copiar_anexos?: boolean; copiar_workflow?: boolean }
+  ) => Promise<string | null>;
 }
 
 /**
