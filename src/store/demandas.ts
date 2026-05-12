@@ -182,9 +182,8 @@ export const useDemandasStore = create<State>((set, get) => ({
   loaded: false,
   loading: false,
 
-  async load() {
-    if (get().loading) return;
-    set({ loading: true });
+  async load(silent = false) {
+    if (!silent) set({ loading: true });
     const [d, c, a, h, deps] = await Promise.all([
       supabase.from("demandas").select("*").order("created_at", { ascending: false }),
       supabase.from("comentarios_demandas").select("*").order("created_at"),
