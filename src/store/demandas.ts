@@ -184,24 +184,39 @@ export const useDemandasStore = create<State>((set, get) => ({
 
   async load(silent = false) {
     if (!silent) set({ loading: true });
-    const [d, c, a, h, deps] = await Promise.all([
-      supabase.from("demandas").select("*").order("created_at", { ascending: false }),
-      supabase.from("comentarios_demandas").select("*").order("created_at"),
-      supabase.from("anexos_demandas").select("*").order("created_at"),
-      supabase.from("historico_demandas").select("*").order("created_at", { ascending: false }),
-      (supabase as any).from("task_dependencies").select("*").order("created_at"),
-    ]);
-    set({
-      demandas: (d.data ?? []).map(normalizeDemanda),
-      comentarios: (c.data ?? []) as ComentarioDemanda[],
-      anexos: (a.data ?? []) as AnexoDemanda[],
-      historico: (h.data ?? []) as HistoricoDemanda[],
-      dependencies: ((deps as any)?.data ?? []) as TaskDependency[],
-      loaded: true,
-      loading: false,
-    });
-    // marca atrasos no servidor
-    supabase.rpc("marcar_demandas_atrasadas").then(() => {});
+    try {
+      const [d, c, a, h, deps] = await Promise.all([
+        supabase.from("demandas").select("*").order("created_at", { ascending: false }),
+        supabase.from("comentarios_demandas").select("*").order("created_at"),
+        supabase.from("anexos_demandas").select("*").order("created_at"),
+        supabase.from("historico_demandas").select("*").order("created_at", { ascending: false }),
+        (supabase as any).from("task_dependencies").select("*").order("created_at"),
+      ]);
+
+      if (d.error) console.error("Erro ao carregar demandas:", d.error);
+      if (c.error) console.error("Erro ao carregar comentários:", c.error);
+      if (a.error) console.error("Erro ao carregar anexos:", a.error);
+      if (h.error) console.error("Erro ao carregar histórico:", h.error);
+      if (deps.error) console.error("Erro ao carregar dependências:", deps.error);
+
+      set({
+        demandas: (d.data ?? []).map(normalizeDemanda),
+        comentarios: (c.data ?? []) as ComentarioDemanda[],
+        anexos: (a.data ?? []) as AnexoDemanda[],
+        historico: (h.data ?? []) as HistoricoDemanda[],
+        dependencies: ((deps as any)?.data ?? []) as TaskDependency[],
+        loaded: true,
+      });
+
+      // Best-effort para marcar atrasos
+      supabase.rpc("marcar_demandas_atrasadas").then(({ error }) => {
+        if (error) console.warn("Aviso: RPC marcar_demandas_atrasadas falhou", error);
+      });
+    } catch (err) {
+      console.error("Erro crítico em load():", err);
+    } finally {
+      set({ loading: false });
+    }
   },
 
   async createDemanda(d) {
@@ -278,32 +293,53 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async updateDemanda(id, patch) {
+    const prev = get().demandas.find((x) => x.id === id);
+    if (!prev) return;
+
+    // Optimistic Update
+    const optimistic = normalizeDemanda({ ...prev, ...patch });
+    // Sincroniza campos que dependem de patch.responsaveis_ids se houver
+    if (Array.isArray(patch.responsaveis_ids)) {
+      optimistic.responsavel_id = patch.responsaveis_ids[0] ?? null;
+    }
+    
+    set({
+      demandas: get().demandas.map((d) => (d.id === id ? optimistic : d)),
+    });
+
     const clean: any = { ...patch };
     delete clean.id;
     delete clean.created_at;
     delete clean.updated_at;
+
     // Se o caller mexeu na lista canônica, sincroniza o legado também
     if (Array.isArray(patch.responsaveis_ids)) {
       clean.responsaveis_ids = patch.responsaveis_ids;
       clean.responsavel_id = patch.responsaveis_ids[0] ?? null;
     }
-    const prev = get().demandas.find((x) => x.id === id);
+
     const { data, error } = await supabase
       .from("demandas")
       .update(clean)
       .eq("id", id)
       .select()
       .single();
+
     if (error) {
       toast.error("Erro ao atualizar", { description: error.message });
+      // Rollback no erro
+      set({
+        demandas: get().demandas.map((d) => (d.id === id ? prev : d)),
+      });
       return;
     }
+
     const next = normalizeDemanda(data);
     set({
       demandas: get().demandas.map((d) => (d.id === id ? next : d)),
     });
 
-    if (prev && prev.status !== "Atrasado" && next.status === "Atrasado") {
+    if (prev.status !== "Atrasado" && next.status === "Atrasado") {
       supabase.from("alertas").insert({
         cliente_id: next.cliente_id,
         mensagem: `[DEMANDA] "${next.titulo}" está atrasada`,

@@ -457,100 +457,127 @@ export const useCRM = create<State>()((set, get) => ({
   loaded: false,
 
   _loadAll: async () => {
+    if (get().loading) return;
     set({ loading: true });
 
-    // Busca todas as linhas de uma tabela em lotes (para furar o limite default
-    // de 1000 linhas do PostgREST/Supabase). Mantém o mesmo formato de retorno
-    // ({ data, error }) para compatibilidade com o resto do código.
-    const fetchAll = async (
-      table: "cards" | "posts" | "comentarios",
-      orderBy?: { column: string; ascending?: boolean },
-    ): Promise<{ data: any[]; error: any }> => {
-      const PAGE = 1000;
-      const all: any[] = [];
-      let from = 0;
-      while (true) {
-        let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
-        if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
-        const { data, error } = await q;
-        if (error) return { data: all, error };
-        const rows = data ?? [];
-        all.push(...rows);
-        if (rows.length < PAGE) break;
-        from += PAGE;
-      }
-      return { data: all, error: null };
-    };
-
-    const [
-      responsaveisRes,
-      clientesRes,
-      contratosRes,
-      colunasRes,
-      modelosRes,
-      statusRes,
-      nichosRes,
-      cardsRes,
-      postsRes,
-      comentariosRes,
-      alertasRes,
-      customFieldsRes,
-      statusPostRes,
-      profilesRes,
-    ] = await Promise.all([
-      supabase.from("responsaveis").select("*").order("nome"),
-      supabase.from("clientes").select("*").order("created_at", { ascending: false }),
-      supabase.from("contratos").select("*"),
-      supabase.from("colunas_cliente").select("*").order("ordem"),
-      supabase.from("modelos_colunas").select("*").order("created_at"),
-      supabase.from("status_options").select("*").order("ordem", { ascending: true }),
-      supabase.from("nichos").select("*").order("label"),
-      fetchAll("cards", { column: "posicao", ascending: true }),
-      fetchAll("posts"),
-      fetchAll("comentarios", { column: "created_at", ascending: true }),
-      supabase.from("alertas").select("*").order("created_at", { ascending: false }),
-      supabase.from("custom_fields").select("*").order("ordem"),
-      supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
-      supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
-    ]);
-
-    const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
-    const contratos = (contratosRes.data ?? []).map(mapContrato);
-    const comentarios = (comentariosRes.data ?? []).map(mapComentario);
-
-    // Mapa auth.uid → autor exibível (resolvido via profiles → responsaveis)
-    const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
-    for (const p of profilesRes.data ?? []) {
-      const resp = p.responsavel_id ? responsaveis.find((r) => r.id === p.responsavel_id) : undefined;
-      authoresPorAuthId[p.id] = {
-        nome: resp?.nome ?? p.nome ?? p.email ?? "Usuário",
-        cor: resp?.cor ?? "#6366f1",
-        avatar_url: resp?.avatar_url ?? p.avatar_url ?? undefined,
+    try {
+      // Busca todas as linhas de uma tabela em lotes (para furar o limite default
+      // de 1000 linhas do PostgREST/Supabase).
+      const fetchAll = async (
+        table: "cards" | "posts" | "comentarios",
+        orderBy?: { column: string; ascending?: boolean },
+      ): Promise<{ data: any[]; error: any }> => {
+        const PAGE = 1000;
+        const all: any[] = [];
+        let from = 0;
+        while (true) {
+          let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
+          if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+          const { data, error } = await q;
+          if (error) return { data: all, error };
+          const rows = data ?? [];
+          all.push(...rows);
+          if (rows.length < PAGE) break;
+          from += PAGE;
+        }
+        return { data: all, error: null };
       };
+
+      const [
+        responsaveisRes,
+        clientesRes,
+        contratosRes,
+        colunasRes,
+        modelosRes,
+        statusRes,
+        nichosRes,
+        cardsRes,
+        postsRes,
+        comentariosRes,
+        alertasRes,
+        customFieldsRes,
+        statusPostRes,
+        profilesRes,
+      ] = await Promise.all([
+        supabase.from("responsaveis").select("*").order("nome"),
+        supabase.from("clientes").select("*").order("created_at", { ascending: false }),
+        supabase.from("contratos").select("*"),
+        supabase.from("colunas_cliente").select("*").order("ordem"),
+        supabase.from("modelos_colunas").select("*").order("created_at"),
+        supabase.from("status_options").select("*").order("ordem", { ascending: true }),
+        supabase.from("nichos").select("*").order("label"),
+        fetchAll("cards", { column: "posicao", ascending: true }),
+        fetchAll("posts"),
+        fetchAll("comentarios", { column: "created_at", ascending: true }),
+        supabase.from("alertas").select("*").order("created_at", { ascending: false }),
+        supabase.from("custom_fields").select("*").order("ordem"),
+        supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
+        supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
+      ]);
+
+      if (
+        responsaveisRes.error ||
+        clientesRes.error ||
+        contratosRes.error ||
+        colunasRes.error ||
+        modelosRes.error ||
+        statusRes.error ||
+        nichosRes.error ||
+        cardsRes.error ||
+        postsRes.error ||
+        comentariosRes.error ||
+        alertasRes.error ||
+        customFieldsRes.error ||
+        statusPostRes.error ||
+        profilesRes.error
+      ) {
+        console.error("Erro ao carregar dados do CRM:", {
+          responsaveis: responsaveisRes.error,
+          clientes: clientesRes.error,
+          // ... adicione outros se precisar debugar fundo
+        });
+      }
+
+      const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
+      const contratos = (contratosRes.data ?? []).map(mapContrato);
+      const comentarios = (comentariosRes.data ?? []).map(mapComentario);
+
+      const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
+      for (const p of profilesRes.data ?? []) {
+        const resp = p.responsavel_id ? responsaveis.find((r) => r.id === p.responsavel_id) : undefined;
+        authoresPorAuthId[p.id] = {
+          nome: resp?.nome ?? p.nome ?? p.email ?? "Usuário",
+          cor: resp?.cor ?? "#6366f1",
+          avatar_url: resp?.avatar_url ?? p.avatar_url ?? undefined,
+        };
+      }
+
+      const clientes = (clientesRes.data ?? []).map((r) =>
+        mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
+      );
+
+      set({
+        responsaveis,
+        clientes,
+        contratos,
+        colunasCliente: (colunasRes.data ?? []).map(mapColuna),
+        modelosColunas: (modelosRes.data ?? []).map(mapModelo),
+        statusOptions: (statusRes.data ?? []).map(mapStatusOpt),
+        nichos: (nichosRes.data ?? []).map(mapNicho),
+        cards: (cardsRes.data ?? []).map(mapCard),
+        posts: (postsRes.data ?? []).map(mapPost),
+        comentarios,
+        alertas: (alertasRes.data ?? []).map(mapAlerta),
+        customFields: (customFieldsRes.data ?? []).map(mapCustomField),
+        statusPostOptions: (statusPostRes.data ?? []).map(mapStatusOpt),
+        authoresPorAuthId,
+        loaded: true,
+      });
+    } catch (err) {
+      console.error("Erro crítico em _loadAll:", err);
+    } finally {
+      set({ loading: false });
     }
-
-    const clientes = (clientesRes.data ?? []).map((r) =>
-      mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
-    );
-
-    set({
-      responsaveis,
-      clientes,
-      contratos,
-      colunasCliente: (colunasRes.data ?? []).map(mapColuna),
-      modelosColunas: (modelosRes.data ?? []).map(mapModelo),
-      statusOptions: (statusRes.data ?? []).map(mapStatusOpt),
-      nichos: (nichosRes.data ?? []).map(mapNicho),
-      cards: (cardsRes.data ?? []).map(mapCard),
-      posts: (postsRes.data ?? []).map(mapPost),
-      comentarios,
-      alertas: (alertasRes.data ?? []).map(mapAlerta),
-      customFields: (customFieldsRes.data ?? []).map(mapCustomField),
-      statusPostOptions: (statusPostRes.data ?? []).map(mapStatusOpt),
-      authoresPorAuthId,
-      loading: false,
-      loaded: true,
-    });
   },
 
   // ============= Clientes =============
