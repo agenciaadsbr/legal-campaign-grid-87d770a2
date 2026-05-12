@@ -171,11 +171,6 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
     template_id: t.id,
   }));
 
-  // Adiciona o card de Planejamento fixo se não existir um com esse título para este cliente
-  const jaTemPlanejamento = existentesArray.some(
-    (d) => d.titulo === "Checklist de Onboarding"
-  );
-
   if (!jaTemPlanejamento) {
     const checklistText = `*Etapa 1: 
 
@@ -212,7 +207,7 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
       cliente_id: clienteId,
       titulo: "Checklist de Onboarding",
       descricao: checklistText,
-      categoria: "Planejamento",
+      categoria: "Operacional",
       subtipo: "Onboarding",
       status: "Planejamento",
       prioridade: "Media",
