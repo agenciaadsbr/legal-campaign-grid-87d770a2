@@ -1262,6 +1262,56 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirmação de duplicação de tarefa */}
+      <AlertDialog open={duplicarOpen} onOpenChange={setDuplicarOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicar tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Será criada uma cópia desta tarefa com status reiniciado em "Planejamento".
+              Comentários e histórico não são copiados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={dupCopiarAnexos}
+                onCheckedChange={(v) => setDupCopiarAnexos(!!v)}
+              />
+              Copiar anexos
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={dupCopiarWorkflow}
+                onCheckedChange={(v) => setDupCopiarWorkflow(!!v)}
+              />
+              Manter no mesmo workflow (replicar dependências pai)
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={duplicando}
+              onClick={async (e) => {
+                e.preventDefault();
+                setDuplicando(true);
+                try {
+                  await duplicarDemanda(demanda.id, {
+                    copiar_anexos: dupCopiarAnexos,
+                    copiar_workflow: dupCopiarWorkflow,
+                  });
+                  setDuplicarOpen(false);
+                } finally {
+                  setDuplicando(false);
+                }
+              }}
+            >
+              {duplicando ? "Duplicando..." : "Duplicar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
