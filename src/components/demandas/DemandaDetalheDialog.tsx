@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -45,6 +46,7 @@ import {
   AtSign,
   Paperclip,
   Link2,
+  Copy,
 } from "lucide-react";
 import { categoriaParaAba } from "@/lib/minhasTarefas";
 import {
@@ -121,6 +123,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     addAnexo,
     removeAnexo,
     deleteDemanda,
+    duplicarDemanda,
     comentarios,
     historico,
     anexos,
@@ -141,6 +144,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   const anexoFileRef = useRef<HTMLInputElement>(null);
   const [previewAnexo, setPreviewAnexo] = useState<{ url: string; nome: string } | null>(null);
   const [anexoParaRemover, setAnexoParaRemover] = useState<string | null>(null);
+  const [duplicarOpen, setDuplicarOpen] = useState(false);
+  const [dupCopiarAnexos, setDupCopiarAnexos] = useState(true);
+  const [dupCopiarWorkflow, setDupCopiarWorkflow] = useState(true);
+  const [duplicando, setDuplicando] = useState(false);
   const [descricaoLocal, setDescricaoLocal] = useState("");
   const descricaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tituloLocal, setTituloLocal] = useState("");
@@ -498,6 +505,18 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   >
                     <Link2 className="h-4 w-4" />
                   </Button>
+                  {canWrite && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setDuplicarOpen(true)}
+                      title="Duplicar tarefa"
+                      className="shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
                   {(demanda as any).origem === "template_operacional" &&
                     !(demanda as any).marcado_ja_possui &&
                     demanda.status !== "Concluido" && (
@@ -1239,6 +1258,56 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               }}
             >
               Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmação de duplicação de tarefa */}
+      <AlertDialog open={duplicarOpen} onOpenChange={setDuplicarOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicar tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Será criada uma cópia desta tarefa com status reiniciado em "Planejamento".
+              Comentários e histórico não são copiados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={dupCopiarAnexos}
+                onCheckedChange={(v) => setDupCopiarAnexos(!!v)}
+              />
+              Copiar anexos
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={dupCopiarWorkflow}
+                onCheckedChange={(v) => setDupCopiarWorkflow(!!v)}
+              />
+              Manter no mesmo workflow (replicar dependências pai)
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={duplicando}
+              onClick={async (e) => {
+                e.preventDefault();
+                setDuplicando(true);
+                try {
+                  await duplicarDemanda(demanda.id, {
+                    copiar_anexos: dupCopiarAnexos,
+                    copiar_workflow: dupCopiarWorkflow,
+                  });
+                  setDuplicarOpen(false);
+                } finally {
+                  setDuplicando(false);
+                }
+              }}
+            >
+              {duplicando ? "Duplicando..." : "Duplicar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
