@@ -143,6 +143,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   const anexoFileRef = useRef<HTMLInputElement>(null);
   const [previewAnexo, setPreviewAnexo] = useState<{ url: string; nome: string } | null>(null);
   const [anexoParaRemover, setAnexoParaRemover] = useState<string | null>(null);
+  const [duplicarOpen, setDuplicarOpen] = useState(false);
+  const [dupCopiarAnexos, setDupCopiarAnexos] = useState(true);
+  const [dupCopiarWorkflow, setDupCopiarWorkflow] = useState(true);
+  const [duplicando, setDuplicando] = useState(false);
   const [descricaoLocal, setDescricaoLocal] = useState("");
   const descricaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tituloLocal, setTituloLocal] = useState("");
