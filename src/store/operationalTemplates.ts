@@ -171,16 +171,13 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
     template_id: t.id,
   }));
 
-  // Adiciona o card de Planejamento fixo se não existir um com esse título na categoria Planejamento
+  // Adiciona o card de Planejamento fixo se não existir um com esse título para este cliente
   const jaTemPlanejamento = existentesArray.some(
-    (d) => d.categoria === "Planejamento" && d.titulo === "Checklist de Onboarding"
+    (d) => d.titulo === "Checklist de Onboarding"
   );
 
   if (!jaTemPlanejamento) {
-    payload.push({
-      cliente_id: clienteId,
-      titulo: "Checklist de Onboarding",
-      descricao: `*Etapa 1: 
+    const checklistText = `*Etapa 1: 
 
 - Reunião de Start de Projeto  ✅ 
 - Análise de Informações coletadas ✅ 
@@ -209,12 +206,18 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
 - Ativação das Campanhas no Google Ads
 - Envio semanal de relatório de métricas
 - Análise das campanhas e otimizações
-- Gestão/Criação Google Meu Negócio`,
-      categoria: "Planejamento" as any,
+- Gestão/Criação Google Meu Negócio`;
+
+    payload.push({
+      cliente_id: clienteId,
+      titulo: "Checklist de Onboarding",
+      descricao: checklistText,
+      categoria: "Planejamento",
       subtipo: "Onboarding",
       status: "Planejamento",
       prioridade: "Media",
       responsaveis_ids: [],
+      responsavel_id: null,
       criado_por: uid,
       precisa_aprovacao: false,
       origem: "template_operacional",
