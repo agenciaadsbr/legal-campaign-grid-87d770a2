@@ -45,6 +45,7 @@ import {
   AtSign,
   Paperclip,
   Link2,
+  Copy,
 } from "lucide-react";
 import { categoriaParaAba } from "@/lib/minhasTarefas";
 import {
@@ -121,6 +122,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     addAnexo,
     removeAnexo,
     deleteDemanda,
+    duplicarDemanda,
     comentarios,
     historico,
     anexos,
