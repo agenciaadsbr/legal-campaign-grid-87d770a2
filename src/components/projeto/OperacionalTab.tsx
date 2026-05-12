@@ -37,7 +37,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     try {
       const n = await gerarEstruturaOperacional(clienteId);
       if (n > 0) {
-        toast.success(`${n} ${n === 1 ? "card operacional criado" : "cards operacionais criados"}`);
+        toast.success(`${n} ${n === 1 ? "card de estrutura criado" : "cards de estrutura criados"}`);
         await reload();
       } else {
         toast.info("Estrutura operacional já está completa para este cliente.");

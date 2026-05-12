@@ -142,20 +142,20 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
   // Carrega demandas já existentes para evitar duplicação
   const { data: existentes } = await (supabase as any)
     .from("demandas")
-    .select("id, template_id")
-    .eq("cliente_id", clienteId)
-    .eq("origem", "template_operacional");
+    .select("id, template_id, titulo, categoria")
+    .eq("cliente_id", clienteId);
+
+  const existentesArray = (existentes as any[]) ?? [];
   const jaUsados = new Set<string>(
-    ((existentes as any[]) ?? []).map((d) => d.template_id).filter(Boolean),
+    existentesArray.map((d) => d.template_id).filter(Boolean),
   );
 
   const { data: userRes } = await supabase.auth.getUser();
   const uid = userRes.user?.id ?? null;
 
   const aCriar = (tpls as OperationalTemplate[]).filter((t) => !jaUsados.has(t.id));
-  if (aCriar.length === 0) return 0;
-
-  const payload = aCriar.map((t) => ({
+  
+  const payload: any[] = aCriar.map((t) => ({
     cliente_id: clienteId,
     titulo: t.nome,
     descricao: t.descricao,
@@ -171,10 +171,63 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
     template_id: t.id,
   }));
 
+  // Adiciona o card de Planejamento fixo se não existir um com esse título na categoria Planejamento
+  const jaTemPlanejamento = existentesArray.some(
+    (d) => d.categoria === "Planejamento" && d.titulo === "Checklist de Onboarding"
+  );
+
+  if (!jaTemPlanejamento) {
+    payload.push({
+      cliente_id: clienteId,
+      titulo: "Checklist de Onboarding",
+      descricao: `*Etapa 1: 
+
+- Reunião de Start de Projeto  ✅ 
+- Análise de Informações coletadas ✅ 
+- Criação e Envio do Planejamento ✅
+- Envio do Material de Boas Vindas ✅
+- Envio do Vídeo de Treinamento Comercial ✅
+- Envio do Script de Atendimento 
+- Análise de mercado (estudo das palavras-chave e volume de pesquisas)
+- Criação da Página do Facebook
+- Criação do Instagram 
+- Criação da BM (Gerenciador de anúncios)
+- Criação e validação dos anúncios em imagem
+- Criação e validação dos anúncios em vídeo com I.A.
+- Roteiros para Vídeos de Anúncios  (Gravados)
+- Configurações técnicas (WhatsApp, pixel, formas de pagamento das campanhas, …)
+- Configuração da ferramenta de CRM/Agente de I.A.
+- Ativação das Campanhas no Meta Ads 
+
+*Etapa 2: 
+
+- Construção dos Posts (Feed Instagram)
+- Criação do GMAIL e Google Ads
+- Criação Landing Page
+- Configurações domínio e Hospedagem
+- Definição da estrutura de campanhas (palavras-chave, títulos e descrições)
+- Ativação das Campanhas no Google Ads
+- Envio semanal de relatório de métricas
+- Análise das campanhas e otimizações
+- Gestão/Criação Google Meu Negócio`,
+      categoria: "Planejamento" as any,
+      subtipo: "Onboarding",
+      status: "Planejamento",
+      prioridade: "Media",
+      responsaveis_ids: [],
+      criado_por: uid,
+      precisa_aprovacao: false,
+      origem: "template_operacional",
+    });
+  }
+
+  if (payload.length === 0) return 0;
+
   const { data: criados, error } = await (supabase as any)
     .from("demandas")
     .insert(payload)
     .select();
+
   if (error) {
     toast.error("Erro ao gerar estrutura operacional", { description: error.message });
     return 0;
@@ -183,7 +236,9 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
   // Vincula dependências (best-effort) — exige que o template-pai já tenha sido criado neste lote
   try {
     const tplIdToDemandaId = new Map<string, string>();
-    (criados as any[]).forEach((d) => tplIdToDemandaId.set(d.template_id, d.id));
+    (criados as any[]).forEach((d) => {
+      if (d.template_id) tplIdToDemandaId.set(d.template_id, d.id);
+    });
     const deps: any[] = [];
     for (const t of aCriar) {
       if (t.depends_on_template_id && tplIdToDemandaId.has(t.depends_on_template_id)) {
