@@ -500,6 +500,95 @@ export const useDemandasStore = create<State>((set, get) => ({
     });
     toast.success("Dependência liberada");
   },
+
+  async duplicarDemanda(id, options) {
+    const copiarAnexos = options?.copiar_anexos !== false;
+    const copiarWorkflow = options?.copiar_workflow !== false;
+
+    const original = get().demandas.find((d) => d.id === id);
+    if (!original) {
+      toast.error("Tarefa não encontrada");
+      return null;
+    }
+
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id ?? null;
+
+    const responsaveis_ids = original.responsaveis_ids ?? [];
+    const payload: any = {
+      cliente_id: original.cliente_id,
+      titulo: `${original.titulo} (cópia)`,
+      categoria: original.categoria,
+      subtipo: original.subtipo ?? null,
+      descricao: original.descricao ?? null,
+      status: "Planejamento",
+      prioridade: original.prioridade,
+      responsaveis_ids,
+      responsavel_id: responsaveis_ids[0] ?? null,
+      criado_por: uid,
+      data_limite: original.data_limite ?? null,
+      data_inicio: original.data_inicio ?? null,
+      data_conclusao: null,
+      precisa_aprovacao: original.precisa_aprovacao ?? false,
+      link_meister: original.link_meister ?? null,
+      link_drive: original.link_drive ?? null,
+      origem: "manual",
+      template_id: null,
+      marcado_ja_possui: false,
+    };
+
+    const { data: novaRow, error } = await supabase
+      .from("demandas")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao duplicar tarefa", { description: error.message });
+      return null;
+    }
+    const nova = normalizeDemanda(novaRow);
+    set({ demandas: [nova, ...get().demandas] });
+
+    if (copiarAnexos) {
+      const anexosOrig = get().anexos.filter((a) => a.demanda_id === id);
+      for (const a of anexosOrig) {
+        const { data: aIns } = await supabase
+          .from("anexos_demandas")
+          .insert({
+            demanda_id: nova.id,
+            nome: a.nome,
+            url: a.url,
+            mime: a.mime,
+            size: a.size,
+          })
+          .select()
+          .single();
+        if (aIns) set({ anexos: [...get().anexos, aIns as AnexoDemanda] });
+      }
+    }
+
+    if (copiarWorkflow) {
+      const deps = get().dependencies.filter((d) => d.task_id === id);
+      for (const d of deps) {
+        const { data: depRow, error: depErr } = await (supabase as any)
+          .from("task_dependencies")
+          .insert({
+            task_id: nova.id,
+            depends_on_task_id: d.depends_on_task_id,
+            modo_liberacao: d.modo_liberacao,
+            liberado: d.liberado,
+          })
+          .select()
+          .single();
+        if (!depErr && depRow) {
+          set({ dependencies: [...get().dependencies, depRow as TaskDependency] });
+        }
+      }
+    }
+
+    toast.success("Tarefa duplicada");
+    return nova.id;
+  },
 }));
 
 export function useDemandasBootstrap() {
