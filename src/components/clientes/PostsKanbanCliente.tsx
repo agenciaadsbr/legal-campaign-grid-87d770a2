@@ -222,9 +222,17 @@ function CardItem({
       </div>
 
       <div className="flex items-center justify-between mt-1.5 gap-2">
-        <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
-          <PrazoIcon className="h-3 w-3" />
-          <span className={cn(prazoState === "overdue" && "font-semibold")}>{prazoLabel}</span>
+        <div className="flex flex-col gap-0.5">
+          {card.data_inicio_tarefa && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Calendar className="h-2.5 w-2.5" />
+              <span>Início: {format(parseISO(card.data_inicio_tarefa), "dd/MM", { locale: ptBR })}</span>
+            </div>
+          )}
+          <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
+            <PrazoIcon className="h-3 w-3" />
+            <span className={cn(prazoState === "overdue" && "font-semibold")}>{prazoLabel}</span>
+          </div>
         </div>
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
