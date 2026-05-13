@@ -1235,11 +1235,18 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
       {/* Lightbox de imagem do anexo */}
       <Dialog open={!!previewAnexo} onOpenChange={(o) => !o && setPreviewAnexo(null)}>
-        <DialogContent className="max-w-5xl p-2 bg-background">
+        <DialogContent className="max-w-5xl p-2 bg-background overflow-visible">
           {previewAnexo && (
-            <div className="space-y-2">
+            <div className="space-y-2 relative group/lightbox">
               <div className="flex items-center justify-between gap-3 px-2 pr-12 pt-1">
-                <span className="min-w-0 text-sm font-medium truncate">{previewAnexo.nome}</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium truncate">{previewAnexo.nome}</span>
+                  {imagensAnexadas.length > 1 && currentImageIndex !== -1 && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      {currentImageIndex + 1} de {imagensAnexadas.length}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
@@ -1267,7 +1274,30 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   </button>
                 </div>
               </div>
-              <div className="flex items-center justify-center bg-muted/30 rounded">
+
+              <div className="relative flex items-center justify-center bg-muted/30 rounded min-h-[40vh]">
+                {/* Setas de Navegação - Desktop */}
+                {imagensAnexadas.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => navigateImage("prev")}
+                      className="absolute left-2 z-10 h-10 w-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-all opacity-0 group-hover/lightbox:opacity-100 md:opacity-100"
+                      title="Anterior (Seta Esquerda)"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigateImage("next")}
+                      className="absolute right-2 z-10 h-10 w-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-all opacity-0 group-hover/lightbox:opacity-100 md:opacity-100"
+                      title="Próxima (Seta Direita)"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+
                 {isVideoUrl(previewAnexo.url, previewAnexo.nome) ? (
                   <video
                     src={previewAnexo.url}
