@@ -20,6 +20,8 @@ export interface UnifiedTask {
   area: string;
   prioridade: TaskPrioridade;
   prazo: string | null;
+  data_inicio: string | null;
+  data_limite: string | null;
   status: TaskStatus;
   urgente: boolean;
   responsaveis_ids: string[];
