@@ -51,9 +51,10 @@ export const useProjectNotes = create<ProjectNotesStore>((set, get) => ({
   addNote: async (note: Partial<ProjectNote>) => {
     try {
       const { data: userData } = await supabase.auth.getUser();
+      const insertData = { ...note, author_id: userData.user?.id } as any;
       const { data, error } = await supabase
         .from("project_notes")
-        .insert([{ ...note, author_id: userData.user?.id }])
+        .insert([insertData])
         .select()
         .single();
 
