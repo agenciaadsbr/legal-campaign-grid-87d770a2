@@ -14,7 +14,9 @@ import { Plus, CheckSquare, X, type LucideIcon } from "lucide-react";
 import { ProjetoKanban } from "@/components/demandas/ProjetoKanban";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { AvatarStack } from "@/components/AvatarStack";
-import { AtribuirResponsaveisPopover, ModoAtribuicao } from "@/components/demandas/AtribuirResponsaveisPopover";
+import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
+import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
+import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
