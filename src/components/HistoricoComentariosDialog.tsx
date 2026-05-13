@@ -10,11 +10,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Pencil, Trash2, Send, MessageSquarePlus, X, Check,
-  Plus, Image as ImageIcon, Smile, AtSign,
+  Plus, Image as ImageIcon, Smile, AtSign, History,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface Props {
   clienteId: string | null;
