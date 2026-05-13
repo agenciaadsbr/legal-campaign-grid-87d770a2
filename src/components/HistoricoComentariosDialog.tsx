@@ -213,12 +213,28 @@ export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Pr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-[95vw] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 py-4 border-b">
-          <DialogTitle className="text-base">
-            Histórico de Comentários — <span className="text-primary">{cliente.nome_cliente}</span>
-          </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {itens.length} {itens.length === 1 ? "comentário" : "comentários"}
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <DialogTitle className="text-base">
+                Histórico de Comentários — <span className="text-primary">{cliente.nome_cliente}</span>
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {itens.length} {itens.length === 1 ? "comentário" : "comentários"}
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 text-[10px] gap-1.5 uppercase font-bold tracking-wider"
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/clientes/${clienteId}/projeto?tab=atividades&tipo=comentario`);
+              }}
+            >
+              <History className="h-3.5 w-3.5" />
+              Ver histórico geral em Atividades
+            </Button>
+          </div>
         </DialogHeader>
 
         <ScrollArea className="max-h-[55vh] w-full px-3 py-2">
