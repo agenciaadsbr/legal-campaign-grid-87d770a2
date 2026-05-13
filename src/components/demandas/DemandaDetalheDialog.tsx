@@ -1281,19 +1281,25 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   <>
                     <button
                       type="button"
-                      onClick={() => navigateImage("prev")}
-                      className="absolute left-2 z-10 h-10 w-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-all opacity-0 group-hover/lightbox:opacity-100 md:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateImage("prev");
+                      }}
+                      className="absolute left-1 md:left-2 z-10 h-8 w-8 md:h-10 md:w-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-all md:opacity-0 md:group-hover/lightbox:opacity-100"
                       title="Anterior (Seta Esquerda)"
                     >
-                      <ChevronLeft className="h-6 w-6" />
+                      <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigateImage("next")}
-                      className="absolute right-2 z-10 h-10 w-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-all opacity-0 group-hover/lightbox:opacity-100 md:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateImage("next");
+                      }}
+                      className="absolute right-1 md:right-2 z-10 h-8 w-8 md:h-10 md:w-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-all md:opacity-0 md:group-hover/lightbox:opacity-100"
                       title="Próxima (Seta Direita)"
                     >
-                      <ChevronRight className="h-6 w-6" />
+                      <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
                     </button>
                   </>
                 )}
