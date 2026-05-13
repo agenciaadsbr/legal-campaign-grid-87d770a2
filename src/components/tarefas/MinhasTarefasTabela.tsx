@@ -19,6 +19,8 @@ interface Props {
   tasks: UnifiedTask[];
   onConcluir: (task: UnifiedTask) => void;
   mostrarResponsavel?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 const STATUS_COR: Record<string, string> = {
