@@ -69,7 +69,7 @@ export function TarefaIAConsulta({ demanda, onAddComment }: Props) {
       tarefa_subtipo: demanda.subtipo,
       tarefa_prioridade: demanda.prioridade,
       tarefa_descricao: demanda.descricao,
-      tarefa_comentarios: "", // Opcional: injetar comentários se necessário
+      tarefa_comentarios: demanda.comentarios_texto || "", // Injetado via DemandaDetalheDialog se disponível
       reunioes: reunioesCliente.map(r => ({
         titulo: r.titulo,
         data: r.data,
