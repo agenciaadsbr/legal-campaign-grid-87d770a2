@@ -628,14 +628,17 @@ function Stat({
 // =====================================================
 // ATIVIDADES — badge identifica área de origem
 // =====================================================
-function badgeAreaPorCategoria(cat: DemandaCategoria): { label: string; cls: string } {
+function badgeAreaPorCategoria(cat: string): { label: string; cls: string } {
   switch (cat) {
     case "EditorVideo": return { label: "VÍDEO", cls: "border-purple-500/40 text-purple-500" };
     case "TrafegoPago": return { label: "TRÁFEGO", cls: "border-emerald-500/40 text-emerald-500" };
-    case "LandingPage": return { label: "LP", cls: "border-blue-500/40 text-blue-500" };
-    case "IAAtendimento": return { label: "IA", cls: "border-cyan-500/40 text-cyan-500" };
+    case "LandingPage": return { label: "LP / SITE", cls: "border-blue-500/40 text-blue-500" };
+    case "IAAtendimento": return { label: "IA / ATEND.", cls: "border-cyan-500/40 text-cyan-500" };
     case "Briefing": return { label: "BRIEFING", cls: "border-amber-500/40 text-amber-500" };
     case "Planejamento": return { label: "PLANEJ.", cls: "border-indigo-500/40 text-indigo-500" };
+    case "Operacional": return { label: "OPERACIONAL", cls: "border-orange-500/40 text-orange-500" };
+    case "Direto": return { label: "CLIENTE", cls: "border-green-500/40 text-green-500" };
+    case "Posts": return { label: "POST", cls: "border-primary/40 text-primary" };
     default: return { label: "URGÊNCIA", cls: "border-destructive/40 text-destructive" };
   }
 }
