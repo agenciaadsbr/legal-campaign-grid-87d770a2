@@ -87,7 +87,11 @@ export function MinhasTarefasTabela({
   };
 
   const grupos = useMemo(() => {
-...
+    const buckets: Record<GroupKey, UnifiedTask[]> = {
+      urgente: [], atrasado: [], em_andamento: [], pendente: [], concluido: [],
+    };
+    for (const t of tasks) buckets[groupOf(t)].push(t);
+    return GROUP_ORDER
       .map((k) => ({ key: k, items: buckets[k] }))
       .filter((g) => g.items.length > 0);
   }, [tasks]);
