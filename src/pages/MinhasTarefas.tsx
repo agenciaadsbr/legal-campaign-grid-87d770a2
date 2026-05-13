@@ -369,10 +369,57 @@ export default function MinhasTarefas() {
         areasDisponiveis={areasDisponiveis}
       />
 
+      {selectedTaskIds.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-card p-2.5 animate-in fade-in slide-in-from-top-1">
+          <Badge variant="secondary" className="text-xs h-7 px-3">
+            {selectedTaskIds.length} {selectedTaskIds.length === 1 ? "selecionado" : "selecionados"}
+          </Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <AtribuirResponsaveisPopover
+              responsaveis={responsaveis}
+              count={selectedTaskIds.length}
+              onApply={handleApplyResponsaveis}
+            />
+
+            <DefinirDatasPopover
+              count={selectedTaskIds.length}
+              onApply={handleApplyDatas}
+            />
+
+            <AlterarStatusPopover
+              count={selectedTaskIds.length}
+              options={statusPostOptions}
+              onApply={handleApplyStatus}
+            />
+
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={() => setSelectedTaskIds([])}
+            >
+              Limpar
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={() => setSelectedTaskIds([])}
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Sair
+            </Button>
+          </div>
+        </div>
+      )}
+
       <MinhasTarefasTabela
         tasks={tarefasFiltradas}
         onConcluir={(t) => setTaskAlvo(t)}
         mostrarResponsavel={mostrarColunaResponsavel}
+        selectedIds={selectedTaskIds}
+        onSelectionChange={setSelectedTaskIds}
       />
 
       {tarefasAguardando.length > 0 && (
