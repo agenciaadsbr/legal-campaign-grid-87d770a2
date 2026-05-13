@@ -3,6 +3,7 @@ import { useReunioes, type Reuniao } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
 import { useTarefasSugeridas } from "@/store/tarefasSugeridas";
 import { useIAConfig, useIAConfigBootstrap } from "@/store/iaConfig";
+import { useDelegations, useDelegationsBootstrap } from "@/store/delegations";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -33,6 +34,9 @@ export function ReuniaoDialog({
   const createSugerida = useTarefasSugeridas((s) => s.create);
   useIAConfigBootstrap();
   const iaAtivo = useIAConfig((s) => s.configs.some((c) => c.ativo));
+  useDelegationsBootstrap();
+  const delegationConfig = useDelegations((s) => s.config);
+  const createDelegation = useDelegations((s) => s.createDelegation);
   const [iaBusy, setIaBusy] = useState<null | "cliente" | "operacional" | "tarefas" | "processar">(null);
   const [reprocDialog, setReprocDialog] = useState(false);
   const [iaStatus, setIaStatus] = useState<any>(null);
@@ -47,6 +51,10 @@ export function ReuniaoDialog({
   const [transcricao, setTranscricao] = useState("");
   const [resumoCliente, setResumoCliente] = useState("");
   const [resumoTarefas, setResumoTarefas] = useState("");
+  const [gerarDelegacao, setGerarDelegacao] = useState(false);
+  const [responsavelDelegacaoId, setResponsavelDelegacaoId] = useState("");
+  const [prazoDelegacao, setPrazoDelegacao] = useState("");
+  const [obsDelegacao, setObsDelegacao] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -61,8 +69,32 @@ export function ReuniaoDialog({
       setResumoTarefas(reuniao?.resumo_tarefas ?? "");
       setIaStatus((reuniao as any)?.ia_status ?? null);
       setIaProcessedAt((reuniao as any)?.ia_processed_at ?? null);
+      setGerarDelegacao(reuniao?.gerar_alerta_delegacao ?? false);
+      setResponsavelDelegacaoId(reuniao?.responsavel_delegacao_id ?? "");
+      setPrazoDelegacao(reuniao?.prazo_delegacao ?? "");
+      setObsDelegacao(reuniao?.observacoes_delegacao ?? "");
     }
   }, [open, reuniao]);
+
+  // Auto-suggest delegation for specific types
+  useEffect(() => {
+    if (open && !reuniao && tipo && delegationConfig?.tipos_sugestao_automatica?.includes(tipo)) {
+      setGerarDelegacao(true);
+      if (delegationConfig.responsavel_padrao_id && !responsavelDelegacaoId) {
+        setResponsavelDelegacaoId(delegationConfig.responsavel_padrao_id);
+      }
+      if (delegationConfig.prazo_padrao_dias && !prazoDelegacao) {
+        const date = new Date();
+        // Simple logic for business days (skipping weekends)
+        let added = 0;
+        while (added < delegationConfig.prazo_padrao_dias) {
+          date.setDate(date.getDate() + 1);
+          if (date.getDay() !== 0 && date.getDay() !== 6) added++;
+        }
+        setPrazoDelegacao(date.toISOString().split("T")[0]);
+      }
+    }
+  }, [tipo, delegationConfig]);
 
   const handleSave = async () => {
     if (!titulo.trim()) {
@@ -80,12 +112,37 @@ export function ReuniaoDialog({
       transcricao: transcricao || null,
       resumo_cliente: resumoCliente || null,
       resumo_tarefas: resumoTarefas || null,
+      gerar_alerta_delegacao: gerarDelegacao,
+      responsavel_delegacao_id: responsavelDelegacaoId || null,
+      prazo_delegacao: prazoDelegacao || null,
+      observacoes_delegacao: obsDelegacao || null,
     };
     if (reuniao) {
       await update(reuniao.id, payload as any);
       toast.success("Reunião atualizada");
     } else {
-      await create(payload as any);
+      const newReuniao = await create(payload as any);
+      if (newReuniao && gerarDelegacao && responsavelDelegacaoId) {
+        await createDelegation({
+          reuniao_id: newReuniao.id,
+          cliente_id: clienteId,
+          responsavel_id: responsavelDelegacaoId,
+          prazo: prazoDelegacao || null,
+          observacoes: obsDelegacao || null,
+          status: "Aguardando delegação",
+        });
+        
+        // Registrar atividade
+        const respDeleg = responsaveis.find(r => r.id === responsavelDelegacaoId);
+        const { data: userData } = await supabase.auth.getUser();
+        const userName = userData.user?.email?.split('@')[0] || "Sistema";
+        
+        await supabase.from("atividade_cliente").insert({
+          cliente_id: clienteId,
+          tipo: "Observação",
+          conteudo: `${userName} criou alerta de delegação para ${respDeleg?.nome || "Responsável"} referente à reunião "${titulo}".`,
+        });
+      }
     }
     onOpenChange(false);
   };
@@ -266,6 +323,7 @@ export function ReuniaoDialog({
             <TabsTrigger value="resumos" className="text-xs h-7">Resumos</TabsTrigger>
             <TabsTrigger value="transcricao" className="text-xs h-7">Transcrição</TabsTrigger>
             <TabsTrigger value="observacoes" className="text-xs h-7">Observações</TabsTrigger>
+            <TabsTrigger value="delegacao" className="text-xs h-7">Delegação interna</TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumos" className="space-y-3 mt-3">
@@ -323,7 +381,43 @@ export function ReuniaoDialog({
           </TabsContent>
 
           <TabsContent value="observacoes" className="mt-3">
-            <Textarea rows={8} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações internas, contexto, riscos..." />
+            <Textarea rows={8} value={observacoes} onChange={(e) => setObsDelegacao(e.target.value)} placeholder="Observações internas, contexto, riscos..." />
+          </TabsContent>
+
+          <TabsContent value="delegacao" className="mt-3 space-y-3">
+            <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded border">
+              <Checkbox 
+                id="gerar-alerta" 
+                checked={gerarDelegacao} 
+                onCheckedChange={(v) => setGerarDelegacao(v as boolean)} 
+              />
+              <Label htmlFor="gerar-alerta" className="font-semibold cursor-pointer">Gerar alerta para delegação de tarefas</Label>
+            </div>
+
+            {gerarDelegacao && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border rounded-md">
+                <div className="md:col-span-2">
+                  <Label className="text-xs">Responsável pela delegação</Label>
+                  <Select value={responsavelDelegacaoId || "__none__"} onValueChange={(v) => setResponsavelDelegacaoId(v === "__none__" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— Nenhum —</SelectItem>
+                      {responsaveis.filter(r => delegationConfig?.usuarios_autorizados_ids?.includes(r.id)).map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Prazo para delegação</Label>
+                  <Input type="date" value={prazoDelegacao} onChange={(e) => setPrazoDelegacao(e.target.value)} />
+                </div>
+                <div className="md:col-span-2">
+                  <Label className="text-xs">Observações para o delegador</Label>
+                  <Textarea rows={3} value={obsDelegacao} onChange={(e) => setObsDelegacao(e.target.value)} placeholder="Instruções específicas para quem vai delegar..." />
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 

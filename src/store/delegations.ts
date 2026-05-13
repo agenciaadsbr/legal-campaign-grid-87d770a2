@@ -74,7 +74,7 @@ export const useDelegations = create<State>((set, get) => ({
   createDelegation: async (data) => {
     const { data: user } = await supabase.auth.getUser();
     const payload = { ...data, criado_por: user.user?.id ?? null };
-    const { data: row, error } = await supabase.from("delegacoes_reuniao").insert(payload).select().single();
+    const { data: row, error } = await supabase.from("delegacoes_reuniao").insert([payload]).select().single();
     if (error) {
       if (error.code === "23505") {
         toast.error("Esta reunião já possui um alerta de delegação.");

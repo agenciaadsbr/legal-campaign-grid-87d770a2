@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useReunioes, useReunioesBootstrap, type Reuniao } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
+import { useDelegations, useDelegationsBootstrap } from "@/store/delegations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Calendar, ExternalLink, Pencil, Trash2, Users } from "lucide-react";
 import { ReuniaoDialog } from "./ReuniaoDialog";
 
 export function ReunioesTab({ clienteId }: { clienteId: string }) {
@@ -11,6 +13,8 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
   const reunioes = useReunioes((s) => s.reunioes).filter((r) => r.cliente_id === clienteId);
   const remove = useReunioes((s) => s.remove);
   const responsaveis = useCRM((s) => s.responsaveis);
+  useDelegationsBootstrap();
+  const delegations = useDelegations((s) => s.delegations);
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Reuniao | null>(null);
 
@@ -43,6 +47,12 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                         <h4 className="text-sm font-semibold">{r.titulo}</h4>
                         {r.tipo && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{r.tipo}</span>
+                        )}
+                        {delegations.find(d => d.reuniao_id === r.id) && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-primary/30 text-primary">
+                            <Users className="h-2.5 w-2.5 mr-1" />
+                            {delegations.find(d => d.reuniao_id === r.id)?.status}
+                          </Badge>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-3 flex-wrap">
