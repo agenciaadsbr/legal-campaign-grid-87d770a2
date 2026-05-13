@@ -657,6 +657,7 @@ function badgeAreaPorCategoria(cat: string): { label: string; cls: string } {
     case "Operacional": return { label: "OPERACIONAL", cls: "border-orange-500/40 text-orange-500" };
     case "Direto": return { label: "CLIENTE", cls: "border-green-500/40 text-green-500" };
     case "Posts": return { label: "POST", cls: "border-primary/40 text-primary" };
+    case "Observação": return { label: "OBSERVAÇÃO", cls: "border-amber-500/40 text-amber-500" };
     default: return { label: "URGÊNCIA", cls: "border-destructive/40 text-destructive" };
   }
 }
