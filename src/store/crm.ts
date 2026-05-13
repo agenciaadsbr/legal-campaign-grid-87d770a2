@@ -216,7 +216,7 @@ interface State {
   ) => Promise<void>;
   createCardRascunho: (payload: { cliente_id: string; mes_referencia?: number }) => Promise<{ cardId: string; postId: string } | null>;
 
-  addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
+  addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<string | null>;
   updateComentario: (
     id: string,
     patch: Partial<Pick<Comentario, "comentario_texto" | "imagem_url">>,
