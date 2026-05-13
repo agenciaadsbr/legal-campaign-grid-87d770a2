@@ -138,7 +138,7 @@ export function ReuniaoDialog({
         const { data: userData } = await supabase.auth.getUser();
         const userName = userData.user?.email?.split('@')[0] || "Sistema";
         
-        await supabase.from("atividade_cliente").insert({
+        await (supabase as any).from("atividade_cliente").insert({
           cliente_id: clienteId,
           tipo: "Observação",
           conteudo: `${userName} criou alerta de delegação para ${respDeleg?.nome || "Responsável"} referente à reunião "${titulo}".`,
