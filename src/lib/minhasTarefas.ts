@@ -323,6 +323,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           area: "Planejamento",
           prioridade: mapPrioridadePlan(p.prioridade),
           prazo: p.prazo,
+          data_inicio: null, // Planejamento não tem data_inicio no schema atual
+          data_limite: p.prazo,
           status,
           urgente: p.prioridade === "urgente",
           responsaveis_ids: p.responsavel_id ? [p.responsavel_id] : [],
