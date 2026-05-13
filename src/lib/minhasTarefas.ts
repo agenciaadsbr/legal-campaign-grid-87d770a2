@@ -349,6 +349,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           area: "Documentação",
           prioridade: "Media",
           prazo: d.data_evento,
+          data_inicio: null,
+          data_limite: d.data_evento,
           status,
           urgente: false,
           responsaveis_ids: [],
