@@ -65,6 +65,7 @@ import {
   Rocket,
   RefreshCw,
   Loader2,
+  StickyNote,
 } from "lucide-react";
 import { OperacionalTab } from "@/components/projeto/OperacionalTab";
 import { ReunioesTab } from "@/components/projeto/ReunioesTab";
@@ -81,6 +82,10 @@ import {
   CartesianGrid,
 } from "recharts";
 import { CATEGORIA_LABEL, DemandaCategoria } from "@/lib/demandas-categorias";
+import { ProjectNotesModal } from "@/components/projeto/ProjectNotesModal";
+import { ProjectNotesButton } from "@/components/projeto/ProjectNotesButton";
+import { ProjectNotesAlert } from "@/components/projeto/ProjectNotesAlert";
+import { useProjectNotes } from "@/store/projectNotes";
 
 // ===== Filtros canônicos por área =====
 const URGENCIA_OUTRO_CATS: DemandaCategoria[] = [
@@ -189,6 +194,7 @@ export default function ProjetoCliente() {
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [novoPlanOpen, setNovoPlanOpen] = useState(false);
   const [editarBriefingTrigger, setEditarBriefingTrigger] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   if (!cliente) {
     return (
@@ -219,6 +225,8 @@ export default function ProjetoCliente() {
         <span className="text-foreground font-medium">Projeto Completo</span>
       </div>
 
+      <ProjectNotesAlert onClick={() => setNotesOpen(true)} />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
@@ -239,23 +247,26 @@ export default function ProjetoCliente() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={handleTabChange}>
-        <div className="overflow-x-auto">
-          <TabsList className="inline-flex w-max">
-            <TabsTrigger value="visao" className="gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
-            <TabsTrigger value="posts" className="gap-1"><FileText className="h-3.5 w-3.5" /> Posts</TabsTrigger>
-            <TabsTrigger value="videos" className="gap-1"><Video className="h-3.5 w-3.5" /> Vídeos</TabsTrigger>
-            <TabsTrigger value="trafego" className="gap-1"><Megaphone className="h-3.5 w-3.5" /> Tráfego Pago</TabsTrigger>
-            <TabsTrigger value="lp" className="gap-1"><Globe className="h-3.5 w-3.5" /> LP / Site</TabsTrigger>
-            <TabsTrigger value="ia" className="gap-1"><Bot className="h-3.5 w-3.5" /> IA / Atendimento</TabsTrigger>
-            <TabsTrigger value="operacional" className="gap-1"><Rocket className="h-3.5 w-3.5" /> Operacional</TabsTrigger>
-            <TabsTrigger value="urgencias" className="gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Urgências</TabsTrigger>
-            <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Acessos, Links e Materiais</TabsTrigger>
-            <TabsTrigger value="reunioes" className="gap-1"><Mic className="h-3.5 w-3.5" /> Reuniões</TabsTrigger>
-            <TabsTrigger value="briefing" className="gap-1"><ClipboardList className="h-3.5 w-3.5" /> Briefing</TabsTrigger>
-            <TabsTrigger value="planejamento" className="gap-1"><CalendarRange className="h-3.5 w-3.5" /> Planejamento</TabsTrigger>
-            <TabsTrigger value="atividades" className="gap-1"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
-            <TabsTrigger value="relatorios" className="gap-1"><BarChart3 className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
-          </TabsList>
+        <div className="flex items-center justify-between gap-4 mb-2">
+          <div className="overflow-x-auto flex-1">
+            <TabsList className="inline-flex w-max">
+              <TabsTrigger value="visao" className="gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
+              <TabsTrigger value="posts" className="gap-1"><FileText className="h-3.5 w-3.5" /> Posts</TabsTrigger>
+              <TabsTrigger value="videos" className="gap-1"><Video className="h-3.5 w-3.5" /> Vídeos</TabsTrigger>
+              <TabsTrigger value="trafego" className="gap-1"><Megaphone className="h-3.5 w-3.5" /> Tráfego Pago</TabsTrigger>
+              <TabsTrigger value="lp" className="gap-1"><Globe className="h-3.5 w-3.5" /> LP / Site</TabsTrigger>
+              <TabsTrigger value="ia" className="gap-1"><Bot className="h-3.5 w-3.5" /> IA / Atendimento</TabsTrigger>
+              <TabsTrigger value="operacional" className="gap-1"><Rocket className="h-3.5 w-3.5" /> Operacional</TabsTrigger>
+              <TabsTrigger value="urgencias" className="gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Urgências</TabsTrigger>
+              <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Acessos, Links e Materiais</TabsTrigger>
+              <TabsTrigger value="reunioes" className="gap-1"><Mic className="h-3.5 w-3.5" /> Reuniões</TabsTrigger>
+              <TabsTrigger value="briefing" className="gap-1"><ClipboardList className="h-3.5 w-3.5" /> Briefing</TabsTrigger>
+              <TabsTrigger value="planejamento" className="gap-1"><CalendarRange className="h-3.5 w-3.5" /> Planejamento</TabsTrigger>
+              <TabsTrigger value="atividades" className="gap-1"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
+              <TabsTrigger value="relatorios" className="gap-1"><BarChart3 className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
+            </TabsList>
+          </div>
+          <ProjectNotesButton clientId={clienteId!} onClick={() => setNotesOpen(true)} className="shrink-0" />
         </div>
 
         {/* ============== VISÃO GERAL ============== */}
@@ -392,6 +403,11 @@ export default function ProjetoCliente() {
         onOpenChange={setNovaTarefaOpen}
         clienteId={clienteId!}
         onCriado={(categoria) => handleTabChange(categoriaParaAba(categoria))}
+      />
+      <ProjectNotesModal 
+        open={notesOpen} 
+        onOpenChange={setNotesOpen} 
+        clientId={clienteId!} 
       />
       <DadosContratuais cliente={cliente} cardsCli={cardsCli} />
     </div>
@@ -596,6 +612,7 @@ function AcaoIcone({ tipo, acao }: { tipo: string; acao: string }) {
   if (acao === "responsavel") return <Plus className={cn(cls, "text-orange-500")} />;
   if (acao === "prazo") return <CalendarRange className={cn(cls, "text-purple-500")} />;
   if (tipo === "post") return <FileText className={cn(cls, "text-primary")} />;
+  if (tipo === "Observação") return <StickyNote className={cn(cls, "text-amber-500")} />;
   return <ClipboardList className={cn(cls, "text-primary")} />;
 }
 
@@ -640,6 +657,7 @@ function badgeAreaPorCategoria(cat: string): { label: string; cls: string } {
     case "Operacional": return { label: "OPERACIONAL", cls: "border-orange-500/40 text-orange-500" };
     case "Direto": return { label: "CLIENTE", cls: "border-green-500/40 text-green-500" };
     case "Posts": return { label: "POST", cls: "border-primary/40 text-primary" };
+    case "Observação": return { label: "OBSERVAÇÃO", cls: "border-amber-500/40 text-amber-500" };
     default: return { label: "URGÊNCIA", cls: "border-destructive/40 text-destructive" };
   }
 }
@@ -679,6 +697,7 @@ function AtividadesTab({
       else if (filtroTipo === "responsavel") filtrados = filtrados.filter(a => a.acao === "responsavel");
       else if (filtroTipo === "prazo") filtrados = filtrados.filter(a => a.acao === "prazo");
       else if (filtroTipo === "Gerencial") filtrados = filtrados.filter(a => (a.tipo as string) === "Gerencial" && a.acao !== "comentario");
+      else if (filtroTipo === "observacao") filtrados = filtrados.filter(a => a.tipo === "Observação");
     }
 
     const agora = new Date();
@@ -739,6 +758,7 @@ function AtividadesTab({
               <SelectItem value="responsavel">Responsáveis</SelectItem>
               <SelectItem value="prazo">Prazos</SelectItem>
               <SelectItem value="Gerencial">Sistema</SelectItem>
+              <SelectItem value="observacao">Observações</SelectItem>
             </SelectContent>
           </Select>
 
