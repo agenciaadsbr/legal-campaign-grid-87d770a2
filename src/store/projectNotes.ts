@@ -56,7 +56,7 @@ export const useProjectNotes = create<ProjectNotesStore>((set, get) => ({
         throw new Error("Usuário não autenticado");
       }
 
-      const insertData = { 
+      const insertData: any = { 
         ...note, 
         author_id: user.id,
         archived: false,
