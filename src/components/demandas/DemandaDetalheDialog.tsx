@@ -62,6 +62,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichTextView } from "@/components/RichTextView";
+import { TarefaIAConsulta } from "./TarefaIAConsulta";
 import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralButton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
