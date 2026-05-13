@@ -651,6 +651,7 @@ function AtividadesTab({
   clienteId: string;
   demandasCli: Demanda[];
 }) {
+  const [searchParams] = useSearchParams();
   const itens = useAtividades((s) => s.porCliente[clienteId]);
   const loading = useAtividades((s) => s.loading[clienteId]);
   const hasMore = useAtividades((s) => s.hasMore[clienteId]);
