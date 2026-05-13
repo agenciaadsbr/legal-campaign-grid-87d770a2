@@ -5,6 +5,8 @@ import {
   CATEGORIA_LABEL,
   CATEGORIA_SUBTIPOS,
   DemandaCategoria,
+  STATUS_DEMANDA,
+  STATUS_DEMANDA_COR,
 } from "@/lib/demandas-categorias";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
