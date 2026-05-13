@@ -27,6 +27,7 @@ import {
 import { AlertCircle, CheckCircle2, ListChecks, Lock, Users, Zap } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TarefasSugeridasTab } from "@/components/tarefas/TarefasSugeridasTab";
+import { MeetingDelegationTab } from "@/components/tarefas/MeetingDelegationTab";
 
 const FILTROS_INICIAIS: FiltrosState = {
   cliente: "all",
@@ -338,10 +339,15 @@ export default function MinhasTarefas() {
         <TabsList className="h-8">
           <TabsTrigger value="tarefas" className="text-xs h-7">Tarefas</TabsTrigger>
           <TabsTrigger value="sugeridas" className="text-xs h-7">Tarefas Sugeridas</TabsTrigger>
+          <TabsTrigger value="delegacoes" className="text-xs h-7">Delegação de Reunião</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sugeridas" className="mt-3">
           <TarefasSugeridasTab />
+        </TabsContent>
+
+        <TabsContent value="delegacoes" className="mt-3">
+          <MeetingDelegationTab />
         </TabsContent>
 
         <TabsContent value="tarefas" className="mt-3 space-y-3">
