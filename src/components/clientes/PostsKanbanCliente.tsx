@@ -86,7 +86,7 @@ function CardItem({
     toast.success("Título atualizado");
   };
 
-  const due = card.data_agendada ? new Date(card.data_agendada) : null;
+  const due = (card.data_limite_tarefa || card.data_agendada) ? new Date(card.data_limite_tarefa || card.data_agendada!) : null;
   let prazoState: "none" | "future" | "today" | "overdue" = "none";
   let prazoLabel = "Definir prazo";
   if (due) {
