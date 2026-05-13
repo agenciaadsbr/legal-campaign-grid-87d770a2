@@ -657,8 +657,15 @@ function AtividadesTab({
   const load = useAtividades((s) => s.loadByCliente);
   const { responsaveis } = useCRM();
 
-  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [filtroTipo, setFiltroTipo] = useState<string>(() => searchParams.get("tipo") ?? "todos");
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>("30");
+
+  useEffect(() => {
+    const tipo = searchParams.get("tipo");
+    if (tipo) {
+      setFiltroTipo(tipo);
+    }
+  }, [searchParams]);
 
   const lista = useMemo(() => {
     let filtrados = itens ?? [];
