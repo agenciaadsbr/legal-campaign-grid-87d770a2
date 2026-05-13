@@ -124,7 +124,7 @@ export function MinhasTarefasTabela({
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[40px] px-2">
                   <Checkbox 
-                    checked={tasks.length > 0 && selectedIds.length === tasks.length}
+                    checked={tasks.length > 0 && tasks.every(t => selectedIds.includes(t.id))}
                     onCheckedChange={toggleAll}
                   />
                 </TableHead>
