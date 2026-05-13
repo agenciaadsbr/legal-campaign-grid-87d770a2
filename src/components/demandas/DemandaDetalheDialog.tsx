@@ -47,6 +47,8 @@ import {
   Paperclip,
   Link2,
   Copy,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { categoriaParaAba } from "@/lib/minhasTarefas";
 import {
