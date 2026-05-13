@@ -826,7 +826,24 @@ export const useCRM = create<State>()((set, get) => ({
 
   // ============= Cards / Posts =============
   moveCard: async (cardId, novoStatus) => {
+    const prev = get().cards.find(c => c.id === cardId);
+    if (!prev) return;
+    
     await supabase.from("cards").update({ status: novoStatus as any }).eq("id", cardId);
+    
+    if (novoStatus !== prev.status_card) {
+      await get().addAtividade({
+        clienteId: prev.cliente_id,
+        acao: "status",
+        descricao: `Status alterado: ${prev.status_card} → ${novoStatus}`,
+        refId: cardId,
+        tipo: "post",
+        area: "Posts",
+        titulo_tarefa: prev.titulo_card,
+        payload: { de: prev.status_card, para: novoStatus }
+      });
+    }
+
     await get()._loadAll();
   },
 
