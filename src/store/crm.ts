@@ -848,6 +848,9 @@ export const useCRM = create<State>()((set, get) => ({
   },
 
   updateCard: async (id, patch) => {
+    const prev = get().cards.find(c => c.id === id);
+    if (!prev) return;
+
     const dbPatch: any = {};
     if (patch.titulo_card !== undefined) dbPatch.titulo = patch.titulo_card;
     if ((patch as any).descricao !== undefined) dbPatch.descricao = (patch as any).descricao;
@@ -860,6 +863,36 @@ export const useCRM = create<State>()((set, get) => ({
     if ((patch as any).formato !== undefined) dbPatch.formato = (patch as any).formato;
     if ((patch as any).qtd_slides !== undefined) dbPatch.qtd_slides = (patch as any).qtd_slides;
     await supabase.from("cards").update(dbPatch).eq("id", id);
+
+    // Atividades
+    if (patch.responsaveis !== undefined && JSON.stringify(patch.responsaveis) !== JSON.stringify(prev.responsaveis)) {
+      await get().addAtividade({
+        clienteId: prev.cliente_id,
+        acao: "responsavel",
+        descricao: `Responsáveis alterados`,
+        refId: id,
+        tipo: "post",
+        area: "Posts",
+        titulo_tarefa: prev.titulo_card,
+        payload: { de: prev.responsaveis, para: patch.responsaveis }
+      });
+    }
+
+    if (patch.data_limite_tarefa !== undefined && patch.data_limite_tarefa !== prev.data_limite_tarefa) {
+      await get().addAtividade({
+        clienteId: prev.cliente_id,
+        acao: "prazo",
+        descricao: patch.data_limite_tarefa 
+          ? `Prazo alterado para ${new Date(patch.data_limite_tarefa).toLocaleDateString("pt-BR")}`
+          : "Prazo removido",
+        refId: id,
+        tipo: "post",
+        area: "Posts",
+        titulo_tarefa: prev.titulo_card,
+        payload: { de: prev.data_limite_tarefa, para: patch.data_limite_tarefa }
+      });
+    }
+
     await get()._loadAll();
   },
 
