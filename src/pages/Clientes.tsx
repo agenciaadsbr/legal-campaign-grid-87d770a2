@@ -1397,7 +1397,7 @@ function FiltrosTopo({
 }
 
 export default function Clientes() {
-  const { clientes, responsaveis, nichos } = useCRM();
+  const { clientes, responsaveis, nichos, loading, heavyDataLoading } = useCRM();
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
@@ -1471,10 +1471,26 @@ export default function Clientes() {
 
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
+      {(loading || (heavyDataLoading && clientes.length === 0)) && (
+        <div className="fixed inset-0 z-[100] bg-background/50 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <Zap className="h-8 w-8 text-primary animate-pulse" />
+            <p className="text-sm font-medium">Carregando CRM...</p>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl font-bold leading-tight">Clientes</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold leading-tight">Clientes</h1>
+              {heavyDataLoading && clientes.length > 0 && (
+                <div className="flex items-center gap-1 text-[10px] text-primary animate-pulse font-medium bg-primary/10 px-1.5 py-0.5 rounded-full">
+                  <Clock className="h-3 w-3" />
+                  Sincronizando dados detalhados...
+                </div>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               {algumFiltroAtivo
                 ? `Filtros ativos · ${clientes.length} clientes no total`

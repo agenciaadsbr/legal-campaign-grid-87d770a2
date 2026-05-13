@@ -241,7 +241,7 @@ export function ClientesGeralTable({
   onAbrirHistorico,
   acoesSlot,
 }: Props) {
-  const { clientes, cards, contratos, nichos, responsaveis } = useCRM();
+  const { clientes, cards, contratos, nichos, responsaveis, heavyDataLoaded } = useCRM();
   useDemandasBootstrap();
   const demandas = useDemandas((s) => s.demandas);
 
@@ -539,6 +539,12 @@ export function ClientesGeralTable({
                         </div>
                       );
 
+                      const renderSkeleton = () => (
+                        <div className="flex justify-center">
+                          <div className="h-4 w-10 bg-muted animate-pulse rounded" />
+                        </div>
+                      );
+
                       return (
                         <TableRow key={cliente.id} className="hover:bg-accent/30">
                           <TableCell className="text-xs text-muted-foreground tabular-nums w-10">
@@ -556,19 +562,23 @@ export function ClientesGeralTable({
                             <StatusClienteBadge status={cliente.status_global} />
                           </TableCell>
                           <TableCell className="text-xs max-w-[240px]">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onAbrirHistorico?.(cliente.id);
-                              }}
-                              className="text-left hover:text-primary line-clamp-2 break-words leading-snug w-full"
-                              title={cliente.ultimo_comentario}
-                            >
-                              {cliente.ultimo_comentario || (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </button>
+                            {!heavyDataLoaded ? (
+                              <div className="h-4 w-full bg-muted animate-pulse rounded max-w-[150px]" />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAbrirHistorico?.(cliente.id);
+                                }}
+                                className="text-left hover:text-primary line-clamp-2 break-words leading-snug w-full"
+                                title={cliente.ultimo_comentario}
+                              >
+                                {cliente.ultimo_comentario || (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </button>
+                            )}
                           </TableCell>
                           <TableCell>
                             {cliente.nicho && nichoOpt ? (
@@ -593,109 +603,115 @@ export function ClientesGeralTable({
 
                           {/* Posts atrasados */}
                           <TableCell className="text-center">
-                            {postsAtrasados === 0 ? (
-                              <EmptyDash />
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button type="button" className="inline-flex">
-                                    <AlertBadge
-                                      count={postsAtrasados}
-                                      icon={AlertTriangle}
-                                      tone="destructive"
-                                    />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="bottom"
-                                  align="center"
-                                  className={tooltipContentClass}
-                                >
-                                  <div className="p-3 space-y-2 text-xs">
-                                    <div className="font-semibold text-sm">
-                                      {postsAtrasados} post{postsAtrasados > 1 ? "s" : ""} atrasado
-                                      {postsAtrasados > 1 ? "s" : ""}
-                                    </div>
-                                    <ul className="space-y-1">
-                                      {postsAtrasadosList.slice(0, 5).map((p) => (
-                                        <li
-                                          key={p.id}
-                                          className="border-b border-border/60 last:border-0 pb-1 last:pb-0"
-                                        >
-                                          <div className="font-medium line-clamp-2 break-words">
-                                            Criar post — {p.titulo_card}
-                                          </div>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                    {postsAtrasados > 5 && (
-                                      <div className="text-muted-foreground pt-1 border-t border-border/60">
-                                        + {postsAtrasados - 5} post
-                                        {postsAtrasados - 5 > 1 ? "s" : ""} atrasado
-                                        {postsAtrasados - 5 > 1 ? "s" : ""}
+                            {!heavyDataLoaded ? renderSkeleton() : (
+                              postsAtrasados === 0 ? (
+                                <EmptyDash />
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button type="button" className="inline-flex">
+                                      <AlertBadge
+                                        count={postsAtrasados}
+                                        icon={AlertTriangle}
+                                        tone="destructive"
+                                      />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="bottom"
+                                    align="center"
+                                    className={tooltipContentClass}
+                                  >
+                                    <div className="p-3 space-y-2 text-xs">
+                                      <div className="font-semibold text-sm">
+                                        {postsAtrasados} post{postsAtrasados > 1 ? "s" : ""} atrasado
+                                        {postsAtrasados > 1 ? "s" : ""}
                                       </div>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
+                                      <ul className="space-y-1">
+                                        {postsAtrasadosList.slice(0, 5).map((p) => (
+                                          <li
+                                            key={p.id}
+                                            className="border-b border-border/60 last:border-0 pb-1 last:pb-0"
+                                          >
+                                            <div className="font-medium line-clamp-2 break-words">
+                                              Criar post — {p.titulo_card}
+                                            </div>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                      {postsAtrasados > 5 && (
+                                        <div className="text-muted-foreground pt-1 border-t border-border/60">
+                                          + {postsAtrasados - 5} post
+                                          {postsAtrasados - 5 > 1 ? "s" : ""} atrasado
+                                          {postsAtrasados - 5 > 1 ? "s" : ""}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )
                             )}
                           </TableCell>
 
                           {/* Tarefas atrasadas */}
                           <TableCell className="text-center">
-                            {demAtrasadas === 0 ? (
-                              <EmptyDash />
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button type="button" className="inline-flex">
-                                    <AlertBadge
-                                      count={demAtrasadas}
-                                      icon={Hourglass}
-                                      tone="amber"
-                                    />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="bottom"
-                                  align="center"
-                                  className={tooltipContentClass}
-                                >
-                                  {renderTaskList(
-                                    demAtrasadasList,
-                                    demAtrasadas,
-                                    "tarefa atrasada",
-                                    "tarefas atrasadas",
-                                  )}
-                                </TooltipContent>
-                              </Tooltip>
+                            {!heavyDataLoaded ? renderSkeleton() : (
+                              demAtrasadas === 0 ? (
+                                <EmptyDash />
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button type="button" className="inline-flex">
+                                      <AlertBadge
+                                        count={demAtrasadas}
+                                        icon={Hourglass}
+                                        tone="amber"
+                                      />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="bottom"
+                                    align="center"
+                                    className={tooltipContentClass}
+                                  >
+                                    {renderTaskList(
+                                      demAtrasadasList,
+                                      demAtrasadas,
+                                      "tarefa atrasada",
+                                      "tarefas atrasadas",
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )
                             )}
                           </TableCell>
 
                           {/* Tarefas urgentes */}
                           <TableCell className="text-center">
-                            {demUrgentes === 0 ? (
-                              <EmptyDash />
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button type="button" className="inline-flex">
-                                    <AlertBadge count={demUrgentes} icon={Zap} tone="primary" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="bottom"
-                                  align="center"
-                                  className={tooltipContentClass}
-                                >
-                                  {renderTaskList(
-                                    demUrgentesList,
-                                    demUrgentes,
-                                    "tarefa urgente",
-                                    "tarefas urgentes",
-                                  )}
-                                </TooltipContent>
-                              </Tooltip>
+                            {!heavyDataLoaded ? renderSkeleton() : (
+                              demUrgentes === 0 ? (
+                                <EmptyDash />
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button type="button" className="inline-flex">
+                                      <AlertBadge count={demUrgentes} icon={Zap} tone="primary" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="bottom"
+                                    align="center"
+                                    className={tooltipContentClass}
+                                  >
+                                    {renderTaskList(
+                                      demUrgentesList,
+                                      demUrgentes,
+                                      "tarefa urgente",
+                                      "tarefas urgentes",
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )
                             )}
                           </TableCell>
 
