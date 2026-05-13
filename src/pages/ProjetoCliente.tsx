@@ -476,6 +476,8 @@ function DadosContratuais({ cliente, cardsCli }: { cliente: any; cardsCli: any[]
         </div>
       </CardContent>
     </Card>
+  );
+}
 
 // =====================================================
 // VISÃO GERAL — 9 cards compactos com "Ver detalhes"
