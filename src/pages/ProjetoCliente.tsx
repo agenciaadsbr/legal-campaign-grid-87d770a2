@@ -65,6 +65,7 @@ import {
   Rocket,
   RefreshCw,
   Loader2,
+  StickyNote,
 } from "lucide-react";
 import { OperacionalTab } from "@/components/projeto/OperacionalTab";
 import { ReunioesTab } from "@/components/projeto/ReunioesTab";
