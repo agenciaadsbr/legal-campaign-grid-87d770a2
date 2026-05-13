@@ -1393,11 +1393,11 @@ export const useCRM = create<State>()((set, get) => ({
         mensagem,
       });
 
-      await get().addAtividade(
-        cliente_id,
-        "Alerta de Renovação",
-        `Alerta de renovação criado para acompanhamento do novo ciclo.`
-      );
+      await get().addAtividade({
+        clienteId: cliente_id,
+        acao: "Alerta de Renovação",
+        descricao: `Alerta de renovação criado para acompanhamento do novo ciclo.`
+      });
     }
 
     toast.success(`Ciclo ${tipo} criado com sucesso!`);
