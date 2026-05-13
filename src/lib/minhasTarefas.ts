@@ -291,6 +291,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         area: "Posts",
         prioridade: algumUrgente ? "Urgente" : "Media",
         prazo,
+        data_inicio,
+        data_limite,
         status,
         urgente: algumUrgente,
         responsaveis_ids: [grupo.responsavel_id],
