@@ -246,23 +246,26 @@ export default function ProjetoCliente() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={handleTabChange}>
-        <div className="overflow-x-auto">
-          <TabsList className="inline-flex w-max">
-            <TabsTrigger value="visao" className="gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
-            <TabsTrigger value="posts" className="gap-1"><FileText className="h-3.5 w-3.5" /> Posts</TabsTrigger>
-            <TabsTrigger value="videos" className="gap-1"><Video className="h-3.5 w-3.5" /> Vídeos</TabsTrigger>
-            <TabsTrigger value="trafego" className="gap-1"><Megaphone className="h-3.5 w-3.5" /> Tráfego Pago</TabsTrigger>
-            <TabsTrigger value="lp" className="gap-1"><Globe className="h-3.5 w-3.5" /> LP / Site</TabsTrigger>
-            <TabsTrigger value="ia" className="gap-1"><Bot className="h-3.5 w-3.5" /> IA / Atendimento</TabsTrigger>
-            <TabsTrigger value="operacional" className="gap-1"><Rocket className="h-3.5 w-3.5" /> Operacional</TabsTrigger>
-            <TabsTrigger value="urgencias" className="gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Urgências</TabsTrigger>
-            <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Acessos, Links e Materiais</TabsTrigger>
-            <TabsTrigger value="reunioes" className="gap-1"><Mic className="h-3.5 w-3.5" /> Reuniões</TabsTrigger>
-            <TabsTrigger value="briefing" className="gap-1"><ClipboardList className="h-3.5 w-3.5" /> Briefing</TabsTrigger>
-            <TabsTrigger value="planejamento" className="gap-1"><CalendarRange className="h-3.5 w-3.5" /> Planejamento</TabsTrigger>
-            <TabsTrigger value="atividades" className="gap-1"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
-            <TabsTrigger value="relatorios" className="gap-1"><BarChart3 className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
-          </TabsList>
+        <div className="flex items-center justify-between gap-4 mb-2">
+          <div className="overflow-x-auto flex-1">
+            <TabsList className="inline-flex w-max">
+              <TabsTrigger value="visao" className="gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
+              <TabsTrigger value="posts" className="gap-1"><FileText className="h-3.5 w-3.5" /> Posts</TabsTrigger>
+              <TabsTrigger value="videos" className="gap-1"><Video className="h-3.5 w-3.5" /> Vídeos</TabsTrigger>
+              <TabsTrigger value="trafego" className="gap-1"><Megaphone className="h-3.5 w-3.5" /> Tráfego Pago</TabsTrigger>
+              <TabsTrigger value="lp" className="gap-1"><Globe className="h-3.5 w-3.5" /> LP / Site</TabsTrigger>
+              <TabsTrigger value="ia" className="gap-1"><Bot className="h-3.5 w-3.5" /> IA / Atendimento</TabsTrigger>
+              <TabsTrigger value="operacional" className="gap-1"><Rocket className="h-3.5 w-3.5" /> Operacional</TabsTrigger>
+              <TabsTrigger value="urgencias" className="gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Urgências</TabsTrigger>
+              <TabsTrigger value="documentacao" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Acessos, Links e Materiais</TabsTrigger>
+              <TabsTrigger value="reunioes" className="gap-1"><Mic className="h-3.5 w-3.5" /> Reuniões</TabsTrigger>
+              <TabsTrigger value="briefing" className="gap-1"><ClipboardList className="h-3.5 w-3.5" /> Briefing</TabsTrigger>
+              <TabsTrigger value="planejamento" className="gap-1"><CalendarRange className="h-3.5 w-3.5" /> Planejamento</TabsTrigger>
+              <TabsTrigger value="atividades" className="gap-1"><Activity className="h-3.5 w-3.5" /> Atividades</TabsTrigger>
+              <TabsTrigger value="relatorios" className="gap-1"><BarChart3 className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
+            </TabsList>
+          </div>
+          <ProjectNotesButton clientId={clienteId!} onClick={() => setNotesOpen(true)} className="shrink-0" />
         </div>
 
         {/* ============== VISÃO GERAL ============== */}
