@@ -54,7 +54,13 @@ function formatPrazo(p: string | null): string {
   return d.toLocaleDateString("pt-BR");
 }
 
-export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = false }: Props) {
+export function MinhasTarefasTabela({ 
+  tasks, 
+  onConcluir, 
+  mostrarResponsavel = false,
+  selectedIds = [],
+  onSelectionChange
+}: Props) {
   const navigate = useNavigate();
   const responsaveis = useCRM((s) => s.responsaveis);
   const respMap = useMemo(
@@ -62,17 +68,31 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
     [responsaveis],
   );
 
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    if (selectedIds.length === tasks.length) {
+      onSelectionChange([]);
+    } else {
+      onSelectionChange(tasks.map(t => t.id));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    if (!onSelectionChange) return;
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter(x => x !== id));
+    } else {
+      onSelectionChange([...selectedIds, id]);
+    }
+  };
+
   const grupos = useMemo(() => {
-    const buckets: Record<GroupKey, UnifiedTask[]> = {
-      urgente: [], atrasado: [], em_andamento: [], pendente: [], concluido: [],
-    };
-    for (const t of tasks) buckets[groupOf(t)].push(t);
-    return GROUP_ORDER
+...
       .map((k) => ({ key: k, items: buckets[k] }))
       .filter((g) => g.items.length > 0);
   }, [tasks]);
 
-  const colSpan = mostrarResponsavel ? 8 : 7;
+  const colSpan = mostrarResponsavel ? 9 : 8;
 
   if (tasks.length === 0) {
     return (
