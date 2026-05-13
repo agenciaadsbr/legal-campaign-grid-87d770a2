@@ -390,9 +390,92 @@ export default function ProjetoCliente() {
         clienteId={clienteId!}
         onCriado={(categoria) => handleTabChange(categoriaParaAba(categoria))}
       />
+      <DadosContratuais cliente={cliente} cardsCli={cardsCli} />
     </div>
   );
 }
+
+function StatItem({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[10px] text-muted-foreground uppercase font-semibold">{label}</span>
+      <span className="text-sm font-medium">{value}</span>
+      {sub && <span className="text-[10px] text-muted-foreground">{sub}</span>}
+    </div>
+  );
+}
+
+function DadosContratuais({ cliente, cardsCli }: { cliente: any; cardsCli: any[] }) {
+  const { updateCliente } = useCRM();
+  const [editing, setEditing] = useState(false);
+  
+  const postsCriados = cardsCli.length;
+  const postsPublicados = cardsCli.filter(c => c.status_card === "Postado").length;
+  const postsPendentes = postsCriados - postsPublicados;
+
+  const [formData, setFormData] = useState({
+    plano: cliente.plano || "",
+    data_inicio_contrato: cliente.data_inicio_contrato || "",
+    data_fim_contrato: cliente.data_fim_contrato || "",
+    observacoes_renovacao: (cliente as any).observacoes_renovacao || "",
+    status_renovacao: (cliente as any).status_renovacao || "Pendente"
+  });
+
+  const handleSave = async () => {
+    await updateCliente(cliente.id, {
+      ...formData,
+      // Mapeamento se necessário
+    } as any);
+    setEditing(false);
+    toast.success("Dados contratuais atualizados");
+  };
+
+  return (
+    <Card className="bg-muted/30 border-none shadow-none">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+            <FileText className="h-3.5 w-3.5" /> Dados do Contrato
+          </h3>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => editing ? handleSave() : setEditing(true)}>
+            {editing ? "Salvar" : "Editar"}
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <div className="space-y-4">
+            {editing ? (
+              <div className="space-y-1">
+                <Label className="text-[10px]">Plano</Label>
+                <Input value={formData.plano} onChange={e => setFormData(prev => ({ ...prev, plano: e.target.value }))} className="h-7 text-xs" />
+              </div>
+            ) : (
+              <StatItem label="Plano" value={cliente.plano || "Não definido"} />
+            )}
+            <StatItem label="Início" value={cliente.data_inicio_contrato ? format(new Date(cliente.data_inicio_contrato), "dd/MM/yyyy") : "---"} />
+          </div>
+
+          <div className="space-y-4">
+            <StatItem label="Término" value={cliente.data_fim_contrato ? format(new Date(cliente.data_fim_contrato), "dd/MM/yyyy") : "---"} />
+            <StatItem label="Renovação" value={(cliente as any).status_renovacao || "Pendente"} />
+          </div>
+
+          <div className="space-y-4">
+            <StatItem label="Posts Criados" value={postsCriados} />
+            <StatItem label="Publicados" value={postsPublicados} />
+          </div>
+
+          <div className="space-y-4">
+            <StatItem label="Pendentes" value={postsPendentes} />
+            <StatItem label="Contratados" value={cliente.plano === 'Mensal' ? 4 : cliente.plano === 'Trimestral' ? 12 : cliente.plano === 'Semestral' ? 24 : "---"} />
+          </div>
+
+          <div className="md:col-span-1">
+            <StatItem label="Observações" value={(cliente as any).observacoes_renovacao || "Nenhuma"} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
 
 // =====================================================
 // VISÃO GERAL — 9 cards compactos com "Ver detalhes"
