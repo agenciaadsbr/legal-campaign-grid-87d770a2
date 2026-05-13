@@ -45,13 +45,24 @@ export default function MinhasTarefas() {
   const { user, isAdmin } = useAuth();
   const { responsavel, responsavelId, loading: loadingResp } = useResponsavelAtual();
 
-  const clientes = useCRM((s) => s.clientes);
-  const cards = useCRM((s) => s.cards);
-  const contratos = useCRM((s) => s.contratos);
-  const responsaveis = useCRM((s) => s.responsaveis);
-  const demandas = useDemandas((s) => s.demandas);
-  const dependencies = useDemandas((s) => s.dependencies);
-  const planejamento = usePlanejamento((s) => s.itens);
+  const { 
+    clientes, 
+    cards, 
+    contratos, 
+    responsaveis, 
+    updateCard, 
+    moveCard, 
+    statusPostOptions 
+  } = useCRM();
+  
+  const { 
+    demandas, 
+    dependencies, 
+    updateDemanda, 
+    moveStatus: moveDemandaStatus 
+  } = useDemandasStore();
+  
+  const { itens: planejamento, update: updatePlan } = usePlanejamento();
   const documentacao = useDocumentacao((s) => s.itens);
 
   const [filtros, setFiltros] = useState<FiltrosState>(FILTROS_INICIAIS);
