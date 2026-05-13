@@ -243,7 +243,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       const todosConcluidos = pendentes.length === 0;
 
       const prazosPendentes = pendentes
-        .map((c) => c.data_agendada)
+        .map((c) => c.data_limite_tarefa)
         .filter((p): p is string => !!p)
         .sort();
       let prazo: string | null = prazosPendentes[0] ?? null;

@@ -34,8 +34,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
+import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
 
 function CardItem({
   card,
@@ -84,9 +86,15 @@ function CardItem({
     toast.success("Título atualizado");
   };
 
-  const due = card.data_agendada ? new Date(card.data_agendada) : null;
+  const productionDue = card.data_limite_tarefa ? new Date(card.data_limite_tarefa) : null;
+  const editorialDue = card.data_agendada ? new Date(card.data_agendada) : null;
+  
   let prazoState: "none" | "future" | "today" | "overdue" = "none";
   let prazoLabel = "Definir prazo";
+  
+  // O prazo operacional/produção tem prioridade para o status de "atrasado"
+  const due = productionDue || editorialDue;
+  
   if (due) {
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
     const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
@@ -95,6 +103,7 @@ function CardItem({
     else prazoState = "future";
     prazoLabel = format(due, "dd MMM yyyy", { locale: ptBR });
   }
+  
   const prazoColor =
     prazoState === "overdue"
       ? "text-destructive"
@@ -220,9 +229,34 @@ function CardItem({
       </div>
 
       <div className="flex items-center justify-between mt-1.5 gap-2">
-        <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
-          <PrazoIcon className="h-3 w-3" />
-          <span className={cn(prazoState === "overdue" && "font-semibold")}>{prazoLabel}</span>
+        <div className="flex flex-col gap-0.5">
+          {card.data_inicio_tarefa && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Calendar className="h-2.5 w-2.5" />
+              <span>Início: {format(parseISO(card.data_inicio_tarefa), "dd/MM", { locale: ptBR })}</span>
+            </div>
+          )}
+          {card.data_limite_tarefa && (
+            <div className={cn("flex items-center gap-1 text-[11px]", productionDue && productionDue < new Date() && card.status_card !== 'Postado' ? "text-destructive font-bold" : "text-muted-foreground")}>
+              <CalendarX className="h-3 w-3" />
+              <span>Limite: {format(parseISO(card.data_limite_tarefa), "dd MMM", { locale: ptBR })}</span>
+            </div>
+          )}
+          {card.data_agendada && !card.data_limite_tarefa && (
+            <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
+              <PrazoIcon className="h-3 w-3" />
+              <span>Prazo: {prazoLabel}</span>
+            </div>
+          )}
+          {card.data_agendada && card.data_limite_tarefa && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground italic">
+              <Calendar className="h-2.5 w-2.5" />
+              <span>Editorial: {format(parseISO(card.data_agendada), "dd/MM", { locale: ptBR })}</span>
+            </div>
+          )}
+          {!card.data_limite_tarefa && !card.data_agendada && (
+            <div className="text-[11px] text-muted-foreground">Definir prazo</div>
+          )}
         </div>
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
@@ -565,6 +599,11 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
               count={selectedIds.size}
               onApply={async (novosIds, modo) => {
                 const ids = Array.from(selectedIds);
+                const nomesResps = responsaveis
+                  .filter((r) => novosIds.includes(r.id))
+                  .map((r) => r.nome)
+                  .join(", ");
+                
                 await Promise.all(
                   ids.map((id) => {
                     const atual = cards.find((c) => c.id === id);
@@ -576,9 +615,80 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                     return updateCard(id, { responsaveis: finalIds });
                   }),
                 );
+
+                if (clienteId) {
+                  const s = ids.length === 1 ? "" : "s";
+                  await useCRM.getState().addAtividade(
+                    clienteId,
+                    "Atribuição em Massa",
+                    `${ids.length} post${s} atribuído${s} para: ${nomesResps}`
+                  );
+                }
+
                 toast.success(
                   `${ids.length} ${ids.length === 1 ? "card atualizado" : "cards atualizados"}`,
                 );
+                setSelectedIds(new Set());
+                setSelectionMode(false);
+              }}
+            />
+
+            <DefinirDatasPopover
+              count={selectedIds.size}
+              onApply={async (datas) => {
+                const ids = Array.from(selectedIds);
+                await Promise.all(
+                  ids.map((id) => updateCard(id, {
+                    data_inicio_tarefa: datas.data_inicio,
+                    data_limite_tarefa: datas.data_limite,
+                  }))
+                );
+
+                if (clienteId) {
+                  const s = ids.length === 1 ? "" : "s";
+                  if (datas.data_inicio) {
+                    const dataFmt = format(parseISO(datas.data_inicio), "dd/MM/yyyy");
+                    await useCRM.getState().addAtividade(
+                      clienteId,
+                      "Data em Massa",
+                      `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data de início definida para ${dataFmt}.`
+                    );
+                  }
+                  if (datas.data_limite) {
+                    const dataFmt = format(parseISO(datas.data_limite), "dd/MM/yyyy");
+                    await useCRM.getState().addAtividade(
+                      clienteId,
+                      "Data em Massa",
+                      `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data limite definida para ${dataFmt}.`
+                    );
+                  }
+                }
+
+                toast.success(`${ids.length} datas atualizadas`);
+                setSelectedIds(new Set());
+                setSelectionMode(false);
+              }}
+            />
+
+            <AlterarStatusPopover
+              count={selectedIds.size}
+              options={statusPostOptions}
+              onApply={async (novoStatus) => {
+                const ids = Array.from(selectedIds);
+                await Promise.all(
+                  ids.map((id) => moveCard(id, novoStatus as StatusCard))
+                );
+
+                if (clienteId) {
+                  const s = ids.length === 1 ? "" : "s";
+                  await useCRM.getState().addAtividade(
+                    clienteId,
+                    "Status em Massa",
+                    `${ids.length} post${s} ${ids.length === 1 ? "foi movido" : "foram movidos"} para ${novoStatus}.`
+                  );
+                }
+
+                toast.success(`${ids.length} status atualizados`);
                 setSelectedIds(new Set());
                 setSelectionMode(false);
               }}

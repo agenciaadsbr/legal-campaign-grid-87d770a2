@@ -273,113 +273,139 @@ export default function PostDetalhe() {
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Dados do post */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Data agendamento</Label>
-              <Input
-                type="date"
-                value={post.data_agendamento ?? ""}
-                onChange={(e) => updatePost(post.id, { data_agendamento: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Data postagem</Label>
-              <Input
-                type="date"
-                value={post.data_postagem ?? ""}
-                onChange={(e) => updatePost(post.id, { data_postagem: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Link do Meta Business Suit</Label>
-              <div className="flex gap-1.5">
+          {/* Controle da Tarefa */}
+          <div className="space-y-4">
+            <div className="text-sm font-semibold border-b pb-1">Controle da tarefa</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Data de início da tarefa</Label>
                 <Input
-                  placeholder="https://..."
-                  value={post.link_post ?? ""}
-                  onChange={(e) => updatePost(post.id, { link_post: e.target.value })}
+                  type="date"
+                  value={card.data_inicio_tarefa ?? ""}
+                  onChange={(e) => updateCard(card.id, { data_inicio_tarefa: e.target.value })}
                 />
-                {post.link_post && (
-                  <Button size="icon" variant="outline" asChild className="shrink-0">
-                    <a href={post.link_post} target="_blank" rel="noreferrer" title="Abrir Meta">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
+              </div>
+              <div>
+                <Label className="text-xs">Data limite da tarefa</Label>
+                <Input
+                  type="date"
+                  value={card.data_limite_tarefa ?? ""}
+                  onChange={(e) => updateCard(card.id, { data_limite_tarefa: e.target.value })}
+                />
               </div>
             </div>
-            <div>
-              <Label className="text-xs">Link do Meister</Label>
-              <div className="flex gap-1.5">
+          </div>
+
+          {/* Dados de Publicação */}
+          <div className="space-y-4">
+            <div className="text-sm font-semibold border-b pb-1">Publicação</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Data agendamento</Label>
                 <Input
-                  placeholder="https://meister..."
-                  value={post.link_meister ?? ""}
-                  onChange={(e) => updatePost(post.id, { link_meister: e.target.value })}
+                  type="date"
+                  value={post.data_agendamento ?? ""}
+                  onChange={(e) => updatePost(post.id, { data_agendamento: e.target.value })}
                 />
-                {post.link_meister && (
-                  <Button size="icon" variant="outline" asChild className="shrink-0">
-                    <a href={post.link_meister} target="_blank" rel="noreferrer" title="Abrir Meister">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
               </div>
-            </div>
-            <div className="md:col-span-2">
-              <Label className="text-xs">Responsáveis</Label>
-              <div className="mt-1">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1.5 -mx-2 transition-colors min-h-[40px]"
-                      title="Clique para adicionar/remover responsáveis"
-                    >
-                      {card.responsaveis.length > 0 ? (
-                        <AvatarStack responsaveis={responsaveis.filter((r) => card.responsaveis.includes(r.id))} />
-                      ) : (
-                        <span className="text-sm text-muted-foreground">+ atribuir responsáveis</span>
-                      )}
-                      <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-2" align="start">
-                    <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis</div>
-                    <div className="max-h-60 overflow-auto space-y-0.5">
-                      {responsaveis.map((r) => {
-                        const checked = card.responsaveis.includes(r.id);
-                        return (
-                          <button
-                            type="button"
-                            key={r.id}
-                            onClick={() => {
-                              const next = checked
-                                ? card.responsaveis.filter((v) => v !== r.id)
-                                : [...card.responsaveis, r.id];
-                              updateCard(card.id, { responsaveis: next });
-                            }}
-                            className={cn(
-                              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
-                              checked && "bg-accent"
-                            )}
-                          >
-                            <Checkbox checked={checked} />
-                            <div
-                              className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
-                              style={{ backgroundColor: r.cor }}
+              <div>
+                <Label className="text-xs">Data postagem</Label>
+                <Input
+                  type="date"
+                  value={post.data_postagem ?? ""}
+                  onChange={(e) => updatePost(post.id, { data_postagem: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Link do Meta Business Suit</Label>
+                <div className="flex gap-1.5">
+                  <Input
+                    placeholder="https://..."
+                    value={post.link_post ?? ""}
+                    onChange={(e) => updatePost(post.id, { link_post: e.target.value })}
+                  />
+                  {post.link_post && (
+                    <Button size="icon" variant="outline" asChild className="shrink-0">
+                      <a href={post.link_post} target="_blank" rel="noreferrer" title="Abrir Meta">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Link do Meister</Label>
+                <div className="flex gap-1.5">
+                  <Input
+                    placeholder="https://meister..."
+                    value={post.link_meister ?? ""}
+                    onChange={(e) => updatePost(post.id, { link_meister: e.target.value })}
+                  />
+                  {post.link_meister && (
+                    <Button size="icon" variant="outline" asChild className="shrink-0">
+                      <a href={post.link_meister} target="_blank" rel="noreferrer" title="Abrir Meister">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-xs">Responsáveis</Label>
+                <div className="mt-1">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1.5 -mx-2 transition-colors min-h-[40px]"
+                        title="Clique para adicionar/remover responsáveis"
+                      >
+                        {card.responsaveis.length > 0 ? (
+                          <AvatarStack responsaveis={responsaveis.filter((r) => card.responsaveis.includes(r.id))} />
+                        ) : (
+                          <span className="text-sm text-muted-foreground">+ atribuir responsáveis</span>
+                        )}
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2" align="start">
+                      <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis</div>
+                      <div className="max-h-60 overflow-auto space-y-0.5">
+                        {responsaveis.map((r) => {
+                          const checked = card.responsaveis.includes(r.id);
+                          return (
+                            <button
+                              type="button"
+                              key={r.id}
+                              onClick={() => {
+                                const next = checked
+                                  ? card.responsaveis.filter((v) => v !== r.id)
+                                  : [...card.responsaveis, r.id];
+                                updateCard(card.id, { responsaveis: next });
+                              }}
+                              className={cn(
+                                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                                checked && "bg-accent"
+                              )}
                             >
-                              {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-                            </div>
-                            <span className="truncate">{r.nome}</span>
-                          </button>
-                        );
-                      })}
-                      {responsaveis.length === 0 && (
-                        <div className="text-xs text-muted-foreground px-2 py-3 text-center">Nenhum responsável cadastrado</div>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                              <Checkbox checked={checked} />
+                              <div
+                                className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
+                                style={{ backgroundColor: r.cor }}
+                              >
+                                {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                              </div>
+                              <span className="truncate">{r.nome}</span>
+                            </button>
+                          );
+                        })}
+                        {responsaveis.length === 0 && (
+                          <div className="text-xs text-muted-foreground px-2 py-3 text-center">Nenhum responsável cadastrado</div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
           </div>

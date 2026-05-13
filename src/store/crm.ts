@@ -91,9 +91,11 @@ export interface Card {
   numero_semana: number;
   status_card: StatusCard;
   responsaveis: string[];
-  data_agendada?: string | null;
-  is_urgent?: boolean;
-  formato?: string | null;
+    data_agendada?: string | null;
+    data_inicio_tarefa?: string | null;
+    data_limite_tarefa?: string | null;
+    is_urgent?: boolean;
+    formato?: string | null;
   qtd_slides?: number | null;
   created_at: string;
 }
@@ -245,6 +247,7 @@ interface State {
   deleteStatusPostOption: (label: string) => Promise<number>;
   reorderStatusPostOptions: (labels: string[]) => Promise<void>;
 
+  addAtividade: (clienteId: string, acao: string, descricao: string, refId?: string, payload?: any) => Promise<void>;
   // internas
   _loadAll: () => Promise<void>;
 }
@@ -376,6 +379,8 @@ function mapCard(row: any): Card {
     status_card: row.status,
     responsaveis: row.responsaveis_ids ?? [],
     data_agendada: row.data_agendada ?? null,
+    data_inicio_tarefa: row.data_inicio_tarefa ?? null,
+    data_limite_tarefa: row.data_limite_tarefa ?? null,
     is_urgent: row.is_urgent ?? false,
     formato: row.formato ?? null,
     qtd_slides: row.qtd_slides ?? null,
@@ -821,6 +826,8 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.status_card !== undefined) dbPatch.status = patch.status_card;
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
     if ((patch as any).data_agendada !== undefined) dbPatch.data_agendada = (patch as any).data_agendada;
+    if (patch.data_inicio_tarefa !== undefined) dbPatch.data_inicio_tarefa = patch.data_inicio_tarefa || null;
+    if (patch.data_limite_tarefa !== undefined) dbPatch.data_limite_tarefa = patch.data_limite_tarefa || null;
     if ((patch as any).is_urgent !== undefined) dbPatch.is_urgent = (patch as any).is_urgent;
     if ((patch as any).formato !== undefined) dbPatch.formato = (patch as any).formato;
     if ((patch as any).qtd_slides !== undefined) dbPatch.qtd_slides = (patch as any).qtd_slides;
@@ -1248,6 +1255,18 @@ export const useCRM = create<State>()((set, get) => ({
     await supabase.from("status_post_options").delete().eq("label", label);
     await get()._loadAll();
     return afetados;
+  },
+  addAtividade: async (clienteId, acao, descricao, refId, payload) => {
+    const { data: userData } = await supabase.auth.getUser();
+    await supabase.from("atividade_cliente").insert({
+      cliente_id: clienteId,
+      tipo: "Gerencial",
+      acao,
+      descricao,
+      referencia_id: refId ?? null,
+      usuario_id: userData.user?.id ?? null,
+      payload: payload ?? {},
+    });
   },
 }));
 
