@@ -50,15 +50,34 @@ export const useProjectNotes = create<ProjectNotesStore>((set, get) => ({
   },
   addNote: async (note: Partial<ProjectNote>) => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const insertData = { ...note, author_id: userData.user?.id } as any;
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
+      const insertData = { 
+        ...note, 
+        author_id: user.id,
+        archived: false,
+        pinned: note.pinned || false
+      };
+
       const { data, error } = await supabase
         .from("project_notes")
         .insert([insertData])
         .select()
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro Supabase ao adicionar observação:", error);
+        throw error;
+      }
+      
+      if (!data) {
+        throw new Error("Nenhum dado retornado após a inserção.");
+      }
+
       
       const updatedNotes = [data, ...get().notes].sort((a, b) => {
           if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
