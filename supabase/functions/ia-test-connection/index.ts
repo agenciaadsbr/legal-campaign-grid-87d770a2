@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "npm:@supabase/supabase-js";
 import { generateText } from "npm:ai";
 import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId, CURATED_MODELS } from "../_shared/ai-gateway.ts";
 
