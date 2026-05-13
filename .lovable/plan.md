@@ -1,22 +1,33 @@
-- Consolidation of all types of activities (direct comments, post card comments, task comments, status changes, assignee changes, deadlines, creation, etc.) into the "Atividades" tab of the project.
-- Detailed display for each item, including type, origin, author, date/time, related task title, category, and specific changes (previous vs. new value).
-- Implementation of compact filters in the "Atividades" tab (All, Comments, Posts, Tasks, Status, Assignees, Deadlines, System) and by period (Today, Last 7/30 days, Custom).
-- Addition of a "Ver histórico geral em Atividades" link in the "Histórico de Comentários" popup for quick navigation.
-- Optimization of the `atividade_cliente` table usage to avoid duplicates and ensure traceability.
+# Plano de Otimização e Correção do Módulo de Clientes
 
-Technical Details:
-- **`src/store/crm.ts`**: Update the `addAtividade` function to handle more specific metadata and ensure all relevant actions (status change, assign, comment) trigger an activity log.
-- **`src/store/demandas.ts`**: Add activity logging to `updateDemanda`, `moveStatus`, `assign`, and `addComentario`.
-- **`src/pages/ProjetoCliente.tsx`**: 
-    - Expand `AtividadesTab` with filtering logic and a detailed list of activities.
-    - Implement a grouping mechanism by date.
-    - Add a specialized rendering for each activity type (e.g., status change vs. comment).
-- **`src/components/HistoricoComentariosDialog.tsx`**: Add the button to navigate to the "Atividades" tab with the "Comentários" filter applied.
-- **`src/store/atividades.ts`**: Ensure the store correctly handles the new activity structure and supports reloading/filtering.
+O problema de \\"tela branca\\" e lentidão ocorre porque o sistema tenta carregar todos os dados de uma vez (Clientes, Contratos, Cards, Posts, Comentários, Alertas, etc.) antes de exibir qualquer informação. Com 93 clientes e potencialmente milhares de cards e comentários, o processamento inicial e o mapeamento de dados tornam-se um gargalo.
 
-User Verification Steps:
-1. Open a client's project and go to the "Atividades" tab to see consolidated logs.
-2. Add a comment to a Post or Task and verify it appears in "Atividades".
-3. Change the status or assignee of a task and check the logged change.
-4. Filter activities by "Comments" or "Status" to verify the filters work.
-5. Use the link in the "Histórico de Comentários" popup to jump to the full history.
+## Objetivos
+- Eliminar a tela branca carregando os dados de forma assíncrona/lazy.
+- Melhorar a performance de carregamento utilizando cache e carregamento sob demanda.
+- Manter o funcionamento em tempo real (Realtime) sem quebrar funcionalidades.
+
+## Ações Técnicas
+
+### 1. Refatoração do Store (Zustand)
+- Alterar `_loadAll` para carregar dados essenciais primeiro (Clientes, Responsáveis, Opções) e carregar dados pesados (Cards, Posts, Comentários) em segundo plano ou sob demanda.
+- Implementar carregamento parcial: a tabela de clientes exibirá as informações básicas enquanto os contadores (Posts atrasados, etc.) são calculados assim que os dados chegarem.
+
+### 2. Otimização da Página de Clientes
+- Adicionar um estado de `loading` visual na tabela para evitar a tela branca total.
+- Utilizar `useMemo` de forma mais agressiva para evitar re-renderizações desnecessárias.
+
+### 3. Melhoria nas Consultas Supabase
+- Ativar o carregamento por partes para tabelas que crescem indefinidamente (comentários e posts).
+- Adicionar tratamento de erro individual por tabela para que falhas em dados secundários não bloqueiem a visualização principal.
+
+### 4. Interface (UX)
+- Exibir placeholders (skeletons) ou um indicador de progresso enquanto os dados pesados são baixados.
+- Garantir que a transição entre estados de carregamento seja fluida.
+
+---
+
+**Detalhes Técnicos:**
+- Modificação no arquivo `src/store/crm.ts` para separar as chamadas do `Promise.all`.
+- Atualização em `src/pages/Clientes.tsx` para lidar com o estado `loading` global do store.
+- Otimização da lógica de mapeamento em `mapCliente` para lidar com dados ainda não carregados.

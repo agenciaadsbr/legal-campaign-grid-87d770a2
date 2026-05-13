@@ -189,6 +189,8 @@ interface State {
   authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }>;
   loading: boolean;
   loaded: boolean;
+  heavyDataLoading: boolean;
+  heavyDataLoaded: boolean;
 
   // ações cliente
   addCliente: (
@@ -471,34 +473,15 @@ export const useCRM = create<State>()((set, get) => ({
   authoresPorAuthId: {},
   loading: false,
   loaded: false,
+  heavyDataLoading: false,
+  heavyDataLoaded: false,
 
   _loadAll: async () => {
     if (get().loading) return;
     set({ loading: true });
 
     try {
-      // Busca todas as linhas de uma tabela em lotes (para furar o limite default
-      // de 1000 linhas do PostgREST/Supabase).
-      const fetchAll = async (
-        table: "cards" | "posts" | "comentarios",
-        orderBy?: { column: string; ascending?: boolean },
-      ): Promise<{ data: any[]; error: any }> => {
-        const PAGE = 1000;
-        const all: any[] = [];
-        let from = 0;
-        while (true) {
-          let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
-          if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
-          const { data, error } = await q;
-          if (error) return { data: all, error };
-          const rows = data ?? [];
-          all.push(...rows);
-          if (rows.length < PAGE) break;
-          from += PAGE;
-        }
-        return { data: all, error: null };
-      };
-
+      // 1. Carrega dados ESSENCIAIS primeiro para liberar a tela branca
       const [
         responsaveisRes,
         clientesRes,
@@ -507,13 +490,9 @@ export const useCRM = create<State>()((set, get) => ({
         modelosRes,
         statusRes,
         nichosRes,
-        cardsRes,
-        postsRes,
-        comentariosRes,
-        alertasRes,
-        customFieldsRes,
         statusPostRes,
         profilesRes,
+        customFieldsRes,
       ] = await Promise.all([
         supabase.from("responsaveis").select("*").order("nome"),
         supabase.from("clientes").select("*").order("created_at", { ascending: false }),
@@ -522,41 +501,13 @@ export const useCRM = create<State>()((set, get) => ({
         supabase.from("modelos_colunas").select("*").order("created_at"),
         supabase.from("status_options").select("*").order("ordem", { ascending: true }),
         supabase.from("nichos").select("*").order("label"),
-        fetchAll("cards", { column: "posicao", ascending: true }),
-        fetchAll("posts"),
-        fetchAll("comentarios", { column: "created_at", ascending: true }),
-        supabase.from("alertas").select("*").order("created_at", { ascending: false }),
-        supabase.from("custom_fields").select("*").order("ordem"),
         supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
         supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
+        supabase.from("custom_fields").select("*").order("ordem"),
       ]);
-
-      if (
-        responsaveisRes.error ||
-        clientesRes.error ||
-        contratosRes.error ||
-        colunasRes.error ||
-        modelosRes.error ||
-        statusRes.error ||
-        nichosRes.error ||
-        cardsRes.error ||
-        postsRes.error ||
-        comentariosRes.error ||
-        alertasRes.error ||
-        customFieldsRes.error ||
-        statusPostRes.error ||
-        profilesRes.error
-      ) {
-        console.error("Erro ao carregar dados do CRM:", {
-          responsaveis: responsaveisRes.error,
-          clientes: clientesRes.error,
-          // ... adicione outros se precisar debugar fundo
-        });
-      }
 
       const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
       const contratos = (contratosRes.data ?? []).map(mapContrato);
-      const comentarios = (comentariosRes.data ?? []).map(mapComentario);
 
       const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
       for (const p of profilesRes.data ?? []) {
@@ -568,8 +519,9 @@ export const useCRM = create<State>()((set, get) => ({
         };
       }
 
+      // Mapeia clientes mesmo sem comentários e cards por enquanto
       const clientes = (clientesRes.data ?? []).map((r) =>
-        mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
+        mapCliente(r, contratosRes.data ?? [], [], responsaveis, authoresPorAuthId),
       );
 
       set({
@@ -580,19 +532,66 @@ export const useCRM = create<State>()((set, get) => ({
         modelosColunas: (modelosRes.data ?? []).map(mapModelo),
         statusOptions: (statusRes.data ?? []).map(mapStatusOpt),
         nichos: (nichosRes.data ?? []).map(mapNicho),
-        cards: (cardsRes.data ?? []).map(mapCard),
-        posts: (postsRes.data ?? []).map(mapPost),
-        comentarios,
-        alertas: (alertasRes.data ?? []).map(mapAlerta),
-        customFields: (customFieldsRes.data ?? []).map(mapCustomField),
         statusPostOptions: (statusPostRes.data ?? []).map(mapStatusOpt),
         authoresPorAuthId,
+        customFields: (customFieldsRes.data ?? []).map(mapCustomField),
         loaded: true,
+        loading: false,
       });
+
+      // 2. Carrega dados PESADOS em segundo plano (Cards, Posts, Comentários, Alertas)
+      if (!get().heavyDataLoading) {
+        set({ heavyDataLoading: true });
+        
+        const fetchAll = async (
+          table: "cards" | "posts" | "comentarios",
+          orderBy?: { column: string; ascending?: boolean },
+        ): Promise<{ data: any[]; error: any }> => {
+          const PAGE = 1000;
+          const all: any[] = [];
+          let from = 0;
+          while (true) {
+            let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
+            if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+            const { data, error } = await q;
+            if (error) return { data: all, error };
+            const rows = data ?? [];
+            all.push(...rows);
+            if (rows.length < PAGE) break;
+            from += PAGE;
+          }
+          return { data: all, error: null };
+        };
+
+        const [cardsRes, postsRes, comentariosRes, alertasRes] = await Promise.all([
+          fetchAll("cards", { column: "posicao", ascending: true }),
+          fetchAll("posts"),
+          fetchAll("comentarios", { column: "created_at", ascending: true }),
+          supabase.from("alertas").select("*").order("created_at", { ascending: false }),
+        ]);
+
+        const comentarios = (comentariosRes.data ?? []).map(mapComentario);
+        const cards = (cardsRes.data ?? []).map(mapCard);
+        
+        // Re-mapeia clientes agora que temos os comentários
+        const clientesAtualizados = (clientesRes.data ?? []).map((r) =>
+          mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
+        );
+
+        set({
+          cards,
+          posts: (postsRes.data ?? []).map(mapPost),
+          comentarios,
+          alertas: (alertasRes.data ?? []).map(mapAlerta),
+          clientes: clientesAtualizados,
+          heavyDataLoading: false,
+          heavyDataLoaded: true,
+        });
+      }
+
     } catch (err) {
       console.error("Erro crítico em _loadAll:", err);
-    } finally {
-      set({ loading: false });
+      set({ loading: false, heavyDataLoading: false });
     }
   },
 

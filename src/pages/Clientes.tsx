@@ -1397,7 +1397,7 @@ function FiltrosTopo({
 }
 
 export default function Clientes() {
-  const { clientes, responsaveis, nichos } = useCRM();
+  const { clientes, responsaveis, nichos, loading, heavyDataLoading } = useCRM();
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
