@@ -20,6 +20,8 @@ export interface UnifiedTask {
   area: string;
   prioridade: TaskPrioridade;
   prazo: string | null;
+  data_inicio: string | null;
+  data_limite: string | null;
   status: TaskStatus;
   urgente: boolean;
   responsaveis_ids: string[];
@@ -179,6 +181,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           area: mapCategoriaArea(d.categoria),
           prioridade: d.prioridade as TaskPrioridade,
           prazo: d.data_limite,
+          data_inicio: d.data_inicio,
+          data_limite: d.data_limite,
           status,
           urgente: d.prioridade === "Urgente",
           responsaveis_ids: getResponsaveisIds(d),
@@ -246,10 +250,20 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         .map((c) => c.data_limite_tarefa)
         .filter((p): p is string => !!p)
         .sort();
+      
+      const iniciosPendentes = pendentes
+        .map((c) => c.data_inicio_tarefa)
+        .filter((p): p is string => !!p)
+        .sort();
+
       let prazo: string | null = prazosPendentes[0] ?? null;
+      let data_inicio: string | null = iniciosPendentes[0] ?? null;
+      let data_limite: string | null = prazosPendentes[0] ?? null;
+
       if (!prazo && grupo.contrato_id !== "all") {
         const ct = contratos.find((x) => x.id === grupo.contrato_id);
         prazo = ct?.data_fim ?? null;
+        if (!data_limite) data_limite = ct?.data_fim ?? null;
       }
 
       const algumUrgente = cardsGrupo.some((c) => !!c.is_urgent);
@@ -277,6 +291,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         area: "Posts",
         prioridade: algumUrgente ? "Urgente" : "Media",
         prazo,
+        data_inicio,
+        data_limite,
         status,
         urgente: algumUrgente,
         responsaveis_ids: [grupo.responsavel_id],
@@ -307,6 +323,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           area: "Planejamento",
           prioridade: mapPrioridadePlan(p.prioridade),
           prazo: p.prazo,
+          data_inicio: null, // Planejamento não tem data_inicio no schema atual
+          data_limite: p.prazo,
           status,
           urgente: p.prioridade === "urgente",
           responsaveis_ids: p.responsavel_id ? [p.responsavel_id] : [],
@@ -331,6 +349,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           area: "Documentação",
           prioridade: "Media",
           prazo: d.data_evento,
+          data_inicio: null,
+          data_limite: d.data_evento,
           status,
           urgente: false,
           responsaveis_ids: [],

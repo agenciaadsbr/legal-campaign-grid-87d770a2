@@ -5,6 +5,8 @@ import {
   CATEGORIA_LABEL,
   CATEGORIA_SUBTIPOS,
   DemandaCategoria,
+  STATUS_DEMANDA,
+  STATUS_DEMANDA_COR,
 } from "@/lib/demandas-categorias";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +16,9 @@ import { Plus, CheckSquare, X, type LucideIcon } from "lucide-react";
 import { ProjetoKanban } from "@/components/demandas/ProjetoKanban";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { AvatarStack } from "@/components/AvatarStack";
-import { AtribuirResponsaveisPopover, ModoAtribuicao } from "@/components/demandas/AtribuirResponsaveisPopover";
+import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
+import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
+import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -208,6 +212,37 @@ export function AreaTab({
                   setSelectionMode(false);
                 }}
               />
+
+              <DefinirDatasPopover
+                count={selectedIds.size}
+                onApply={async (datas) => {
+                  const ids = Array.from(selectedIds);
+                  await Promise.all(
+                    ids.map((id) => updateDemanda(id, {
+                      data_inicio: datas.data_inicio || undefined,
+                      data_limite: datas.data_limite || undefined,
+                    }))
+                  );
+                  toast.success(`${ids.length} datas atualizadas`);
+                  setSelectedIds(new Set());
+                  setSelectionMode(false);
+                }}
+              />
+
+              <AlterarStatusPopover
+                count={selectedIds.size}
+                options={STATUS_DEMANDA.map(s => ({ label: s, cor: STATUS_DEMANDA_COR[s] }))}
+                onApply={async (novoStatus) => {
+                  const ids = Array.from(selectedIds);
+                  await Promise.all(
+                    ids.map((id) => updateDemanda(id, { status: novoStatus as any }))
+                  );
+                  toast.success(`${ids.length} status atualizados`);
+                  setSelectedIds(new Set());
+                  setSelectionMode(false);
+                }}
+              />
+
               <Button
                 size="sm"
                 variant="ghost"

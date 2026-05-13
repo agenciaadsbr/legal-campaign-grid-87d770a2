@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCRM } from "@/store/crm";
-import { useDemandas, useDemandasBootstrap } from "@/store/demandas";
+import { useDemandas, useDemandasBootstrap, getResponsaveisIds } from "@/store/demandas";
 import { usePlanejamento, usePlanejamentoBootstrap } from "@/store/planejamento";
 import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,14 @@ import { MinhasTarefasFiltros, type FiltrosState } from "@/components/tarefas/Mi
 import { MinhasTarefasTabela } from "@/components/tarefas/MinhasTarefasTabela";
 import { ConcluirTarefaDialog } from "@/components/tarefas/ConcluirTarefaDialog";
 import { KpiCard } from "@/components/relatorios/KpiCard";
+import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
+import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
+import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
+import { useDemandasStore } from "@/store/demandas";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -38,18 +46,30 @@ export default function MinhasTarefas() {
   const { user, isAdmin } = useAuth();
   const { responsavel, responsavelId, loading: loadingResp } = useResponsavelAtual();
 
-  const clientes = useCRM((s) => s.clientes);
-  const cards = useCRM((s) => s.cards);
-  const contratos = useCRM((s) => s.contratos);
-  const responsaveis = useCRM((s) => s.responsaveis);
-  const demandas = useDemandas((s) => s.demandas);
-  const dependencies = useDemandas((s) => s.dependencies);
-  const planejamento = usePlanejamento((s) => s.itens);
+  const { 
+    clientes, 
+    cards, 
+    contratos, 
+    responsaveis, 
+    updateCard, 
+    moveCard, 
+    statusPostOptions 
+  } = useCRM();
+  
+  const { 
+    demandas, 
+    dependencies, 
+    updateDemanda, 
+    moveStatus: moveDemandaStatus 
+  } = useDemandasStore();
+  
+  const { itens: planejamento, update: updatePlan } = usePlanejamento();
   const documentacao = useDocumentacao((s) => s.itens);
 
   const [filtros, setFiltros] = useState<FiltrosState>(FILTROS_INICIAIS);
   const [taskAlvo, setTaskAlvo] = useState<UnifiedTask | null>(null);
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("minhas");
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
   // Mapa responsavel_id -> auth.uid (para documentação no modo admin por usuário específico)
   const [respToAuth, setRespToAuth] = useState<Record<string, string>>({});
@@ -191,6 +211,97 @@ export default function MinhasTarefas() {
 
   const mostrarColunaResponsavel = isAdmin && visualizacao !== "minhas";
 
+  const handleApplyResponsaveis = async (novosIds: string[], modo: "substituir" | "adicionar") => {
+    const selectedTasks = todasTarefas.filter(t => selectedTaskIds.includes(t.id));
+    let count = 0;
+    
+    await Promise.all(selectedTasks.map(async (t) => {
+      if (t.fonte === 'demanda') {
+        const atual = getResponsaveisIds(demandas.find(d => d.id === t.origem_id)!);
+        const finalIds = modo === 'substituir' ? novosIds : Array.from(new Set([...atual, ...novosIds]));
+        await updateDemanda(t.origem_id, { responsaveis_ids: finalIds });
+        count++;
+      } else if (t.fonte === 'post') {
+        const [_, cid, rid, ctid] = t.id.split(':');
+        // Filtra os cards que pertencem a este grupo específico na Central de Tarefas
+        const cardsNoGrupo = cards.filter(c => c.cliente_id === cid && c.responsaveis.includes(rid));
+        // Para posts, a atualização é em cada card do grupo
+        await Promise.all(cardsNoGrupo.map(c => {
+          const atual = c.responsaveis ?? [];
+          const finalIds = modo === 'substituir' ? novosIds : Array.from(new Set([...atual, ...novosIds]));
+          return updateCard(c.id, { responsaveis: finalIds });
+        }));
+        count += cardsNoGrupo.length;
+      } else if (t.fonte === 'planejamento') {
+        await updatePlan(t.origem_id, { responsavel_id: novosIds[0] });
+        count++;
+      }
+    }));
+    
+    toast.success(`${count} itens atualizados`);
+    setSelectedTaskIds([]);
+  };
+
+  const handleApplyDatas = async (datas: { data_inicio?: string, data_limite?: string }) => {
+    const selectedTasks = todasTarefas.filter(t => selectedTaskIds.includes(t.id));
+    let count = 0;
+
+    await Promise.all(selectedTasks.map(async (t) => {
+      if (t.fonte === 'demanda') {
+        await updateDemanda(t.origem_id, { 
+          data_inicio: datas.data_inicio || undefined, 
+          data_limite: datas.data_limite || undefined 
+        });
+        count++;
+      } else if (t.fonte === 'post') {
+        const [_, cid, rid] = t.id.split(':');
+        const cardsNoGrupo = cards.filter(c => c.cliente_id === cid && c.responsaveis.includes(rid));
+        await Promise.all(cardsNoGrupo.map(c => updateCard(c.id, { 
+          data_inicio_tarefa: datas.data_inicio || undefined, 
+          data_limite_tarefa: datas.data_limite || undefined 
+        })));
+        count += cardsNoGrupo.length;
+      } else if (t.fonte === 'planejamento') {
+        await updatePlan(t.origem_id, { prazo: datas.data_limite || undefined });
+        count++;
+      }
+    }));
+
+    toast.success(`${count} itens atualizados`);
+    setSelectedTaskIds([]);
+  };
+
+  const handleApplyStatus = async (novoStatus: string) => {
+    const selectedTasks = todasTarefas.filter(t => selectedTaskIds.includes(t.id));
+    let count = 0;
+
+    await Promise.all(selectedTasks.map(async (t) => {
+      if (t.fonte === 'demanda') {
+        let statusParaDemanda = novoStatus;
+        // Mapeamento de compatibilidade entre status de Post e Demanda
+        if (novoStatus === 'Agendar') statusParaDemanda = 'Entregue';
+        if (novoStatus === 'Postado') statusParaDemanda = 'Concluido';
+        
+        await moveDemandaStatus(t.origem_id, statusParaDemanda as any);
+        count++;
+      } else if (t.fonte === 'post') {
+        const [_, cid, rid] = t.id.split(':');
+        const cardsNoGrupo = cards.filter(c => c.cliente_id === cid && c.responsaveis.includes(rid));
+        await Promise.all(cardsNoGrupo.map(c => moveCard(c.id, novoStatus as any)));
+        count += cardsNoGrupo.length;
+      } else if (t.fonte === 'planejamento') {
+        let statusPlan = novoStatus.toLowerCase();
+        if (statusPlan === 'postado') statusPlan = 'concluido';
+        if (statusPlan === 'agendar') statusPlan = 'em_andamento';
+        await updatePlan(t.origem_id, { status: statusPlan as any });
+        count++;
+      }
+    }));
+
+    toast.success(`${count} itens atualizados`);
+    setSelectedTaskIds([]);
+  };
+
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -266,10 +377,57 @@ export default function MinhasTarefas() {
         areasDisponiveis={areasDisponiveis}
       />
 
+      {selectedTaskIds.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-card p-2.5 animate-in fade-in slide-in-from-top-1">
+          <Badge variant="secondary" className="text-xs h-7 px-3">
+            {selectedTaskIds.length} {selectedTaskIds.length === 1 ? "selecionado" : "selecionados"}
+          </Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <AtribuirResponsaveisPopover
+              responsaveis={responsaveis}
+              count={selectedTaskIds.length}
+              onApply={handleApplyResponsaveis}
+            />
+
+            <DefinirDatasPopover
+              count={selectedTaskIds.length}
+              onApply={handleApplyDatas}
+            />
+
+            <AlterarStatusPopover
+              count={selectedTaskIds.length}
+              options={statusPostOptions}
+              onApply={handleApplyStatus}
+            />
+
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={() => setSelectedTaskIds([])}
+            >
+              Limpar
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={() => setSelectedTaskIds([])}
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Sair
+            </Button>
+          </div>
+        </div>
+      )}
+
       <MinhasTarefasTabela
         tasks={tarefasFiltradas}
         onConcluir={(t) => setTaskAlvo(t)}
         mostrarResponsavel={mostrarColunaResponsavel}
+        selectedIds={selectedTaskIds}
+        onSelectionChange={setSelectedTaskIds}
       />
 
       {tarefasAguardando.length > 0 && (

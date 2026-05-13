@@ -5,7 +5,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ExternalLink, AlertCircle, Clock, Circle, Zap } from "lucide-react";
+import { CheckCircle2, ExternalLink, AlertCircle, Clock, Circle, Zap, CheckSquare, Square } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ColorBadge } from "@/components/StatusBadge";
 import { PrioridadeIcons } from "./PrioridadeIcon";
@@ -18,6 +19,8 @@ interface Props {
   tasks: UnifiedTask[];
   onConcluir: (task: UnifiedTask) => void;
   mostrarResponsavel?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 const STATUS_COR: Record<string, string> = {
@@ -51,13 +54,40 @@ function formatPrazo(p: string | null): string {
   return d.toLocaleDateString("pt-BR");
 }
 
-export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = false }: Props) {
+export function MinhasTarefasTabela({ 
+  tasks, 
+  onConcluir, 
+  mostrarResponsavel = false,
+  selectedIds = [],
+  onSelectionChange
+}: Props) {
   const navigate = useNavigate();
   const responsaveis = useCRM((s) => s.responsaveis);
   const respMap = useMemo(
     () => new Map(responsaveis.map((r) => [r.id, r.nome])),
     [responsaveis],
   );
+
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    const taskIds = tasks.map(t => t.id);
+    const allSelectedInTable = taskIds.length > 0 && taskIds.every(id => selectedIds.includes(id));
+    
+    if (allSelectedInTable) {
+      onSelectionChange(selectedIds.filter(id => !taskIds.includes(id)));
+    } else {
+      onSelectionChange(Array.from(new Set([...selectedIds, ...taskIds])));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    if (!onSelectionChange) return;
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter(x => x !== id));
+    } else {
+      onSelectionChange([...selectedIds, id]);
+    }
+  };
 
   const grupos = useMemo(() => {
     const buckets: Record<GroupKey, UnifiedTask[]> = {
@@ -69,7 +99,7 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
       .filter((g) => g.items.length > 0);
   }, [tasks]);
 
-  const colSpan = mostrarResponsavel ? 8 : 7;
+  const colSpan = mostrarResponsavel ? 9 : 8;
 
   if (tasks.length === 0) {
     return (
@@ -92,6 +122,12 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
           <Table className="[&_th]:py-1.5 [&_th]:px-2 [&_th]:h-8 [&_th]:text-xs [&_td]:py-2 [&_td]:px-2 [&_td]:align-middle">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[40px] px-2">
+                  <Checkbox 
+                    checked={tasks.length > 0 && tasks.every(t => selectedIds.includes(t.id))}
+                    onCheckedChange={toggleAll}
+                  />
+                </TableHead>
                 <TableHead className="w-[160px]">Cliente</TableHead>
                 {mostrarResponsavel && <TableHead className="w-[140px]">Responsável</TableHead>}
                 <TableHead>Tarefa</TableHead>
@@ -131,8 +167,15 @@ export function MinhasTarefasTabela({ tasks, onConcluir, mostrarResponsavel = fa
                             isAtrasado && !isUrgente && "bg-destructive/5",
                             isUrgente && "bg-destructive/5 border-l-2 border-l-destructive",
                             isConcluido && "opacity-60",
+                            selectedIds.includes(t.id) && "bg-primary/5",
                           )}
                         >
+                          <TableCell className="px-2">
+                            <Checkbox 
+                              checked={selectedIds.includes(t.id)}
+                              onCheckedChange={() => toggleOne(t.id)}
+                            />
+                          </TableCell>
                           <TableCell className={cn("font-medium text-xs", isConcluido && "text-muted-foreground")}>
                             {t.cliente_nome}
                           </TableCell>
