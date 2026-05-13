@@ -50,6 +50,7 @@ export default function MinhasTarefas() {
   const [filtros, setFiltros] = useState<FiltrosState>(FILTROS_INICIAIS);
   const [taskAlvo, setTaskAlvo] = useState<UnifiedTask | null>(null);
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("minhas");
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
   // Mapa responsavel_id -> auth.uid (para documentação no modo admin por usuário específico)
   const [respToAuth, setRespToAuth] = useState<Record<string, string>>({});
