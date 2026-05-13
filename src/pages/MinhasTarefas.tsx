@@ -210,6 +210,90 @@ export default function MinhasTarefas() {
 
   const mostrarColunaResponsavel = isAdmin && visualizacao !== "minhas";
 
+  const handleApplyResponsaveis = async (novosIds: string[], modo: "substituir" | "adicionar") => {
+    const selectedTasks = todasTarefas.filter(t => selectedTaskIds.includes(t.id));
+    let count = 0;
+    
+    await Promise.all(selectedTasks.map(async (t) => {
+      if (t.fonte === 'demanda') {
+        const atual = getResponsaveisIds(demandas.find(d => d.id === t.origem_id)!);
+        const finalIds = modo === 'substituir' ? novosIds : Array.from(new Set([...atual, ...novosIds]));
+        await updateDemanda(t.origem_id, { responsaveis_ids: finalIds });
+        count++;
+      } else if (t.fonte === 'post') {
+        const [_, cid, rid, ctid] = t.id.split(':');
+        // Filtra os cards que pertencem a este grupo específico na Central de Tarefas
+        const cardsNoGrupo = cards.filter(c => c.cliente_id === cid && c.responsaveis.includes(rid));
+        // Para posts, a atualização é em cada card do grupo
+        await Promise.all(cardsNoGrupo.map(c => {
+          const atual = c.responsaveis ?? [];
+          const finalIds = modo === 'substituir' ? novosIds : Array.from(new Set([...atual, ...novosIds]));
+          return updateCard(c.id, { responsaveis: finalIds });
+        }));
+        count += cardsNoGrupo.length;
+      } else if (t.fonte === 'planejamento') {
+        await updatePlan(t.origem_id, { responsavel_id: novosIds[0] });
+        count++;
+      }
+    }));
+    
+    toast.success(`${count} itens atualizados`);
+    setSelectedTaskIds([]);
+  };
+
+  const handleApplyDatas = async (datas: { data_inicio?: string, data_limite?: string }) => {
+    const selectedTasks = todasTarefas.filter(t => selectedTaskIds.includes(t.id));
+    let count = 0;
+
+    await Promise.all(selectedTasks.map(async (t) => {
+      if (t.fonte === 'demanda') {
+        await updateDemanda(t.origem_id, { 
+          data_inicio: datas.data_inicio || undefined, 
+          data_limite: datas.data_limite || undefined 
+        });
+        count++;
+      } else if (t.fonte === 'post') {
+        const [_, cid, rid] = t.id.split(':');
+        const cardsNoGrupo = cards.filter(c => c.cliente_id === cid && c.responsaveis.includes(rid));
+        await Promise.all(cardsNoGrupo.map(c => updateCard(c.id, { 
+          data_inicio_tarefa: datas.data_inicio || undefined, 
+          data_limite_tarefa: datas.data_limite || undefined 
+        })));
+        count += cardsNoGrupo.length;
+      } else if (t.fonte === 'planejamento') {
+        await updatePlan(t.origem_id, { prazo: datas.data_limite || undefined });
+        count++;
+      }
+    }));
+
+    toast.success(`${count} itens atualizados`);
+    setSelectedTaskIds([]);
+  };
+
+  const handleApplyStatus = async (novoStatus: string) => {
+    const selectedTasks = todasTarefas.filter(t => selectedTaskIds.includes(t.id));
+    let count = 0;
+
+    await Promise.all(selectedTasks.map(async (t) => {
+      if (t.fonte === 'demanda') {
+        // Mapeia o label do post-status para o status da demanda se possível, ou usa direto se bater
+        await moveDemandaStatus(t.origem_id, novoStatus as any);
+        count++;
+      } else if (t.fonte === 'post') {
+        const [_, cid, rid] = t.id.split(':');
+        const cardsNoGrupo = cards.filter(c => c.cliente_id === cid && c.responsaveis.includes(rid));
+        await Promise.all(cardsNoGrupo.map(c => moveCard(c.id, novoStatus as any)));
+        count += cardsNoGrupo.length;
+      } else if (t.fonte === 'planejamento') {
+        await updatePlan(t.origem_id, { status: novoStatus.toLowerCase() as any });
+        count++;
+      }
+    }));
+
+    toast.success(`${count} itens atualizados`);
+    setSelectedTaskIds([]);
+  };
+
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
       <header className="flex flex-wrap items-end justify-between gap-3">
