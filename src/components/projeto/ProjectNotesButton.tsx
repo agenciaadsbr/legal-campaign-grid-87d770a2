@@ -27,12 +27,12 @@ export function ProjectNotesButton({ onClick, clientId, className }: ProjectNote
       variant="outline" 
       size="sm" 
       onClick={onClick}
-      className={cn("h-8 gap-2 border-dashed bg-primary/5 hover:bg-primary/10 transition-all group", className)}
+      className={cn("h-8 gap-2 border-dashed border-red-200 bg-red-50 hover:bg-red-100 text-red-600 transition-all group", className)}
     >
-      <StickyNote className="h-3.5 w-3.5 text-primary group-hover:scale-110 transition-transform" />
+      <StickyNote className="h-3.5 w-3.5 text-red-600 group-hover:scale-110 transition-transform" />
       <span className="text-xs font-semibold">Observações</span>
       {count > 0 && (
-        <Badge variant="default" className="h-4 min-w-[16px] px-1 text-[10px] flex items-center justify-center rounded-full bg-primary animate-in zoom-in duration-300">
+        <Badge variant="default" className="h-4 min-w-[16px] px-1 text-[10px] flex items-center justify-center rounded-full bg-red-600 text-white animate-in zoom-in duration-300">
           {count}
         </Badge>
       )}
