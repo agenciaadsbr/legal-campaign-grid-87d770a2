@@ -825,6 +825,8 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.status_card !== undefined) dbPatch.status = patch.status_card;
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
     if ((patch as any).data_agendada !== undefined) dbPatch.data_agendada = (patch as any).data_agendada;
+    if (patch.data_inicio_tarefa !== undefined) dbPatch.data_inicio_tarefa = patch.data_inicio_tarefa || null;
+    if (patch.data_limite_tarefa !== undefined) dbPatch.data_limite_tarefa = patch.data_limite_tarefa || null;
     if ((patch as any).is_urgent !== undefined) dbPatch.is_urgent = (patch as any).is_urgent;
     if ((patch as any).formato !== undefined) dbPatch.formato = (patch as any).formato;
     if ((patch as any).qtd_slides !== undefined) dbPatch.qtd_slides = (patch as any).qtd_slides;
