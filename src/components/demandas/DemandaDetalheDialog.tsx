@@ -188,6 +188,48 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     [demanda, anexos]
   );
 
+  const imagensAnexadas = useMemo(
+    () => meusAnexos.filter((a) => isImageUrl(a.url, a.nome)),
+    [meusAnexos]
+  );
+
+  const currentImageIndex = useMemo(() => {
+    if (!previewAnexo) return -1;
+    return imagensAnexadas.findIndex((img) => img.url === previewAnexo.url);
+  }, [previewAnexo, imagensAnexadas]);
+
+  const navigateImage = (direction: "prev" | "next") => {
+    if (currentImageIndex === -1 || imagensAnexadas.length === 0) return;
+
+    let newIndex = currentImageIndex;
+    if (direction === "next") {
+      newIndex = (currentImageIndex + 1) % imagensAnexadas.length;
+    } else {
+      newIndex = (currentImageIndex - 1 + imagensAnexadas.length) % imagensAnexadas.length;
+    }
+
+    const nextImg = imagensAnexadas[newIndex];
+    if (nextImg) {
+      setPreviewAnexo({ url: nextImg.url, nome: nextImg.nome });
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!previewAnexo) return;
+      if (e.key === "ArrowRight") {
+        navigateImage("next");
+      } else if (e.key === "ArrowLeft") {
+        navigateImage("prev");
+      } else if (e.key === "Escape") {
+        setPreviewAnexo(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewAnexo, currentImageIndex, imagensAnexadas]);
+
   // Sincroniza descricaoLocal/tituloLocal quando muda de demanda (por id) ou
   // quando os valores chegam/atualizam externamente sem haver edição em curso.
   useEffect(() => {
