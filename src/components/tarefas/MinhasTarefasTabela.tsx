@@ -119,6 +119,12 @@ export function MinhasTarefasTabela({
           <Table className="[&_th]:py-1.5 [&_th]:px-2 [&_th]:h-8 [&_th]:text-xs [&_td]:py-2 [&_td]:px-2 [&_td]:align-middle">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[40px] px-2">
+                  <Checkbox 
+                    checked={tasks.length > 0 && selectedIds.length === tasks.length}
+                    onCheckedChange={toggleAll}
+                  />
+                </TableHead>
                 <TableHead className="w-[160px]">Cliente</TableHead>
                 {mostrarResponsavel && <TableHead className="w-[140px]">Responsável</TableHead>}
                 <TableHead>Tarefa</TableHead>
