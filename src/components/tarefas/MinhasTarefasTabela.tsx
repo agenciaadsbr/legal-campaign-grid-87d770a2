@@ -70,10 +70,13 @@ export function MinhasTarefasTabela({
 
   const toggleAll = () => {
     if (!onSelectionChange) return;
-    if (selectedIds.length === tasks.length) {
-      onSelectionChange([]);
+    const taskIds = tasks.map(t => t.id);
+    const allSelectedInTable = taskIds.length > 0 && taskIds.every(id => selectedIds.includes(id));
+    
+    if (allSelectedInTable) {
+      onSelectionChange(selectedIds.filter(id => !taskIds.includes(id)));
     } else {
-      onSelectionChange(tasks.map(t => t.id));
+      onSelectionChange(Array.from(new Set([...selectedIds, ...taskIds])));
     }
   };
 
