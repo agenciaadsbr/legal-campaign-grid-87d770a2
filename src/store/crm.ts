@@ -91,9 +91,11 @@ export interface Card {
   numero_semana: number;
   status_card: StatusCard;
   responsaveis: string[];
-  data_agendada?: string | null;
-  is_urgent?: boolean;
-  formato?: string | null;
+    data_agendada?: string | null;
+    data_inicio_tarefa?: string | null;
+    data_limite_tarefa?: string | null;
+    is_urgent?: boolean;
+    formato?: string | null;
   qtd_slides?: number | null;
   created_at: string;
 }

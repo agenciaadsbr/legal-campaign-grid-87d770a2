@@ -179,6 +179,8 @@ export type Database = {
           cliente_id: string
           created_at: string
           data_agendada: string | null
+          data_inicio_tarefa: string | null
+          data_limite_tarefa: string | null
           descricao: string | null
           formato: string | null
           id: string
@@ -194,6 +196,8 @@ export type Database = {
           cliente_id: string
           created_at?: string
           data_agendada?: string | null
+          data_inicio_tarefa?: string | null
+          data_limite_tarefa?: string | null
           descricao?: string | null
           formato?: string | null
           id?: string
@@ -209,6 +213,8 @@ export type Database = {
           cliente_id?: string
           created_at?: string
           data_agendada?: string | null
+          data_inicio_tarefa?: string | null
+          data_limite_tarefa?: string | null
           descricao?: string | null
           formato?: string | null
           id?: string
