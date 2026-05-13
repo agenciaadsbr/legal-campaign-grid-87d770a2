@@ -707,11 +707,13 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
 
                 if (clienteId) {
                   const s = ids.length === 1 ? "" : "s";
-                  await useCRM.getState().addAtividade(
+                  await useCRM.getState().addAtividade({
                     clienteId,
-                    "Status em Massa",
-                    `${ids.length} post${s} ${ids.length === 1 ? "foi movido" : "foram movidos"} para ${novoStatus}.`
-                  );
+                    acao: "Status em Massa",
+                    descricao: `${ids.length} post${s} ${ids.length === 1 ? "foi movido" : "foram movidos"} para ${novoStatus}.`,
+                    area: "Posts",
+                    tipo: "post"
+                  });
                 }
 
                 toast.success(`${ids.length} status atualizados`);
