@@ -76,8 +76,15 @@ interface ProjectNotesModalProps {
 }
 
 export function ProjectNotesModal({ open, onOpenChange, clientId }: ProjectNotesModalProps) {
-  const { notes, addNote, updateNote, deleteNote, loading } = useProjectNotes();
+  const { notes, addNote, updateNote, deleteNote, loading, fetchNotes } = useProjectNotes();
   const { canWrite, user } = useAuth();
+
+  useEffect(() => {
+    if (open && clientId) {
+      fetchNotes(clientId);
+    }
+  }, [open, clientId, fetchNotes]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("Todas");
   const [filterPinned, setFilterPinned] = useState(false);
