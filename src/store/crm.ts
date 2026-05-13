@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 // ===================== Tipos =====================
 export type StatusCliente = string; // dinâmico via tabela status_options
@@ -248,6 +249,7 @@ interface State {
   reorderStatusPostOptions: (labels: string[]) => Promise<void>;
 
   addAtividade: (clienteId: string, acao: string, descricao: string, refId?: string, payload?: any) => Promise<void>;
+  createCicloPosts: (payload: { cliente_id: string; tipo: "mensal" | "trimestral" | "semestral"; observacao?: string; criar_alerta?: boolean }) => Promise<void>;
   // internas
   _loadAll: () => Promise<void>;
 }
@@ -1267,6 +1269,100 @@ export const useCRM = create<State>()((set, get) => ({
       usuario_id: userData.user?.id ?? null,
       payload: payload ?? {},
     });
+  },
+
+  createCicloPosts: async ({ cliente_id, tipo, observacao, criar_alerta }) => {
+    const cardsCli = get().cards.filter((c) => c.cliente_id === cliente_id);
+    const maxMes = cardsCli.reduce((acc, c) => Math.max(acc, c.mes_referencia), 0);
+    const proximoMes = maxMes + 1;
+    
+    const qtdPosts = tipo === "mensal" ? 4 : tipo === "trimestral" ? 12 : 24;
+    const numMeses = tipo === "mensal" ? 1 : tipo === "trimestral" ? 3 : 6;
+    
+    const statusInicial = get().statusPostOptions.find((o) => o.label === "Planejamento")?.label ?? "Planejamento";
+    const cardsPayload = [];
+    
+    let currentPos = cardsCli.reduce((acc, c) => {
+      const pos = (c.mes_referencia - 1) * 4 + (c.numero_semana - 1);
+      return pos > acc ? pos : acc;
+    }, -1) + 1;
+
+    for (let m = 0; m < numMeses; m++) {
+      const mesRef = proximoMes + m;
+      for (let s = 1; s <= 4; s++) {
+        cardsPayload.push({
+          cliente_id,
+          titulo: `Post Mês ${mesRef} - Semana ${s}`,
+          status: statusInicial,
+          posicao: currentPos++,
+          responsaveis_ids: [],
+        });
+      }
+    }
+
+    const { data: cardsInseridos, error: cardsErr } = await supabase
+      .from("cards")
+      .insert(cardsPayload)
+      .select();
+
+    if (cardsErr) {
+      toast.error(`Falha ao criar ciclo: ${cardsErr.message}`);
+      return;
+    }
+
+    if (cardsInseridos && cardsInseridos.length > 0) {
+      const postsPayload = cardsInseridos.map((c: any) => ({
+        card_id: c.id,
+        titulo: c.titulo,
+        status: c.status,
+      }));
+      const { error: postsErr } = await supabase.from("posts").insert(postsPayload);
+      if (postsErr) toast.error(`Cards criados, mas os posts falharam: ${postsErr.message}`);
+    }
+
+    // Histórico
+    const labelTipo = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+    await get().addAtividade(
+      cliente_id,
+      "Criação de Ciclo",
+      `Ciclo ${tipo} criado: ${qtdPosts} posts adicionados em Planejamento.`
+    );
+
+    // Alerta de renovação
+    if (criar_alerta) {
+      const cliente = get().clientes.find(c => c.id === cliente_id);
+      const hoje = new Date();
+      const prazoRecomendado = new Date();
+      prazoRecomendado.setDate(hoje.getDate() + 7);
+      
+      const respsAlerta = get().responsaveis.filter(r => ["Robson", "Cristiano"].includes(r.nome));
+      const respsIds = respsAlerta.map(r => r.id);
+
+      const mensagem = `Cliente renovou o ciclo ${tipo}. Criar novo ciclo de ${qtdPosts} posts e organizar responsável, datas e status. Primeiro post deve entrar em produção em até 7 dias.\n\n` +
+                       `Cliente: ${cliente?.nome_cliente}\n` +
+                       `Tipo de renovação: ${labelTipo}\n` +
+                       `Quantidade de posts: ${qtdPosts}\n` +
+                       `Data da renovação: ${format(hoje, "dd/MM/yyyy")}\n` +
+                       `Prazo recomendado: ${format(prazoRecomendado, "dd/MM/yyyy")}\n` +
+                       `Observações: ${observacao || "Nenhuma"}`;
+
+      await supabase.from("alertas").insert({
+        cliente_id,
+        tipo_alerta: "Renovacao",
+        data_alerta: hoje.toISOString(),
+        status: "Pendente",
+        mensagem,
+      });
+
+      await get().addAtividade(
+        cliente_id,
+        "Alerta de Renovação",
+        `Alerta de renovação criado para acompanhamento do novo ciclo.`
+      );
+    }
+
+    toast.success(`Ciclo ${tipo} criado com sucesso!`);
+    await get()._loadAll();
   },
 }));
 
