@@ -47,6 +47,8 @@ import {
   Paperclip,
   Link2,
   Copy,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { categoriaParaAba } from "@/lib/minhasTarefas";
 import {
@@ -185,6 +187,48 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     () => (demanda ? anexos.filter((a) => a.demanda_id === demanda.id) : []),
     [demanda, anexos]
   );
+
+  const imagensAnexadas = useMemo(
+    () => meusAnexos.filter((a) => isImageUrl(a.url, a.nome)),
+    [meusAnexos]
+  );
+
+  const currentImageIndex = useMemo(() => {
+    if (!previewAnexo) return -1;
+    return imagensAnexadas.findIndex((img) => img.url === previewAnexo.url);
+  }, [previewAnexo, imagensAnexadas]);
+
+  const navigateImage = (direction: "prev" | "next") => {
+    if (currentImageIndex === -1 || imagensAnexadas.length === 0) return;
+
+    let newIndex = currentImageIndex;
+    if (direction === "next") {
+      newIndex = (currentImageIndex + 1) % imagensAnexadas.length;
+    } else {
+      newIndex = (currentImageIndex - 1 + imagensAnexadas.length) % imagensAnexadas.length;
+    }
+
+    const nextImg = imagensAnexadas[newIndex];
+    if (nextImg) {
+      setPreviewAnexo({ url: nextImg.url, nome: nextImg.nome });
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!previewAnexo) return;
+      if (e.key === "ArrowRight") {
+        navigateImage("next");
+      } else if (e.key === "ArrowLeft") {
+        navigateImage("prev");
+      } else if (e.key === "Escape") {
+        setPreviewAnexo(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewAnexo, currentImageIndex, imagensAnexadas]);
 
   // Sincroniza descricaoLocal/tituloLocal quando muda de demanda (por id) ou
   // quando os valores chegam/atualizam externamente sem haver edição em curso.
@@ -1191,11 +1235,18 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
       {/* Lightbox de imagem do anexo */}
       <Dialog open={!!previewAnexo} onOpenChange={(o) => !o && setPreviewAnexo(null)}>
-        <DialogContent className="max-w-5xl p-2 bg-background">
+        <DialogContent className="max-w-5xl p-2 bg-background overflow-visible">
           {previewAnexo && (
-            <div className="space-y-2">
+            <div className="space-y-2 relative group/lightbox">
               <div className="flex items-center justify-between gap-3 px-2 pr-12 pt-1">
-                <span className="min-w-0 text-sm font-medium truncate">{previewAnexo.nome}</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium truncate">{previewAnexo.nome}</span>
+                  {imagensAnexadas.length > 1 && currentImageIndex !== -1 && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      {currentImageIndex + 1} de {imagensAnexadas.length}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
@@ -1223,7 +1274,36 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   </button>
                 </div>
               </div>
-              <div className="flex items-center justify-center bg-muted/30 rounded">
+
+              <div className="relative flex items-center justify-center bg-muted/30 rounded min-h-[40vh]">
+                {/* Setas de Navegação - Desktop */}
+                {imagensAnexadas.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateImage("prev");
+                      }}
+                      className="absolute left-1 md:left-2 z-10 h-8 w-8 md:h-10 md:w-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-all md:opacity-0 md:group-hover/lightbox:opacity-100"
+                      title="Anterior (Seta Esquerda)"
+                    >
+                      <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateImage("next");
+                      }}
+                      className="absolute right-1 md:right-2 z-10 h-8 w-8 md:h-10 md:w-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-all md:opacity-0 md:group-hover/lightbox:opacity-100"
+                      title="Próxima (Seta Direita)"
+                    >
+                      <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
+                    </button>
+                  </>
+                )}
+
                 {isVideoUrl(previewAnexo.url, previewAnexo.nome) ? (
                   <video
                     src={previewAnexo.url}
