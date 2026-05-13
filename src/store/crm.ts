@@ -1295,15 +1295,17 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
     return afetados;
   },
-  addAtividade: async (clienteId, acao, descricao, refId, payload) => {
+  addAtividade: async ({ clienteId, acao, descricao, refId, tipo, area, titulo_tarefa, payload }) => {
     const { data: userData } = await supabase.auth.getUser();
     await supabase.from("atividade_cliente").insert({
       cliente_id: clienteId,
-      tipo: "Gerencial",
+      tipo: tipo ?? "Gerencial",
       acao,
       descricao,
       referencia_id: refId ?? null,
       usuario_id: userData.user?.id ?? null,
+      area: area ?? null,
+      titulo_tarefa: titulo_tarefa ?? null,
       payload: payload ?? {},
     });
   },
