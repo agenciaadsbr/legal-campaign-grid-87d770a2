@@ -612,6 +612,7 @@ function AcaoIcone({ tipo, acao }: { tipo: string; acao: string }) {
   if (acao === "responsavel") return <Plus className={cn(cls, "text-orange-500")} />;
   if (acao === "prazo") return <CalendarRange className={cn(cls, "text-purple-500")} />;
   if (tipo === "post") return <FileText className={cn(cls, "text-primary")} />;
+  if (tipo === "Observação") return <StickyNote className={cn(cls, "text-amber-500")} />;
   return <ClipboardList className={cn(cls, "text-primary")} />;
 }
 
