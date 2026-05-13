@@ -962,25 +962,53 @@ export const useCRM = create<State>()((set, get) => ({
 
   // ============= Comentários =============
   addComentario: async (c) => {
-    // RLS exige auth.uid() = usuario_id, então usamos sempre o usuário autenticado
     const { data: userData } = await supabase.auth.getUser();
     const authUid = userData.user?.id;
     if (!authUid) {
       toast.error("Você precisa estar autenticado para comentar");
-      return;
+      return null;
     }
-    const { error } = await supabase.from("comentarios").insert({
+    const { data, error } = await supabase.from("comentarios").insert({
       post_id: c.post_id ?? null,
       cliente_id: c.cliente_id ?? null,
       usuario_id: authUid,
       comentario_texto: c.comentario_texto,
       imagem_url: c.imagem_url ?? null,
-    });
+    }).select().single();
+
     if (error) {
       toast.error(`Falha ao salvar comentário: ${error.message}`);
-      return;
+      return null;
     }
+
+    if (c.cliente_id) {
+      const trecho = c.comentario_texto.replace(/<[^>]+>/g, "").slice(0, 100);
+      let area = "Direto";
+      let titulo_tarefa = undefined;
+      let tipo: "Gerencial" | "post" = "Gerencial";
+
+      if (c.post_id) {
+        tipo = "post";
+        area = "Posts";
+        const post = get().posts.find(p => p.id === c.post_id);
+        const card = post ? get().cards.find(cd => cd.id === post.card_id) : null;
+        titulo_tarefa = card?.titulo_card;
+      }
+
+      await get().addAtividade({
+        clienteId: c.cliente_id,
+        acao: "comentario",
+        descricao: trecho,
+        refId: data.id,
+        tipo,
+        area,
+        titulo_tarefa,
+        payload: { comentario_id: data.id }
+      });
+    }
+
     await get()._loadAll();
+    return data.id;
   },
 
   updateComentario: async (id, patch) => {
