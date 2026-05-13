@@ -346,6 +346,48 @@ export const useDemandasStore = create<State>((set, get) => ({
         tipo_alerta: "Posts_Pendentes" as any,
       }).then(() => {});
     }
+
+    // Log de atividades para mudanças relevantes
+    const { useCRM } = await import("@/store/crm");
+    
+    if (patch.status && patch.status !== prev.status) {
+      await useCRM.getState().addAtividade({
+        clienteId: next.cliente_id,
+        acao: "status",
+        descricao: `Status alterado: ${prev.status} → ${next.status}`,
+        refId: id,
+        tipo: "demanda",
+        area: next.categoria,
+        titulo_tarefa: next.titulo,
+        payload: { de: prev.status, para: next.status }
+      });
+    }
+
+    if (patch.responsaveis_ids && JSON.stringify(patch.responsaveis_ids) !== JSON.stringify(prev.responsaveis_ids)) {
+      await useCRM.getState().addAtividade({
+        clienteId: next.cliente_id,
+        acao: "responsavel",
+        descricao: `Responsáveis alterados`,
+        refId: id,
+        tipo: "demanda",
+        area: next.categoria,
+        titulo_tarefa: next.titulo,
+        payload: { de: prev.responsaveis_ids, para: next.responsaveis_ids }
+      });
+    }
+
+    if (patch.data_limite && patch.data_limite !== prev.data_limite) {
+      await useCRM.getState().addAtividade({
+        clienteId: next.cliente_id,
+        acao: "prazo",
+        descricao: `Prazo alterado para ${new Date(patch.data_limite).toLocaleDateString("pt-BR")}`,
+        refId: id,
+        tipo: "demanda",
+        area: next.categoria,
+        titulo_tarefa: next.titulo,
+        payload: { de: prev.data_limite, para: patch.data_limite }
+      });
+    }
   },
 
   async deleteDemanda(id) {
