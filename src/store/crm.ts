@@ -248,7 +248,16 @@ interface State {
   deleteStatusPostOption: (label: string) => Promise<number>;
   reorderStatusPostOptions: (labels: string[]) => Promise<void>;
 
-  addAtividade: (clienteId: string, acao: string, descricao: string, refId?: string, payload?: any) => Promise<void>;
+  addAtividade: (args: {
+    clienteId: string;
+    acao: string;
+    descricao: string;
+    refId?: string;
+    tipo?: "post" | "demanda" | "Gerencial";
+    area?: string;
+    titulo_tarefa?: string;
+    payload?: any;
+  }) => Promise<void>;
   createCicloPosts: (payload: { cliente_id: string; tipo: "mensal" | "trimestral" | "semestral"; observacao?: string; criar_alerta?: boolean }) => Promise<void>;
   // internas
   _loadAll: () => Promise<void>;
