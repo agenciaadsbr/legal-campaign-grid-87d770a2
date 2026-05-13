@@ -277,8 +277,12 @@ export default function MinhasTarefas() {
 
     await Promise.all(selectedTasks.map(async (t) => {
       if (t.fonte === 'demanda') {
-        // Mapeia o label do post-status para o status da demanda se possível, ou usa direto se bater
-        await moveDemandaStatus(t.origem_id, novoStatus as any);
+        let statusParaDemanda = novoStatus;
+        // Mapeamento de compatibilidade entre status de Post e Demanda
+        if (novoStatus === 'Agendar') statusParaDemanda = 'Entregue';
+        if (novoStatus === 'Postado') statusParaDemanda = 'Concluido';
+        
+        await moveDemandaStatus(t.origem_id, statusParaDemanda as any);
         count++;
       } else if (t.fonte === 'post') {
         const [_, cid, rid] = t.id.split(':');
@@ -286,7 +290,10 @@ export default function MinhasTarefas() {
         await Promise.all(cardsNoGrupo.map(c => moveCard(c.id, novoStatus as any)));
         count += cardsNoGrupo.length;
       } else if (t.fonte === 'planejamento') {
-        await updatePlan(t.origem_id, { status: novoStatus.toLowerCase() as any });
+        let statusPlan = novoStatus.toLowerCase();
+        if (statusPlan === 'postado') statusPlan = 'concluido';
+        if (statusPlan === 'agendar') statusPlan = 'em_andamento';
+        await updatePlan(t.origem_id, { status: statusPlan as any });
         count++;
       }
     }));
