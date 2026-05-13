@@ -11,6 +11,10 @@ export interface Atividade {
   usuario_id: string | null;
   descricao: string | null;
   payload: any;
+  /** Categoria da tarefa ou origem (posts, demandas, etc) */
+  area?: string | null;
+  /** Título do card ou tarefa associado */
+  titulo_tarefa?: string | null;
   created_at: string;
 }
 

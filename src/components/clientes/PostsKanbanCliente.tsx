@@ -638,11 +638,13 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
 
                 if (clienteId) {
                   const s = ids.length === 1 ? "" : "s";
-                  await useCRM.getState().addAtividade(
+                  await useCRM.getState().addAtividade({
                     clienteId,
-                    "Atribuição em Massa",
-                    `${ids.length} post${s} atribuído${s} para: ${nomesResps}`
-                  );
+                    acao: "Atribuição em Massa",
+                    descricao: `${ids.length} post${s} atribuído${s} para: ${nomesResps}`,
+                    area: "Posts",
+                    tipo: "post"
+                  });
                 }
 
                 toast.success(
@@ -668,19 +670,23 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                   const s = ids.length === 1 ? "" : "s";
                   if (datas.data_inicio) {
                     const dataFmt = format(parseISO(datas.data_inicio), "dd/MM/yyyy");
-                    await useCRM.getState().addAtividade(
+                    await useCRM.getState().addAtividade({
                       clienteId,
-                      "Data em Massa",
-                      `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data de início definida para ${dataFmt}.`
-                    );
+                      acao: "Data em Massa",
+                      descricao: `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data de início definida para ${dataFmt}.`,
+                      area: "Posts",
+                      tipo: "post"
+                    });
                   }
                   if (datas.data_limite) {
                     const dataFmt = format(parseISO(datas.data_limite), "dd/MM/yyyy");
-                    await useCRM.getState().addAtividade(
+                    await useCRM.getState().addAtividade({
                       clienteId,
-                      "Data em Massa",
-                      `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data limite definida para ${dataFmt}.`
-                    );
+                      acao: "Data em Massa",
+                      descricao: `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data limite definida para ${dataFmt}.`,
+                      area: "Posts",
+                      tipo: "post"
+                    });
                   }
                 }
 
@@ -701,11 +707,13 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
 
                 if (clienteId) {
                   const s = ids.length === 1 ? "" : "s";
-                  await useCRM.getState().addAtividade(
+                  await useCRM.getState().addAtividade({
                     clienteId,
-                    "Status em Massa",
-                    `${ids.length} post${s} ${ids.length === 1 ? "foi movido" : "foram movidos"} para ${novoStatus}.`
-                  );
+                    acao: "Status em Massa",
+                    descricao: `${ids.length} post${s} ${ids.length === 1 ? "foi movido" : "foram movidos"} para ${novoStatus}.`,
+                    area: "Posts",
+                    tipo: "post"
+                  });
                 }
 
                 toast.success(`${ids.length} status atualizados`);

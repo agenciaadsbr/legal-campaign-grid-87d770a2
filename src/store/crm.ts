@@ -216,7 +216,7 @@ interface State {
   ) => Promise<void>;
   createCardRascunho: (payload: { cliente_id: string; mes_referencia?: number }) => Promise<{ cardId: string; postId: string } | null>;
 
-  addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<void>;
+  addComentario: (c: Omit<Comentario, "id" | "created_at">) => Promise<string | null>;
   updateComentario: (
     id: string,
     patch: Partial<Pick<Comentario, "comentario_texto" | "imagem_url">>,
@@ -248,7 +248,16 @@ interface State {
   deleteStatusPostOption: (label: string) => Promise<number>;
   reorderStatusPostOptions: (labels: string[]) => Promise<void>;
 
-  addAtividade: (clienteId: string, acao: string, descricao: string, refId?: string, payload?: any) => Promise<void>;
+  addAtividade: (args: {
+    clienteId: string;
+    acao: string;
+    descricao: string;
+    refId?: string;
+    tipo?: "post" | "demanda" | "Gerencial";
+    area?: string;
+    titulo_tarefa?: string;
+    payload?: any;
+  }) => Promise<void>;
   createCicloPosts: (payload: { cliente_id: string; tipo: "mensal" | "trimestral" | "semestral"; observacao?: string; criar_alerta?: boolean }) => Promise<void>;
   // internas
   _loadAll: () => Promise<void>;
@@ -817,11 +826,31 @@ export const useCRM = create<State>()((set, get) => ({
 
   // ============= Cards / Posts =============
   moveCard: async (cardId, novoStatus) => {
+    const prev = get().cards.find(c => c.id === cardId);
+    if (!prev) return;
+    
     await supabase.from("cards").update({ status: novoStatus as any }).eq("id", cardId);
+    
+    if (novoStatus !== prev.status_card) {
+      await get().addAtividade({
+        clienteId: prev.cliente_id,
+        acao: "status",
+        descricao: `Status alterado: ${prev.status_card} → ${novoStatus}`,
+        refId: cardId,
+        tipo: "post",
+        area: "Posts",
+        titulo_tarefa: prev.titulo_card,
+        payload: { de: prev.status_card, para: novoStatus }
+      });
+    }
+
     await get()._loadAll();
   },
 
   updateCard: async (id, patch) => {
+    const prev = get().cards.find(c => c.id === id);
+    if (!prev) return;
+
     const dbPatch: any = {};
     if (patch.titulo_card !== undefined) dbPatch.titulo = patch.titulo_card;
     if ((patch as any).descricao !== undefined) dbPatch.descricao = (patch as any).descricao;
@@ -834,6 +863,36 @@ export const useCRM = create<State>()((set, get) => ({
     if ((patch as any).formato !== undefined) dbPatch.formato = (patch as any).formato;
     if ((patch as any).qtd_slides !== undefined) dbPatch.qtd_slides = (patch as any).qtd_slides;
     await supabase.from("cards").update(dbPatch).eq("id", id);
+
+    // Atividades
+    if (patch.responsaveis !== undefined && JSON.stringify(patch.responsaveis) !== JSON.stringify(prev.responsaveis)) {
+      await get().addAtividade({
+        clienteId: prev.cliente_id,
+        acao: "responsavel",
+        descricao: `Responsáveis alterados`,
+        refId: id,
+        tipo: "post",
+        area: "Posts",
+        titulo_tarefa: prev.titulo_card,
+        payload: { de: prev.responsaveis, para: patch.responsaveis }
+      });
+    }
+
+    if (patch.data_limite_tarefa !== undefined && patch.data_limite_tarefa !== prev.data_limite_tarefa) {
+      await get().addAtividade({
+        clienteId: prev.cliente_id,
+        acao: "prazo",
+        descricao: patch.data_limite_tarefa 
+          ? `Prazo alterado para ${new Date(patch.data_limite_tarefa).toLocaleDateString("pt-BR")}`
+          : "Prazo removido",
+        refId: id,
+        tipo: "post",
+        area: "Posts",
+        titulo_tarefa: prev.titulo_card,
+        payload: { de: prev.data_limite_tarefa, para: patch.data_limite_tarefa }
+      });
+    }
+
     await get()._loadAll();
   },
 
@@ -953,25 +1012,53 @@ export const useCRM = create<State>()((set, get) => ({
 
   // ============= Comentários =============
   addComentario: async (c) => {
-    // RLS exige auth.uid() = usuario_id, então usamos sempre o usuário autenticado
     const { data: userData } = await supabase.auth.getUser();
     const authUid = userData.user?.id;
     if (!authUid) {
       toast.error("Você precisa estar autenticado para comentar");
-      return;
+      return null;
     }
-    const { error } = await supabase.from("comentarios").insert({
+    const { data, error } = await supabase.from("comentarios").insert({
       post_id: c.post_id ?? null,
       cliente_id: c.cliente_id ?? null,
       usuario_id: authUid,
       comentario_texto: c.comentario_texto,
       imagem_url: c.imagem_url ?? null,
-    });
+    }).select().single();
+
     if (error) {
       toast.error(`Falha ao salvar comentário: ${error.message}`);
-      return;
+      return null;
     }
+
+    if (c.cliente_id) {
+      const trecho = c.comentario_texto.replace(/<[^>]+>/g, "").slice(0, 100);
+      let area = "Direto";
+      let titulo_tarefa = undefined;
+      let tipo: "Gerencial" | "post" = "Gerencial";
+
+      if (c.post_id) {
+        tipo = "post";
+        area = "Posts";
+        const post = get().posts.find(p => p.id === c.post_id);
+        const card = post ? get().cards.find(cd => cd.id === post.card_id) : null;
+        titulo_tarefa = card?.titulo_card;
+      }
+
+      await get().addAtividade({
+        clienteId: c.cliente_id,
+        acao: "comentario",
+        descricao: trecho,
+        refId: data.id,
+        tipo,
+        area,
+        titulo_tarefa,
+        payload: { comentario_id: data.id }
+      });
+    }
+
     await get()._loadAll();
+    return data.id;
   },
 
   updateComentario: async (id, patch) => {
@@ -1258,15 +1345,17 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
     return afetados;
   },
-  addAtividade: async (clienteId, acao, descricao, refId, payload) => {
+  addAtividade: async ({ clienteId, acao, descricao, refId, tipo, area, titulo_tarefa, payload }) => {
     const { data: userData } = await supabase.auth.getUser();
-    await supabase.from("atividade_cliente").insert({
+    await (supabase as any).from("atividade_cliente").insert({
       cliente_id: clienteId,
-      tipo: "Gerencial",
+      tipo: tipo ?? "Gerencial",
       acao,
       descricao,
       referencia_id: refId ?? null,
       usuario_id: userData.user?.id ?? null,
+      area: area ?? null,
+      titulo_tarefa: titulo_tarefa ?? null,
       payload: payload ?? {},
     });
   },
@@ -1322,11 +1411,11 @@ export const useCRM = create<State>()((set, get) => ({
 
     // Histórico
     const labelTipo = tipo.charAt(0).toUpperCase() + tipo.slice(1);
-    await get().addAtividade(
-      cliente_id,
-      "Criação de Ciclo",
-      `Ciclo ${tipo} criado: ${qtdPosts} posts adicionados em Planejamento.`
-    );
+    await get().addAtividade({
+      clienteId: cliente_id,
+      acao: "Criação de Ciclo",
+      descricao: `Ciclo ${tipo} criado: ${qtdPosts} posts adicionados em Planejamento.`
+    });
 
     // Alerta de renovação
     if (criar_alerta) {
@@ -1354,11 +1443,11 @@ export const useCRM = create<State>()((set, get) => ({
         mensagem,
       });
 
-      await get().addAtividade(
-        cliente_id,
-        "Alerta de Renovação",
-        `Alerta de renovação criado para acompanhamento do novo ciclo.`
-      );
+      await get().addAtividade({
+        clienteId: cliente_id,
+        acao: "Alerta de Renovação",
+        descricao: `Alerta de renovação criado para acompanhamento do novo ciclo.`
+      });
     }
 
     toast.success(`Ciclo ${tipo} criado com sucesso!`);
