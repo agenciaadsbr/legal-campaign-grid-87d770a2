@@ -13,6 +13,13 @@ import { MinhasTarefasFiltros, type FiltrosState } from "@/components/tarefas/Mi
 import { MinhasTarefasTabela } from "@/components/tarefas/MinhasTarefasTabela";
 import { ConcluirTarefaDialog } from "@/components/tarefas/ConcluirTarefaDialog";
 import { KpiCard } from "@/components/relatorios/KpiCard";
+import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
+import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
+import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
+import { useDemandasStore } from "@/store/demandas";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
