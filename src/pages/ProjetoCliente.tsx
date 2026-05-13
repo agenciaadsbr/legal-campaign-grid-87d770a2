@@ -193,6 +193,7 @@ export default function ProjetoCliente() {
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [novoPlanOpen, setNovoPlanOpen] = useState(false);
   const [editarBriefingTrigger, setEditarBriefingTrigger] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   if (!cliente) {
     return (
