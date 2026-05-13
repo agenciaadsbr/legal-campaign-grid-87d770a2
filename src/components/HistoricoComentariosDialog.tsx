@@ -167,6 +167,7 @@ function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string
 
 export function HistoricoComentariosDialog({ clienteId, open, onOpenChange }: Props) {
   const { clientes, comentarios, posts, cards, responsaveis, addComentario } = useCRM();
+  const navigate = useNavigate();
   const cliente = clientes.find((c) => c.id === clienteId);
   const [novo, setNovo] = useState("");
   const [imagemUrl, setImagemUrl] = useState<string | null>(null);
