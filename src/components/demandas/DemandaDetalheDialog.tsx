@@ -62,6 +62,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichTextView } from "@/components/RichTextView";
+import { TarefaIAConsulta } from "./TarefaIAConsulta";
 import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralButton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -1173,6 +1174,14 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             )}
           </CardContent>
         </Card>
+
+        <TarefaIAConsulta 
+          demanda={demanda}
+          comentarios_texto={meusComentarios.map(c => c.texto).join("\n")}
+          onAddComment={(txt) => {
+            if (user) addComentario(demanda.id, user.id, txt);
+          }}
+        />
 
         <EtapasRelacionadas demanda={demanda} />
         {canWrite && <WorkflowSection pai={demanda} />}

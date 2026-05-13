@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Save } from "lucide-react";
 import { IAProviderCard } from "./IAProviderCard";
 import { IAAgentesManager } from "./IAAgentesManager";
+import { IAPromptSetorManager } from "./IAPromptSetorManager";
 
 const TIPOS_PROMPT = [
   { value: "resumo_cliente", label: "Resumo cliente (estilo ata, curto)" },
@@ -33,7 +34,8 @@ export function IAConfigManager() {
           <TabsList className="h-8">
             <TabsTrigger value="provider" className="text-xs h-7">Provedor</TabsTrigger>
             <TabsTrigger value="agentes" className="text-xs h-7">Agentes</TabsTrigger>
-            <TabsTrigger value="prompts" className="text-xs h-7">Prompts</TabsTrigger>
+            <TabsTrigger value="prompts" className="text-xs h-7">Prompts Reunião</TabsTrigger>
+            <TabsTrigger value="prompts_setor" className="text-xs h-7">Prompts por Setor</TabsTrigger>
             <TabsTrigger value="logs" className="text-xs h-7">Logs / consumo</TabsTrigger>
           </TabsList>
 
@@ -51,6 +53,10 @@ export function IAConfigManager() {
               const p = prompts.find((x) => x.tipo === t.value);
               return <PromptRow key={t.value} tipo={t} prompt={p} onSave={upsertPrompt} />;
             })}
+          </TabsContent>
+
+          <TabsContent value="prompts_setor" className="mt-3">
+            <IAPromptSetorManager />
           </TabsContent>
 
           <TabsContent value="logs" className="mt-3">
