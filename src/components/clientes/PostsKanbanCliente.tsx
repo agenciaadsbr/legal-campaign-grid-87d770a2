@@ -34,8 +34,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
+import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
 
 function CardItem({
   card,
