@@ -32,7 +32,7 @@ interface State {
   loadConfig: () => Promise<void>;
   updateConfig: (patch: Partial<DelegationConfig>) => Promise<void>;
   loadDelegations: () => Promise<void>;
-  createDelegation: (data: Partial<MeetingDelegation>) => Promise<MeetingDelegation | null>;
+  createDelegation: (data: any) => Promise<MeetingDelegation | null>;
   updateDelegation: (id: string, patch: Partial<MeetingDelegation>) => Promise<void>;
   removeDelegation: (id: string) => Promise<void>;
 }
