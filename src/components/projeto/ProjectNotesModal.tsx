@@ -297,7 +297,7 @@ export function ProjectNotesModal({ open, onOpenChange, clientId }: ProjectNotes
                   filteredNotes.map(note => (
                     <Card key={note.id} className={cn(
                       "group border-l-4 transition-all hover:shadow-md",
-                      note.pinned ? "border-l-primary bg-primary/5" : "border-l-transparent"
+                      note.pinned ? "border-l-red-600 bg-red-50/50" : "border-l-transparent"
                     )}>
                       <CardContent className="p-4 space-y-3">
                         <div className="flex items-start justify-between gap-2">
@@ -314,7 +314,7 @@ export function ProjectNotesModal({ open, onOpenChange, clientId }: ProjectNotes
                               >
                                 {note.priority}
                               </Badge>
-                              {note.pinned && <Pin className="h-3 w-3 text-primary fill-primary" />}
+                              {note.pinned && <Pin className="h-3 w-3 text-red-600 fill-red-600" />}
                             </div>
                             <h4 className="font-bold text-sm leading-tight">{note.title}</h4>
                           </div>
