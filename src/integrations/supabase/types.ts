@@ -598,6 +598,44 @@ export type Database = {
           },
         ]
       }
+      configuracoes_delegacao: {
+        Row: {
+          created_at: string | null
+          id: string
+          prazo_padrao_dias: number | null
+          responsavel_padrao_id: string | null
+          tipos_sugestao_automatica: string[] | null
+          updated_at: string | null
+          usuarios_autorizados_ids: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          prazo_padrao_dias?: number | null
+          responsavel_padrao_id?: string | null
+          tipos_sugestao_automatica?: string[] | null
+          updated_at?: string | null
+          usuarios_autorizados_ids?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          prazo_padrao_dias?: number | null
+          responsavel_padrao_id?: string | null
+          tipos_sugestao_automatica?: string[] | null
+          updated_at?: string | null
+          usuarios_autorizados_ids?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracoes_delegacao_responsavel_padrao_id_fkey"
+            columns: ["responsavel_padrao_id"]
+            isOneToOne: false
+            referencedRelation: "responsaveis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contratos: {
         Row: {
           cliente_id: string
@@ -671,6 +709,67 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_custom_field"]
         }
         Relationships: []
+      }
+      delegacoes_reuniao: {
+        Row: {
+          cliente_id: string
+          created_at: string | null
+          criado_por: string | null
+          id: string
+          observacoes: string | null
+          prazo: string | null
+          responsavel_id: string
+          reuniao_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string | null
+          criado_por?: string | null
+          id?: string
+          observacoes?: string | null
+          prazo?: string | null
+          responsavel_id: string
+          reuniao_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string | null
+          criado_por?: string | null
+          id?: string
+          observacoes?: string | null
+          prazo?: string | null
+          responsavel_id?: string
+          reuniao_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delegacoes_reuniao_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegacoes_reuniao_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "responsaveis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegacoes_reuniao_reuniao_id_fkey"
+            columns: ["reuniao_id"]
+            isOneToOne: true
+            referencedRelation: "reunioes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demanda_categorias_custom: {
         Row: {
@@ -1485,11 +1584,15 @@ export type Database = {
           created_at: string
           criado_por: string | null
           data: string
+          gerar_alerta_delegacao: boolean | null
           ia_processed_at: string | null
           ia_status: Json
           id: string
           link_tldv: string | null
           observacoes: string | null
+          observacoes_delegacao: string | null
+          prazo_delegacao: string | null
+          responsavel_delegacao_id: string | null
           responsavel_id: string | null
           resumo_cliente: string | null
           resumo_tarefas: string | null
@@ -1503,11 +1606,15 @@ export type Database = {
           created_at?: string
           criado_por?: string | null
           data?: string
+          gerar_alerta_delegacao?: boolean | null
           ia_processed_at?: string | null
           ia_status?: Json
           id?: string
           link_tldv?: string | null
           observacoes?: string | null
+          observacoes_delegacao?: string | null
+          prazo_delegacao?: string | null
+          responsavel_delegacao_id?: string | null
           responsavel_id?: string | null
           resumo_cliente?: string | null
           resumo_tarefas?: string | null
@@ -1521,11 +1628,15 @@ export type Database = {
           created_at?: string
           criado_por?: string | null
           data?: string
+          gerar_alerta_delegacao?: boolean | null
           ia_processed_at?: string | null
           ia_status?: Json
           id?: string
           link_tldv?: string | null
           observacoes?: string | null
+          observacoes_delegacao?: string | null
+          prazo_delegacao?: string | null
+          responsavel_delegacao_id?: string | null
           responsavel_id?: string | null
           resumo_cliente?: string | null
           resumo_tarefas?: string | null
@@ -1534,7 +1645,15 @@ export type Database = {
           transcricao?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reunioes_responsavel_delegacao_id_fkey"
+            columns: ["responsavel_delegacao_id"]
+            isOneToOne: false
+            referencedRelation: "responsaveis"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       status_options: {
         Row: {

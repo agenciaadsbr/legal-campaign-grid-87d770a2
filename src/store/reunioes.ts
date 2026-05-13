@@ -16,6 +16,10 @@ export interface Reuniao {
   resumo_cliente: string | null;
   resumo_tarefas: string | null;
   criado_por: string | null;
+  gerar_alerta_delegacao?: boolean;
+  responsavel_delegacao_id?: string | null;
+  prazo_delegacao?: string | null;
+  observacoes_delegacao?: string | null;
   created_at: string;
   updated_at: string;
 }
