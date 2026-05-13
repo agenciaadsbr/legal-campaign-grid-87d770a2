@@ -1361,11 +1361,11 @@ export const useCRM = create<State>()((set, get) => ({
 
     // Histórico
     const labelTipo = tipo.charAt(0).toUpperCase() + tipo.slice(1);
-    await get().addAtividade(
-      cliente_id,
-      "Criação de Ciclo",
-      `Ciclo ${tipo} criado: ${qtdPosts} posts adicionados em Planejamento.`
-    );
+    await get().addAtividade({
+      clienteId: cliente_id,
+      acao: "Criação de Ciclo",
+      descricao: `Ciclo ${tipo} criado: ${qtdPosts} posts adicionados em Planejamento.`
+    });
 
     // Alerta de renovação
     if (criar_alerta) {
