@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCRM } from "@/store/crm";
-import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds } from "@/store/demandas";
-import { useAtividades, useAtividadesBootstrap } from "@/store/atividades";
+import { useDemandas, useDemandasBootstrap, Demanda, getResponsaveisIds, useDemandasStore } from "@/store/demandas";
+import { useAtividades, useAtividadesBootstrap, type Atividade } from "@/store/atividades";
 import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao";
 import { useBriefingBootstrap } from "@/store/briefing";
 import { usePlanejamentoBootstrap, usePlanejamento, calcularProgresso } from "@/store/planejamento";
@@ -22,7 +22,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useDemandasStore } from "@/store/demandas";
 import { CATEGORIAS, CATEGORIA_LABEL as CATLABEL_ALL } from "@/lib/demandas-categorias";
 import { toast } from "sonner";
 import { AreaTab } from "@/components/projeto/AreaTab";
@@ -40,12 +39,12 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextView } from "@/components/RichTextView";
 import {
   ArrowLeft,
   LayoutGrid,
   List,
   Activity,
-  
   BarChart3,
   FileText,
   Plus,
@@ -64,11 +63,13 @@ import {
   AlertTriangle,
   Mic,
   Rocket,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { OperacionalTab } from "@/components/projeto/OperacionalTab";
 import { ReunioesTab } from "@/components/projeto/ReunioesTab";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   BarChart,
