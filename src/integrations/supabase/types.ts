@@ -1085,6 +1085,71 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_setor_prompts: {
+        Row: {
+          created_at: string | null
+          id: string
+          prompt: string
+          setor: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          prompt: string
+          setor: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          prompt?: string
+          setor?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ia_tarefa_consultas: {
+        Row: {
+          created_at: string | null
+          demanda_id: string
+          fontes: Json | null
+          id: string
+          nivel_confianca: string | null
+          pergunta: string
+          resposta: string
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          demanda_id: string
+          fontes?: Json | null
+          id?: string
+          nivel_confianca?: string | null
+          pergunta: string
+          resposta: string
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          demanda_id?: string
+          fontes?: Json | null
+          id?: string
+          nivel_confianca?: string | null
+          pergunta?: string
+          resposta?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_tarefa_consultas_demanda_id_fkey"
+            columns: ["demanda_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modelos_colunas: {
         Row: {
           colunas: Json
