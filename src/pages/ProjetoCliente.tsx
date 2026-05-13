@@ -758,6 +758,7 @@ function AtividadesTab({
               <SelectItem value="responsavel">Responsáveis</SelectItem>
               <SelectItem value="prazo">Prazos</SelectItem>
               <SelectItem value="Gerencial">Sistema</SelectItem>
+              <SelectItem value="observacao">Observações</SelectItem>
             </SelectContent>
           </Select>
 
