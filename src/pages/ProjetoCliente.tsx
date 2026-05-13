@@ -403,6 +403,11 @@ export default function ProjetoCliente() {
         clienteId={clienteId!}
         onCriado={(categoria) => handleTabChange(categoriaParaAba(categoria))}
       />
+      <ProjectNotesModal 
+        open={notesOpen} 
+        onOpenChange={setNotesOpen} 
+        clientId={clienteId!} 
+      />
       <DadosContratuais cliente={cliente} cardsCli={cardsCli} />
     </div>
   );
