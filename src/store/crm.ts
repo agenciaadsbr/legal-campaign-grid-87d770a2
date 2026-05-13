@@ -378,6 +378,8 @@ function mapCard(row: any): Card {
     status_card: row.status,
     responsaveis: row.responsaveis_ids ?? [],
     data_agendada: row.data_agendada ?? null,
+    data_inicio_tarefa: row.data_inicio_tarefa ?? null,
+    data_limite_tarefa: row.data_limite_tarefa ?? null,
     is_urgent: row.is_urgent ?? false,
     formato: row.formato ?? null,
     qtd_slides: row.qtd_slides ?? null,
