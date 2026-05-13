@@ -24,10 +24,11 @@ import { Badge } from "@/components/ui/badge";
 
 interface Props {
   demanda: Demanda;
+  comentarios_texto?: string;
   onAddComment?: (text: string) => void;
 }
 
-export function TarefaIAConsulta({ demanda, onAddComment }: Props) {
+export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [pergunta, setPergunta] = useState("");
   const [resposta, setResposta] = useState<any>(null);
@@ -69,7 +70,7 @@ export function TarefaIAConsulta({ demanda, onAddComment }: Props) {
       tarefa_subtipo: demanda.subtipo,
       tarefa_prioridade: demanda.prioridade,
       tarefa_descricao: demanda.descricao,
-      tarefa_comentarios: demanda.comentarios_texto || "", // Injetado via DemandaDetalheDialog se disponível
+      tarefa_comentarios: comentarios_texto || "",
       reunioes: reunioesCliente.map(r => ({
         titulo: r.titulo,
         data: r.data,

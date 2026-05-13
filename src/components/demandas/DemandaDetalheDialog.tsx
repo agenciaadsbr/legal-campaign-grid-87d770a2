@@ -1176,10 +1176,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
         </Card>
 
         <TarefaIAConsulta 
-          demanda={{
-            ...demanda,
-            comentarios_texto: meusComentarios.map(c => c.texto).join("\n")
-          }} 
+          demanda={demanda}
+          comentarios_texto={meusComentarios.map(c => c.texto).join("\n")}
           onAddComment={(txt) => {
             if (user) addComentario(demanda.id, user.id, txt);
           }}
