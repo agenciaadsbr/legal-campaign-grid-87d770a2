@@ -241,7 +241,7 @@ export function ClientesGeralTable({
   onAbrirHistorico,
   acoesSlot,
 }: Props) {
-  const { clientes, cards, contratos, nichos, responsaveis } = useCRM();
+  const { clientes, cards, contratos, nichos, responsaveis, heavyDataLoaded } = useCRM();
   useDemandasBootstrap();
   const demandas = useDemandas((s) => s.demandas);
 
