@@ -80,7 +80,10 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { CATEGORIA_LABEL, DemandaCategoria } from "@/lib/demandas-categorias";
+import { ProjectNotesModal } from "@/components/projeto/ProjectNotesModal";
+import { ProjectNotesButton } from "@/components/projeto/ProjectNotesButton";
+import { ProjectNotesAlert } from "@/components/projeto/ProjectNotesAlert";
+import { useProjectNotes } from "@/store/projectNotes";
 
 // ===== Filtros canônicos por área =====
 const URGENCIA_OUTRO_CATS: DemandaCategoria[] = [
