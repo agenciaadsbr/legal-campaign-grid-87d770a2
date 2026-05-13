@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCRM, StatusCard, Card as CardT } from "@/store/crm";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 
 const CARDS_POR_PAGINA = 8;
 import { AvatarStack } from "@/components/AvatarStack";
@@ -26,7 +26,7 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -38,6 +38,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
 import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
+import { CriarCicloModal } from "./CriarCicloModal";
 
 function CardItem({
   card,
@@ -390,6 +391,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
   const [criandoTarefa, setCriandoTarefa] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [cicloModalOpen, setCicloModalOpen] = useState(false);
 
   const [filtroResps, setFiltroResps] = useState<string[]>([]);
   const [filtroSomente, setFiltroSomente] = useState<"todos" | "atrasados" | "hoje" | "semana">("todos");
@@ -569,9 +571,27 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
         )}
 
         {canWrite && (
-          <Button onClick={handleAdicionarTarefa} size="sm" className="h-9" disabled={criandoTarefa}>
-            <Plus className="h-4 w-4 mr-1" /> {criandoTarefa ? "Criando..." : "Adicionar Tarefa"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+              onClick={() => setCicloModalOpen(true)}
+            >
+              <RefreshCw className="h-4 w-4 mr-1" /> Criar ciclo de posts
+            </Button>
+            <Button onClick={handleAdicionarTarefa} size="sm" className="h-9" disabled={criandoTarefa}>
+              <Plus className="h-4 w-4 mr-1" /> {criandoTarefa ? "Criando..." : "Adicionar Tarefa"}
+            </Button>
+          </div>
+        )}
+
+        {clienteId && (
+          <CriarCicloModal 
+            open={cicloModalOpen} 
+            onOpenChange={setCicloModalOpen} 
+            clienteId={clienteId} 
+          />
         )}
       </div>
 
