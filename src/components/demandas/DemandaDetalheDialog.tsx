@@ -1175,6 +1175,13 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           </CardContent>
         </Card>
 
+        <TarefaIAConsulta 
+          demanda={demanda} 
+          onAddComment={(txt) => {
+            if (user) addComentario(demanda.id, user.id, txt);
+          }}
+        />
+
         <EtapasRelacionadas demanda={demanda} />
         {canWrite && <WorkflowSection pai={demanda} />}
           </div>
