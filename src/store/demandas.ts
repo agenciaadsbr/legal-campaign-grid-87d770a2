@@ -378,6 +378,23 @@ export const useDemandasStore = create<State>((set, get) => ({
       toast.error("Erro ao comentar", { description: error.message });
       return;
     }
+
+    const dem = get().demandas.find(d => d.id === demanda_id);
+    if (dem) {
+      const trecho = texto.replace(/<[^>]+>/g, "").slice(0, 100);
+      const { useCRM } = await import("@/store/crm");
+      await useCRM.getState().addAtividade({
+        clienteId: dem.cliente_id,
+        acao: "comentario",
+        descricao: trecho,
+        refId: data.id,
+        tipo: "demanda",
+        area: dem.categoria,
+        titulo_tarefa: dem.titulo,
+        payload: { comentario_id: data.id }
+      });
+    }
+
     set({ comentarios: [...get().comentarios, data as ComentarioDemanda] });
   },
 
