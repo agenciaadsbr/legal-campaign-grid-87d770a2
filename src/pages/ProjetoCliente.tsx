@@ -589,9 +589,11 @@ function AcaoIcone({ tipo, acao }: { tipo: string; acao: string }) {
   const cls = "h-3.5 w-3.5 shrink-0 mt-0.5";
   if (acao === "comentario") return <MessageSquare className={cn(cls, "text-blue-500")} />;
   if (acao === "anexo") return <Paperclip className={cn(cls, "text-violet-500")} />;
-  if (acao === "iniciado") return <Play className={cn(cls, "text-amber-500")} />;
-  if (acao === "concluido") return <CheckCircle2 className={cn(cls, "text-emerald-500")} />;
+  if (acao === "iniciado" || acao === "Iniciado") return <Play className={cn(cls, "text-amber-500")} />;
+  if (acao === "concluido" || acao === "Concluído") return <CheckCircle2 className={cn(cls, "text-emerald-500")} />;
   if (acao === "status") return <ArrowRight className={cn(cls, "text-muted-foreground")} />;
+  if (acao === "responsavel") return <Plus className={cn(cls, "text-orange-500")} />;
+  if (acao === "prazo") return <CalendarRange className={cn(cls, "text-purple-500")} />;
   if (tipo === "post") return <FileText className={cn(cls, "text-primary")} />;
   return <ClipboardList className={cn(cls, "text-primary")} />;
 }
