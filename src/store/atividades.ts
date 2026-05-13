@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface Atividade {
   id: string;
   cliente_id: string;
-  tipo: "post" | "demanda";
+  tipo: "post" | "demanda" | "Observação" | string;
   acao: string;
   referencia_id: string | null;
   usuario_id: string | null;
