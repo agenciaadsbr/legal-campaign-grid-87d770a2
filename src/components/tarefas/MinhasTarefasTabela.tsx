@@ -5,7 +5,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ExternalLink, AlertCircle, Clock, Circle, Zap } from "lucide-react";
+import { CheckCircle2, ExternalLink, AlertCircle, Clock, Circle, Zap, CheckSquare, Square } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ColorBadge } from "@/components/StatusBadge";
 import { PrioridadeIcons } from "./PrioridadeIcon";
