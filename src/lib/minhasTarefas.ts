@@ -181,6 +181,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           area: mapCategoriaArea(d.categoria),
           prioridade: d.prioridade as TaskPrioridade,
           prazo: d.data_limite,
+          data_inicio: d.data_inicio,
+          data_limite: d.data_limite,
           status,
           urgente: d.prioridade === "Urgente",
           responsaveis_ids: getResponsaveisIds(d),
