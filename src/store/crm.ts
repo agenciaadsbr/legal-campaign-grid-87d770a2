@@ -1256,6 +1256,18 @@ export const useCRM = create<State>()((set, get) => ({
     await get()._loadAll();
     return afetados;
   },
+  addAtividade: async (clienteId, acao, descricao, refId, payload) => {
+    const { data: userData } = await supabase.auth.getUser();
+    await supabase.from("atividade_cliente").insert({
+      cliente_id: clienteId,
+      tipo: "Gerencial",
+      acao,
+      descricao,
+      referencia_id: refId ?? null,
+      usuario_id: userData.user?.id ?? null,
+      payload: payload ?? {},
+    });
+  },
 }));
 
 // ===================== Bootstrap (uma vez por app) =====================
