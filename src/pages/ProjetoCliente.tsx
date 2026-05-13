@@ -670,7 +670,7 @@ function AtividadesTab({
       else if (filtroTipo === "status") filtrados = filtrados.filter(a => a.acao === "status");
       else if (filtroTipo === "responsavel") filtrados = filtrados.filter(a => a.acao === "responsavel");
       else if (filtroTipo === "prazo") filtrados = filtrados.filter(a => a.acao === "prazo");
-      else if (filtroTipo === "Gerencial") filtrados = filtrados.filter(a => a.tipo === "Gerencial" && a.acao !== "comentario");
+      else if (filtroTipo === "Gerencial") filtrados = filtrados.filter(a => (a.tipo as string) === "Gerencial" && a.acao !== "comentario");
     }
 
     const agora = new Date();
