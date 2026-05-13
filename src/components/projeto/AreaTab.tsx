@@ -212,6 +212,37 @@ export function AreaTab({
                   setSelectionMode(false);
                 }}
               />
+
+              <DefinirDatasPopover
+                count={selectedIds.size}
+                onApply={async (datas) => {
+                  const ids = Array.from(selectedIds);
+                  await Promise.all(
+                    ids.map((id) => updateDemanda(id, {
+                      data_inicio: datas.data_inicio || undefined,
+                      data_limite: datas.data_limite || undefined,
+                    }))
+                  );
+                  toast.success(`${ids.length} datas atualizadas`);
+                  setSelectedIds(new Set());
+                  setSelectionMode(false);
+                }}
+              />
+
+              <AlterarStatusPopover
+                count={selectedIds.size}
+                options={STATUS_DEMANDA.map(s => ({ label: s, cor: STATUS_DEMANDA_COR[s] }))}
+                onApply={async (novoStatus) => {
+                  const ids = Array.from(selectedIds);
+                  await Promise.all(
+                    ids.map((id) => updateDemanda(id, { status: novoStatus as any }))
+                  );
+                  toast.success(`${ids.length} status atualizados`);
+                  setSelectedIds(new Set());
+                  setSelectionMode(false);
+                }}
+              />
+
               <Button
                 size="sm"
                 variant="ghost"
