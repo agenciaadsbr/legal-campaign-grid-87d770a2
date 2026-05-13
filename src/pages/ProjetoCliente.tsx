@@ -656,15 +656,39 @@ function AtividadesTab({
   const load = useAtividades((s) => s.loadByCliente);
   const { responsaveis } = useCRM();
 
-  const lista = itens ?? [];
-  const demMap = useMemo(() => {
-    const m = new Map<string, Demanda>();
-    demandasCli.forEach((d) => m.set(d.id, d));
-    return m;
-  }, [demandasCli]);
+  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string>("30");
+
+  const lista = useMemo(() => {
+    let filtrados = itens ?? [];
+    
+    if (filtroTipo !== "todos") {
+      if (filtroTipo === "comentario") filtrados = filtrados.filter(a => a.acao === "comentario");
+      else if (filtroTipo === "post") filtrados = filtrados.filter(a => a.tipo === "post");
+      else if (filtroTipo === "demanda") filtrados = filtrados.filter(a => a.tipo === "demanda");
+      else if (filtroTipo === "status") filtrados = filtrados.filter(a => a.acao === "status");
+      else if (filtroTipo === "responsavel") filtrados = filtrados.filter(a => a.acao === "responsavel");
+      else if (filtroTipo === "prazo") filtrados = filtrados.filter(a => a.acao === "prazo");
+      else if (filtroTipo === "Gerencial") filtrados = filtrados.filter(a => a.tipo === "Gerencial" && a.acao !== "comentario");
+    }
+
+    const agora = new Date();
+    if (filtroPeriodo !== "tudo") {
+      const dias = parseInt(filtroPeriodo);
+      const limite = new Date();
+      if (filtroPeriodo === "0") {
+        limite.setHours(0, 0, 0, 0);
+      } else {
+        limite.setDate(agora.getDate() - dias);
+      }
+      filtrados = filtrados.filter(a => new Date(a.created_at) >= limite);
+    }
+
+    return filtrados;
+  }, [itens, filtroTipo, filtroPeriodo]);
 
   const grupos = useMemo(() => {
-    const map = new Map<string, typeof lista>();
+    const map = new Map<string, Atividade[]>();
     lista.forEach((a) => {
       const k = format(new Date(a.created_at), "yyyy-MM-dd");
       const arr = map.get(k) ?? [];
@@ -685,66 +709,133 @@ function AtividadesTab({
   };
 
   return (
-    <Card>
-      <CardContent className="p-4 space-y-4">
-        {grupos.length === 0 && !loading && (
-          <div className="text-center text-sm text-muted-foreground py-8">
-            Sem atividade registrada para este cliente.
+    <div className="space-y-4">
+      <Card className="bg-muted/30 border-none shadow-none">
+        <CardContent className="p-3 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 mr-2">
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Histórico de Atividades</h3>
           </div>
-        )}
-        {grupos.map(([dia, lista]) => (
-          <div key={dia} className="space-y-2">
-            <div className="text-xs font-semibold text-muted-foreground sticky top-0 bg-card py-1">
-              {rotuloDia(dia)}
+          
+          <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos Eventos</SelectItem>
+              <SelectItem value="comentario">Comentários</SelectItem>
+              <SelectItem value="post">Posts</SelectItem>
+              <SelectItem value="demanda">Tarefas</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+              <SelectItem value="responsavel">Responsáveis</SelectItem>
+              <SelectItem value="prazo">Prazos</SelectItem>
+              <SelectItem value="Gerencial">Sistema</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filtroPeriodo} onValueChange={setFiltroPeriodo}>
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Hoje</SelectItem>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="tudo">Tudo</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="ml-auto text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+            {lista.length} registros encontrados
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-4 space-y-6">
+          {grupos.length === 0 && !loading && (
+            <div className="text-center text-sm text-muted-foreground py-12 flex flex-col items-center gap-2">
+              <Activity className="h-8 w-8 opacity-20" />
+              <span>Nenhuma atividade encontrada com os filtros atuais.</span>
             </div>
-            <ul className="space-y-1.5 border-l-2 border-border pl-3 ml-1">
-              {lista.map((a) => {
-                const autor = responsaveis.find((r) => r.id === a.usuario_id);
-                let badge: { label: string; cls: string };
-                if (a.tipo === "post") {
-                  badge = { label: "POST", cls: "border-primary/40 text-primary" };
-                } else {
-                  const dem = a.referencia_id ? demMap.get(a.referencia_id) : undefined;
-                  badge = dem
-                    ? badgeAreaPorCategoria(dem.categoria)
-                    : { label: "TAREFA", cls: "border-border text-muted-foreground" };
-                }
-                return (
-                  <li key={a.id} className="flex items-start gap-2 text-xs">
-                    <AcaoIcone tipo={a.tipo} acao={a.acao} />
-                    <div className="flex-1">
-                      <div>
-                        <Badge variant="outline" className={cn("text-[9px] mr-1.5 h-4 px-1", badge.cls)}>
-                          {badge.label}
-                        </Badge>
-                        {a.descricao}
+          )}
+          
+          {grupos.map(([dia, listaDia]) => (
+            <div key={dia} className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 whitespace-nowrap bg-background px-2">
+                  {rotuloDia(dia)}
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="space-y-4">
+                {listaDia.map((a) => {
+                  const autor = responsaveis.find((r) => r.id === a.usuario_id);
+                  const badge = badgeAreaPorCategoria(a.area || (a.tipo === "post" ? "Posts" : "Urgência"));
+                  
+                  return (
+                    <div key={a.id} className="flex gap-3 group">
+                      <div className="shrink-0 mt-1">
+                        <AcaoIcone tipo={a.tipo} acao={a.acao} />
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {autor?.nome ?? "Sistema"} ·{" "}
-                        {format(new Date(a.created_at), "HH:mm", { locale: ptBR })}
+                      
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold uppercase tracking-tight">
+                            {autor?.nome ?? "Sistema"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground/70">
+                            • {format(new Date(a.created_at), "HH:mm", { locale: ptBR })}
+                          </span>
+                          <Badge variant="outline" className={cn("text-[9px] h-4 px-1 font-bold", badge.cls)}>
+                            {badge.label}
+                          </Badge>
+                        </div>
+
+                        {a.titulo_tarefa && (
+                          <div className="text-[11px] font-semibold text-primary/80 flex items-center gap-1">
+                            <span className="text-muted-foreground/60 font-normal">Relacionado:</span>
+                            {a.titulo_tarefa}
+                          </div>
+                        )}
+
+                        <div className={cn(
+                          "text-sm leading-relaxed",
+                          a.acao === "comentario" ? "bg-muted/30 p-2.5 rounded-lg border-l-2 border-primary/20 italic" : "text-foreground/80"
+                        )}>
+                          {a.acao === "comentario" ? (
+                            <RichTextView content={a.descricao || ""} className="text-xs" />
+                          ) : (
+                            <span>{a.descricao}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+                  );
+                })}
+              </div>
+            </div>
+          ))}
 
-        {hasMore && (
-          <div className="flex justify-center pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={loading}
-              onClick={() => load(clienteId)}
-            >
-              {loading ? "Carregando..." : "Carregar mais"}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          {hasMore && (
+            <div className="flex justify-center pt-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-2"
+                disabled={loading}
+                onClick={() => load(clienteId)}
+              >
+                {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                Carregar mais atividades
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
