@@ -164,8 +164,15 @@ export function MinhasTarefasTabela({
                             isAtrasado && !isUrgente && "bg-destructive/5",
                             isUrgente && "bg-destructive/5 border-l-2 border-l-destructive",
                             isConcluido && "opacity-60",
+                            selectedIds.includes(t.id) && "bg-primary/5",
                           )}
                         >
+                          <TableCell className="px-2">
+                            <Checkbox 
+                              checked={selectedIds.includes(t.id)}
+                              onCheckedChange={() => toggleOne(t.id)}
+                            />
+                          </TableCell>
                           <TableCell className={cn("font-medium text-xs", isConcluido && "text-muted-foreground")}>
                             {t.cliente_nome}
                           </TableCell>
