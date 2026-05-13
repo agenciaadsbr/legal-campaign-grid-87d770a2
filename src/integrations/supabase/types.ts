@@ -1360,6 +1360,56 @@ export type Database = {
           },
         ]
       }
+      project_notes: {
+        Row: {
+          archived: boolean | null
+          author_id: string | null
+          category: string | null
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          pinned: boolean | null
+          priority: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean | null
+          author_id?: string | null
+          category?: string | null
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          pinned?: boolean | null
+          priority?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean | null
+          author_id?: string | null
+          category?: string | null
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          pinned?: boolean | null
+          priority?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       responsabilidades_equipe: {
         Row: {
           areas: string[]
