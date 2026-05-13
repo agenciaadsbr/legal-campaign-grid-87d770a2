@@ -247,6 +247,7 @@ interface State {
   deleteStatusPostOption: (label: string) => Promise<number>;
   reorderStatusPostOptions: (labels: string[]) => Promise<void>;
 
+  addAtividade: (clienteId: string, acao: string, descricao: string, refId?: string, payload?: any) => Promise<void>;
   // internas
   _loadAll: () => Promise<void>;
 }
