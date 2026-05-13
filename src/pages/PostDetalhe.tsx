@@ -273,41 +273,66 @@ export default function PostDetalhe() {
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Dados do post */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Data agendamento</Label>
-              <Input
-                type="date"
-                value={post.data_agendamento ?? ""}
-                onChange={(e) => updatePost(post.id, { data_agendamento: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Data postagem</Label>
-              <Input
-                type="date"
-                value={post.data_postagem ?? ""}
-                onChange={(e) => updatePost(post.id, { data_postagem: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Link do Meta Business Suit</Label>
-              <div className="flex gap-1.5">
+          {/* Controle da Tarefa */}
+          <div className="space-y-4">
+            <div className="text-sm font-semibold border-b pb-1">Controle da tarefa</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Data de início da tarefa</Label>
                 <Input
-                  placeholder="https://..."
-                  value={post.link_post ?? ""}
-                  onChange={(e) => updatePost(post.id, { link_post: e.target.value })}
+                  type="date"
+                  value={card.data_inicio_tarefa ?? ""}
+                  onChange={(e) => updateCard(card.id, { data_inicio_tarefa: e.target.value })}
                 />
-                {post.link_post && (
-                  <Button size="icon" variant="outline" asChild className="shrink-0">
-                    <a href={post.link_post} target="_blank" rel="noreferrer" title="Abrir Meta">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
+              </div>
+              <div>
+                <Label className="text-xs">Data limite da tarefa</Label>
+                <Input
+                  type="date"
+                  value={card.data_limite_tarefa ?? ""}
+                  onChange={(e) => updateCard(card.id, { data_limite_tarefa: e.target.value })}
+                />
               </div>
             </div>
+          </div>
+
+          {/* Dados de Publicação */}
+          <div className="space-y-4">
+            <div className="text-sm font-semibold border-b pb-1">Publicação</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Data agendamento</Label>
+                <Input
+                  type="date"
+                  value={post.data_agendamento ?? ""}
+                  onChange={(e) => updatePost(post.id, { data_agendamento: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Data postagem</Label>
+                <Input
+                  type="date"
+                  value={post.data_postagem ?? ""}
+                  onChange={(e) => updatePost(post.id, { data_postagem: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Link do Meta Business Suit</Label>
+                <div className="flex gap-1.5">
+                  <Input
+                    placeholder="https://..."
+                    value={post.link_post ?? ""}
+                    onChange={(e) => updatePost(post.id, { link_post: e.target.value })}
+                  />
+                  {post.link_post && (
+                    <Button size="icon" variant="outline" asChild className="shrink-0">
+                      <a href={post.link_post} target="_blank" rel="noreferrer" title="Abrir Meta">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
             <div>
               <Label className="text-xs">Link do Meister</Label>
               <div className="flex gap-1.5">
