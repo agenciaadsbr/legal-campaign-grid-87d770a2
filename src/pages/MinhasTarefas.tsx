@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCRM } from "@/store/crm";
-import { useDemandas, useDemandasBootstrap } from "@/store/demandas";
+import { useDemandas, useDemandasBootstrap, getResponsaveisIds } from "@/store/demandas";
 import { usePlanejamento, usePlanejamentoBootstrap } from "@/store/planejamento";
 import { useDocumentacao, useDocumentacaoBootstrap } from "@/store/documentacao";
 import { useAuth } from "@/hooks/useAuth";
