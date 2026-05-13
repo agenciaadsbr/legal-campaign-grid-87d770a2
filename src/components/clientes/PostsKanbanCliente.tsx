@@ -638,11 +638,13 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
 
                 if (clienteId) {
                   const s = ids.length === 1 ? "" : "s";
-                  await useCRM.getState().addAtividade(
+                  await useCRM.getState().addAtividade({
                     clienteId,
-                    "Atribuição em Massa",
-                    `${ids.length} post${s} atribuído${s} para: ${nomesResps}`
-                  );
+                    acao: "Atribuição em Massa",
+                    descricao: `${ids.length} post${s} atribuído${s} para: ${nomesResps}`,
+                    area: "Posts",
+                    tipo: "post"
+                  });
                 }
 
                 toast.success(
