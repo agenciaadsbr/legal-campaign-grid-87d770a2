@@ -680,11 +680,13 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                   }
                   if (datas.data_limite) {
                     const dataFmt = format(parseISO(datas.data_limite), "dd/MM/yyyy");
-                    await useCRM.getState().addAtividade(
+                    await useCRM.getState().addAtividade({
                       clienteId,
-                      "Data em Massa",
-                      `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data limite definida para ${dataFmt}.`
-                    );
+                      acao: "Data em Massa",
+                      descricao: `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data limite definida para ${dataFmt}.`,
+                      area: "Posts",
+                      tipo: "post"
+                    });
                   }
                 }
 
