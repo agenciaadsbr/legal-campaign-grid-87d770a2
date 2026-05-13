@@ -86,9 +86,15 @@ function CardItem({
     toast.success("Título atualizado");
   };
 
-  const due = (card.data_limite_tarefa || card.data_agendada) ? new Date(card.data_limite_tarefa || card.data_agendada!) : null;
+  const productionDue = card.data_limite_tarefa ? new Date(card.data_limite_tarefa) : null;
+  const editorialDue = card.data_agendada ? new Date(card.data_agendada) : null;
+  
   let prazoState: "none" | "future" | "today" | "overdue" = "none";
   let prazoLabel = "Definir prazo";
+  
+  // O prazo operacional/produção tem prioridade para o status de "atrasado"
+  const due = productionDue || editorialDue;
+  
   if (due) {
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
     const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
@@ -97,6 +103,7 @@ function CardItem({
     else prazoState = "future";
     prazoLabel = format(due, "dd MMM yyyy", { locale: ptBR });
   }
+  
   const prazoColor =
     prazoState === "overdue"
       ? "text-destructive"
