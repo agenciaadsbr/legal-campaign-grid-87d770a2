@@ -250,10 +250,20 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         .map((c) => c.data_limite_tarefa)
         .filter((p): p is string => !!p)
         .sort();
+      
+      const iniciosPendentes = pendentes
+        .map((c) => c.data_inicio_tarefa)
+        .filter((p): p is string => !!p)
+        .sort();
+
       let prazo: string | null = prazosPendentes[0] ?? null;
+      let data_inicio: string | null = iniciosPendentes[0] ?? null;
+      let data_limite: string | null = prazosPendentes[0] ?? null;
+
       if (!prazo && grupo.contrato_id !== "all") {
         const ct = contratos.find((x) => x.id === grupo.contrato_id);
         prazo = ct?.data_fim ?? null;
+        if (!data_limite) data_limite = ct?.data_fim ?? null;
       }
 
       const algumUrgente = cardsGrupo.some((c) => !!c.is_urgent);
