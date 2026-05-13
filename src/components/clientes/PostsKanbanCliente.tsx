@@ -236,10 +236,27 @@ function CardItem({
               <span>Início: {format(parseISO(card.data_inicio_tarefa), "dd/MM", { locale: ptBR })}</span>
             </div>
           )}
-          <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
-            <PrazoIcon className="h-3 w-3" />
-            <span className={cn(prazoState === "overdue" && "font-semibold")}>{prazoLabel}</span>
-          </div>
+          {card.data_limite_tarefa && (
+            <div className={cn("flex items-center gap-1 text-[11px]", productionDue && productionDue < new Date() && card.status_card !== 'Postado' ? "text-destructive font-bold" : "text-muted-foreground")}>
+              <CalendarX className="h-3 w-3" />
+              <span>Limite: {format(parseISO(card.data_limite_tarefa), "dd MMM", { locale: ptBR })}</span>
+            </div>
+          )}
+          {card.data_agendada && !card.data_limite_tarefa && (
+            <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
+              <PrazoIcon className="h-3 w-3" />
+              <span>Prazo: {prazoLabel}</span>
+            </div>
+          )}
+          {card.data_agendada && card.data_limite_tarefa && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground italic">
+              <Calendar className="h-2.5 w-2.5" />
+              <span>Editorial: {format(parseISO(card.data_agendada), "dd/MM", { locale: ptBR })}</span>
+            </div>
+          )}
+          {!card.data_limite_tarefa && !card.data_agendada && (
+            <div className="text-[11px] text-muted-foreground">Definir prazo</div>
+          )}
         </div>
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
