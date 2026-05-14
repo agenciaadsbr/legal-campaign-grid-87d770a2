@@ -1252,6 +1252,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
         {canWrite && <WorkflowSection pai={demanda} />}
           </div>
         </fieldset>
+        {showSaveButton && (
+          <div className="shrink-0 flex items-center justify-end gap-2 pt-2 border-t">
+            <Button type="button" variant="outline" onClick={() => onCancel?.()}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={() => onSave?.()}>
+              {saveLabel ?? "Salvar tarefa"}
+            </Button>
+          </div>
+        )}
       </DialogContent>
 
       {/* Lightbox de imagem do anexo */}
