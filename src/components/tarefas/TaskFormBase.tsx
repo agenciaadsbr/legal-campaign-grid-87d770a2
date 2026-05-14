@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,13 +52,18 @@ interface TaskFormBaseProps {
   standalone?: boolean;
 }
 
-export function TaskFormBase({ 
-  initialDemandaId, 
-  initialPostId,
-  onSuccess, 
-  onCancel,
-  standalone = true 
-}: TaskFormBaseProps) {
+export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
+  const { 
+    initialDemandaId, 
+    initialPostId,
+    onSuccess, 
+    onCancel,
+    standalone = true 
+  } = props;
+
+  useImperativeHandle(ref, () => ({
+    handleSubmit
+  }));
   const { clientes, responsaveis, updateCard, moveCard, updatePost, statusPostOptions, addAtividade, createCardRascunho } = useCRM();
   const { user, canWrite } = useAuth();
   const { 
@@ -511,4 +516,4 @@ export function TaskFormBase({
       )}
     </div>
   );
-}
+});
