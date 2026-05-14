@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useCRM, StatusCard } from "@/store/crm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { TaskFormBase } from "@/components/tarefas/TaskFormBase";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,13 +64,16 @@ export default function PostDetalhe() {
   const post = posts.find((p) => p.id === postId);
   const card = post && cards.find((c) => c.id === post.card_id);
 
-  const [texto, setTexto] = useState("");
-  const [imagemUrl, setImagemUrl] = useState<string | null>(null);
-  const [legendaSavedAt, setLegendaSavedAt] = useState<number | null>(null);
-  const [showSaved, setShowSaved] = useState(false);
-  const composerFileRef = useRef<HTMLInputElement>(null);
-  const anexoFileRef = useRef<HTMLInputElement>(null);
-  const tituloInputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(false);
+  const taskFormRef = useRef<{ handleSubmit: () => Promise<void> } | null>(null);
+
+  const handleSubmit = async () => {
+    if (taskFormRef.current) {
+      setLoading(true);
+      await taskFormRef.current.handleSubmit();
+      setLoading(false);
+    }
+  };
 
   // Foco automático no título quando vindo da criação/iniciar via ?focus=titulo
   useEffect(() => {
@@ -189,413 +193,24 @@ export default function PostDetalhe() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-3 animate-fade-in">
       <VoltarVisaoGeralButton onClick={voltarParaVisaoGeral} />
-      {/* Post do Mês — seção unificada */}
-      <fieldset disabled={!canWrite} className="contents">
+      
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">Título da tarefa</div>
-              <Input
-                ref={tituloInputRef}
-                value={card.titulo_card}
-                onChange={(e) => updateCard(card.id, { titulo_card: e.target.value })}
-                placeholder="Ex: Criar arte carrossel sobre aposentadoria rural"
-                className="text-xl font-bold border-0 px-0 focus-visible:ring-0 h-auto"
-              />
-              <div className="text-xs text-muted-foreground mt-1">
-                Post Mês {card.mes_referencia} · Semana {card.numero_semana}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant={card.is_urgent ? "default" : "outline"}
-                size="sm"
-                disabled={!canWrite}
-                onClick={() => {
-                  const next = !card.is_urgent;
-                  updateCard(card.id, { is_urgent: next });
-                  toast.success(next ? "Card marcado como urgente" : "Urgência removida");
-                }}
-                className={cn(
-                  "gap-1.5",
-                  card.is_urgent && "bg-amber-500 hover:bg-amber-500/90 text-white border-amber-500"
-                )}
-                title={card.is_urgent ? "Remover urgência" : "Marcar como urgente"}
-              >
-                <Zap className={cn("h-4 w-4", card.is_urgent && "fill-current")} />
-                Urgente
-              </Button>
-              <Select value={post.status} onValueChange={(v) => updatePost(post.id, { status: v as StatusCard })}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {statusPostOptions.map((s) => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onClick={copiarLink}
-                title="Copiar link da tarefa"
-                className="shrink-0"
-              >
-                <Link2 className="h-4 w-4" />
-              </Button>
-              {isAdmin && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive shrink-0"
-                      title="Excluir tarefa"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta ação não pode ser desfeita. Anexos, comentários e o post serão removidos.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={excluirTarefa}>Excluir</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {/* Controle da Tarefa */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold border-b pb-1">Controle da tarefa</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Data de início da tarefa</Label>
-                <Input
-                  type="date"
-                  value={card.data_inicio_tarefa ?? ""}
-                  onChange={(e) => updateCard(card.id, { data_inicio_tarefa: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Data limite da tarefa</Label>
-                <Input
-                  type="date"
-                  value={card.data_limite_tarefa ?? ""}
-                  onChange={(e) => updateCard(card.id, { data_limite_tarefa: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Dados de Publicação */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold border-b pb-1">Publicação</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Data agendamento</Label>
-                <Input
-                  type="date"
-                  value={post.data_agendamento ?? ""}
-                  onChange={(e) => updatePost(post.id, { data_agendamento: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Data postagem</Label>
-                <Input
-                  type="date"
-                  value={post.data_postagem ?? ""}
-                  onChange={(e) => updatePost(post.id, { data_postagem: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Link do Meta Business Suit</Label>
-                <div className="flex gap-1.5">
-                  <Input
-                    placeholder="https://..."
-                    value={post.link_post ?? ""}
-                    onChange={(e) => updatePost(post.id, { link_post: e.target.value })}
-                  />
-                  {post.link_post && (
-                    <Button size="icon" variant="outline" asChild className="shrink-0">
-                      <a href={post.link_post} target="_blank" rel="noreferrer" title="Abrir Meta">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Link do Meister</Label>
-                <div className="flex gap-1.5">
-                  <Input
-                    placeholder="https://meister..."
-                    value={post.link_meister ?? ""}
-                    onChange={(e) => updatePost(post.id, { link_meister: e.target.value })}
-                  />
-                  {post.link_meister && (
-                    <Button size="icon" variant="outline" asChild className="shrink-0">
-                      <a href={post.link_meister} target="_blank" rel="noreferrer" title="Abrir Meister">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="md:col-span-2">
-                <Label className="text-xs">Responsáveis</Label>
-                <div className="mt-1">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1.5 -mx-2 transition-colors min-h-[40px]"
-                        title="Clique para adicionar/remover responsáveis"
-                      >
-                        {card.responsaveis.length > 0 ? (
-                          <AvatarStack responsaveis={responsaveis.filter((r) => card.responsaveis.includes(r.id))} />
-                        ) : (
-                          <span className="text-sm text-muted-foreground">+ atribuir responsáveis</span>
-                        )}
-                        <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2" align="start">
-                      <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis</div>
-                      <div className="max-h-60 overflow-auto space-y-0.5">
-                        {responsaveis.map((r) => {
-                          const checked = card.responsaveis.includes(r.id);
-                          return (
-                            <button
-                              type="button"
-                              key={r.id}
-                              onClick={() => {
-                                const next = checked
-                                  ? card.responsaveis.filter((v) => v !== r.id)
-                                  : [...card.responsaveis, r.id];
-                                updateCard(card.id, { responsaveis: next });
-                              }}
-                              className={cn(
-                                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
-                                checked && "bg-accent"
-                              )}
-                            >
-                              <Checkbox checked={checked} />
-                              <div
-                                className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
-                                style={{ backgroundColor: r.cor }}
-                              >
-                                {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-                              </div>
-                              <span className="truncate">{r.nome}</span>
-                            </button>
-                          );
-                        })}
-                        {responsaveis.length === 0 && (
-                          <div className="text-xs text-muted-foreground px-2 py-3 text-center">Nenhum responsável cadastrado</div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Anexos */}
-          <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs">Anexos</Label>
-              <input
-                ref={anexoFileRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={addAnexo}
-              />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-xs text-primary hover:text-primary"
-                onClick={() => anexoFileRef.current?.click()}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar anexo
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {post.anexos.map((a) => {
-                const img = isImageUrl(a.url, a.nome);
-                return (
-                  <div
-                    key={a.id}
-                    className="group relative h-[72px] w-[72px] border rounded-lg overflow-hidden bg-muted/30"
-                  >
-                    {img ? (
-                      <a href={a.url} target="_blank" rel="noreferrer" className="block w-full h-full">
-                        <img src={a.url} alt={a.nome} className="w-full h-full object-cover" />
-                      </a>
-                    ) : (
-                      <a
-                        href={a.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        download={a.nome}
-                        className="flex flex-col items-center justify-center w-full h-full p-1 text-center hover:bg-accent"
-                        title={a.nome}
-                      >
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-[9px] mt-0.5 truncate w-full leading-tight">{a.nome}</span>
-                      </a>
-                    )}
-                    <button
-                      onClick={(e) => { e.preventDefault(); removerAnexo(a.id); }}
-                      className="absolute top-0.5 right-0.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Remover"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                );
-              })}
-              <button
-                onClick={() => anexoFileRef.current?.click()}
-                className="flex flex-col items-center justify-center h-[72px] w-[72px] border border-dashed rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                title="Adicionar anexo"
-              >
-                <Plus className="h-5 w-5" />
-                <span className="text-[9px] mt-0.5">Anexar</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Atividade / Briefing interno */}
-          <div className="border-t pt-4">
-            <Label className="text-xs">Atividade / Briefing</Label>
-            <Textarea
-              rows={4}
-              placeholder="Detalhes internos: cores do cliente, CTA no último slide, tom formal, referências..."
-              value={card.descricao ?? ""}
-              onChange={(e) => updateCard(card.id, { descricao: e.target.value } as any)}
-              className="mt-1.5"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Visível apenas dentro deste card. O título principal acima é o que aparece no Kanban.
-            </p>
-          </div>
-
-          {/* Legenda */}
-          <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs">Legenda</Label>
-              {showSaved && (
-                <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 animate-fade-in">
-                  <CheckCircle2 className="h-3 w-3" /> Salvo
-                </span>
-              )}
-            </div>
-            <Textarea
-              rows={5}
-              placeholder="Escreva a legenda do post..."
-              value={post.legenda}
-              onChange={(e) => {
-                updatePost(post.id, { legenda: e.target.value });
-                setLegendaSavedAt(Date.now());
-              }}
-            />
-            <div className="flex justify-end mt-1">
-              <span className="text-[11px] text-muted-foreground tabular-nums">
-                {post.legenda.length} caracteres
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      </fieldset>
-
-      {/* Atividade */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Atividade</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-2 max-h-80 overflow-auto scrollbar-thin pr-1">
-            {meusComentarios.length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-6">Sem comentários ainda</div>
-            )}
-            {meusComentarios.map((c) => (
-              <ComentarioBubble
-                key={c.id}
-                comentario={c}
-                autorCor={responsaveis.find((r) => r.id === c.usuario_id)?.cor}
-                autorNome={responsaveis.find((r) => r.id === c.usuario_id)?.nome ?? "Usuário"}
-                onUpdate={(texto) => updateComentario(c.id, { comentario_texto: texto })}
-                onDelete={() => deleteComentario(c.id)}
-              />
-            ))}
-          </div>
-
-          {/* Composer estilo chat */}
-          <div className="rounded-xl border bg-muted/30 px-3 py-2 space-y-2">
-            {imagemUrl && (
-              <div className="relative inline-block">
-                <img src={imagemUrl} className="max-h-32 rounded border" alt="preview" />
-                <button
-                  onClick={() => setImagemUrl(null)}
-                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-            <RichTextEditor
-              value={texto}
-              onChange={setTexto}
-              placeholder="Escreva um comentário..."
-              onEnterSubmit={enviar}
-              minHeight="min-h-[44px]"
-            />
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <input
-                  ref={composerFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={onPickImg}
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => composerFileRef.current?.click()}
-                  title="Anexar imagem"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" title="Imagem" onClick={() => composerFileRef.current?.click()}>
-                  <ImageIcon className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" title="Emoji" disabled>
-                  <Smile className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" title="Mencionar" disabled>
-                  <AtSign className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground hidden sm:inline">Enter envia · Shift+Enter quebra</span>
-                <Button size="sm" onClick={enviar} disabled={!texto.trim() && !imagemUrl}>
-                  <Send className="h-4 w-4 mr-1" /> Enviar
-                </Button>
-              </div>
-            </div>
+        <CardContent className="p-6">
+          <TaskFormBase 
+            initialPostId={postId}
+            onSuccess={() => toast.success("Post atualizado")}
+            onCancel={voltarParaVisaoGeral}
+            standalone={false}
+          />
+          
+          <div className="mt-6 pt-6 border-t">
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading}
+              className="w-full md:w-auto"
+            >
+              {loading ? "Salvando..." : "Salvar Alterações"}
+            </Button>
           </div>
         </CardContent>
       </Card>
