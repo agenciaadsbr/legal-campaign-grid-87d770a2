@@ -83,7 +83,7 @@ export function WorkflowSection({ pai }: Props) {
 
   // --- Campos espelhados do detalhe da tarefa ---
   const [titulo, setTitulo] = useState("");
-  const [categoria, setCategoria] = useState<DemandaCategoria>(pai.categoria);
+  const [categoria, setCategoria] = useState<DemandaCategoria | "Posts">(pai.categoria);
   const [subtipo, setSubtipo] = useState<string>("");
   const [prioridade, setPrioridade] = useState<DemandaPrioridade>("Media");
   const [dataInicio, setDataInicio] = useState<string>("");
@@ -180,33 +180,75 @@ export function WorkflowSection({ pai }: Props) {
     setAnexosPendentes((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const mostrarLinks = CATEGORIAS_COM_LINKS.includes(categoria);
+  const mostrarLinks = categoria !== "Posts" && CATEGORIAS_COM_LINKS.includes(categoria);
 
   const salvar = async () => {
     if (!titulo.trim()) return;
     setSalvando(true);
     try {
-      const novaId = await createProximaEtapa(
-        pai.id,
-        {
-          titulo: titulo.trim(),
-          cliente_id: pai.cliente_id,
-          categoria,
-          subtipo: subtipo.trim() || null,
-          prioridade,
-          data_inicio: dataInicio ? new Date(dataInicio).toISOString() : null,
-          data_limite: dataLimite ? new Date(dataLimite).toISOString() : null,
-          descricao: descricao.trim() ? descricao : null,
-          link_meister: mostrarLinks && linkMeister.trim() ? linkMeister.trim() : null,
-          link_drive: mostrarLinks && linkDrive.trim() ? linkDrive.trim() : null,
-          responsaveis_ids: responsaveisIds,
-        },
-        {
-          modo_liberacao: modo,
-          bloquear,
-          herdar_anexos: herdarAnexos,
-        },
-      );
+      let novaId: string | null = null;
+
+      if (categoria === "Posts") {
+        const { createCardRascunho, updateCard, updatePost, addAtividade } = useCRM.getState();
+        const res = await createCardRascunho({ cliente_id: pai.cliente_id });
+        if (res) {
+          novaId = res.cardId;
+          await updateCard(res.cardId, {
+            titulo_card: titulo.trim(),
+            is_urgent: prioridade === "Urgente",
+            responsaveis: responsaveisIds,
+            data_inicio_tarefa: dataInicio ? new Date(dataInicio).toISOString() : null,
+            data_limite_tarefa: dataLimite ? new Date(dataLimite).toISOString() : null,
+          });
+          await updatePost(res.postId, {
+            status: "Aguardando etapa anterior" as any,
+            link_meister: linkMeister.trim() || null,
+            descricao: descricao.trim() || null,
+          });
+          
+          await addAtividade({
+            clienteId: pai.cliente_id,
+            acao: "workflow",
+            descricao: `Próxima etapa criada: ${titulo.trim()} (Post)`,
+            refId: res.cardId,
+            tipo: "post",
+            area: "Posts",
+            titulo_tarefa: titulo.trim(),
+            payload: { pai_id: pai.id, bloqueada: bloquear }
+          });
+          
+          if (bloquear) {
+            await (supabase as any).from("task_dependencies").insert({
+              task_id: res.cardId,
+              depends_on_task_id: pai.id,
+              modo_liberacao: modo,
+              liberado: false
+            });
+          }
+        }
+      } else {
+        novaId = await createProximaEtapa(
+          pai.id,
+          {
+            titulo: titulo.trim(),
+            cliente_id: pai.cliente_id,
+            categoria,
+            subtipo: subtipo.trim() || null,
+            prioridade,
+            data_inicio: dataInicio ? new Date(dataInicio).toISOString() : null,
+            data_limite: dataLimite ? new Date(dataLimite).toISOString() : null,
+            descricao: descricao.trim() ? descricao : null,
+            link_meister: mostrarLinks && linkMeister.trim() ? linkMeister.trim() : null,
+            link_drive: mostrarLinks && linkDrive.trim() ? linkDrive.trim() : null,
+            responsaveis_ids: responsaveisIds,
+          },
+          {
+            modo_liberacao: modo,
+            bloquear,
+            herdar_anexos: herdarAnexos,
+          },
+        );
+      }
 
       // Upload dos anexos pendentes (após a demanda existir)
       if (novaId && anexosPendentes.length > 0) {
@@ -307,12 +349,15 @@ export function WorkflowSection({ pai }: Props) {
                   setSubtipo("");
                 }}
               >
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIAS.map((c) => (
-                    <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Posts">Posts</SelectItem>
+                    {CATEGORIAS.map((c) => (
+                      <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>
+                    ))}
+                  </SelectContent>
               </Select>
             </div>
             <div>
@@ -344,7 +389,9 @@ export function WorkflowSection({ pai }: Props) {
             <div>
               <Label className="text-[11px]">Prioridade</Label>
               <Select value={prioridade} onValueChange={(v) => setPrioridade(v as DemandaPrioridade)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {PRIORIDADES.map((p) => (
                     <SelectItem key={p} value={p}>{PRIORIDADE_LABEL[p]}</SelectItem>
@@ -556,7 +603,20 @@ export function WorkflowSection({ pai }: Props) {
 
           {/* Atividade / Briefing */}
           <div className="border-t pt-2">
-            <Label className="text-[11px]">Atividade / Briefing</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-[11px]">Atividade / Briefing</Label>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 text-[10px] text-primary"
+                onClick={() => {
+                  setDescricao(prev => prev + `<br/>---<br/>${pai.descricao || ""}`);
+                  toast.success("Briefing anexado");
+                }}
+              >
+                Anexar Briefing Anterior
+              </Button>
+            </div>
             <div className="border rounded-md overflow-hidden mt-1">
               <RichTextEditor
                 value={descricao}

@@ -113,7 +113,8 @@ export type DemandaStatus =
   | "Revisar"
   | "Entregue"
   | "Concluido"
-  | "Atrasado";
+  | "Atrasado"
+  | "Aguardando etapa anterior";
 
 export const STATUS_DEMANDA: DemandaStatus[] = [
   "Planejamento",
@@ -122,6 +123,7 @@ export const STATUS_DEMANDA: DemandaStatus[] = [
   "Entregue",
   "Concluido",
   "Atrasado",
+  "Aguardando etapa anterior",
 ];
 
 export const STATUS_DEMANDA_LABEL: Record<DemandaStatus, string> = {
@@ -131,6 +133,7 @@ export const STATUS_DEMANDA_LABEL: Record<DemandaStatus, string> = {
   Entregue: "Entregue",
   Concluido: "Concluído",
   Atrasado: "Atrasado",
+  "Aguardando etapa anterior": "Aguardando etapa anterior",
 };
 
 export const STATUS_DEMANDA_COR: Record<DemandaStatus, string> = {
@@ -140,6 +143,7 @@ export const STATUS_DEMANDA_COR: Record<DemandaStatus, string> = {
   Entregue: "hsl(var(--status-agendar))",
   Concluido: "hsl(var(--status-postado))",
   Atrasado: "hsl(var(--destructive))",
+  "Aguardando etapa anterior": "hsl(var(--warning))",
 };
 
 export type DemandaPrioridade = "Baixa" | "Media" | "Alta" | "Urgente";

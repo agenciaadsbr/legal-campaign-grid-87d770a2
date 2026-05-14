@@ -1003,7 +1003,8 @@ function NovaTarefaSeletor({
     const novo = await useDemandasStore.getState().createRascunho({
       cliente_id: clienteId,
       categoria,
-    });
+      origem: "manual"
+    } as any);
     setCriando(false);
     if (novo) {
       onOpenChange(false);

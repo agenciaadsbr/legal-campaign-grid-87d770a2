@@ -6,7 +6,7 @@ import { format } from "date-fns";
 
 // ===================== Tipos =====================
 export type StatusCliente = string; // dinâmico via tabela status_options
-export type StatusCard = "ideias" | "Criar" | "Revisar" | "Agendar" | "Postado" | "Renovação" | string;
+export type StatusCard = "ideias" | "Criar" | "Revisar" | "Agendar" | "Postado" | "Renovação" | "Aguardando etapa anterior" | string;
 export type TipoAlerta =
   | "Renovacao"
   | "Posts_Pendentes"
@@ -532,7 +532,10 @@ export const useCRM = create<State>()((set, get) => ({
         modelosColunas: (modelosRes.data ?? []).map(mapModelo),
         statusOptions: (statusRes.data ?? []).map(mapStatusOpt),
         nichos: (nichosRes.data ?? []).map(mapNicho),
-        statusPostOptions: (statusPostRes.data ?? []).map(mapStatusOpt),
+        statusPostOptions: [
+          { label: "Aguardando etapa anterior", cor: "#f59e0b" },
+          ...(statusPostRes.data ?? []).map(mapStatusOpt).filter(o => o.label !== "Aguardando etapa anterior")
+        ],
         authoresPorAuthId,
         customFields: (customFieldsRes.data ?? []).map(mapCustomField),
         loaded: true,
