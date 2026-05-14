@@ -283,7 +283,7 @@ function CardItem({
 
   if (!post || selectionMode) return inner;
   return (
-    <div onClick={() => abrirDetalhe(card.id)}>
+    <div onClick={() => navigate(`/clientes/${clienteIdLink}/posts/${post.id}`)}>
       {inner}
     </div>
   );
