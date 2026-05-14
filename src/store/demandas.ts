@@ -502,6 +502,14 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async deleteDemanda(id) {
+    if (isLocalDraftId(id)) {
+      set({
+        demandas: get().demandas.filter((d) => d.id !== id),
+        comentarios: get().comentarios.filter((c) => c.demanda_id !== id),
+        anexos: get().anexos.filter((a) => a.demanda_id !== id),
+      });
+      return;
+    }
     const { error } = await supabase.from("demandas").delete().eq("id", id);
     if (error) {
       toast.error("Erro ao excluir", { description: error.message });
