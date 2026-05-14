@@ -1,84 +1,59 @@
 ## Escopo
 
-Aplicar mudanças apenas em:
-
-- `src/components/tarefas/TaskFormBase.tsx` — modo Posts (`initialPostId` definido)
-- `src/pages/PostDetalhe.tsx` — apenas se necessário (sem alterar layout externo)
-
-Nada em Projeto Completo, `DemandaDetalheDialog`, kanbans, store ou demais áreas.
+Apenas `src/components/tarefas/TaskFormBase.tsx`. Nenhuma alteração em store, banco, kanbans, Projeto Completo, Central de Tarefas, Dashboards, demais áreas, `PostDetalhe.tsx` ou qualquer outro arquivo.
 
 ## Diagnóstico
 
-- O "formulário padrão validado" é o `TaskFormBase` (já usado em Vídeos, Tráfego Pago, LP/Site, IA/Atendimento, Operacional, Urgências). Posts já usa o mesmo componente, mas hoje tem um campo extra `Legenda` e a seção "Campos de Post" está renderizada com `Legenda` embutida.
-- `PostDetalhe` carrega o post pelo `initialPostId` em `TaskFormBase`. Isso já garante mesma estrutura, mesmo layout, mesmas interações (Workflow, IA Consulta, Comentários, Histórico, Anexos, Briefing).
-- O único delta entre Posts e demais áreas é: (a) campo Legenda, (b) campos extras Data Agendamento, Data Postagem, Link Meta Business Suite.
+A aba Posts já abre o card via `PostDetalhe` → `<TaskFormBase initialPostId=... />`. Ou seja, o componente já é o mesmo formulário padrão usado em Vídeos, Tráfego Pago, LP/Site, IA/Atendimento, Operacional e Urgências (mesma estrutura, mesmo CSS, mesmo Workflow, mesma IA Consulta, mesmos comentários/histórico/anexos/briefing). Isso atende ao requisito "usar exatamente o mesmo componente já existente" — não é necessário criar nada novo nem duplicar componente.
 
-## Mudanças
+Pendências do comando ainda não satisfeitas:
 
-### 1. Remover completamente o campo Legenda do formulário Posts
+1. O bloco "Campos de Post" hoje só tem **Data Agendamento, Data Postagem, Link Meta Business Suite**. Falta **Legenda** (4º campo exigido).
+2. O campo Legenda foi removido na iteração anterior do `TaskFormBase`: estado, leitura (`p.legenda`) e gravação (`updatePost({ legenda })`) não existem mais. Precisa voltar — sem migração destrutiva e preservando dados antigos em `posts.legenda`.
+3. Garantir o **placeholder** do Briefing exatamente como pedido.
+4. Garantir **posicionamento**: bloco "Campos de Post" entre Responsáveis e Anexos (já está correto hoje — apenas confirmar que não regride ao adicionar Legenda).
+5. Garantir que, fora o bloco "Campos de Post", o formulário de Posts é visualmente indistinguível das demais áreas (já é — apenas reconfirmar nenhuma divergência sobrou).
 
-Em `TaskFormBase.tsx`:
+## Mudanças (todas em `src/components/tarefas/TaskFormBase.tsx`)
 
-- Remover estado local `legenda` e `setLegenda`.
-- Remover bloco JSX do `<Label>Legenda</Label>` + `<Textarea>` dentro da seção "Campos de Post".
-- Remover leitura `setLegenda(p.legenda || "")` no `useEffect` de carregamento.
-- Remover envio de `legenda` em `updatePost(...)` (ambos branches: `initialPostId` existente e novo via `createCardRascunho`). O backend continua aceitando `legenda` opcional, então registros antigos não são alterados (compatibilidade preservada).
+### 1. Reintroduzir estado da Legenda
+- Adicionar `const [legenda, setLegenda] = useState("");` junto a `dataAgendamento`, `dataPostagem`, `linkMeta`.
 
-### 2. Briefing passa a cobrir a legenda
+### 2. Carregar Legenda de posts existentes
+- No `useEffect` de carga, branch `initialPostId`: adicionar `setLegenda(p.legenda || "")`.
 
-- Atualizar `placeholder` do `RichTextEditor` de "Atividade / Briefing" para:
-  `"Descreva detalhes do post, legenda, CTA, referências, contexto e instruções internas..."`
-- Manter o nome do campo "Atividade / Briefing".
-- Não mexer em `descricao` para áreas não-Posts (placeholder único é aceitável; mantém consistência e não altera funcionalidade — apenas amplia o texto-guia).
+### 3. Persistir Legenda
+- Em `handleSubmit`, branch Posts, nas duas chamadas `updatePost(...)` (post existente e novo via `createCardRascunho`), incluir `legenda: legenda || undefined`.
+- Compatibilidade: se o usuário não preencher, valor antigo no banco não é apagado pelo `undefined`; se preencher, sobrescreve normalmente.
 
-### 3. Reordenar para a estrutura final exigida
+### 4. Adicionar campo Legenda dentro do bloco "Campos de Post"
+- Reimportar `Textarea` de `@/components/ui/textarea`.
+- Após o item "Link Meta Business Suite" do `<Card>` "Campos de Post", adicionar em `md:col-span-2`:
+  - `<Label>Legenda</Label>`
+  - `<Textarea value={legenda} onChange={e => setLegenda(e.target.value)} placeholder="Texto final do post (Instagram/Facebook)..." rows={4} />`
+- Ordem final do bloco: Data Agendamento → Data Postagem → Link Meta Business Suite → Legenda. Bloco continua entre Responsáveis e Anexos.
 
-Hoje a ordem em modo Posts é:
+### 5. Confirmar placeholder do Briefing
+- Manter exatamente: `"Descreva detalhes do post, legenda, CTA, referências, contexto e instruções internas..."` (já está aplicado para `categoria === "Posts"`).
 
-```
-Cliente / Área | Título / Urgente / Status / Prioridade
-Subtipo (se não-Posts)
-[Campos de Post: Data agendamento, Data postagem, Link Meta, Legenda]
-Data Início / Data Limite / Responsáveis | Link Meister / Link Drive / Anexos
-Briefing
-Comentários
-Workflow
-```
+### 6. Garantir paridade total com as outras áreas
+- Não remover, esconder, simplificar ou reordenar nenhuma seção do `TaskFormBase`.
+- Cabeçalho (Cliente, Área, Subtipo, Título, Urgente, Status, Prioridade), Datas, Responsáveis, Anexos, Link Meister, Link Drive, Atividade/Briefing, Atividade/Comentários, Ver histórico, IA Consulta ("Está com dúvidas na tarefa? Consulte aqui") e Workflow/Continuidade permanecem idênticos aos das demais áreas.
 
-Reordenar para casar com o pedido (válido para Posts e demais áreas):
+## Não fazer
 
-```
-Cliente / Área | Título / Urgente / Status / Prioridade
-Subtipo
-Data Início / Data Limite | (coluna direita: Links)
-Responsáveis
-[CAMPOS DE POST] (somente quando categoria === "Posts")
-Anexos
-Link Meister / Link Drive
-Briefing (placeholder ampliado)
-Comentários (Atividade / Comentários + Ver histórico + IA Consulta já presente)
-Workflow / Continuidade
-```
-
-Detalhes:
-
-- A seção "CAMPOS DE POST" (card destacado já existente) é movida para ficar **após Responsáveis e antes de Anexos**.
-- Anexos sai da coluna direita do grid de datas e vira bloco próprio em largura cheia, antes dos Links.
-- Mantidos: bloco `TarefaIAConsulta` ("Está com dúvidas na tarefa? Consulte aqui"), histórico via `meuHistorico`, `WorkflowSection`.
-
-### 4. Compatibilidade
-
-- Posts antigos com `legenda` no banco continuam carregando (apenas não são exibidos/editados pelo formulário). Nenhum DELETE/UPDATE em massa.
-- Anexos, comentários, workflow, IA Consulta, histórico permanecem com os mesmos handlers.
-- Cards e rotas inalterados.
-- Tarefas das demais áreas (não-Posts): apenas a reordenação visual descrita acima e o placeholder do Briefing. Nenhum campo removido, nenhum binding alterado.
+- Sem migração SQL. `posts.legenda` permanece como está.
+- Sem alterar `PostDetalhe.tsx`, `DemandaDetalheDialog.tsx`, kanbans, store `crm`/`demandas`, edge functions, tipos, dashboards, central de tarefas ou formulários de outras categorias.
+- Sem `DELETE`/`UPDATE` em massa, sem limpar valores antigos.
 
 ## Validação manual
 
-1. Abrir `/clientes/:id/posts/:postId` → mesmo layout do formulário das demais áreas.
-2. Confirmar ausência total do campo Legenda.
-3. Confirmar presença de Data agendamento, Data postagem, Link Meta Business Suite na seção "Campos de Post" entre Responsáveis e Anexos.
-4. Confirmar novo placeholder do Briefing.
-5. Comentários, Workflow, IA Consulta, anexos e histórico funcionando.
-6. Abrir post antigo (que tinha `legenda` salva) → abre normalmente, sem quebrar.
-7. Abrir tarefa de Vídeos/Tráfego/LP/IA/Operacional/Urgência → mesma ordem visual, sem regressão.
+1. Cliente → Projeto Completo → aba Posts → abrir um card existente.
+2. Confirmar que o layout é visualmente idêntico ao de Vídeos/Tráfego/LP/IA/Operacional/Urgência.
+3. Confirmar única diferença: bloco "Campos de Post" entre Responsáveis e Anexos com **Data Agendamento, Data Postagem, Link Meta Business Suite, Legenda**.
+4. Abrir post antigo cuja `legenda` esteja salva no banco → valor aparece preenchido no campo Legenda.
+5. Editar Legenda + salvar → persistido em `posts.legenda`. Reabrir → mantém o novo valor.
+6. Salvar sem mexer em Legenda → valor anterior continua intacto.
+7. Briefing exibe o placeholder ampliado exigido.
+8. Comentários, Ver histórico, IA Consulta, Workflow, anexos, links Meister/Drive funcionando normalmente.
+9. Abrir tarefa de outra área → bloco "Campos de Post" não aparece; nenhuma regressão visual.
