@@ -171,7 +171,7 @@ export default function CriarTarefa() {
           onValueChange={(v) => handleAreaChange(v as AreaSel)}
         >
           <SelectTrigger className="h-9">
-            <SelectValue placeholder="Selecione a área" />
+            <SelectValue placeholder="Selecione a área/categoria" />
           </SelectTrigger>
           <SelectContent>
             {AREAS_ORDEM.filter(
