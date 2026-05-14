@@ -46,12 +46,14 @@ function CardItem({
   selectionMode,
   selected,
   onToggleSelect,
+  abrirDetalhe,
 }: {
   card: CardT;
   onIniciar: (id: string) => void;
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  abrirDetalhe: (id: string) => void;
 }) {
   const navigate = useNavigate();
   const { responsaveis, posts, updateCard } = useCRM();
