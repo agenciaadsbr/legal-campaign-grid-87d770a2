@@ -1,33 +1,33 @@
-# Plano de Otimização e Correção do Módulo de Clientes
+text
+I will implement a global "Create Task" feature, standardize forms, and add workflow capabilities to posts. This is an expansion of the current system, ensuring backward compatibility.
 
-O problema de \\"tela branca\\" e lentidão ocorre porque o sistema tenta carregar todos os dados de uma vez (Clientes, Contratos, Cards, Posts, Comentários, Alertas, etc.) antes de exibir qualquer informação. Com 93 clientes e potencialmente milhares de cards e comentários, o processamento inicial e o mapeamento de dados tornam-se um gargalo.
+### Phase 1: Global "Create Task" Sidebar Item
+- Add "Criar Tarefa" to `AppSidebar.tsx` with a `Plus` icon, positioned after "Clientes".
+- Create `src/pages/CriarTarefa.tsx` as the landing page for this menu item.
+- Register the `/criar-tarefa` route in `App.tsx`.
 
-## Objetivos
-- Eliminar a tela branca carregando os dados de forma assíncrona/lazy.
-- Melhorar a performance de carregamento utilizando cache e carregamento sob demanda.
-- Manter o funcionamento em tempo real (Realtime) sem quebrar funcionalidades.
+### Phase 2 & 3: TaskFormBase Component
+- Create `src/components/tarefas/TaskFormBase.tsx` based on `DemandaDetalheDialog.tsx`.
+- Include fields: Cliente (select), Área (select: Posts, Vídeos, etc.), Subtipo, Título, Urgente (toggle), Status, Prioridade, Datas (Início/Limite), Responsáveis, Anexos, Drive/External links, Briefing, Comments, FAQ, and Workflow.
+- Implement auto-mapping logic: saving a task with a specific "Área" will automatically create it in the corresponding category in the CRM store.
 
-## Ações Técnicas
+### Phase 4 & 5: Post Standardization & Workflow
+- Update `PostDetalhe.tsx` to use `TaskFormBase`.
+- Add conditional fields for "Posts" category: Publicação dates, Legenda, and Meta/Meister links.
+- Integrate `WorkflowSection` into `PostDetalhe.tsx` to allow creating follow-up tasks (e.g., Designer finishes post -> system suggests scheduling).
 
-### 1. Refatoração do Store (Zustand)
-- Alterar `_loadAll` para carregar dados essenciais primeiro (Clientes, Responsáveis, Opções) e carregar dados pesados (Cards, Posts, Comentários) em segundo plano ou sob demanda.
-- Implementar carregamento parcial: a tabela de clientes exibirá as informações básicas enquanto os contadores (Posts atrasados, etc.) são calculados assim que os dados chegarem.
+### Phase 6: Blocked Tasks Logic
+- Add "AGUARDANDO ETAPA ANTERIOR" status handling.
+- Allow editing briefing, attachments, and comments but restrict movement/completion while blocked.
+- Update `DemandCard.tsx` and `DemandaDetalheDialog.tsx` to display lock indicators and restricted actions.
 
-### 2. Otimização da Página de Clientes
-- Adicionar um estado de `loading` visual na tabela para evitar a tela branca total.
-- Utilizar `useMemo` de forma mais agressiva para evitar re-renderizações desnecessárias.
+### Phase 7 to 10: History, Responsiveness & Compatibility
+- Ensure all new tasks are registered in the activity history.
+- Maintain existing layouts and ensure mobile responsiveness (no horizontal scroll).
+- Ensure existing cards continue to work without modification.
 
-### 3. Melhoria nas Consultas Supabase
-- Ativar o carregamento por partes para tabelas que crescem indefinidamente (comentários e posts).
-- Adicionar tratamento de erro individual por tabela para que falhas em dados secundários não bloqueiem a visualização principal.
-
-### 4. Interface (UX)
-- Exibir placeholders (skeletons) ou um indicador de progresso enquanto os dados pesados são baixados.
-- Garantir que a transição entre estados de carregamento seja fluida.
-
----
-
-**Detalhes Técnicos:**
-- Modificação no arquivo `src/store/crm.ts` para separar as chamadas do `Promise.all`.
-- Atualização em `src/pages/Clientes.tsx` para lidar com o estado `loading` global do store.
-- Otimização da lógica de mapeamento em `mapCliente` para lidar com dados ainda não carregados.
+### Technical Details
+- **Store**: Use `useDemandasStore` for task creation and `useCRM` for posts/cards.
+- **UI Components**: Leverage Shadcn UI (Select, Popover, Card, etc.) for consistency.
+- **Workflow**: Use `task_dependencies` logic for blocking/unlocking tasks.
+- **Layout**: Use CSS Grid/Flex for responsive form sections.

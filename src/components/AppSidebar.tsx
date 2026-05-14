@@ -18,6 +18,7 @@ const MENU_ITEMS: MenuItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
   { title: "Central de Tarefas", url: "/minhas-tarefas", icon: CheckSquare },
   { title: "Clientes", url: "/clientes", icon: Users },
+  { title: "Criar Tarefa", url: "/criar-tarefa", icon: Plus },
   { title: "Contratos", url: "/contratos", icon: FileText },
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
