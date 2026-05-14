@@ -313,7 +313,7 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
         <div className="space-y-4">
           <TarefaIAConsulta 
             demanda={currentDemanda} 
-            comentarios_texto={meusComentarios.map(c => c.comentario_texto).join('\n')}
+            comentarios_texto={meusComentarios.map(c => c.texto).join('\n')}
             onAddComment={(txt) => addComentario(currentDemanda.id, user?.id || '', txt)}
           />
         </div>
@@ -550,7 +550,7 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
       <div className="space-y-2">
         <Label>Atividade / Briefing</Label>
         <RichTextEditor
-          content={descricao}
+          value={descricao}
           onChange={setDescricao}
           placeholder="Descreva os detalhes da tarefa..."
         />
@@ -581,7 +581,7 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
                     </span>
                   </div>
                   <div className="text-xs p-2 rounded-md bg-muted">
-                    <div dangerouslySetInnerHTML={{ __html: c.comentario_texto }} />
+                    <div dangerouslySetInnerHTML={{ __html: c.texto }} />
                   </div>
                 </div>
               </div>
