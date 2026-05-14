@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, forwardRef, useImperativeHandle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -103,7 +103,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
   // Post specific states
   const [dataAgendamento, setDataAgendamento] = useState("");
   const [dataPostagem, setDataPostagem] = useState("");
-  const [legenda, setLegenda] = useState("");
   const [linkMeta, setLinkMeta] = useState("");
 
   const anexoFileRef = useRef<HTMLInputElement>(null);
@@ -142,7 +141,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
         setLinkMeister(p.link_meister || "");
         setDataAgendamento(p.data_agendamento || "");
         setDataPostagem(p.data_postagem || "");
-        setLegenda(p.legenda || "");
         setLinkMeta(p.link_post || "");
       }
     }
@@ -171,7 +169,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
               status: status as any,
               data_agendamento: dataAgendamento || undefined,
               data_postagem: dataPostagem || undefined,
-              legenda,
               link_post: linkMeta || undefined,
               link_meister: linkMeister || undefined
             });
@@ -191,7 +188,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
               status: status as any,
               data_agendamento: dataAgendamento || undefined,
               data_postagem: dataPostagem || undefined,
-              legenda,
               link_post: linkMeta || undefined,
               link_meister: linkMeister || undefined
             });
@@ -432,6 +428,45 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Data Início</Label>
+          <Input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Data Limite</Label>
+          <Input type="date" value={dataLimite} onChange={e => setDataLimite(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Responsáveis</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-start font-normal">
+              {responsaveisIds.length > 0
+                ? `${responsaveisIds.length} selecionado(s)`
+                : "Atribuir responsáveis"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-2">
+            <div className="max-h-60 overflow-auto space-y-1">
+              {responsaveis.map(r => (
+                <div key={r.id} className="flex items-center gap-2 p-1 hover:bg-accent rounded-md cursor-pointer"
+                     onClick={() => {
+                       setResponsaveisIds(prev =>
+                         prev.includes(r.id) ? prev.filter(id => id !== r.id) : [...prev, r.id]
+                       );
+                     }}>
+                  <Checkbox checked={responsaveisIds.includes(r.id)} />
+                  <span className="text-sm">{r.nome}</span>
+                </div>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
       {categoria === "Posts" && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
@@ -453,97 +488,50 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
               <Label>Link Meta Business Suite</Label>
               <Input value={linkMeta} onChange={e => setLinkMeta(e.target.value)} placeholder="https://business.facebook.com/..." />
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Legenda</Label>
-              <Textarea value={legenda} onChange={e => setLegenda(e.target.value)} className="min-h-[100px]" />
-            </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-2">
-              <Label>Data Início</Label>
-              <Input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Data Limite</Label>
-              <Input type="date" value={dataLimite} onChange={e => setDataLimite(e.target.value)} />
-            </div>
+      {(initialDemandaId || initialPostId) && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Anexos</Label>
+            <Button variant="ghost" size="sm" onClick={() => anexoFileRef.current?.click()} className="h-7 text-xs">
+              <Plus className="h-3 w-3 mr-1" /> Adicionar
+            </Button>
+            <input ref={anexoFileRef} type="file" multiple className="hidden" onChange={handleAddAnexo} />
           </div>
-
-          <div className="space-y-2">
-            <Label>Responsáveis</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start font-normal">
-                  {responsaveisIds.length > 0 
-                    ? `${responsaveisIds.length} selecionado(s)` 
-                    : "Atribuir responsáveis"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-2">
-                <div className="max-h-60 overflow-auto space-y-1">
-                  {responsaveis.map(r => (
-                    <div key={r.id} className="flex items-center gap-2 p-1 hover:bg-accent rounded-md cursor-pointer" 
-                         onClick={() => {
-                           setResponsaveisIds(prev => 
-                             prev.includes(r.id) ? prev.filter(id => id !== r.id) : [...prev, r.id]
-                           );
-                         }}>
-                      <Checkbox checked={responsaveisIds.includes(r.id)} />
-                      <span className="text-sm">{r.nome}</span>
-                    </div>
-                  ))}
+          <div className="space-y-1">
+            {meusAnexos.map((a) => (
+              <div key={a.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 group">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <Paperclip className="h-3 w-3 shrink-0" />
+                  <span className="text-xs truncate">{a.nome}</span>
                 </div>
-              </PopoverContent>
-            </Popover>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
+                    <a href={a.url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeAnexo(a.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      )}
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Link do Meister</Label>
-            <Input value={linkMeister} onChange={e => setLinkMeister(e.target.value)} placeholder="https://..." />
-          </div>
-          <div className="space-y-2">
-            <Label>Link do Drive</Label>
-            <Input value={linkDrive} onChange={e => setLinkDrive(e.target.value)} placeholder="https://..." />
-          </div>
-          
-          {(initialDemandaId || initialPostId) && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Anexos</Label>
-                <Button variant="ghost" size="sm" onClick={() => anexoFileRef.current?.click()} className="h-7 text-xs">
-                  <Plus className="h-3 w-3 mr-1" /> Adicionar
-                </Button>
-                <input ref={anexoFileRef} type="file" multiple className="hidden" onChange={handleAddAnexo} />
-              </div>
-              <div className="space-y-1">
-                {meusAnexos.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 group">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <Paperclip className="h-3 w-3 shrink-0" />
-                      <span className="text-xs truncate">{a.nome}</span>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
-                        <a href={a.url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeAnexo(a.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Link do Meister</Label>
+          <Input value={linkMeister} onChange={e => setLinkMeister(e.target.value)} placeholder="https://..." />
+        </div>
+        <div className="space-y-2">
+          <Label>Link do Drive</Label>
+          <Input value={linkDrive} onChange={e => setLinkDrive(e.target.value)} placeholder="https://..." />
         </div>
       </div>
 
@@ -552,7 +540,9 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
         <RichTextEditor
           value={descricao}
           onChange={setDescricao}
-          placeholder="Descreva os detalhes da tarefa..."
+          placeholder={categoria === "Posts"
+            ? "Descreva detalhes do post, legenda, CTA, referências, contexto e instruções internas..."
+            : "Descreva os detalhes da tarefa..."}
         />
       </div>
 
