@@ -349,7 +349,9 @@ export function WorkflowSection({ pai }: Props) {
                   setSubtipo("");
                 }}
               >
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Posts">Posts</SelectItem>
                     {CATEGORIAS.map((c) => (
@@ -387,7 +389,9 @@ export function WorkflowSection({ pai }: Props) {
             <div>
               <Label className="text-[11px]">Prioridade</Label>
               <Select value={prioridade} onValueChange={(v) => setPrioridade(v as DemandaPrioridade)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {PRIORIDADES.map((p) => (
                     <SelectItem key={p} value={p}>{PRIORIDADE_LABEL[p]}</SelectItem>
