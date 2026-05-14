@@ -433,6 +433,9 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+          {headerExtras && (
+            <div className="shrink-0">{headerExtras}</div>
+          )}
           {isAguardando && (
             <div className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 flex items-start gap-2 text-xs">
               <span className="mt-0.5">🔒</span>
