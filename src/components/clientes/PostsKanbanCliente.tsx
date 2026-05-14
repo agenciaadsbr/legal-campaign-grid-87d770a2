@@ -53,6 +53,7 @@ function CardItem({
   selected?: boolean;
   onToggleSelect?: () => void;
 }) {
+  const navigate = useNavigate();
   const { responsaveis, posts, updateCard } = useCRM();
   const { canWrite } = useAuth();
   const { clienteId: clienteIdRota } = useParams();
