@@ -171,6 +171,10 @@ function migrarCategoria(cat: any): any {
   return cat;
 }
 
+const LOCAL_DRAFT_PREFIX = "local-draft-";
+export const isLocalDraftId = (id: string | null | undefined) =>
+  typeof id === "string" && id.startsWith(LOCAL_DRAFT_PREFIX);
+
 function normalizeDemanda(row: any): Demanda {
   const responsaveis_ids: string[] = Array.isArray(row.responsaveis_ids)
     ? row.responsaveis_ids
