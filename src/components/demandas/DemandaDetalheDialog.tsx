@@ -80,6 +80,12 @@ interface Props {
    *   conteúdo (descrição, anexos, comentários), o rascunho é descartado.
    */
   isRascunho?: boolean;
+  /**
+   * Conteúdo extra renderizado no topo do diálogo (ex.: seletores de Cliente
+   * e Área usados no módulo global "Criar Tarefa"). Slot opcional — não
+   * altera nenhum comportamento existente.
+   */
+  headerExtras?: ReactNode;
 }
 
 const fileToDataUrl = (f: File) =>
