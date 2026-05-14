@@ -123,7 +123,7 @@ const extractAnexoStoragePath = (url: string): string | null => {
   }
 };
 
-export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho }: Props) {
+export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho, headerExtras }: Props) {
   const { clientes, responsaveis } = useCRM();
   const { user, isAdmin, canWrite } = useAuth();
   const {
