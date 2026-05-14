@@ -310,10 +310,89 @@ export const useDemandasStore = create<State>((set, get) => ({
     }
     const novo = normalizeDemanda(data);
     set({ demandas: [novo, ...get().demandas] });
+  },
+
+  createLocalRascunho({ cliente_id, categoria }) {
+    const id = `${LOCAL_DRAFT_PREFIX}${
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? (crypto as any).randomUUID()
+        : Math.random().toString(36).slice(2)
+    }`;
+    const now = new Date().toISOString();
+    const novo: Demanda = {
+      id,
+      cliente_id: cliente_id ?? "",
+      titulo: "",
+      categoria: (categoria ?? "Personalizado") as DemandaCategoria,
+      subtipo: null,
+      descricao: null,
+      status: "Criar" as DemandaStatus,
+      prioridade: "Media" as DemandaPrioridade,
+      responsaveis_ids: [],
+      responsavel_id: null,
+      criado_por: null,
+      data_limite: null,
+      data_inicio: null,
+      data_conclusao: null,
+      precisa_aprovacao: false,
+      aprovado_por: null,
+      link_meister: null,
+      link_drive: null,
+      origem: "manual",
+      template_id: null,
+      marcado_ja_possui: false,
+      created_at: now,
+      updated_at: now,
+    };
+    set({ demandas: [novo, ...get().demandas] });
     return novo;
   },
 
-  async updateDemanda(id, patch) {
+  async commitLocalRascunho(localId, overrides) {
+    const local = get().demandas.find((d) => d.id === localId);
+    if (!local || !isLocalDraftId(localId)) return null;
+    const merged: Demanda = { ...local, ...(overrides ?? {}) };
+    if (!merged.cliente_id) {
+      toast.error("Selecione um cliente para criar a tarefa.");
+      return null;
+    }
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id ?? null;
+    const responsaveis_ids = merged.responsaveis_ids ?? [];
+    const payload: any = {
+      cliente_id: merged.cliente_id,
+      titulo: merged.titulo?.trim() || "Sem título",
+      categoria: merged.categoria ?? "Personalizado",
+      subtipo: merged.subtipo ?? null,
+      descricao: merged.descricao ?? null,
+      status: merged.status ?? "Criar",
+      prioridade: merged.prioridade ?? "Media",
+      responsaveis_ids,
+      responsavel_id: responsaveis_ids[0] ?? null,
+      criado_por: uid,
+      data_limite: merged.data_limite ?? null,
+      data_inicio: merged.data_inicio ?? null,
+      data_conclusao: merged.data_conclusao ?? null,
+      precisa_aprovacao: merged.precisa_aprovacao ?? false,
+      link_meister: merged.link_meister ?? null,
+      link_drive: merged.link_drive ?? null,
+    };
+    const { data, error } = await supabase
+      .from("demandas")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao criar tarefa", { description: error.message });
+      return null;
+    }
+    const nova = normalizeDemanda(data);
+    set({
+      demandas: [nova, ...get().demandas.filter((d) => d.id !== localId)],
+    });
+    return nova;
+  },
+
     const prev = get().demandas.find((x) => x.id === id);
     if (!prev) return;
 
