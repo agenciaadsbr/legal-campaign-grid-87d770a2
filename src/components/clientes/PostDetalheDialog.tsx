@@ -469,85 +469,97 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <Label className="text-[11px]">Responsáveis</Label>
-                <div className="mt-1">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1 -mx-2 transition-colors min-h-[36px] w-full"
-                        title="Clique para alterar os responsáveis"
-                      >
-                        {(() => {
-                          const ids = card.responsaveis || [];
-                          const lista = responsaveis.filter((x) => ids.includes(x.id));
-                          return lista.length > 0 ? (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {lista.map((r) => (
-                                <div key={r.id} className="flex items-center gap-1.5">
-                                  <div
-                                    className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center"
-                                    style={{ backgroundColor: r.cor }}
-                                  >
-                                    {r.nome
-                                      .split(" ")
-                                      .map((n) => n[0])
-                                      .slice(0, 2)
-                                      .join("")}
-                                  </div>
-                                  <span className="text-xs">{r.nome}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">+ atribuir responsáveis</span>
-                          );
-                        })()}
-                        <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2" align="start">
-                      <div className="text-[11px] text-muted-foreground px-2 pb-1.5">Responsáveis</div>
-                      <div className="max-h-60 overflow-auto space-y-0.5">
-                        <button
-                          type="button"
-                          onClick={() => updateCard(card.id, { responsaveis: [] })}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm text-muted-foreground"
-                        >
-                          <X className="h-3.5 w-3.5" /> Limpar todos
-                        </button>
-                        {responsaveis.map((r) => {
-                          const active = (card.responsaveis || []).includes(r.id);
-                          return (
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                {([
+                  {
+                    label: "Responsáveis pela criação",
+                    ids: card.responsaveis || [],
+                    onToggle: toggleResponsavel,
+                    onClear: () => updateCard(card.id, { responsaveis: [] }),
+                    placeholder: "+ atribuir criadores",
+                  },
+                  {
+                    label: "Responsáveis pela postagem",
+                    ids: ((card as any).responsaveis_postagem || []) as string[],
+                    onToggle: togglePostador,
+                    onClear: () =>
+                      updateCard(card.id, { responsaveis_postagem: [] } as any),
+                    placeholder: "+ atribuir postadores",
+                  },
+                ] as const).map((bloco) => {
+                  const lista = responsaveis.filter((x) => bloco.ids.includes(x.id));
+                  return (
+                    <div key={bloco.label}>
+                      <Label className="text-[11px]">{bloco.label}</Label>
+                      <div className="mt-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
                             <button
                               type="button"
-                              key={r.id}
-                              onClick={() => toggleResponsavel(r.id)}
-                              className={cn(
-                                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
-                                active && "bg-accent",
-                              )}
+                              className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1 -mx-2 transition-colors min-h-[36px] w-full"
+                              title="Clique para alterar os responsáveis"
                             >
-                              <div
-                                className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
-                                style={{ backgroundColor: r.cor }}
-                              >
-                                {r.nome
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .slice(0, 2)
-                                  .join("")}
-                              </div>
-                              <span className="truncate">{r.nome}</span>
+                              {lista.length > 0 ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {lista.map((r) => (
+                                    <div key={r.id} className="flex items-center gap-1.5">
+                                      <div
+                                        className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center"
+                                        style={{ backgroundColor: r.cor }}
+                                      >
+                                        {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                                      </div>
+                                      <span className="text-xs">{r.nome}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">{bloco.placeholder}</span>
+                              )}
+                              <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                             </button>
-                          );
-                        })}
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-2" align="start">
+                            <div className="text-[11px] text-muted-foreground px-2 pb-1.5">{bloco.label}</div>
+                            <div className="max-h-60 overflow-auto space-y-0.5">
+                              <button
+                                type="button"
+                                onClick={bloco.onClear}
+                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm text-muted-foreground"
+                              >
+                                <X className="h-3.5 w-3.5" /> Limpar todos
+                              </button>
+                              {responsaveis.map((r) => {
+                                const active = bloco.ids.includes(r.id);
+                                return (
+                                  <button
+                                    type="button"
+                                    key={r.id}
+                                    onClick={() => bloco.onToggle(r.id)}
+                                    className={cn(
+                                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                                      active && "bg-accent",
+                                    )}
+                                  >
+                                    <div
+                                      className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
+                                      style={{ backgroundColor: r.cor }}
+                                    >
+                                      {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                                    </div>
+                                    <span className="truncate">{r.nome}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                    </div>
+                  );
+                })}
               </div>
+
             </div>
 
             {/* Anexos */}
