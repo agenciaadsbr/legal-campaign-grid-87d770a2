@@ -39,6 +39,7 @@ import { useCRM } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import { PRIORIDADES, PRIORIDADE_LABEL } from "@/lib/demandas-categorias";
 import { TarefaIAConsulta } from "@/components/demandas/TarefaIAConsulta";
+import { WorkflowSection } from "@/components/demandas/WorkflowSection";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichTextView } from "@/components/RichTextView";
 import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralButton";
