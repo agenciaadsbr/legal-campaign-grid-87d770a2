@@ -89,6 +89,7 @@ export function WorkflowSection({ pai }: Props) {
   const [dataInicio, setDataInicio] = useState<string>("");
   const [dataLimite, setDataLimite] = useState<string>("");
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>([]);
+  const [responsaveisPostagemIds, setResponsaveisPostagemIds] = useState<string[]>([]);
   const [linkMeister, setLinkMeister] = useState("");
   const [linkDrive, setLinkDrive] = useState("");
   const [descricao, setDescricao] = useState<string>("");
@@ -111,6 +112,7 @@ export function WorkflowSection({ pai }: Props) {
     setDataInicio("");
     setDataLimite("");
     setResponsaveisIds([]);
+    setResponsaveisPostagemIds([]);
     setLinkMeister("");
     setLinkDrive("");
     setDescricao("");
@@ -147,15 +149,27 @@ export function WorkflowSection({ pai }: Props) {
   const toggleHerdarResponsaveis = (v: boolean) => {
     setHerdarResponsaveis(v);
     const idsPai = getResponsaveisIds(pai);
+    const idsPaiPostagem = ((pai as any).responsaveis_postagem_ids ?? []) as string[];
     if (v) {
       if (responsaveisIds.length === 0 && idsPai.length > 0) {
         setResponsaveisIds(idsPai);
+      }
+      if (
+        categoria === "Posts" &&
+        responsaveisPostagemIds.length === 0 &&
+        idsPaiPostagem.length > 0
+      ) {
+        setResponsaveisPostagemIds(idsPaiPostagem);
       }
     } else {
       const same =
         responsaveisIds.length === idsPai.length &&
         responsaveisIds.every((x) => idsPai.includes(x));
       if (same) setResponsaveisIds([]);
+      const samePost =
+        responsaveisPostagemIds.length === idsPaiPostagem.length &&
+        responsaveisPostagemIds.every((x) => idsPaiPostagem.includes(x));
+      if (samePost) setResponsaveisPostagemIds([]);
     }
   };
 
