@@ -211,6 +211,9 @@ export function WorkflowSection({ pai }: Props) {
             titulo_card: titulo.trim(),
             is_urgent: prioridade === "Urgente",
             responsaveis: responsaveisIds,
+            responsaveis_postagem: responsaveisPostagemIds,
+          } as any);
+          // remove fechamento extra abaixo
             data_inicio_tarefa: dataInicio ? new Date(dataInicio).toISOString() : null,
             data_limite_tarefa: dataLimite ? new Date(dataLimite).toISOString() : null,
           });
