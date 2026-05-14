@@ -188,6 +188,7 @@ export type Database = {
           posicao: number
           qtd_slides: number | null
           responsaveis_ids: string[]
+          responsaveis_postagem_ids: string[]
           status: string
           titulo: string
           updated_at: string
@@ -205,6 +206,7 @@ export type Database = {
           posicao?: number
           qtd_slides?: number | null
           responsaveis_ids?: string[]
+          responsaveis_postagem_ids?: string[]
           status?: string
           titulo: string
           updated_at?: string
@@ -222,6 +224,7 @@ export type Database = {
           posicao?: number
           qtd_slides?: number | null
           responsaveis_ids?: string[]
+          responsaveis_postagem_ids?: string[]
           status?: string
           titulo?: string
           updated_at?: string
