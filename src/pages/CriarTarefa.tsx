@@ -46,7 +46,7 @@ export default function CriarTarefa() {
   const demandas = useDemandasStore((s) => s.demandas);
 
   const [clienteId, setClienteId] = useState<string>("");
-  const [area, setArea] = useState<AreaSel>("Personalizado");
+  const [area, setArea] = useState<AreaSel | "">("");
   const [draftId, setDraftId] = useState<string | null>(null);
   const initRef = useRef(false);
   const switchingRef = useRef(false);
