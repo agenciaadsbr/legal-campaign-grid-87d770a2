@@ -428,7 +428,7 @@ export default function CriarTarefa() {
 
         {clienteId ? (
             <TarefaIAConsulta 
-              demanda={{ id: 'new', cliente_id: clienteId, titulo: titulo || 'Nova Tarefa', categoria: categoria as any, status: status as any, prioridade: isUrgent ? 'Urgente' : (prioridade as any) } as any}
+              demanda={{ id: 'new', cliente_id: clienteId, titulo: titulo || 'Nova Tarefa', categoria: categoria as any, status: status as any, prioridade: isUrgent ? 'Urgente' : prioridade } as any}
               onAddComment={(txt) => setNovoComentario(prev => prev + `<br/>${txt}`)}
             />
         ) : (
