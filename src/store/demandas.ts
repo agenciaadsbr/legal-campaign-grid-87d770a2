@@ -99,6 +99,23 @@ interface State {
     categoria?: DemandaCategoria;
     subtipo?: string | null;
   }) => Promise<Demanda | null>;
+  /**
+   * Cria um rascunho APENAS em memória (sem chamar Supabase). Usado pelo módulo
+   * "Criar Tarefa" para exibir o formulário completo sem persistir nada antes
+   * do usuário clicar em "Salvar tarefa".
+   */
+  createLocalRascunho: (args: {
+    cliente_id?: string;
+    categoria?: DemandaCategoria;
+  }) => Demanda;
+  /**
+   * Persiste um rascunho local no Supabase e remove a versão em memória.
+   * Retorna a Demanda real (com id do banco) ou null em caso de erro.
+   */
+  commitLocalRascunho: (
+    localId: string,
+    overrides?: Partial<Demanda>,
+  ) => Promise<Demanda | null>;
   updateDemanda: (id: string, patch: Partial<Demanda>) => Promise<void>;
   deleteDemanda: (id: string) => Promise<void>;
   moveStatus: (id: string, status: DemandaStatus) => Promise<void>;
