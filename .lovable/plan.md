@@ -1,34 +1,41 @@
 ## Objetivo
 
-Eliminar a tela intermediária de seleção em `/criar-tarefa` (com botão "Continuar") e mostrar diretamente o **mesmo formulário** do Projeto Completo (`DemandaDetalheDialog`), com os campos **Cliente** e **Área / Categoria** integrados dentro dele — um único formulário, sem etapa prévia.
+Fazer o módulo lateral "Criar Tarefa" usar **exatamente o mesmo formulário** já existente nos cards do Projeto Completo (`DemandaDetalheDialog`), em vez de manter um formulário paralelo com layout próprio. Adicionar a etapa de "selecionar cliente" antes de abrir o formulário.
 
-## Mudanças
+Sem mudanças em: cards do Projeto Completo, aba Posts, Kanbans, dashboards, Central de Tarefas, dados existentes.
 
-### 1. `src/components/demandas/DemandaDetalheDialog.tsx`
-- No header do Card 1 (onde hoje há a linha de texto `{cliente} · {categoria}` abaixo do título), substituir por **dois Selects compactos**:
-  - **Cliente** → `Select` populado com `useCRM().clientes`. `onValueChange` chama `updateDemanda(id, { cliente_id })`.
-  - **Categoria** → mesmo Select já existente no grid abaixo, espelhado aqui (ou reutilizar variável). Mantém o Select de Categoria no grid logo abaixo intacto (ele continua funcional para edição também).
-- Esses dois selects ficam sempre visíveis (substituindo o subtítulo readonly). Para tarefas existentes funcionam como edição normal; para rascunho recém-criado pelo módulo "Criar Tarefa" funcionam como definição inicial.
+## Como vai funcionar (fluxo do usuário)
 
-### 2. `src/pages/CriarTarefa.tsx`
-- Remover a tela com Card "Criar nova tarefa" + botão "Continuar".
-- Ao montar a página: criar **automaticamente** um rascunho mínimo via `createRascunho({ cliente_id: <primeiro cliente>, categoria: "Personalizado" })` apenas se houver clientes. **Alternativa preferida** (sem sujar dados): manter um mini-bloco minimalista de 2 selects centralizado **só** enquanto o rascunho não existe; assim que o usuário escolher Cliente + Área, criar o rascunho automaticamente (sem botão "Continuar") e renderizar o `DemandaDetalheDialog` em seguida.
-- Ao fechar o dialog:
-  - se rascunho ainda existe no store (foi preenchido) → navegar para `/clientes/{cliente_id}/projeto?tab=...&demanda={id}`;
-  - se descartado → voltar a mostrar o mini-bloco de seleção para nova criação.
+1. Usuário clica em "Criar Tarefa" no menu lateral.
+2. A página `/criar-tarefa` mostra um passo inicial pequeno e centralizado:
+   - Combo **Cliente** (obrigatório, busca por nome).
+   - Combo **Área / Categoria** (Posts, Vídeo, Tráfego Pago, Landing Page, IA Atendimento, Personalizado).
+   - Botão **Continuar**.
+3. Ao clicar em Continuar:
+   - Se Categoria = "Posts": cria um post rascunho silencioso para o cliente (`createCardRascunho`) e abre o mesmo formulário usado hoje na aba Posts.
+   - Caso contrário: cria uma demanda rascunho silenciosa (`createDemanda` com título "Sem título") para o cliente/categoria e abre o `DemandaDetalheDialog` com `isRascunho={true}`.
+4. O usuário edita exatamente o mesmo formulário do Projeto Completo: título, status, urgência, subtipo, prioridade, datas, responsáveis, anexos, links Meister/Drive, briefing, comentários, IA Consulta, Workflow, histórico — tudo idêntico, porque é o mesmo componente.
+5. Botão "Voltar" no topo:
+   - Se o rascunho ficou vazio (sem título, sem descrição, sem anexos, sem responsáveis, sem datas, sem comentários) → descarta automaticamente (já é o comportamento atual de `isRascunho`).
+   - Se foi preenchido → permanece salvo e o usuário é redirecionado para o Projeto Completo do cliente, na aba e tarefa correspondente.
 
-Adoto a alternativa preferida (sem placeholder) porque evita criar rascunhos órfãos no banco.
+## Mudanças técnicas
 
-### 3. Resultado visual
-- Sidebar → "Criar Tarefa" abre uma tela com **somente** o formulário completo da tarefa.
-- Os campos Cliente e Área/Categoria aparecem como dropdowns dentro do header desse formulário, lado a lado com o título.
-- Nenhuma duplicação: o mesmo `DemandaDetalheDialog` é usado em todo o sistema.
+- `src/pages/CriarTarefa.tsx` — reescrever:
+  - Remover todo o formulário customizado atual (campos duplicados, anexos locais, etc.).
+  - Adicionar estado `step: 'select' | 'editing'` e `draftId` / `draftType`.
+  - Passo `select`: card pequeno com selects de Cliente e Categoria + botão Continuar.
+  - Passo `editing`:
+    - Para demanda: renderizar `<DemandaDetalheDialog demanda={draftDemanda} isRascunho onOpenChange={...}/>` (já é um Dialog próprio, abre sobre a página).
+    - Para post: navegar diretamente para `/clientes/{id}/projeto?tab=posts&post={id}` que já abre o formulário existente do post (mesma UX do Projeto Completo).
+  - Ao fechar o dialog com conteúdo preenchido → `navigate` para o Projeto Completo na aba/tarefa criada.
+  - Ao fechar vazio → o próprio `DemandaDetalheDialog` descarta o rascunho; voltamos para o passo `select`.
 
-## Não alterado
-- `TaskFormBase.tsx`, `PostDetalhe.tsx`, lógica de stores, schema, kanbans, abas Posts, comportamento dentro do Projeto Completo.
-- Categoria continua editável também no grid abaixo (sem remover nada).
+- Nenhuma alteração em `DemandaDetalheDialog.tsx`, `PostDetalhe.tsx`, stores, ou outros formulários.
+- `TaskFormBase.tsx` permanece (usado por outros pontos), mas deixa de ser referenciado pelo Criar Tarefa global.
 
-## Detalhes técnicos
-- `DemandaDetalheDialog` ganha um Select Cliente novo no header; `cliente` deixa de ser apenas texto.
-- `updateDemanda` já aceita `cliente_id` em `Partial<Demanda>` — sem mudança de store.
-- `CriarTarefa.tsx` passa a usar 2 estados: `clienteId`, `categoria`, e dispara `createRascunho` no `useEffect` quando ambos preenchidos e ainda não há `draftDemanda`.
+## Resultado
+
+- Um único formulário de tarefa em todo o sistema (o do Projeto Completo).
+- Seleção de cliente preservada como pré-requisito.
+- Zero divergência visual entre "Criar Tarefa" e abrir um card no Projeto Completo.

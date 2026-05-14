@@ -474,48 +474,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     placeholder="Ex: Criar landing page para campanha de inverno"
                     className="text-sm font-bold border-0 px-0 focus-visible:ring-0 h-auto"
                   />
-                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                    <Select
-                      value={demanda.cliente_id}
-                      onValueChange={(v) => updateDemanda(demanda.id, { cliente_id: v } as any)}
-                      disabled={!canWrite}
-                    >
-                      <SelectTrigger className="h-7 text-xs w-auto min-w-[160px] max-w-[260px] gap-1">
-                        <SelectValue placeholder="Selecionar cliente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientes.map((c) => (
-                          <SelectItem key={c.id} value={c.id} className="text-xs">
-                            {c.nome_cliente}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span className="text-xs text-muted-foreground">·</span>
-                    <Select
-                      value={demanda.categoria}
-                      onValueChange={(v) =>
-                        updateDemanda(demanda.id, {
-                          categoria: v as DemandaCategoria,
-                          subtipo: v === demanda.categoria ? demanda.subtipo : null,
-                        })
-                      }
-                      disabled={!canWrite}
-                    >
-                      <SelectTrigger className="h-7 text-xs w-auto min-w-[140px] gap-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIAS.map((c) => (
-                          <SelectItem key={c} value={c} className="text-xs">
-                            {CATEGORIA_LABEL[c]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {demanda.subtipo && (
-                      <span className="text-xs text-muted-foreground">· {demanda.subtipo}</span>
-                    )}
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {cliente?.nome_cliente ?? "—"} ·{" "}
+                    {CATEGORIA_LABEL[demanda.categoria]}
+                    {demanda.subtipo && ` · ${demanda.subtipo}`}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
