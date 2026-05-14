@@ -27,7 +27,6 @@ import {
   FileText,
   CheckCircle2,
   Zap,
-  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -147,17 +146,6 @@ export default function PostDetalhe() {
 
   const removerAnexo = (id: string) => {
     updatePost(post.id, { anexos: post.anexos.filter((a) => a.id !== id) });
-  };
-
-  const voltarParaVisaoGeral = () => {
-    // Volta para o Kanban da aba Posts (não para a aba "Visão Geral" do hub).
-    if (card?.cliente_id) {
-      navigate(`/clientes/${card.cliente_id}?tab=posts`);
-    } else if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/clientes");
-    }
   };
 
   const copiarLink = async () => {
