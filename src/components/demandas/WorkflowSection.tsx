@@ -313,9 +313,6 @@ export function WorkflowSection({ pai }: Props) {
     }
   };
 
-  const responsaveisSelecionados = responsaveis.filter((r) =>
-    responsaveisIds.includes(r.id),
-  );
 
   return (
     <Card className="shrink-0 overflow-hidden border-dashed">
