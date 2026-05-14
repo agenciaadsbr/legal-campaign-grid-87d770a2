@@ -199,7 +199,7 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
         }
       } else {
         // Lógica de Demanda (Vídeos, Tráfego, LP, IA, Operacional, Urgências)
-        const payload = {
+        const payload: any = {
           cliente_id: clienteId,
           titulo,
           categoria: categoria as DemandaCategoria,
@@ -212,6 +212,7 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
           link_meister: linkMeister || null,
           link_drive: linkDrive || null,
           descricao: descricao || null,
+          origem: initialDemandaId ? undefined : "manual"
         };
 
         if (initialDemandaId) {
