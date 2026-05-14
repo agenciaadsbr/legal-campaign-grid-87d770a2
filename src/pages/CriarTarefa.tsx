@@ -12,7 +12,7 @@ import { useCRM } from "@/store/crm";
 import { useDemandasStore } from "@/store/demandas";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Zap, Plus, FileText, Trash2, Info, LayoutGrid, History, X, ImageIcon, Smile, AtSign, Send, Paperclip, ChevronLeft, Link2, ChevronUp, ChevronDown } from "lucide-react";
+import { Zap, Plus, FileText, Trash2, Info, LayoutGrid, History, X, ImageIcon, Smile, AtSign, Send, Paperclip, ChevronLeft, Link2, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import { CATEGORIAS, CATEGORIA_LABEL, CATEGORIA_SUBTIPOS, PRIORIDADES, PRIORIDADE_LABEL, STATUS_DEMANDA, STATUS_DEMANDA_LABEL, STATUS_DEMANDA_COR, type DemandaCategoria } from "@/lib/demandas-categorias";
 import { cn } from "@/lib/utils";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -51,6 +51,7 @@ export default function CriarTarefa() {
   const [linkMeister, setLinkMeister] = useState("");
   const [linkDrive, setLinkDrive] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [novoComentario, setNovoComentario] = useState("");
   
   // Post specific
   const [dataAgendamento, setDataAgendamento] = useState("");
@@ -427,7 +428,7 @@ export default function CriarTarefa() {
 
         {clienteId ? (
             <TarefaIAConsulta 
-              demanda={{ id: 'new', cliente_id: clienteId, titulo: titulo || 'Nova Tarefa', categoria: categoria as any, status: status as any, prioridade: isUrgente ? 'Urgente' : prioridade } as any} 
+              demanda={{ id: 'new', cliente_id: clienteId, titulo: titulo || 'Nova Tarefa', categoria: categoria as any, status: status as any, prioridade: isUrgent ? 'Urgente' : prioridade } as any} 
               onAddComment={(txt) => setNovoComentario(prev => prev + `<br/>${txt}`)}
             />
         ) : (
