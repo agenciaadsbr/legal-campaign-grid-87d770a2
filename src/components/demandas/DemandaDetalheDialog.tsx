@@ -86,6 +86,16 @@ interface Props {
    * altera nenhum comportamento existente.
    */
   headerExtras?: ReactNode;
+  /** Renderiza botões "Salvar tarefa" / "Cancelar" no rodapé. */
+  showSaveButton?: boolean;
+  /** Handler do botão Salvar. */
+  onSave?: () => void | Promise<void>;
+  /** Handler do botão Cancelar. */
+  onCancel?: () => void;
+  /** Quando true, fechar o diálogo NÃO chama deleteDemanda automaticamente. */
+  disableAutoDiscard?: boolean;
+  /** Texto opcional do botão Salvar (default: "Salvar tarefa"). */
+  saveLabel?: string;
 }
 
 const fileToDataUrl = (f: File) =>
