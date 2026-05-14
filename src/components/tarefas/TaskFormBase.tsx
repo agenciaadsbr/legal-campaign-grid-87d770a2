@@ -38,6 +38,7 @@ import {
   Zap,
   History,
   Info,
+  LayoutGrid,
 } from "lucide-react";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { cn } from "@/lib/utils";
@@ -46,7 +47,6 @@ import { toast } from "sonner";
 import { WorkflowSection } from "@/components/demandas/WorkflowSection";
 import { TarefaIAConsulta } from "@/components/demandas/TarefaIAConsulta";
 import { isAguardandoDependencia } from "@/lib/workflow";
-import { categoriaParaAba } from "@/lib/minhasTarefas";
 
 interface TaskFormBaseProps {
   initialDemandaId?: string;
@@ -157,7 +157,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
     setLoading(true);
     try {
       if (categoria === "Posts") {
-        // Lógica de Post
         if (initialPostId) {
           const p = useCRM.getState().posts.find(x => x.id === initialPostId);
           if (p) {
@@ -179,7 +178,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
             onSuccess?.('post', clienteId, initialPostId);
           }
         } else {
-          // Criar novo Post
           const res = await createCardRascunho({ cliente_id: clienteId });
           if (res) {
             await updateCard(res.cardId, {
@@ -201,7 +199,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
           }
         }
       } else {
-        // Lógica de Demanda (Vídeos, Tráfego, LP, IA, Operacional, Urgências)
         const payload: any = {
           cliente_id: clienteId,
           titulo,
@@ -282,9 +279,46 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
 
   const currentDemanda = initialDemandaId ? demandas.find(d => d.id === initialDemandaId) : null;
   const isAguardando = initialDemandaId ? isAguardandoDependencia(initialDemandaId, dependencies) : false;
+  
+  const meuHistorico = useMemo(
+    () => (initialDemandaId ? (useDemandasStore.getState().historico || []).filter((h) => h.demanda_id === initialDemandaId) : []),
+    [initialDemandaId, useDemandasStore.getState().historico]
+  );
+
+  const meusComentarios = useMemo(
+    () =>
+      initialDemandaId
+        ? (useDemandasStore.getState().comentarios || [])
+            .filter((c) => c.demanda_id === initialDemandaId)
+            .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        : [],
+    [initialDemandaId, useDemandasStore.getState().comentarios]
+  );
+
+  const meusAnexos = useMemo(
+    () => (initialDemandaId ? (useDemandasStore.getState().anexos || []).filter((a) => a.demanda_id === initialDemandaId) : []),
+    [initialDemandaId, useDemandasStore.getState().anexos]
+  );
 
   return (
     <div className="space-y-6">
+      {!clienteId && (
+        <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-md text-xs flex items-center gap-2">
+          <Info className="h-4 w-4 text-amber-600" />
+          <span className="text-amber-700">Selecione um cliente para consultar informações da tarefa.</span>
+        </div>
+      )}
+
+      {currentDemanda && (
+        <div className="space-y-4">
+          <TarefaIAConsulta 
+            demanda={currentDemanda} 
+            comentarios_texto={meusComentarios.map(c => c.comentario_texto).join('\n')}
+            onAddComment={(txt) => addComentario(currentDemanda.id, user?.id || '', txt)}
+          />
+        </div>
+      )}
+
       {isAguardando && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-md text-xs flex items-start gap-2">
           <span className="mt-0.5">🔒</span>
@@ -296,7 +330,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Cliente e Área */}
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Cliente *</Label>
@@ -348,7 +381,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
           )}
         </div>
 
-        {/* Título e Urgente */}
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Título da Tarefa *</Label>
@@ -400,8 +432,36 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
         </div>
       </div>
 
+      {categoria === "Posts" && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Campos de Post
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-0">
+            <div className="space-y-2">
+              <Label>Data de Agendamento</Label>
+              <Input type="date" value={dataAgendamento} onChange={e => setDataAgendamento(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Data de Postagem</Label>
+              <Input type="date" value={dataPostagem} onChange={e => setDataPostagem(e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Link Meta Business Suite</Label>
+              <Input value={linkMeta} onChange={e => setLinkMeta(e.target.value)} placeholder="https://business.facebook.com/..." />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Legenda</Label>
+              <Textarea value={legenda} onChange={e => setLegenda(e.target.value)} className="min-h-[100px]" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Datas e Responsáveis */}
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-2">
@@ -443,18 +503,15 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
           </div>
         </div>
 
-        {/* Links e Anexos */}
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Link do Meister</Label>
             <Input value={linkMeister} onChange={e => setLinkMeister(e.target.value)} placeholder="https://..." />
           </div>
-          {categoria !== "Posts" && (
-            <div className="space-y-2">
-              <Label>Link do Drive</Label>
-              <Input value={linkDrive} onChange={e => setLinkDrive(e.target.value)} placeholder="https://..." />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Link do Drive</Label>
+            <Input value={linkDrive} onChange={e => setLinkDrive(e.target.value)} placeholder="https://..." />
+          </div>
           
           {(initialDemandaId || initialPostId) && (
             <div className="space-y-2">
@@ -466,70 +523,89 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
                 <input ref={anexoFileRef} type="file" multiple className="hidden" onChange={handleAddAnexo} />
               </div>
               <div className="space-y-1">
-                {/* Renderizar anexos aqui */}
+                {meusAnexos.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 group">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <Paperclip className="h-3 w-3 shrink-0" />
+                      <span className="text-xs truncate">{a.nome}</span>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
+                        <a href={a.url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeAnexo(a.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {categoria === "Posts" && (
-        <Card className="bg-muted/30">
-          <CardContent className="p-4 space-y-4">
-            <div className="font-semibold text-sm border-b pb-1">Campos de Post</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Data Agendamento</Label>
-                <Input type="date" value={dataAgendamento} onChange={e => setDataAgendamento(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Data Postagem</Label>
-                <Input type="date" value={dataPostagem} onChange={e => setDataPostagem(e.target.value)} />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Link Meta Business Suite</Label>
-                <Input value={linkMeta} onChange={e => setLinkMeta(e.target.value)} placeholder="https://..." />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Legenda</Label>
-                <Textarea value={legenda} onChange={e => setLegenda(e.target.value)} rows={4} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="space-y-2">
         <Label>Atividade / Briefing</Label>
-        <RichTextEditor value={descricao} onChange={setDescricao} placeholder="Descreva os detalhes da tarefa..." />
-        {currentDemanda && (
-          <div className="flex justify-end">
-            <Button 
-              variant="link" 
-              className="text-xs p-0 h-auto" 
-              onClick={() => {
-                const url = `https://legal-campaign-grid.lovable.app/clientes/${currentDemanda.cliente_id}/projeto?tab=${categoriaParaAba(currentDemanda.categoria)}&demanda=${currentDemanda.id}`;
-                toast.info("Consulte aqui: " + url);
-                window.open(url, '_blank');
-              }}
-            >
-              ESTÁ COM DÚVIDAS NESSA TAREFA? CONSULTE AQUI
-            </Button>
-          </div>
-        )}
+        <RichTextEditor
+          content={descricao}
+          onChange={setDescricao}
+          placeholder="Descreva os detalhes da tarefa..."
+        />
       </div>
 
       {(initialDemandaId || initialPostId) && (
         <div className="space-y-4 pt-4 border-t">
-          <Label className="text-sm font-bold uppercase tracking-wide">Comentários</Label>
-          {/* Renderizar comentários aqui */}
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            <h3 className="text-sm font-semibold">Atividade / Comentários</h3>
+          </div>
+          
+          <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+            {meusComentarios.map((c) => (
+              <div key={c.id} className="flex gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-primary">
+                    {responsaveis.find(r => r.id === c.usuario_id)?.nome.charAt(0) || '?'}
+                  </span>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold">
+                      {responsaveis.find(r => r.id === c.usuario_id)?.nome || 'Usuário'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {new Date(c.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="text-xs p-2 rounded-md bg-muted">
+                    <div dangerouslySetInnerHTML={{ __html: c.comentario_texto }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div className="flex gap-2">
-            <Input value={novoComentario} onChange={e => setNovoComentario(e.target.value)} placeholder="Escreva um comentário..." />
-            <Button size="icon" onClick={async () => {
-              if (!novoComentario.trim() || !user) return;
-              if (initialDemandaId) await addComentario(initialDemandaId, user.id, novoComentario);
-              setNovoComentario("");
-            }}><Plus className="h-4 w-4" /></Button>
+            <Input 
+              placeholder="Adicionar comentário..." 
+              value={novoComentario} 
+              onChange={e => setNovoComentario(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && novoComentario.trim()) {
+                  if (initialDemandaId) addComentario(initialDemandaId, user?.id || '', novoComentario);
+                  setNovoComentario('');
+                }
+              }}
+            />
+            <Button size="sm" onClick={() => {
+              if (novoComentario.trim()) {
+                if (initialDemandaId) addComentario(initialDemandaId, user?.id || '', novoComentario);
+                setNovoComentario('');
+              }
+            }}>Enviar</Button>
           </div>
         </div>
       )}
@@ -537,13 +613,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
       {currentDemanda && (
         <div className="pt-4 border-t">
           <WorkflowSection pai={currentDemanda} />
-        </div>
-      )}
-
-      {standalone && (
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="outline" onClick={onCancel} disabled={loading}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={loading}>{loading ? "Salvando..." : "Salvar Tarefa"}</Button>
         </div>
       )}
     </div>
