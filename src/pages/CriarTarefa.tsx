@@ -58,7 +58,6 @@ export default function CriarTarefa() {
     if (!clientes.length) return;
     initRef.current = true;
     const primeiro = clientes[0].id;
-    setClienteId(primeiro);
     (async () => {
       const novo = await createRascunho({
         cliente_id: primeiro,
