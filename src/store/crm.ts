@@ -6,7 +6,7 @@ import { format } from "date-fns";
 
 // ===================== Tipos =====================
 export type StatusCliente = string; // dinâmico via tabela status_options
-export type StatusCard = "ideias" | "Criar" | "Revisar" | "Agendar" | "Postado" | "Renovação" | string;
+export type StatusCard = "ideias" | "Criar" | "Revisar" | "Agendar" | "Postado" | "Renovação" | "Aguardando etapa anterior" | string;
 export type TipoAlerta =
   | "Renovacao"
   | "Posts_Pendentes"
