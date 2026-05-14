@@ -310,6 +310,7 @@ export const useDemandasStore = create<State>((set, get) => ({
     }
     const novo = normalizeDemanda(data);
     set({ demandas: [novo, ...get().demandas] });
+    return novo;
   },
 
   createLocalRascunho({ cliente_id, categoria }) {
