@@ -1,33 +1,41 @@
-text
-I will implement a global "Create Task" feature, standardize forms, and add workflow capabilities to posts. This is an expansion of the current system, ensuring backward compatibility.
+## Objetivo
 
-### Phase 1: Global "Create Task" Sidebar Item
-- Add "Criar Tarefa" to `AppSidebar.tsx` with a `Plus` icon, positioned after "Clientes".
-- Create `src/pages/CriarTarefa.tsx` as the landing page for this menu item.
-- Register the `/criar-tarefa` route in `App.tsx`.
+Fazer o módulo lateral "Criar Tarefa" usar **exatamente o mesmo formulário** já existente nos cards do Projeto Completo (`DemandaDetalheDialog`), em vez de manter um formulário paralelo com layout próprio. Adicionar a etapa de "selecionar cliente" antes de abrir o formulário.
 
-### Phase 2 & 3: TaskFormBase Component
-- Create `src/components/tarefas/TaskFormBase.tsx` based on `DemandaDetalheDialog.tsx`.
-- Include fields: Cliente (select), Área (select: Posts, Vídeos, etc.), Subtipo, Título, Urgente (toggle), Status, Prioridade, Datas (Início/Limite), Responsáveis, Anexos, Drive/External links, Briefing, Comments, FAQ, and Workflow.
-- Implement auto-mapping logic: saving a task with a specific "Área" will automatically create it in the corresponding category in the CRM store.
+Sem mudanças em: cards do Projeto Completo, aba Posts, Kanbans, dashboards, Central de Tarefas, dados existentes.
 
-### Phase 4 & 5: Post Standardization & Workflow
-- Update `PostDetalhe.tsx` to use `TaskFormBase`.
-- Add conditional fields for "Posts" category: Publicação dates, Legenda, and Meta/Meister links.
-- Integrate `WorkflowSection` into `PostDetalhe.tsx` to allow creating follow-up tasks (e.g., Designer finishes post -> system suggests scheduling).
+## Como vai funcionar (fluxo do usuário)
 
-### Phase 6: Blocked Tasks Logic
-- Add "AGUARDANDO ETAPA ANTERIOR" status handling.
-- Allow editing briefing, attachments, and comments but restrict movement/completion while blocked.
-- Update `DemandCard.tsx` and `DemandaDetalheDialog.tsx` to display lock indicators and restricted actions.
+1. Usuário clica em "Criar Tarefa" no menu lateral.
+2. A página `/criar-tarefa` mostra um passo inicial pequeno e centralizado:
+   - Combo **Cliente** (obrigatório, busca por nome).
+   - Combo **Área / Categoria** (Posts, Vídeo, Tráfego Pago, Landing Page, IA Atendimento, Personalizado).
+   - Botão **Continuar**.
+3. Ao clicar em Continuar:
+   - Se Categoria = "Posts": cria um post rascunho silencioso para o cliente (`createCardRascunho`) e abre o mesmo formulário usado hoje na aba Posts.
+   - Caso contrário: cria uma demanda rascunho silenciosa (`createDemanda` com título "Sem título") para o cliente/categoria e abre o `DemandaDetalheDialog` com `isRascunho={true}`.
+4. O usuário edita exatamente o mesmo formulário do Projeto Completo: título, status, urgência, subtipo, prioridade, datas, responsáveis, anexos, links Meister/Drive, briefing, comentários, IA Consulta, Workflow, histórico — tudo idêntico, porque é o mesmo componente.
+5. Botão "Voltar" no topo:
+   - Se o rascunho ficou vazio (sem título, sem descrição, sem anexos, sem responsáveis, sem datas, sem comentários) → descarta automaticamente (já é o comportamento atual de `isRascunho`).
+   - Se foi preenchido → permanece salvo e o usuário é redirecionado para o Projeto Completo do cliente, na aba e tarefa correspondente.
 
-### Phase 7 to 10: History, Responsiveness & Compatibility
-- Ensure all new tasks are registered in the activity history.
-- Maintain existing layouts and ensure mobile responsiveness (no horizontal scroll).
-- Ensure existing cards continue to work without modification.
+## Mudanças técnicas
 
-### Technical Details
-- **Store**: Use `useDemandasStore` for task creation and `useCRM` for posts/cards.
-- **UI Components**: Leverage Shadcn UI (Select, Popover, Card, etc.) for consistency.
-- **Workflow**: Use `task_dependencies` logic for blocking/unlocking tasks.
-- **Layout**: Use CSS Grid/Flex for responsive form sections.
+- `src/pages/CriarTarefa.tsx` — reescrever:
+  - Remover todo o formulário customizado atual (campos duplicados, anexos locais, etc.).
+  - Adicionar estado `step: 'select' | 'editing'` e `draftId` / `draftType`.
+  - Passo `select`: card pequeno com selects de Cliente e Categoria + botão Continuar.
+  - Passo `editing`:
+    - Para demanda: renderizar `<DemandaDetalheDialog demanda={draftDemanda} isRascunho onOpenChange={...}/>` (já é um Dialog próprio, abre sobre a página).
+    - Para post: navegar diretamente para `/clientes/{id}/projeto?tab=posts&post={id}` que já abre o formulário existente do post (mesma UX do Projeto Completo).
+  - Ao fechar o dialog com conteúdo preenchido → `navigate` para o Projeto Completo na aba/tarefa criada.
+  - Ao fechar vazio → o próprio `DemandaDetalheDialog` descarta o rascunho; voltamos para o passo `select`.
+
+- Nenhuma alteração em `DemandaDetalheDialog.tsx`, `PostDetalhe.tsx`, stores, ou outros formulários.
+- `TaskFormBase.tsx` permanece (usado por outros pontos), mas deixa de ser referenciado pelo Criar Tarefa global.
+
+## Resultado
+
+- Um único formulário de tarefa em todo o sistema (o do Projeto Completo).
+- Seleção de cliente preservada como pré-requisito.
+- Zero divergência visual entre "Criar Tarefa" e abrir um card no Projeto Completo.
