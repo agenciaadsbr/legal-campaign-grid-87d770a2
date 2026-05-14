@@ -246,6 +246,12 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
     await updateCard(card.id, { responsaveis: next });
   };
 
+  const togglePostador = async (rid: string) => {
+    const ids = (card as any).responsaveis_postagem || [];
+    const next = ids.includes(rid) ? ids.filter((x: string) => x !== rid) : [...ids, rid];
+    await updateCard(card.id, { responsaveis_postagem: next } as any);
+  };
+
   // Demanda-like stub para reutilizar TarefaIAConsulta sem alterar contrato
   const demandaStub: any = {
     id: post.id,
@@ -257,6 +263,23 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
     descricao: card.descricao || "",
     status: post.status,
   };
+
+  // Stub usado pelo WorkflowSection (precisa de id = card.id e categoria = Posts).
+  const paiWorkflowStub: any = {
+    id: card.id,
+    cliente_id: card.cliente_id,
+    titulo: card.titulo_card,
+    categoria: "Posts",
+    subtipo: card.formato || null,
+    prioridade: prioridadeAtual,
+    descricao: card.descricao || "",
+    status: post.status,
+    link_meister: post.link_meister || null,
+    link_drive: ((post as any).link_drive as string) || null,
+    responsaveis_ids: card.responsaveis || [],
+    responsaveis_postagem_ids: (card as any).responsaveis_postagem || [],
+  };
+
 
   return (
     <div className="max-w-2xl w-full mx-auto p-3 space-y-2">
