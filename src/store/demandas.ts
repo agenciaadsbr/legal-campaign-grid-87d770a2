@@ -564,6 +564,10 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async addAnexo(a) {
+    if (isLocalDraftId(a.demanda_id)) {
+      toast.error("Salve a tarefa primeiro para adicionar anexos.");
+      return;
+    }
     const { data, error } = await supabase
       .from("anexos_demandas")
       .insert(a)
