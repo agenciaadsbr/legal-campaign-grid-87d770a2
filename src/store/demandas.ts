@@ -394,8 +394,18 @@ export const useDemandasStore = create<State>((set, get) => ({
     return nova;
   },
 
+  async updateDemanda(id, patch) {
     const prev = get().demandas.find((x) => x.id === id);
     if (!prev) return;
+
+    if (isLocalDraftId(id)) {
+      const merged = normalizeDemanda({ ...prev, ...patch });
+      if (Array.isArray(patch.responsaveis_ids)) {
+        merged.responsavel_id = patch.responsaveis_ids[0] ?? null;
+      }
+      set({ demandas: get().demandas.map((d) => (d.id === id ? merged : d)) });
+      return;
+    }
 
     // Optimistic Update
     const optimistic = normalizeDemanda({ ...prev, ...patch });
