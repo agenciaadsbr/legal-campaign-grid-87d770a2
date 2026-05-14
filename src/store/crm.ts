@@ -532,7 +532,10 @@ export const useCRM = create<State>()((set, get) => ({
         modelosColunas: (modelosRes.data ?? []).map(mapModelo),
         statusOptions: (statusRes.data ?? []).map(mapStatusOpt),
         nichos: (nichosRes.data ?? []).map(mapNicho),
-        statusPostOptions: (statusPostRes.data ?? []).map(mapStatusOpt),
+        statusPostOptions: [
+          { label: "Aguardando etapa anterior", cor: "#f59e0b" },
+          ...(statusPostRes.data ?? []).map(mapStatusOpt).filter(o => o.label !== "Aguardando etapa anterior")
+        ],
         authoresPorAuthId,
         customFields: (customFieldsRes.data ?? []).map(mapCustomField),
         loaded: true,
