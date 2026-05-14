@@ -220,7 +220,19 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
           onSuccess?.('demanda', clienteId, initialDemandaId);
         } else {
           const id = await createDemanda(payload);
-          if (id) onSuccess?.('demanda', clienteId, id);
+          if (id) {
+            await addAtividade({
+              clienteId,
+              acao: "manual",
+              descricao: `Tarefa criada: ${titulo}`,
+              refId: id,
+              tipo: "demanda",
+              area: categoria,
+              titulo_tarefa: titulo,
+              payload: { origem: "Criar Tarefa Global" }
+            });
+            onSuccess?.('demanda', clienteId, id);
+          }
         }
       }
     } catch (err) {
