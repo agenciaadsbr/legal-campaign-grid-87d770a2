@@ -281,7 +281,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   // Wrapper de fechamento: descarta rascunho silenciosamente quando vazio.
   const handleOpenChange = (open: boolean) => {
-    if (!open && demanda) {
+    if (!open && demanda && !disableAutoDiscard) {
       // flush de timers pendentes
       if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
       if (tituloTimer.current) clearTimeout(tituloTimer.current);
