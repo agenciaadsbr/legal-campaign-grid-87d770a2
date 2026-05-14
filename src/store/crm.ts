@@ -92,6 +92,7 @@ export interface Card {
   numero_semana: number;
   status_card: StatusCard;
   responsaveis: string[];
+  responsaveis_postagem?: string[];
     data_agendada?: string | null;
     data_inicio_tarefa?: string | null;
     data_limite_tarefa?: string | null;
@@ -391,6 +392,7 @@ function mapCard(row: any): Card {
     numero_semana: (pos % 4) + 1,
     status_card: row.status,
     responsaveis: row.responsaveis_ids ?? [],
+    responsaveis_postagem: row.responsaveis_postagem_ids ?? [],
     data_agendada: row.data_agendada ?? null,
     data_inicio_tarefa: row.data_inicio_tarefa ?? null,
     data_limite_tarefa: row.data_limite_tarefa ?? null,
@@ -858,6 +860,7 @@ export const useCRM = create<State>()((set, get) => ({
     if ((patch as any).descricao !== undefined) dbPatch.descricao = (patch as any).descricao;
     if (patch.status_card !== undefined) dbPatch.status = patch.status_card;
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
+    if ((patch as any).responsaveis_postagem !== undefined) dbPatch.responsaveis_postagem_ids = (patch as any).responsaveis_postagem;
     if ((patch as any).data_agendada !== undefined) dbPatch.data_agendada = (patch as any).data_agendada;
     if (patch.data_inicio_tarefa !== undefined) dbPatch.data_inicio_tarefa = patch.data_inicio_tarefa || null;
     if (patch.data_limite_tarefa !== undefined) dbPatch.data_limite_tarefa = patch.data_limite_tarefa || null;
