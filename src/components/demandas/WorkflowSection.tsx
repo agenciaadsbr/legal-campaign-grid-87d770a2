@@ -599,7 +599,20 @@ export function WorkflowSection({ pai }: Props) {
 
           {/* Atividade / Briefing */}
           <div className="border-t pt-2">
-            <Label className="text-[11px]">Atividade / Briefing</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-[11px]">Atividade / Briefing</Label>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 text-[10px] text-primary"
+                onClick={() => {
+                  setDescricao(prev => prev + `<br/>---<br/>${pai.descricao || ""}`);
+                  toast.success("Briefing anexado");
+                }}
+              >
+                Anexar Briefing Anterior
+              </Button>
+            </div>
             <div className="border rounded-md overflow-hidden mt-1">
               <RichTextEditor
                 value={descricao}
