@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WorkflowSection } from "@/components/demandas/WorkflowSection";
 import { isAguardandoDependencia } from "@/lib/workflow";
+import { categoriaParaAba } from "@/lib/minhasTarefas";
 
 interface TaskFormBaseProps {
   initialDemandaId?: string;
@@ -485,6 +486,21 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
       <div className="space-y-2">
         <Label>Atividade / Briefing</Label>
         <RichTextEditor value={descricao} onChange={setDescricao} placeholder="Descreva os detalhes da tarefa..." />
+        {currentDemanda && (
+          <div className="flex justify-end">
+            <Button 
+              variant="link" 
+              className="text-xs p-0 h-auto" 
+              onClick={() => {
+                const url = `https://legal-campaign-grid.lovable.app/clientes/${currentDemanda.cliente_id}/projeto?tab=${categoriaParaAba(currentDemanda.categoria)}&demanda=${currentDemanda.id}`;
+                toast.info("Consulte aqui: " + url);
+                window.open(url, '_blank');
+              }}
+            >
+              ESTÁ COM DÚVIDAS NESSA TAREFA? CONSULTE AQUI
+            </Button>
+          </div>
+        )}
       </div>
 
       {(initialDemandaId || initialPostId) && (
