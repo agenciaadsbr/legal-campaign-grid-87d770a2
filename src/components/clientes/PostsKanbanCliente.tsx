@@ -774,13 +774,14 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                   return next;
                 })
               }
+              abrirDetalhe={abrirDetalhe}
             />
           ))}
         </div>
         <DragOverlay>
           {activeId ? (() => {
             const c = cardsCliente.find((x) => x.id === activeId);
-            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} /> : null;
+            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} abrirDetalhe={abrirDetalhe} /> : null;
           })() : null}
         </DragOverlay>
       </DndContext>
