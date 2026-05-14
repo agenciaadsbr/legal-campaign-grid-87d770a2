@@ -282,7 +282,11 @@ function CardItem({
   );
 
   if (!post || selectionMode) return inner;
-  return <Link to={`/clientes/${clienteIdLink}/posts/${post.id}`}>{inner}</Link>;
+  return (
+    <div onClick={() => abrirDetalhe(card.id)}>
+      {inner}
+    </div>
+  );
 }
 
 function Coluna({

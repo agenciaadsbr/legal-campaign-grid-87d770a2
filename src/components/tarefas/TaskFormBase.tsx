@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -36,12 +36,15 @@ import {
   Trash2,
   ExternalLink,
   Zap,
+  History,
+  Info,
 } from "lucide-react";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WorkflowSection } from "@/components/demandas/WorkflowSection";
+import { TarefaIAConsulta } from "@/components/demandas/TarefaIAConsulta";
 import { isAguardandoDependencia } from "@/lib/workflow";
 import { categoriaParaAba } from "@/lib/minhasTarefas";
 
