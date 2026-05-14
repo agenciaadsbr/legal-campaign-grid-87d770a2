@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,12 +16,10 @@ import {
   CATEGORIA_LABEL,
   type DemandaCategoria,
 } from "@/lib/demandas-categorias";
-import { categoriaParaAba } from "@/lib/minhasTarefas";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 
 type AreaSel = DemandaCategoria | "Posts";
 
-// Ordem solicitada de exibição das áreas no seletor.
 const AREAS_ORDEM: AreaSel[] = [
   "Posts",
   "EditorVideo",
@@ -48,47 +46,47 @@ export default function CriarTarefa() {
   const [clienteId, setClienteId] = useState<string>("");
   const [area, setArea] = useState<AreaSel | "">("");
   const [draftId, setDraftId] = useState<string | null>(null);
-  const initRef = useRef(false);
   const switchingRef = useRef(false);
-
-  // Inicializa cliente padrão (primeiro disponível) e cria rascunho silencioso
-  // imediatamente para que o formulário completo apareça já no carregamento.
-  useEffect(() => {
-    if (initRef.current) return;
-    if (!clientes.length) return;
-    initRef.current = true;
-    const primeiro = clientes[0].id;
-    (async () => {
-      const novo = await createRascunho({
-        cliente_id: primeiro,
-        categoria: "Personalizado",
-      });
-      if (novo) setDraftId(novo.id);
-    })();
-  }, [clientes, createRascunho]);
+  const creatingRef = useRef(false);
 
   const liveDraft = draftId
     ? demandas.find((d) => d.id === draftId) ?? null
     : null;
 
+  // Cria o rascunho APENAS quando Cliente e Área (≠ Posts) estão preenchidos.
+  const ensureDraft = async (cli: string, ar: AreaSel) => {
+    if (draftId || creatingRef.current) return;
+    if (!cli || !ar || ar === "Posts") return;
+    creatingRef.current = true;
+    try {
+      const novo = await createRascunho({
+        cliente_id: cli,
+        categoria: ar as DemandaCategoria,
+      });
+      if (novo) setDraftId(novo.id);
+    } finally {
+      creatingRef.current = false;
+    }
+  };
+
   const handleClienteChange = async (novoId: string) => {
     setClienteId(novoId);
     if (draftId) {
       await updateDemanda(draftId, { cliente_id: novoId });
+    } else if (area && area !== "Posts") {
+      await ensureDraft(novoId, area as AreaSel);
     }
   };
 
   const handleAreaChange = async (nova: AreaSel) => {
     if (nova === area) return;
-    setArea(nova);
 
     if (nova === "Posts") {
-      // Comuta para o formulário de Post: descarta o rascunho de demanda
-      // e abre o formulário de Posts já existente no Projeto Completo.
       if (!clienteId) {
         toast.error("Selecione um cliente para criar a tarefa.");
         return;
       }
+      setArea(nova);
       switchingRef.current = true;
       const idParaRemover = draftId;
       setDraftId(null);
@@ -97,28 +95,21 @@ export default function CriarTarefa() {
       }
       const res = await createCardRascunho({ cliente_id: clienteId });
       if (res) {
-        navigate(
-          `/clientes/${clienteId}/projeto?tab=posts&post=${res.postId}`,
-        );
+        navigate(`/clientes/${clienteId}/projeto?tab=posts&post=${res.postId}`);
       }
       return;
     }
 
-    if (!draftId) {
-      // Veio de "Posts" sem ter rascunho de demanda — cria um novo.
-      if (!clienteId) return;
-      const novo = await createRascunho({
-        cliente_id: clienteId,
-        categoria: nova as DemandaCategoria,
-      });
-      if (novo) setDraftId(novo.id);
-      return;
-    }
+    setArea(nova);
 
-    await updateDemanda(draftId, { categoria: nova as DemandaCategoria });
+    if (draftId) {
+      await updateDemanda(draftId, { categoria: nova as DemandaCategoria });
+    } else if (clienteId) {
+      await ensureDraft(clienteId, nova);
+    }
   };
 
-  const handleDialogClose = (open: boolean) => {
+  const handleDialogClose = async (open: boolean) => {
     if (open) return;
     if (switchingRef.current) {
       switchingRef.current = false;
@@ -126,27 +117,14 @@ export default function CriarTarefa() {
     }
     const id = draftId;
     setDraftId(null);
-    setTimeout(() => {
-      if (!id) {
-        navigate(-1);
-        return;
-      }
-      const ainda = useDemandasStore
-        .getState()
-        .demandas.find((d) => d.id === id);
-      if (ainda) {
-        navigate(
-          `/clientes/${ainda.cliente_id}/projeto?tab=${categoriaParaAba(
-            ainda.categoria,
-          )}&demanda=${ainda.id}`,
-        );
-      } else {
-        navigate(-1);
-      }
-    }, 0);
+    // Descarta SEMPRE o rascunho ao fechar sem salvar explicitamente.
+    if (id) {
+      await deleteDemanda(id);
+    }
+    // NUNCA redireciona para o cliente — apenas volta para a tela anterior.
+    navigate(-1);
   };
 
-  // Slot renderizado no topo do formulário original (Cliente + Área).
   const headerExtras = (
     <div className="rounded-md border bg-muted/30 p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div className="space-y-1.5">
@@ -197,8 +175,12 @@ export default function CriarTarefa() {
           headerExtras={headerExtras}
         />
       ) : (
-        <div className="flex items-center justify-center p-10 text-sm text-muted-foreground">
-          Preparando formulário...
+        <div className="max-w-2xl mx-auto p-6 space-y-4">
+          <h1 className="text-lg font-semibold">Criar tarefa</h1>
+          {headerExtras}
+          <p className="text-sm text-muted-foreground">
+            Selecione um cliente e uma área/categoria para começar.
+          </p>
         </div>
       )}
     </div>
