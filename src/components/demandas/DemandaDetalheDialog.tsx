@@ -136,6 +136,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   const isAguardando = demandaProp ? isAguardandoDependencia(demandaProp.id, dependencies) : false;
 
+  const isAguardando = demandaProp ? isAguardandoDependencia(demandaProp.id, dependencies) : false;
+
   // Fonte de verdade reativa: lê a demanda viva do store pelo id, para que
   // mudanças em Categoria/Subtipo/Prioridade/Datas/Responsáveis apareçam
   // imediatamente nos controles sem precisar fechar e reabrir o card.
