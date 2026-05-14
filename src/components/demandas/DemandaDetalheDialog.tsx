@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
 import {
   Dialog,
   DialogContent,
@@ -80,6 +80,12 @@ interface Props {
    *   conteúdo (descrição, anexos, comentários), o rascunho é descartado.
    */
   isRascunho?: boolean;
+  /**
+   * Conteúdo extra renderizado no topo do diálogo (ex.: seletores de Cliente
+   * e Área usados no módulo global "Criar Tarefa"). Slot opcional — não
+   * altera nenhum comportamento existente.
+   */
+  headerExtras?: ReactNode;
 }
 
 const fileToDataUrl = (f: File) =>
@@ -117,7 +123,7 @@ const extractAnexoStoragePath = (url: string): string | null => {
   }
 };
 
-export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho }: Props) {
+export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho, headerExtras }: Props) {
   const { clientes, responsaveis } = useCRM();
   const { user, isAdmin, canWrite } = useAuth();
   const {
@@ -427,6 +433,9 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+          {headerExtras && (
+            <div className="shrink-0">{headerExtras}</div>
+          )}
           {isAguardando && (
             <div className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 flex items-start gap-2 text-xs">
               <span className="mt-0.5">🔒</span>

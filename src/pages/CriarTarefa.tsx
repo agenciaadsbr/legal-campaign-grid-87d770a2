@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCRM } from "@/store/crm";
-import { useDemandasStore, type Demanda } from "@/store/demandas";
+import { useDemandasStore } from "@/store/demandas";
 import { toast } from "sonner";
-import { ChevronLeft, Sparkles } from "lucide-react";
 import {
   CATEGORIAS,
   CATEGORIA_LABEL,
@@ -16,168 +19,188 @@ import {
 import { categoriaParaAba } from "@/lib/minhasTarefas";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 
-type AreaSel = DemandaCategoria | "Posts" | "";
+type AreaSel = DemandaCategoria | "Posts";
+
+// Ordem solicitada de exibição das áreas no seletor.
+const AREAS_ORDEM: AreaSel[] = [
+  "Posts",
+  "EditorVideo",
+  "TrafegoPago",
+  "LandingPage",
+  "IAAtendimento",
+  "Operacional",
+  "Personalizado",
+];
+
+const AREA_LABEL: Record<AreaSel, string> = {
+  Posts: "Posts",
+  ...CATEGORIA_LABEL,
+} as Record<AreaSel, string>;
 
 export default function CriarTarefa() {
   const navigate = useNavigate();
   const { clientes, createCardRascunho } = useCRM();
   const createRascunho = useDemandasStore((s) => s.createRascunho);
+  const updateDemanda = useDemandasStore((s) => s.updateDemanda);
+  const deleteDemanda = useDemandasStore((s) => s.deleteDemanda);
   const demandas = useDemandasStore((s) => s.demandas);
 
-  const [clienteId, setClienteId] = useState("");
-  const [categoria, setCategoria] = useState<AreaSel>("");
-  const [creating, setCreating] = useState(false);
-  const [draftDemanda, setDraftDemanda] = useState<Demanda | null>(null);
+  const [clienteId, setClienteId] = useState<string>("");
+  const [area, setArea] = useState<AreaSel>("Personalizado");
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const initRef = useRef(false);
+  const switchingRef = useRef(false);
 
-  // Mantém referência reativa ao rascunho a partir do store (para detectar se foi descartado)
-  const liveDraft = draftDemanda
-    ? demandas.find((d) => d.id === draftDemanda.id) ?? null
+  // Inicializa cliente padrão (primeiro disponível) e cria rascunho silencioso
+  // imediatamente para que o formulário completo apareça já no carregamento.
+  useEffect(() => {
+    if (initRef.current) return;
+    if (!clientes.length) return;
+    initRef.current = true;
+    const primeiro = clientes[0].id;
+    setClienteId(primeiro);
+    (async () => {
+      const novo = await createRascunho({
+        cliente_id: primeiro,
+        categoria: "Personalizado",
+      });
+      if (novo) setDraftId(novo.id);
+    })();
+  }, [clientes, createRascunho]);
+
+  const liveDraft = draftId
+    ? demandas.find((d) => d.id === draftId) ?? null
     : null;
 
-  const cliente = clientes.find((c) => c.id === clienteId);
+  const handleClienteChange = async (novoId: string) => {
+    setClienteId(novoId);
+    if (draftId) {
+      await updateDemanda(draftId, { cliente_id: novoId });
+    }
+  };
 
-  const handleContinuar = async () => {
-    if (!clienteId) {
-      toast.error("Selecione um cliente");
-      return;
-    }
-    if (!categoria) {
-      toast.error("Selecione uma área");
-      return;
-    }
-    setCreating(true);
-    try {
-      if (categoria === "Posts") {
-        const res = await createCardRascunho({ cliente_id: clienteId });
-        if (res) {
-          // O formulário de Post existe dentro do Projeto Completo (mesma UX).
-          navigate(`/clientes/${clienteId}/projeto?tab=posts&post=${res.postId}`);
-        }
-      } else {
-        const novo = await createRascunho({
-          cliente_id: clienteId,
-          categoria: categoria as DemandaCategoria,
-        });
-        if (novo) {
-          setDraftDemanda(novo);
-        }
+  const handleAreaChange = async (nova: AreaSel) => {
+    if (nova === area) return;
+    setArea(nova);
+
+    if (nova === "Posts") {
+      // Comuta para o formulário de Post: descarta o rascunho de demanda
+      // e abre o formulário de Posts já existente no Projeto Completo.
+      if (!clienteId) {
+        toast.error("Selecione um cliente para criar a tarefa.");
+        return;
       }
-    } finally {
-      setCreating(false);
+      switchingRef.current = true;
+      const idParaRemover = draftId;
+      setDraftId(null);
+      if (idParaRemover) {
+        await deleteDemanda(idParaRemover);
+      }
+      const res = await createCardRascunho({ cliente_id: clienteId });
+      if (res) {
+        navigate(
+          `/clientes/${clienteId}/projeto?tab=posts&post=${res.postId}`,
+        );
+      }
+      return;
     }
+
+    if (!draftId) {
+      // Veio de "Posts" sem ter rascunho de demanda — cria um novo.
+      if (!clienteId) return;
+      const novo = await createRascunho({
+        cliente_id: clienteId,
+        categoria: nova as DemandaCategoria,
+      });
+      if (novo) setDraftId(novo.id);
+      return;
+    }
+
+    await updateDemanda(draftId, { categoria: nova as DemandaCategoria });
   };
 
   const handleDialogClose = (open: boolean) => {
     if (open) return;
-    const id = draftDemanda?.id;
-    setDraftDemanda(null);
-    // Após fechar, se o rascunho ainda existe no store (foi preenchido), navega para o Projeto Completo.
+    if (switchingRef.current) {
+      switchingRef.current = false;
+      return;
+    }
+    const id = draftId;
+    setDraftId(null);
     setTimeout(() => {
-      if (!id) return;
-      const ainda = useDemandasStore.getState().demandas.find((d) => d.id === id);
+      if (!id) {
+        navigate(-1);
+        return;
+      }
+      const ainda = useDemandasStore
+        .getState()
+        .demandas.find((d) => d.id === id);
       if (ainda) {
         navigate(
-          `/clientes/${ainda.cliente_id}/projeto?tab=${categoriaParaAba(ainda.categoria)}&demanda=${ainda.id}`,
+          `/clientes/${ainda.cliente_id}/projeto?tab=${categoriaParaAba(
+            ainda.categoria,
+          )}&demanda=${ainda.id}`,
         );
+      } else {
+        navigate(-1);
       }
-      // Caso contrário, o DemandaDetalheDialog descartou o rascunho silenciosamente.
-      // Permanecemos na tela de seleção, pronta para nova criação.
     }, 0);
   };
 
-  return (
-    <div className="p-6 max-w-xl mx-auto min-h-screen bg-background animate-fade-in">
-      <div className="mb-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(-1)}
-          className="gap-2 text-muted-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" /> Voltar
-        </Button>
+  // Slot renderizado no topo do formulário original (Cliente + Área).
+  const headerExtras = (
+    <div className="rounded-md border bg-muted/30 p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Cliente *</Label>
+        <Select value={clienteId} onValueChange={handleClienteChange}>
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Selecione o cliente" />
+          </SelectTrigger>
+          <SelectContent>
+            {clientes.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.nome_cliente}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Área / Categoria *</Label>
+        <Select
+          value={area}
+          onValueChange={(v) => handleAreaChange(v as AreaSel)}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Selecione a área" />
+          </SelectTrigger>
+          <SelectContent>
+            {AREAS_ORDEM.filter(
+              (a) => a === "Posts" || (CATEGORIAS as readonly string[]).includes(a),
+            ).map((a) => (
+              <SelectItem key={a} value={a}>
+                {AREA_LABEL[a]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Criar nova tarefa
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-xs text-muted-foreground">
-            Selecione o cliente e a área da tarefa. Em seguida você abrirá o mesmo
-            formulário usado dentro do Projeto Completo do cliente.
-          </p>
-
-          <div className="space-y-2">
-            <Label className="text-xs">Cliente *</Label>
-            <Select value={clienteId} onValueChange={setClienteId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                {clientes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome_cliente}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs">Área / Categoria *</Label>
-            <Select value={categoria} onValueChange={(v) => setCategoria(v as AreaSel)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a área" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Posts">Posts</SelectItem>
-                {CATEGORIAS.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {CATEGORIA_LABEL[c]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {cliente && categoria && (
-            <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              Será criada uma tarefa para{" "}
-              <span className="font-medium text-foreground">{cliente.nome_cliente}</span>{" "}
-              na área{" "}
-              <span className="font-medium text-foreground">
-                {categoria === "Posts" ? "Posts" : CATEGORIA_LABEL[categoria as DemandaCategoria]}
-              </span>
-              .
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-2">
-            <Button
-              onClick={handleContinuar}
-              disabled={!clienteId || !categoria || creating}
-              className="flex-1"
-            >
-              {creating ? "Abrindo..." : "Continuar"}
-            </Button>
-            <Button variant="outline" onClick={() => navigate(-1)} disabled={creating}>
-              Cancelar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Mesmo formulário usado nos cards do Projeto Completo */}
-      {liveDraft && (
+  return (
+    <div className="min-h-screen bg-background">
+      {liveDraft ? (
         <DemandaDetalheDialog
           demanda={liveDraft}
           isRascunho
           onOpenChange={handleDialogClose}
+          headerExtras={headerExtras}
         />
+      ) : (
+        <div className="flex items-center justify-center p-10 text-sm text-muted-foreground">
+          Preparando formulário...
+        </div>
       )}
     </div>
   );

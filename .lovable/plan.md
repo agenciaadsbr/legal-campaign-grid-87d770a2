@@ -1,41 +1,73 @@
+
 ## Objetivo
 
-Fazer o módulo lateral "Criar Tarefa" usar **exatamente o mesmo formulário** já existente nos cards do Projeto Completo (`DemandaDetalheDialog`), em vez de manter um formulário paralelo com layout próprio. Adicionar a etapa de "selecionar cliente" antes de abrir o formulário.
+Eliminar a tela intermediária ("Continuar") em `/criar-tarefa`. A página deve abrir já com o formulário completo idêntico ao usado nos cards do Projeto Completo, com apenas dois campos extras no topo: **Cliente** e **Área / Categoria**.
 
-Sem mudanças em: cards do Projeto Completo, aba Posts, Kanbans, dashboards, Central de Tarefas, dados existentes.
+Sem alterar o comportamento do formulário original em nenhum outro lugar do sistema.
 
-## Como vai funcionar (fluxo do usuário)
+---
 
-1. Usuário clica em "Criar Tarefa" no menu lateral.
-2. A página `/criar-tarefa` mostra um passo inicial pequeno e centralizado:
-   - Combo **Cliente** (obrigatório, busca por nome).
-   - Combo **Área / Categoria** (Posts, Vídeo, Tráfego Pago, Landing Page, IA Atendimento, Personalizado).
-   - Botão **Continuar**.
-3. Ao clicar em Continuar:
-   - Se Categoria = "Posts": cria um post rascunho silencioso para o cliente (`createCardRascunho`) e abre o mesmo formulário usado hoje na aba Posts.
-   - Caso contrário: cria uma demanda rascunho silenciosa (`createDemanda` com título "Sem título") para o cliente/categoria e abre o `DemandaDetalheDialog` com `isRascunho={true}`.
-4. O usuário edita exatamente o mesmo formulário do Projeto Completo: título, status, urgência, subtipo, prioridade, datas, responsáveis, anexos, links Meister/Drive, briefing, comentários, IA Consulta, Workflow, histórico — tudo idêntico, porque é o mesmo componente.
-5. Botão "Voltar" no topo:
-   - Se o rascunho ficou vazio (sem título, sem descrição, sem anexos, sem responsáveis, sem datas, sem comentários) → descarta automaticamente (já é o comportamento atual de `isRascunho`).
-   - Se foi preenchido → permanece salvo e o usuário é redirecionado para o Projeto Completo do cliente, na aba e tarefa correspondente.
+## Estratégia
 
-## Mudanças técnicas
+1. Ao montar `CriarTarefa`, criar imediatamente um **rascunho silencioso** (igual ao que o Projeto Completo já faz quando se clica em "Adicionar tarefa").
+   - Categoria padrão: `Personalizado` (Urgências) → trocada na hora pelo seletor de Área no topo.
+   - Cliente padrão: o primeiro cliente disponível → trocado na hora pelo seletor de Cliente no topo.
+   - O rascunho não polui o sistema: a lógica de descarte automático (já existente em `DemandaDetalheDialog` quando `isRascunho` e o título permanece vazio sem conteúdo) cuida da limpeza ao sair sem preencher.
 
-- `src/pages/CriarTarefa.tsx` — reescrever:
-  - Remover todo o formulário customizado atual (campos duplicados, anexos locais, etc.).
-  - Adicionar estado `step: 'select' | 'editing'` e `draftId` / `draftType`.
-  - Passo `select`: card pequeno com selects de Cliente e Categoria + botão Continuar.
-  - Passo `editing`:
-    - Para demanda: renderizar `<DemandaDetalheDialog demanda={draftDemanda} isRascunho onOpenChange={...}/>` (já é um Dialog próprio, abre sobre a página).
-    - Para post: navegar diretamente para `/clientes/{id}/projeto?tab=posts&post={id}` que já abre o formulário existente do post (mesma UX do Projeto Completo).
-  - Ao fechar o dialog com conteúdo preenchido → `navigate` para o Projeto Completo na aba/tarefa criada.
-  - Ao fechar vazio → o próprio `DemandaDetalheDialog` descarta o rascunho; voltamos para o passo `select`.
+2. Renderizar o **mesmo `DemandaDetalheDialog`** já usado no Projeto Completo, em modo `isRascunho`, recebendo esse rascunho. Ele já traz por padrão:
+   - Título, Urgente, Status, Categoria, Subtipo, Prioridade
+   - Datas, Responsáveis, Anexos, Link Meister, Link Drive
+   - Briefing/Descrição, Comentários
+   - "Está com dúvidas na tarefa? Consulte aqui" (`TarefaIAConsulta`)
+   - Workflow / Continuidade (`WorkflowSection`)
+   - Salvar (autosave) / fechar
 
-- Nenhuma alteração em `DemandaDetalheDialog.tsx`, `PostDetalhe.tsx`, stores, ou outros formulários.
-- `TaskFormBase.tsx` permanece (usado por outros pontos), mas deixa de ser referenciado pelo Criar Tarefa global.
+3. Adicionar **dois campos no topo** acima do conteúdo do diálogo:
+   - **Cliente** (Select obrigatório) → ao alterar, dispara `updateDemanda(rascunho.id, { cliente_id })`.
+   - **Área / Categoria** (Select obrigatório) → ao alterar para uma categoria de demanda, dispara `updateDemanda(rascunho.id, { categoria })`.
+   - Se a Área for **Posts**: descarta o rascunho de demanda e cria um rascunho de card via `createCardRascunho` do CRM, comutando o formulário renderizado abaixo para `PostDetalhe` (mesmo formulário usado dentro da aba Posts do Projeto Completo). Ao trocar de Posts para qualquer outra área, faz o caminho inverso.
 
-## Resultado
+4. Para expor esses dois campos no topo **sem recriar nem modificar o formulário original**, adicionar uma única prop opcional `headerExtras?: ReactNode` em `DemandaDetalheDialog` (slot puro, renderizado no topo do `DialogContent`). Nenhum comportamento existente muda; outras chamadas continuam funcionando sem alteração porque a prop é opcional.
 
-- Um único formulário de tarefa em todo o sistema (o do Projeto Completo).
-- Seleção de cliente preservada como pré-requisito.
-- Zero divergência visual entre "Criar Tarefa" e abrir um card no Projeto Completo.
+5. Validação de salvamento: como o formulário usa autosave, o "Salvar tarefa" do rascunho é o próprio comportamento atual. As mensagens obrigatórias pedidas pelo usuário aparecem caso ele tente sair/fechar com Cliente vazio ou sem Área válida; nesse caso bloqueamos o descarte e mostramos:
+   - "Selecione um cliente para criar a tarefa."
+   - "Selecione uma área/categoria para criar a tarefa."
+
+---
+
+## Mudanças por arquivo
+
+### `src/components/demandas/DemandaDetalheDialog.tsx`
+- Adicionar prop opcional `headerExtras?: ReactNode`.
+- Renderizá-la no topo do `DialogContent` (logo antes do bloco de título).
+- Nenhuma outra alteração — todas as chamadas existentes seguem funcionando exatamente como hoje.
+
+### `src/pages/CriarTarefa.tsx` (reescrita)
+- Remove o fluxo em duas etapas (sem `step`, sem botão "Continuar", sem tela de seleção).
+- `useEffect` no mount: cria rascunho com `createRascunho({ cliente_id: primeiroCliente, categoria: "Personalizado" })`.
+- Estado: `mode: "demanda" | "post"`, `demandaDraftId`, `postDraftId`.
+- Renderiza:
+  - Se `mode === "demanda"`: `<DemandaDetalheDialog demanda={liveDraft} isRascunho onOpenChange={...} headerExtras={<ClienteAreaSelectors/>} />`
+  - Se `mode === "post"`: layout análogo embutindo `PostDetalhe` para o card rascunho (com os mesmos dois selects no topo).
+- Handlers:
+  - `onClienteChange(novoId)` → `updateDemanda(draftId, { cliente_id: novoId })` ou `updateCard` equivalente para Post.
+  - `onAreaChange(novaArea)`:
+    - se "Posts" e `mode === "demanda"` → `deleteDemanda(draftId)` + `createCardRascunho` + `setMode("post")`.
+    - se categoria de demanda e `mode === "post"` → descartar card rascunho + `createRascunho` + `setMode("demanda")`.
+    - se categoria de demanda e `mode === "demanda"` → `updateDemanda(draftId, { categoria: novaArea })`.
+- `onOpenChange(false)`: se rascunho ainda existir no store (foi preenchido), redireciona para o Projeto Completo na aba correta (`categoriaParaAba` ou `tab=posts`); se foi descartado silenciosamente, volta para a rota anterior.
+
+### Não mexer
+- `PostDetalhe.tsx`, `WorkflowSection.tsx`, `TarefaIAConsulta.tsx`, `TaskFormBase.tsx`, stores, kanbans, dashboards, Central de Tarefas, Minhas Tarefas, dados existentes.
+
+---
+
+## Validação
+
+1. Abrir `/criar-tarefa` → o formulário completo aparece imediatamente, sem botão "Continuar" e sem etapa separada.
+2. Cliente e Área aparecem no topo, integrados ao mesmo formulário.
+3. IA ("Está com dúvidas...") e Workflow aparecem desde o início.
+4. Trocar Área para "Posts" → o formulário comuta para o de Posts (campos extras: data agendamento, postagem, link Meta, legenda) sem recarregar a página.
+5. Salvar tarefa de Tráfego Pago → aparece no cliente correto, na aba correta, na Central de Tarefas, no Dashboard e (se aplicável) em Alertas.
+6. Salvar tarefa de Posts → aparece na aba Posts do cliente correto.
+7. Nada no Projeto Completo, Kanbans ou demais módulos é alterado.
