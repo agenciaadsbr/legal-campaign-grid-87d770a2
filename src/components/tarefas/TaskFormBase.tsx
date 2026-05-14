@@ -103,7 +103,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
   // Post specific states
   const [dataAgendamento, setDataAgendamento] = useState("");
   const [dataPostagem, setDataPostagem] = useState("");
-  const [legenda, setLegenda] = useState("");
   const [linkMeta, setLinkMeta] = useState("");
 
   const anexoFileRef = useRef<HTMLInputElement>(null);
@@ -142,7 +141,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
         setLinkMeister(p.link_meister || "");
         setDataAgendamento(p.data_agendamento || "");
         setDataPostagem(p.data_postagem || "");
-        setLegenda(p.legenda || "");
         setLinkMeta(p.link_post || "");
       }
     }
@@ -171,7 +169,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
               status: status as any,
               data_agendamento: dataAgendamento || undefined,
               data_postagem: dataPostagem || undefined,
-              legenda,
               link_post: linkMeta || undefined,
               link_meister: linkMeister || undefined
             });
@@ -191,7 +188,6 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
               status: status as any,
               data_agendamento: dataAgendamento || undefined,
               data_postagem: dataPostagem || undefined,
-              legenda,
               link_post: linkMeta || undefined,
               link_meister: linkMeister || undefined
             });
