@@ -1,0 +1,1 @@
+ALTER TABLE public.cards ADD COLUMN IF NOT EXISTS responsaveis_postagem_ids uuid[] NOT NULL DEFAULT '{}'::uuid[];
