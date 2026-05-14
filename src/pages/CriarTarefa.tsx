@@ -46,7 +46,7 @@ export default function CriarTarefa() {
   const demandas = useDemandasStore((s) => s.demandas);
 
   const [clienteId, setClienteId] = useState<string>("");
-  const [area, setArea] = useState<AreaSel>("Personalizado");
+  const [area, setArea] = useState<AreaSel | "">("");
   const [draftId, setDraftId] = useState<string | null>(null);
   const initRef = useRef(false);
   const switchingRef = useRef(false);
@@ -58,7 +58,6 @@ export default function CriarTarefa() {
     if (!clientes.length) return;
     initRef.current = true;
     const primeiro = clientes[0].id;
-    setClienteId(primeiro);
     (async () => {
       const novo = await createRascunho({
         cliente_id: primeiro,
@@ -172,7 +171,7 @@ export default function CriarTarefa() {
           onValueChange={(v) => handleAreaChange(v as AreaSel)}
         >
           <SelectTrigger className="h-9">
-            <SelectValue placeholder="Selecione a área" />
+            <SelectValue placeholder="Selecione a área/categoria" />
           </SelectTrigger>
           <SelectContent>
             {AREAS_ORDEM.filter(
