@@ -86,8 +86,8 @@ export function DemandCard({
           {demanda.titulo}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {aguardando && (
-            <span title="Aguardando etapa anterior" className="text-muted-foreground">
+          {(aguardando || demanda.status === "Aguardando etapa anterior") && (
+            <span title="Aguardando etapa anterior" className="text-amber-500">
               <Lock className="h-3.5 w-3.5" />
             </span>
           )}
