@@ -1,61 +1,73 @@
+# Plano — Workflow / Continuidade para a aba Posts
+
 ## Objetivo
 
-Substituir o formulário atual de **Detalhes da Tarefa** da aba **Posts** (hoje renderizado por `PostDetalhe.tsx` usando `TaskFormBase`) pelo **mesmo layout/estrutura visual do formulário padrão validado** usado nas demais abas (`DemandaDetalheDialog`, mostrado no anexo), preservando a Legenda e todos os dados antigos dos posts.
+Habilitar, dentro do detalhe de um Post, a mesma funcionalidade de **Workflow / Continuidade** já usada nas demais áreas (criar próxima etapa que depende da conclusão da tarefa atual), porém adaptada à realidade da aba Posts, onde existem **dois papéis distintos**:
 
-Escopo restrito: apenas a tela de detalhe do post (rota `/clientes/:clienteId/posts/:postId` + abertura via card da aba Posts). Kanban, Projeto Completo, demais abas e store `useCRM`/banco **não são alterados**.
+- **Responsáveis pela criação do post** (designer / quem produz)
+- **Responsáveis pela postagem** (quem efetivamente publica nas redes)
+
+Hoje o card "WORKFLOW / CONTINUIDADE" no detalhe do Post mostra apenas a mensagem _"Continuidade entre etapas está disponível para tarefas das demais áreas. Posts não possuem etapas vinculadas."_ — esse placeholder será substituído pela funcionalidade real.
+
+Escopo: **somente a aba Posts**. Nenhuma alteração em Demandas, Projeto Completo, Kanbans ou outras áreas.
 
 ---
 
 ## Mudanças
 
-### 1. Novo componente `src/components/clientes/PostDetalheDialog.tsx`
-Réplica visual fiel de `DemandaDetalheDialog` (mesma estrutura de seções, mesmos componentes shadcn, mesmos espaçamentos, mesma `VoltarVisaoGeralButton`, mesmo card de cabeçalho com pílula de status, botão Urgente, ícones de copiar/abrir/excluir), porém vinculada a `Card` + `Post` da store `useCRM`.
+### 1. Banco — novo campo para "responsáveis pela postagem"
 
-Seções renderizadas, na mesma ordem do anexo:
+Adicionar coluna `responsaveis_postagem uuid[]` (default `'{}'`) na tabela `cards`. O campo `responsaveis` existente continua representando os **responsáveis pela criação**. Sem migração de dados antigos (campo novo nasce vazio, totalmente compatível).
 
-1. **Voltar para Visão Geral** (já existe)
-2. **Cabeçalho**: TÍTULO DA TAREFA (Input), botão Urgente, pílula de Status, ações (copiar link, abrir em nova aba, excluir)
-3. **Categoria** (fixo "Posts", read-only) · **Subtipo** (campo livre opcional, só persiste se preenchido — usa `card.formato` se já existir, senão fica em branco) · **Prioridade** (Select)
-4. **Data início** · **Data limite** (mapeados para `card.data_inicio_tarefa` / `card.data_limite_tarefa`)
-5. **Responsáveis** (`AvatarStack` + popover, mapeado para `card.responsaveis`)
-6. **Anexos** (lista + "Adicionar anexo", mapeado para `post.anexos`)
-7. **Link do Meister** · **Link do Drive** (mapeados para `post.link_meister` e novo `post.link_drive` — campo já existe no payload via `updatePost`; se não existir na coluna do banco será gravado em `post.link_drive` se a coluna existir, caso contrário ignorado silenciosamente sem quebrar)
-8. **Atividade / Briefing** (Textarea, mapeado para `card.descricao` ou campo `briefing` existente do post — usar o que já está em uso hoje)
-9. **Campos de Post** (bloco extra, abaixo do Briefing, mantido por compatibilidade):
-   - Data agendamento (`post.data_agendamento`)
-   - Data postagem (`post.data_postagem`)
-   - Link Meta Business Suite (`post.link_post`)
-   - **Legenda** (`Textarea`, vinculado a `post.legenda`) — leitura e gravação preservando posts antigos
-10. **ATIVIDADE / Comentários** (RichTextEditor + lista, usando `addAtividade` da `useCRM` que já existe para posts)
-11. **Está com dúvidas na tarefa? Consulte aqui** (`TarefaIAConsulta` — adaptado para receber um objeto mínimo `{id, titulo, categoria:"Posts", cliente_id}` derivado do post; sem alterar o componente)
-12. **Workflow / Continuidade** (`WorkflowSection` — alimentado a partir do `post.id` quando aplicável; se o componente exigir uma `Demanda`, exibimos um collapsible vazio "Sem etapas vinculadas" para não esconder a seção)
+### 2. Detalhe do Post — dois blocos de responsáveis
 
-Persistência: todas as escritas continuam pelos métodos já existentes da `useCRM` (`updateCard`, `updatePost`, `addAtividade`). Nenhuma migração de dados, nenhuma remoção de coluna, nenhuma alteração de schema.
+Em `src/components/clientes/PostDetalheDialog.tsx`, na seção "Responsáveis" (Card 1):
 
-### 2. `src/pages/PostDetalhe.tsx`
-- Remover uso de `TaskFormBase`.
-- Renderizar o novo `PostDetalheDialog` no mesmo layout de página (envolvido por `Card` + `VoltarVisaoGeralButton`), passando `postId`.
+- Renomear o bloco atual para **"Responsáveis pela criação"** (lê/grava `card.responsaveis`).
+- Adicionar logo abaixo um segundo bloco **"Responsáveis pela postagem"** com o mesmo Popover de seleção, lendo/gravando `card.responsaveis_postagem`.
+- Visual idêntico ao já existente (avatares coloridos + popover de toggle).
 
-### 3. Não tocar em
-- `TaskFormBase.tsx` (continua sendo usado por Minhas Tarefas / Criar Tarefa para outras áreas).
-- `PostsKanbanCliente.tsx` (continua navegando para `/clientes/:cid/posts/:postId`).
-- `DemandaDetalheDialog.tsx`, `AreaTab.tsx`, `ProjetoCliente.tsx`, store `useCRM`, store `useDemandas`, edge functions, banco.
-- Posts antigos: campo `legenda` lido e gravado normalmente; nada é apagado, migrado ou limpo.
+### 3. Substituir o placeholder pelo WorkflowSection real
+
+Em `PostDetalheDialog.tsx`, remover o card placeholder "WORKFLOW / CONTINUIDADE" e renderizar `<WorkflowSection pai={demandaStub} />`, passando um stub `Demanda`-like construído a partir de `card` + `post` (categoria `"Posts"`, `cliente_id`, `id` = `card.id`, `descricao`, `link_meister`, `responsaveis`, etc.). O `WorkflowSection` já tem o branch `categoria === "Posts"` que cria um Card+Post via `createCardRascunho` e grava a dependência em `task_dependencies` — esse caminho passa a funcionar quando o **pai** também é um Post.
+
+### 4. WorkflowSection — suportar dois responsáveis quando a próxima etapa for "Posts"
+
+Em `src/components/demandas/WorkflowSection.tsx`:
+
+- Quando `categoria === "Posts"` na próxima etapa, exibir **dois seletores de responsáveis** lado a lado: "Responsáveis pela criação" e "Responsáveis pela postagem" (estados separados `responsaveisCriacaoIds` e `responsaveisPostagemIds`).
+- No `salvar()` do branch Posts, gravar `responsaveis: responsaveisCriacaoIds` e `responsaveis_postagem: responsaveisPostagemIds` no `updateCard`.
+- "Herdar responsáveis" do pai: se o pai for um Post, herda os dois conjuntos respectivamente; se o pai for de outra área, herda apenas para "criação" (postagem fica vazia).
+- Quando a próxima etapa **não** for Posts, o comportamento atual permanece intacto (um único bloco de responsáveis).
+
+### 5. Compatibilidade
+
+- Campo `responsaveis_postagem` é opcional e default `[]` — posts antigos continuam funcionando sem alteração.
+- Nenhuma remoção de dados (legenda, anexos, comentários, status, datas, link Meta etc. permanecem).
+- Nenhuma mudança em Kanbans, listagens, relatórios ou edge functions.
 
 ---
 
 ## Detalhes técnicos
 
-- O novo `PostDetalheDialog` é um componente de página (não usa `<Dialog>`), espelhando o layout interno do `DialogContent` de `DemandaDetalheDialog` para manter idêntico ao anexo.
-- Reaproveitar tokens semânticos do `index.css` (sem cores hardcoded).
-- `TarefaIAConsulta` recebe um `Demanda`-like mínimo via cast (`as any`) para evitar mudança no contrato do componente; comentários são lidos/gravados em `atividades` da `useCRM`, que é a fonte real para posts.
-- `WorkflowSection` é incluído mesmo quando não há etapas, para cumprir "NÃO esconder componentes".
+**Arquivos alterados**
+
+- `supabase/migrations/*` (nova): `ALTER TABLE public.cards ADD COLUMN responsaveis_postagem uuid[] NOT NULL DEFAULT '{}';`
+- `src/store/crm.ts`: incluir `responsaveis_postagem` no tipo `Card`, no fetch e no `updateCard`.
+- `src/components/clientes/PostDetalheDialog.tsx`:
+  - novo bloco "Responsáveis pela postagem";
+  - troca do placeholder por `<WorkflowSection pai={demandaStub} />`;
+  - `demandaStub` passa a expor `responsaveis` e `responsaveis_postagem` para herança.
+- `src/components/demandas/WorkflowSection.tsx`:
+  - estado `responsaveisPostagemIds`;
+  - UI condicional (dois blocos quando `categoria === "Posts"`);
+  - persistência no `updateCard` do branch Posts;
+  - lógica de "herdar responsáveis" estendida para o caso pai-Post.
+
+**Não tocar**: `TaskFormBase.tsx`, `DemandaDetalheDialog.tsx`, `PostsKanbanCliente.tsx`, `AreaTab.tsx`, `ProjetoCliente.tsx`, edge functions, tipos do Supabase exceto regeneração automática.
 
 ---
 
 ## Resultado esperado
 
-- Aba Posts → ao abrir um card, aparece o **mesmo formulário visual** do anexo (campos, ordem, estilo).
-- **Legenda** preservada (leitura e gravação).
-- Posts antigos abrem normalmente, sem perda de dados.
-- Demais abas, kanbans, Projeto Completo e store inalterados.
+Dentro de qualquer Post, o bloco "Workflow / Continuidade" passa a permitir criar a próxima etapa (em qualquer categoria, incluindo outro Post) com dependência registrada em `task_dependencies`. Quando essa próxima etapa for um Post, o usuário define separadamente quem cria e quem publica. Posts antigos continuam abrindo normalmente, com o segundo campo apenas vazio.
