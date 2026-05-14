@@ -530,6 +530,10 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async addComentario(demanda_id, usuario_id, texto, imagem_url) {
+    if (isLocalDraftId(demanda_id)) {
+      toast.error("Salve a tarefa primeiro para comentar.");
+      return;
+    }
     const { data, error } = await supabase
       .from("comentarios_demandas")
       .insert({ demanda_id, usuario_id, texto, imagem_url: imagem_url ?? null })
