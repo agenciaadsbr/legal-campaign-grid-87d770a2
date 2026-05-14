@@ -439,85 +439,119 @@ export function WorkflowSection({ pai }: Props) {
           </div>
 
           {/* Responsáveis */}
-          <div>
-            <Label className="text-[11px]">Responsáveis</Label>
-            <div className="mt-1">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1 -mx-2 transition-colors min-h-[36px] w-full"
-                  >
-                    {responsaveisSelecionados.length > 0 ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {responsaveisSelecionados.map((r) => (
-                          <div key={r.id} className="flex items-center gap-1.5">
-                            <div
-                              className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center"
-                              style={{ backgroundColor: r.cor }}
+          {(() => {
+            const blocos =
+              categoria === "Posts"
+                ? [
+                    {
+                      key: "criacao",
+                      label: "Responsáveis pela criação",
+                      placeholder: "+ atribuir criadores",
+                      ids: responsaveisIds,
+                      setIds: setResponsaveisIds,
+                    },
+                    {
+                      key: "postagem",
+                      label: "Responsáveis pela postagem",
+                      placeholder: "+ atribuir postadores",
+                      ids: responsaveisPostagemIds,
+                      setIds: setResponsaveisPostagemIds,
+                    },
+                  ]
+                : [
+                    {
+                      key: "default",
+                      label: "Responsáveis",
+                      placeholder: "+ atribuir responsáveis",
+                      ids: responsaveisIds,
+                      setIds: setResponsaveisIds,
+                    },
+                  ];
+            return (
+              <div className={cn("grid gap-2", blocos.length === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
+                {blocos.map((bloco) => {
+                  const lista = responsaveis.filter((r) => bloco.ids.includes(r.id));
+                  return (
+                    <div key={bloco.key}>
+                      <Label className="text-[11px]">{bloco.label}</Label>
+                      <div className="mt-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="group flex items-center gap-2 rounded-md border border-transparent hover:border-border hover:bg-accent px-2 py-1 -mx-2 transition-colors min-h-[36px] w-full"
                             >
-                              {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                              {lista.length > 0 ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {lista.map((r) => (
+                                    <div key={r.id} className="flex items-center gap-1.5">
+                                      <div
+                                        className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center"
+                                        style={{ backgroundColor: r.cor }}
+                                      >
+                                        {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                                      </div>
+                                      <span className="text-xs">{r.nome}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">{bloco.placeholder}</span>
+                              )}
+                              <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-2" align="start">
+                            <div className="text-[11px] text-muted-foreground px-2 pb-1.5">{bloco.label}</div>
+                            <div className="max-h-60 overflow-auto space-y-0.5">
+                              <button
+                                type="button"
+                                onClick={() => bloco.setIds([])}
+                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm text-muted-foreground"
+                              >
+                                <X className="h-3.5 w-3.5" /> Limpar todos
+                              </button>
+                              {responsaveis.map((r) => {
+                                const active = bloco.ids.includes(r.id);
+                                return (
+                                  <button
+                                    type="button"
+                                    key={r.id}
+                                    onClick={() => {
+                                      bloco.setIds((prev) =>
+                                        active ? prev.filter((x) => x !== r.id) : [...prev, r.id],
+                                      );
+                                    }}
+                                    className={cn(
+                                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+                                      active && "bg-accent",
+                                    )}
+                                  >
+                                    <div
+                                      className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
+                                      style={{ backgroundColor: r.cor }}
+                                    >
+                                      {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                                    </div>
+                                    <span className="truncate">{r.nome}</span>
+                                  </button>
+                                );
+                              })}
+                              {responsaveis.length === 0 && (
+                                <div className="text-xs text-muted-foreground px-2 py-3 text-center">
+                                  Nenhum responsável cadastrado
+                                </div>
+                              )}
                             </div>
-                            <span className="text-xs">{r.nome}</span>
-                          </div>
-                        ))}
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        + atribuir responsáveis
-                      </span>
-                    )}
-                    <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 p-2" align="start">
-                  <div className="text-[11px] text-muted-foreground px-2 pb-1.5">
-                    Responsáveis
-                  </div>
-                  <div className="max-h-60 overflow-auto space-y-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setResponsaveisIds([])}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm text-muted-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" /> Limpar todos
-                    </button>
-                    {responsaveis.map((r) => {
-                      const active = responsaveisIds.includes(r.id);
-                      return (
-                        <button
-                          type="button"
-                          key={r.id}
-                          onClick={() => {
-                            setResponsaveisIds((prev) =>
-                              active ? prev.filter((x) => x !== r.id) : [...prev, r.id],
-                            );
-                          }}
-                          className={cn(
-                            "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
-                            active && "bg-accent",
-                          )}
-                        >
-                          <div
-                            className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
-                            style={{ backgroundColor: r.cor }}
-                          >
-                            {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-                          </div>
-                          <span className="truncate">{r.nome}</span>
-                        </button>
-                      );
-                    })}
-                    {responsaveis.length === 0 && (
-                      <div className="text-xs text-muted-foreground px-2 py-3 text-center">
-                        Nenhum responsável cadastrado
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Anexos */}
           <div className="border-t pt-2">
