@@ -581,6 +581,11 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async removeAnexo(id) {
+    const anexoLocal = get().anexos.find((a) => a.id === id);
+    if (anexoLocal && isLocalDraftId(anexoLocal.demanda_id)) {
+      set({ anexos: get().anexos.filter((a) => a.id !== id) });
+      return;
+    }
     const anexo = get().anexos.find((a) => a.id === id);
     const { error, count } = await supabase
       .from("anexos_demandas")
