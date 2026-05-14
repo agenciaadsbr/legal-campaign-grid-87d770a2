@@ -21,6 +21,7 @@ import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog
 
 type AreaSel = DemandaCategoria | "Posts";
 
+// Ordem solicitada de exibição das áreas no seletor.
 const AREAS_ORDEM: AreaSel[] = [
   "Posts",
   "EditorVideo",
@@ -45,26 +46,27 @@ export default function CriarTarefa() {
   const demandas = useDemandasStore((s) => s.demandas);
 
   const [clienteId, setClienteId] = useState<string>("");
-  const [area, setArea] = useState<AreaSel | "">("");
+  const [area, setArea] = useState<AreaSel>("Personalizado");
   const [draftId, setDraftId] = useState<string | null>(null);
+  const initRef = useRef(false);
   const switchingRef = useRef(false);
-  const creatingRef = useRef(false);
 
-  // Cria rascunho de demanda apenas quando cliente + área (não-Posts) já foram escolhidos.
+  // Inicializa cliente padrão (primeiro disponível) e cria rascunho silencioso
+  // imediatamente para que o formulário completo apareça já no carregamento.
   useEffect(() => {
-    if (!clienteId || !area || area === "Posts") return;
-    if (draftId) return;
-    if (creatingRef.current) return;
-    creatingRef.current = true;
+    if (initRef.current) return;
+    if (!clientes.length) return;
+    initRef.current = true;
+    const primeiro = clientes[0].id;
+    setClienteId(primeiro);
     (async () => {
       const novo = await createRascunho({
-        cliente_id: clienteId,
-        categoria: area as DemandaCategoria,
+        cliente_id: primeiro,
+        categoria: "Personalizado",
       });
       if (novo) setDraftId(novo.id);
-      creatingRef.current = false;
     })();
-  }, [clienteId, area, draftId, createRascunho]);
+  }, [clientes, createRascunho]);
 
   const liveDraft = draftId
     ? demandas.find((d) => d.id === draftId) ?? null
@@ -75,14 +77,6 @@ export default function CriarTarefa() {
     if (draftId) {
       await updateDemanda(draftId, { cliente_id: novoId });
     }
-    // Se já havia escolhido "Posts" antes do cliente, agora dispara o fluxo.
-    if (area === "Posts" && novoId) {
-      switchingRef.current = true;
-      const res = await createCardRascunho({ cliente_id: novoId });
-      if (res) {
-        navigate(`/clientes/${novoId}/projeto?tab=posts&post=${res.postId}`);
-      }
-    }
   };
 
   const handleAreaChange = async (nova: AreaSel) => {
@@ -90,29 +84,39 @@ export default function CriarTarefa() {
     setArea(nova);
 
     if (nova === "Posts") {
-      // Descarta rascunho de demanda, se houver.
-      const idParaRemover = draftId;
-      setDraftId(null);
-      if (idParaRemover) {
-        switchingRef.current = true;
-        await deleteDemanda(idParaRemover);
-      }
+      // Comuta para o formulário de Post: descarta o rascunho de demanda
+      // e abre o formulário de Posts já existente no Projeto Completo.
       if (!clienteId) {
-        // Aguarda o usuário escolher um cliente para abrir o fluxo de Posts.
+        toast.error("Selecione um cliente para criar a tarefa.");
         return;
       }
       switchingRef.current = true;
+      const idParaRemover = draftId;
+      setDraftId(null);
+      if (idParaRemover) {
+        await deleteDemanda(idParaRemover);
+      }
       const res = await createCardRascunho({ cliente_id: clienteId });
       if (res) {
-        navigate(`/clientes/${clienteId}/projeto?tab=posts&post=${res.postId}`);
+        navigate(
+          `/clientes/${clienteId}/projeto?tab=posts&post=${res.postId}`,
+        );
       }
       return;
     }
 
-    if (draftId) {
-      await updateDemanda(draftId, { categoria: nova as DemandaCategoria });
+    if (!draftId) {
+      // Veio de "Posts" sem ter rascunho de demanda — cria um novo.
+      if (!clienteId) return;
+      const novo = await createRascunho({
+        cliente_id: clienteId,
+        categoria: nova as DemandaCategoria,
+      });
+      if (novo) setDraftId(novo.id);
+      return;
     }
-    // Se ainda não houver draft, o useEffect cria assim que cliente + área existirem.
+
+    await updateDemanda(draftId, { categoria: nova as DemandaCategoria });
   };
 
   const handleDialogClose = (open: boolean) => {
@@ -143,6 +147,7 @@ export default function CriarTarefa() {
     }, 0);
   };
 
+  // Slot renderizado no topo do formulário original (Cliente + Área).
   const headerExtras = (
     <div className="rounded-md border bg-muted/30 p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div className="space-y-1.5">
@@ -163,7 +168,7 @@ export default function CriarTarefa() {
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">Área / Categoria *</Label>
         <Select
-          value={area || undefined}
+          value={area}
           onValueChange={(v) => handleAreaChange(v as AreaSel)}
         >
           <SelectTrigger className="h-9">
@@ -183,26 +188,18 @@ export default function CriarTarefa() {
     </div>
   );
 
-  const pronto = clienteId && area && area !== "Posts" && liveDraft;
-
   return (
     <div className="min-h-screen bg-background">
-      {pronto ? (
+      {liveDraft ? (
         <DemandaDetalheDialog
-          demanda={liveDraft!}
+          demanda={liveDraft}
           isRascunho
           onOpenChange={handleDialogClose}
           headerExtras={headerExtras}
         />
       ) : (
-        <div className="max-w-3xl mx-auto p-6 space-y-4">
-          <h1 className="text-lg font-semibold">Criar Tarefa</h1>
-          {headerExtras}
-          <p className="text-sm text-muted-foreground">
-            {area === "Posts" && !clienteId
-              ? "Selecione um cliente para abrir o formulário de Post."
-              : "Selecione cliente e área para começar."}
-          </p>
+        <div className="flex items-center justify-center p-10 text-sm text-muted-foreground">
+          Preparando formulário...
         </div>
       )}
     </div>
