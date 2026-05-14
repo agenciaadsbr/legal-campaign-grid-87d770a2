@@ -134,6 +134,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     dependencies,
   } = useDemandas();
 
+  const isAguardando = demandaProp ? isAguardandoDependencia(demandaProp.id, dependencies) : false;
+
   // Fonte de verdade reativa: lê a demanda viva do store pelo id, para que
   // mudanças em Categoria/Subtipo/Prioridade/Datas/Responsáveis apareçam
   // imediatamente nos controles sem precisar fechar e reabrir o card.
@@ -419,7 +421,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl w-[92vw] max-h-[90vh] overflow-hidden p-3 gap-2 flex flex-col">
-        <fieldset disabled={!canWrite} className="contents">
+        <fieldset disabled={!canWrite || isAguardando} className="contents">
           {/* Voltar para Visão Geral */}
           <div className="shrink-0">
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
