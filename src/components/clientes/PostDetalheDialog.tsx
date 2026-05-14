@@ -868,16 +868,8 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
           }}
         />
 
-        {/* CARD 4 — Workflow / Continuidade (placeholder p/ Posts) */}
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-1 pt-2 px-3">
-            <CardTitle className="text-xs uppercase tracking-wide">Workflow / Continuidade</CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-3 text-xs text-muted-foreground">
-            Continuidade entre etapas está disponível para tarefas das demais áreas.
-            Posts não possuem etapas vinculadas.
-          </CardContent>
-        </Card>
+        {/* CARD 4 — Workflow / Continuidade */}
+        <WorkflowSection pai={paiWorkflowStub} />
       </fieldset>
 
       {/* Lightbox de anexo */}
