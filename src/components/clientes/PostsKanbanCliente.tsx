@@ -46,13 +46,16 @@ function CardItem({
   selectionMode,
   selected,
   onToggleSelect,
+  abrirDetalhe,
 }: {
   card: CardT;
   onIniciar: (id: string) => void;
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  abrirDetalhe: (id: string) => void;
 }) {
+  const navigate = useNavigate();
   const { responsaveis, posts, updateCard } = useCRM();
   const { canWrite } = useAuth();
   const { clienteId: clienteIdRota } = useParams();
@@ -282,7 +285,11 @@ function CardItem({
   );
 
   if (!post || selectionMode) return inner;
-  return <Link to={`/clientes/${clienteIdLink}/posts/${post.id}`}>{inner}</Link>;
+  return (
+    <div onClick={() => abrirDetalhe(card.id)}>
+      {inner}
+    </div>
+  );
 }
 
 function Coluna({
@@ -294,6 +301,7 @@ function Coluna({
   selectionMode,
   selectedIds,
   onToggleSelect,
+  abrirDetalhe,
 }: {
   status: StatusCard;
   cards: CardT[];
@@ -303,6 +311,7 @@ function Coluna({
   selectionMode?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  abrirDetalhe: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status, disabled: selectionMode });
   const isAtrasado = status === "Atrasado";
@@ -347,6 +356,7 @@ function Coluna({
             selectionMode={selectionMode}
             selected={selectedIds?.has(c.id)}
             onToggleSelect={() => onToggleSelect?.(c.id)}
+            abrirDetalhe={abrirDetalhe}
           />
         ))}
       </div>
@@ -764,13 +774,14 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                   return next;
                 })
               }
+              abrirDetalhe={abrirDetalhe}
             />
           ))}
         </div>
         <DragOverlay>
           {activeId ? (() => {
             const c = cardsCliente.find((x) => x.id === activeId);
-            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} /> : null;
+            return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} abrirDetalhe={abrirDetalhe} /> : null;
           })() : null}
         </DragOverlay>
       </DndContext>
