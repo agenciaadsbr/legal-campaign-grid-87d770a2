@@ -189,7 +189,7 @@ export function WorkflowSection({ pai }: Props) {
       let novaId: string | null = null;
 
       if (categoria === "Posts") {
-        const { createCardRascunho, updateCard, updatePost } = useCRM.getState();
+        const { createCardRascunho, updateCard, updatePost, addAtividade } = useCRM.getState();
         const res = await createCardRascunho({ cliente_id: pai.cliente_id });
         if (res) {
           novaId = res.cardId;
@@ -201,8 +201,20 @@ export function WorkflowSection({ pai }: Props) {
             data_limite_tarefa: dataLimite ? new Date(dataLimite).toISOString() : null,
           });
           await updatePost(res.postId, {
+            status: "Aguardando etapa anterior" as any,
             link_meister: linkMeister.trim() || null,
             descricao: descricao.trim() || null,
+          });
+          
+          await addAtividade({
+            clienteId: pai.cliente_id,
+            acao: "workflow",
+            descricao: `Próxima etapa criada: ${titulo.trim()} (Post)`,
+            refId: res.cardId,
+            tipo: "post",
+            area: "Posts",
+            titulo_tarefa: titulo.trim(),
+            payload: { pai_id: pai.id, bloqueada: bloquear }
           });
           
           if (bloquear) {
