@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,6 +16,7 @@ import {
   CATEGORIA_LABEL,
   type DemandaCategoria,
 } from "@/lib/demandas-categorias";
+import { categoriaParaAba } from "@/lib/minhasTarefas";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 
 type AreaSel = DemandaCategoria | "Posts";
@@ -38,7 +39,8 @@ const AREA_LABEL: Record<AreaSel, string> = {
 export default function CriarTarefa() {
   const navigate = useNavigate();
   const { clientes, createCardRascunho } = useCRM();
-  const createRascunho = useDemandasStore((s) => s.createRascunho);
+  const createLocalRascunho = useDemandasStore((s) => s.createLocalRascunho);
+  const commitLocalRascunho = useDemandasStore((s) => s.commitLocalRascunho);
   const updateDemanda = useDemandasStore((s) => s.updateDemanda);
   const deleteDemanda = useDemandasStore((s) => s.deleteDemanda);
   const demandas = useDemandasStore((s) => s.demandas);
@@ -46,35 +48,30 @@ export default function CriarTarefa() {
   const [clienteId, setClienteId] = useState<string>("");
   const [area, setArea] = useState<AreaSel | "">("");
   const [draftId, setDraftId] = useState<string | null>(null);
-  const switchingRef = useRef(false);
-  const creatingRef = useRef(false);
+  const initRef = useRef(false);
+
+  // Cria o rascunho LOCAL (apenas em memória) ao montar.
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+    const novo = createLocalRascunho({});
+    setDraftId(novo.id);
+    // Cleanup: descarta o rascunho local se o componente desmontar sem salvar.
+    return () => {
+      // usa o id capturado no closure
+      deleteDemanda(novo.id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const liveDraft = draftId
     ? demandas.find((d) => d.id === draftId) ?? null
     : null;
 
-  // Cria o rascunho APENAS quando Cliente e Área (≠ Posts) estão preenchidos.
-  const ensureDraft = async (cli: string, ar: AreaSel) => {
-    if (draftId || creatingRef.current) return;
-    if (!cli || !ar || ar === "Posts") return;
-    creatingRef.current = true;
-    try {
-      const novo = await createRascunho({
-        cliente_id: cli,
-        categoria: ar as DemandaCategoria,
-      });
-      if (novo) setDraftId(novo.id);
-    } finally {
-      creatingRef.current = false;
-    }
-  };
-
-  const handleClienteChange = async (novoId: string) => {
+  const handleClienteChange = (novoId: string) => {
     setClienteId(novoId);
     if (draftId) {
-      await updateDemanda(draftId, { cliente_id: novoId });
-    } else if (area && area !== "Posts") {
-      await ensureDraft(novoId, area as AreaSel);
+      updateDemanda(draftId, { cliente_id: novoId });
     }
   };
 
@@ -86,10 +83,10 @@ export default function CriarTarefa() {
         toast.error("Selecione um cliente para criar a tarefa.");
         return;
       }
-      setArea(nova);
-      switchingRef.current = true;
+      // Descarta rascunho local e segue fluxo legado de Posts.
       const idParaRemover = draftId;
       setDraftId(null);
+      setArea(nova);
       if (idParaRemover) {
         await deleteDemanda(idParaRemover);
       }
@@ -101,28 +98,44 @@ export default function CriarTarefa() {
     }
 
     setArea(nova);
-
     if (draftId) {
       await updateDemanda(draftId, { categoria: nova as DemandaCategoria });
-    } else if (clienteId) {
-      await ensureDraft(clienteId, nova);
     }
   };
 
-  const handleDialogClose = async (open: boolean) => {
-    if (open) return;
-    if (switchingRef.current) {
-      switchingRef.current = false;
-      return;
-    }
+  const handleCancel = async () => {
     const id = draftId;
     setDraftId(null);
-    // Descarta SEMPRE o rascunho ao fechar sem salvar explicitamente.
-    if (id) {
-      await deleteDemanda(id);
-    }
-    // NUNCA redireciona para o cliente — apenas volta para a tela anterior.
+    if (id) await deleteDemanda(id);
     navigate(-1);
+  };
+
+  const handleSave = async () => {
+    if (!draftId || !liveDraft) return;
+    if (!clienteId) {
+      toast.error("Selecione um cliente para criar a tarefa.");
+      return;
+    }
+    if (!area) {
+      toast.error("Selecione uma área/categoria para criar a tarefa.");
+      return;
+    }
+    if (!liveDraft.titulo.trim()) {
+      toast.error("Informe um título para a tarefa.");
+      return;
+    }
+    const nova = await commitLocalRascunho(draftId);
+    if (!nova) return;
+    setDraftId(null);
+    toast.success("Tarefa criada");
+    navigate(
+      `/clientes/${nova.cliente_id}/projeto?tab=${categoriaParaAba(nova.categoria)}&demanda=${nova.id}`,
+    );
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    if (open) return;
+    handleCancel();
   };
 
   const headerExtras = (
@@ -165,24 +178,22 @@ export default function CriarTarefa() {
     </div>
   );
 
+  if (!liveDraft) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {liveDraft ? (
-        <DemandaDetalheDialog
-          demanda={liveDraft}
-          isRascunho
-          onOpenChange={handleDialogClose}
-          headerExtras={headerExtras}
-        />
-      ) : (
-        <div className="max-w-2xl mx-auto p-6 space-y-4">
-          <h1 className="text-lg font-semibold">Criar tarefa</h1>
-          {headerExtras}
-          <p className="text-sm text-muted-foreground">
-            Selecione um cliente e uma área/categoria para começar.
-          </p>
-        </div>
-      )}
+      <DemandaDetalheDialog
+        demanda={liveDraft}
+        isRascunho
+        onOpenChange={handleDialogClose}
+        headerExtras={headerExtras}
+        showSaveButton
+        onSave={handleSave}
+        onCancel={handleCancel}
+        disableAutoDiscard
+      />
     </div>
   );
 }

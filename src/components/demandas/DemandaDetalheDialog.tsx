@@ -86,6 +86,16 @@ interface Props {
    * altera nenhum comportamento existente.
    */
   headerExtras?: ReactNode;
+  /** Renderiza botões "Salvar tarefa" / "Cancelar" no rodapé. */
+  showSaveButton?: boolean;
+  /** Handler do botão Salvar. */
+  onSave?: () => void | Promise<void>;
+  /** Handler do botão Cancelar. */
+  onCancel?: () => void;
+  /** Quando true, fechar o diálogo NÃO chama deleteDemanda automaticamente. */
+  disableAutoDiscard?: boolean;
+  /** Texto opcional do botão Salvar (default: "Salvar tarefa"). */
+  saveLabel?: string;
 }
 
 const fileToDataUrl = (f: File) =>
@@ -123,7 +133,7 @@ const extractAnexoStoragePath = (url: string): string | null => {
   }
 };
 
-export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho, headerExtras }: Props) {
+export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho, headerExtras, showSaveButton, onSave, onCancel, disableAutoDiscard, saveLabel }: Props) {
   const { clientes, responsaveis } = useCRM();
   const { user, isAdmin, canWrite } = useAuth();
   const {
@@ -271,7 +281,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
 
   // Wrapper de fechamento: descarta rascunho silenciosamente quando vazio.
   const handleOpenChange = (open: boolean) => {
-    if (!open && demanda) {
+    if (!open && demanda && !disableAutoDiscard) {
       // flush de timers pendentes
       if (descricaoTimer.current) clearTimeout(descricaoTimer.current);
       if (tituloTimer.current) clearTimeout(tituloTimer.current);
@@ -1242,6 +1252,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
         {canWrite && <WorkflowSection pai={demanda} />}
           </div>
         </fieldset>
+        {showSaveButton && (
+          <div className="shrink-0 flex items-center justify-end gap-2 pt-2 border-t">
+            <Button type="button" variant="outline" onClick={() => onCancel?.()}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={() => onSave?.()}>
+              {saveLabel ?? "Salvar tarefa"}
+            </Button>
+          </div>
+        )}
       </DialogContent>
 
       {/* Lightbox de imagem do anexo */}

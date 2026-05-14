@@ -99,6 +99,23 @@ interface State {
     categoria?: DemandaCategoria;
     subtipo?: string | null;
   }) => Promise<Demanda | null>;
+  /**
+   * Cria um rascunho APENAS em memória (sem chamar Supabase). Usado pelo módulo
+   * "Criar Tarefa" para exibir o formulário completo sem persistir nada antes
+   * do usuário clicar em "Salvar tarefa".
+   */
+  createLocalRascunho: (args: {
+    cliente_id?: string;
+    categoria?: DemandaCategoria;
+  }) => Demanda;
+  /**
+   * Persiste um rascunho local no Supabase e remove a versão em memória.
+   * Retorna a Demanda real (com id do banco) ou null em caso de erro.
+   */
+  commitLocalRascunho: (
+    localId: string,
+    overrides?: Partial<Demanda>,
+  ) => Promise<Demanda | null>;
   updateDemanda: (id: string, patch: Partial<Demanda>) => Promise<void>;
   deleteDemanda: (id: string) => Promise<void>;
   moveStatus: (id: string, status: DemandaStatus) => Promise<void>;
@@ -153,6 +170,10 @@ function migrarCategoria(cat: any): any {
   if (cat === "Tecnologia") return "IAAtendimento";
   return cat;
 }
+
+const LOCAL_DRAFT_PREFIX = "local-draft-";
+export const isLocalDraftId = (id: string | null | undefined) =>
+  typeof id === "string" && id.startsWith(LOCAL_DRAFT_PREFIX);
 
 function normalizeDemanda(row: any): Demanda {
   const responsaveis_ids: string[] = Array.isArray(row.responsaveis_ids)
@@ -292,9 +313,99 @@ export const useDemandasStore = create<State>((set, get) => ({
     return novo;
   },
 
+  createLocalRascunho({ cliente_id, categoria }) {
+    const id = `${LOCAL_DRAFT_PREFIX}${
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? (crypto as any).randomUUID()
+        : Math.random().toString(36).slice(2)
+    }`;
+    const now = new Date().toISOString();
+    const novo: Demanda = {
+      id,
+      cliente_id: cliente_id ?? "",
+      titulo: "",
+      categoria: (categoria ?? "Personalizado") as DemandaCategoria,
+      subtipo: null,
+      descricao: null,
+      status: "Criar" as DemandaStatus,
+      prioridade: "Media" as DemandaPrioridade,
+      responsaveis_ids: [],
+      responsavel_id: null,
+      criado_por: null,
+      data_limite: null,
+      data_inicio: null,
+      data_conclusao: null,
+      precisa_aprovacao: false,
+      aprovado_por: null,
+      link_meister: null,
+      link_drive: null,
+      origem: "manual",
+      template_id: null,
+      marcado_ja_possui: false,
+      created_at: now,
+      updated_at: now,
+    };
+    set({ demandas: [novo, ...get().demandas] });
+    return novo;
+  },
+
+  async commitLocalRascunho(localId, overrides) {
+    const local = get().demandas.find((d) => d.id === localId);
+    if (!local || !isLocalDraftId(localId)) return null;
+    const merged: Demanda = { ...local, ...(overrides ?? {}) };
+    if (!merged.cliente_id) {
+      toast.error("Selecione um cliente para criar a tarefa.");
+      return null;
+    }
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id ?? null;
+    const responsaveis_ids = merged.responsaveis_ids ?? [];
+    const payload: any = {
+      cliente_id: merged.cliente_id,
+      titulo: merged.titulo?.trim() || "Sem título",
+      categoria: merged.categoria ?? "Personalizado",
+      subtipo: merged.subtipo ?? null,
+      descricao: merged.descricao ?? null,
+      status: merged.status ?? "Criar",
+      prioridade: merged.prioridade ?? "Media",
+      responsaveis_ids,
+      responsavel_id: responsaveis_ids[0] ?? null,
+      criado_por: uid,
+      data_limite: merged.data_limite ?? null,
+      data_inicio: merged.data_inicio ?? null,
+      data_conclusao: merged.data_conclusao ?? null,
+      precisa_aprovacao: merged.precisa_aprovacao ?? false,
+      link_meister: merged.link_meister ?? null,
+      link_drive: merged.link_drive ?? null,
+    };
+    const { data, error } = await supabase
+      .from("demandas")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao criar tarefa", { description: error.message });
+      return null;
+    }
+    const nova = normalizeDemanda(data);
+    set({
+      demandas: [nova, ...get().demandas.filter((d) => d.id !== localId)],
+    });
+    return nova;
+  },
+
   async updateDemanda(id, patch) {
     const prev = get().demandas.find((x) => x.id === id);
     if (!prev) return;
+
+    if (isLocalDraftId(id)) {
+      const merged = normalizeDemanda({ ...prev, ...patch });
+      if (Array.isArray(patch.responsaveis_ids)) {
+        merged.responsavel_id = patch.responsaveis_ids[0] ?? null;
+      }
+      set({ demandas: get().demandas.map((d) => (d.id === id ? merged : d)) });
+      return;
+    }
 
     // Optimistic Update
     const optimistic = normalizeDemanda({ ...prev, ...patch });
@@ -391,6 +502,14 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async deleteDemanda(id) {
+    if (isLocalDraftId(id)) {
+      set({
+        demandas: get().demandas.filter((d) => d.id !== id),
+        comentarios: get().comentarios.filter((c) => c.demanda_id !== id),
+        anexos: get().anexos.filter((a) => a.demanda_id !== id),
+      });
+      return;
+    }
     const { error } = await supabase.from("demandas").delete().eq("id", id);
     if (error) {
       toast.error("Erro ao excluir", { description: error.message });
@@ -411,6 +530,10 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async addComentario(demanda_id, usuario_id, texto, imagem_url) {
+    if (isLocalDraftId(demanda_id)) {
+      toast.error("Salve a tarefa primeiro para comentar.");
+      return;
+    }
     const { data, error } = await supabase
       .from("comentarios_demandas")
       .insert({ demanda_id, usuario_id, texto, imagem_url: imagem_url ?? null })
@@ -441,6 +564,10 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async addAnexo(a) {
+    if (isLocalDraftId(a.demanda_id)) {
+      toast.error("Salve a tarefa primeiro para adicionar anexos.");
+      return;
+    }
     const { data, error } = await supabase
       .from("anexos_demandas")
       .insert(a)
@@ -454,6 +581,11 @@ export const useDemandasStore = create<State>((set, get) => ({
   },
 
   async removeAnexo(id) {
+    const anexoLocal = get().anexos.find((a) => a.id === id);
+    if (anexoLocal && isLocalDraftId(anexoLocal.demanda_id)) {
+      set({ anexos: get().anexos.filter((a) => a.id !== id) });
+      return;
+    }
     const anexo = get().anexos.find((a) => a.id === id);
     const { error, count } = await supabase
       .from("anexos_demandas")
