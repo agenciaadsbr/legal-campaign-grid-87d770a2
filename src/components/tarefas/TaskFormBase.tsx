@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, forwardRef, useImperativeHandle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -104,6 +105,7 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
   const [dataAgendamento, setDataAgendamento] = useState("");
   const [dataPostagem, setDataPostagem] = useState("");
   const [linkMeta, setLinkMeta] = useState("");
+  const [legenda, setLegenda] = useState("");
 
   const anexoFileRef = useRef<HTMLInputElement>(null);
 
@@ -142,6 +144,7 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
         setDataAgendamento(p.data_agendamento || "");
         setDataPostagem(p.data_postagem || "");
         setLinkMeta(p.link_post || "");
+        setLegenda((p as any).legenda || "");
       }
     }
   }, [initialDemandaId, initialPostId, demandas]);
@@ -170,8 +173,9 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
               data_agendamento: dataAgendamento || undefined,
               data_postagem: dataPostagem || undefined,
               link_post: linkMeta || undefined,
-              link_meister: linkMeister || undefined
-            });
+              link_meister: linkMeister || undefined,
+              legenda: legenda || undefined,
+            } as any);
             onSuccess?.('post', clienteId, initialPostId);
           }
         } else {
@@ -189,8 +193,9 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
               data_agendamento: dataAgendamento || undefined,
               data_postagem: dataPostagem || undefined,
               link_post: linkMeta || undefined,
-              link_meister: linkMeister || undefined
-            });
+              link_meister: linkMeister || undefined,
+              legenda: legenda || undefined,
+            } as any);
             onSuccess?.('post', clienteId, res.postId);
           }
         }
@@ -487,6 +492,15 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
             <div className="space-y-2 md:col-span-2">
               <Label>Link Meta Business Suite</Label>
               <Input value={linkMeta} onChange={e => setLinkMeta(e.target.value)} placeholder="https://business.facebook.com/..." />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Legenda</Label>
+              <Textarea
+                value={legenda}
+                onChange={e => setLegenda(e.target.value)}
+                placeholder="Texto final do post (Instagram/Facebook)..."
+                rows={4}
+              />
             </div>
           </CardContent>
         </Card>
