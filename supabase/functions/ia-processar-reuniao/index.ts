@@ -57,6 +57,7 @@ Deno.serve(async (req) => {
       return `- ${p?.nome ?? p?.email ?? e.profile_id} (id=${e.profile_id}) | cargo=${e.cargo ?? p?.cargo ?? ""} | áreas=${(e.areas ?? []).join(",")} | skills=${(e.skills ?? []).join(",")} | setores=${(e.setores ?? []).join(",")}`;
     }).join("\n");
 
+    const startTime = Date.now();
     const status: any = { cliente: null, operacional: null, tarefas: null };
     let resumoClienteOut: string | null = null;
     let resumoOperOut: string | null = null;
@@ -91,8 +92,8 @@ Deno.serve(async (req) => {
       }
     })();
 
-    // Agente 2 — Operacional (resumo + tarefas, sequencialmente, mesma config)
-    const runOper = (async () => {
+    // Agentes 2 e 3 — Operacional e Tarefas (Executados em paralelo se possível, ou otimizados)
+    const runOperAndTasks = (async () => {
       try {
         const client = getProviderClient(agOper.provider);
         const modelId = agOper.model || defaultModelFor(agOper.provider);
@@ -105,86 +106,99 @@ Deno.serve(async (req) => {
           equipeContext ? `Equipe disponível (use o id exato em responsavel_sugerido_id):\n${equipeContext}` : null,
         ].filter(Boolean).join("\n\n");
 
-        // 2.1 — Resumo operacional
-        const t0 = Date.now();
-        const r1 = await generateText({
-          model: client(realModel),
-          system: sysBase,
-          temperature: Number(agOper.temperatura ?? 0.3),
-          prompt: `Produza um briefing operacional detalhado da reunião abaixo. Liste decisões, contexto, demandas, riscos e próximos passos. Use bullets ricos em contexto técnico.\n\nReunião: ${reuniao.titulo}\n\nTranscrição:\n${transcricao}`,
-        });
-        resumoOperOut = r1.text;
-        const tIn1 = r1.usage?.inputTokens ?? 0;
-        const tOut1 = r1.usage?.outputTokens ?? 0;
-        await supa.from("ia_logs").insert({
-          tipo: "agente_operacional", modelo: modelId, tokens_input: tIn1, tokens_output: tOut1,
-          custo: estimateCost(agOper.provider, modelId, tIn1, tOut1),
-          input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
-        });
-        status.operacional = { ok: true, latency_ms: Date.now() - t0 };
+        // Executa resumo operacional e extração de tarefas em paralelo para ganhar tempo
+        const [resumoResult, tarefasResult] = await Promise.allSettled([
+          generateText({
+            model: client(realModel),
+            system: sysBase,
+            temperature: Number(agOper.temperatura ?? 0.3),
+            prompt: `Produza um briefing operacional detalhado da reunião abaixo. Liste decisões, contexto, demandas, riscos e próximos passos. Use bullets ricos em contexto técnico.\n\nReunião: ${reuniao.titulo}\n\nTranscrição:\n${transcricao}`,
+          }),
+          generateText({
+            model: client(realModel),
+            system: sysBase,
+            temperature: Number(agOper.temperatura ?? 0.3),
+            prompt: `Extraia as tarefas operacionais desta reunião. Cada tarefa deve ser detalhada (não genérica), com contexto rico na descrição. Sugira responsável apenas se houver match claro com a equipe disponível.\n\nReunião: ${reuniao.titulo}\n\nTranscrição:\n${transcricao}`,
+            experimental_output: Output.object({ schema: TarefasSchema }),
+          })
+        ]);
 
-        // 2.2 — Extração de tarefas estruturadas
-        const t1 = Date.now();
-        const r2 = await generateText({
-          model: client(realModel),
-          system: sysBase,
-          temperature: Number(agOper.temperatura ?? 0.3),
-          prompt: `Extraia as tarefas operacionais desta reunião. Cada tarefa deve ser detalhada (não genérica), com contexto rico na descrição. Sugira responsável apenas se houver match claro com a equipe disponível.\n\nReunião: ${reuniao.titulo}\n\nTranscrição:\n${transcricao}\n\nResumo operacional:\n${resumoOperOut}`,
-          experimental_output: Output.object({ schema: TarefasSchema }),
-        });
-        const parsed = (r2 as any).experimental_output as z.infer<typeof TarefasSchema> | undefined;
-        const tarefas = parsed?.tarefas ?? [];
-        const tIn2 = r2.usage?.inputTokens ?? 0;
-        const tOut2 = r2.usage?.outputTokens ?? 0;
-        await supa.from("ia_logs").insert({
-          tipo: "agente_operacional_tarefas", modelo: modelId, tokens_input: tIn2, tokens_output: tOut2,
-          custo: estimateCost(agOper.provider, modelId, tIn2, tOut2),
-          input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
-        });
+        const tFinal = Date.now();
 
-        // Política de duplicidade
-        const { data: existentes } = await supa.from("tarefas_sugeridas")
-          .select("id, status")
-          .eq("reuniao_id", reuniao_id)
-          .eq("status", "aguardando_aprovacao");
-        const temPendentes = (existentes ?? []).length > 0;
-
-        if (temPendentes && modo === "manter") {
-          status.tarefas = { ok: true, skipped: true, latency_ms: Date.now() - t1 };
-          return;
-        }
-        if (temPendentes && modo === "substituir") {
-          const ids = (existentes ?? []).map((x: any) => x.id);
-          const { error } = await supa.from("tarefas_sugeridas").delete().in("id", ids);
-          if (!error) tarefasSubstituidas = ids.length;
-        }
-
-        const validProfileIds = new Set((profiles ?? []).map((p: any) => p.id));
-        for (const t of tarefas) {
-          const respId = t.responsavel_sugerido_id && validProfileIds.has(t.responsavel_sugerido_id) ? t.responsavel_sugerido_id : null;
-          const { error } = await supa.from("tarefas_sugeridas").insert({
-            cliente_id: reuniao.cliente_id,
-            reuniao_id,
-            titulo: t.titulo,
-            descricao: t.descricao ?? null,
-            categoria: t.categoria ?? null,
-            prioridade: t.prioridade ?? null,
-            prazo_sugerido: t.prazo_sugerido ?? null,
-            responsavel_sugerido_id: respId,
-            origem: "ia_reuniao",
-            status: "aguardando_aprovacao",
-            criado_por: userData.user.id,
+        // Processa resultado do Resumo
+        if (resumoResult.status === "fulfilled") {
+          const r1 = resumoResult.value;
+          resumoOperOut = r1.text;
+          const tIn1 = r1.usage?.inputTokens ?? 0;
+          const tOut1 = r1.usage?.outputTokens ?? 0;
+          await supa.from("ia_logs").insert({
+            tipo: "agente_operacional", modelo: modelId, tokens_input: tIn1, tokens_output: tOut1,
+            custo: estimateCost(agOper.provider, modelId, tIn1, tOut1),
+            input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
           });
-          if (!error) tarefasInseridas++;
+          status.operacional = { ok: true, latency_ms: tFinal - startTime };
+        } else {
+          status.operacional = { ok: false, error: resumoResult.reason?.message };
         }
-        status.tarefas = { ok: true, latency_ms: Date.now() - t1, count: tarefasInseridas, substituidas: tarefasSubstituidas };
+
+        // Processa resultado das Tarefas
+        if (tarefasResult.status === "fulfilled") {
+          const r2 = tarefasResult.value;
+          const parsed = (r2 as any).experimental_output as z.infer<typeof TarefasSchema> | undefined;
+          const tarefas = parsed?.tarefas ?? [];
+          const tIn2 = r2.usage?.inputTokens ?? 0;
+          const tOut2 = r2.usage?.outputTokens ?? 0;
+          await supa.from("ia_logs").insert({
+            tipo: "agente_operacional_tarefas", modelo: modelId, tokens_input: tIn2, tokens_output: tOut2,
+            custo: estimateCost(agOper.provider, modelId, tIn2, tOut2),
+            input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+          });
+
+          // Política de duplicidade e inserção
+          const { data: existentes } = await supa.from("tarefas_sugeridas")
+            .select("id, status")
+            .eq("reuniao_id", reuniao_id)
+            .eq("status", "aguardando_aprovacao");
+          const temPendentes = (existentes ?? []).length > 0;
+
+          if (!(temPendentes && modo === "manter")) {
+            if (temPendentes && modo === "substituir") {
+              const ids = (existentes ?? []).map((x: any) => x.id);
+              const { error } = await supa.from("tarefas_sugeridas").delete().in("id", ids);
+              if (!error) tarefasSubstituidas = ids.length;
+            }
+
+            const validProfileIds = new Set((profiles ?? []).map((p: any) => p.id));
+            const inserts = tarefas.map(t => ({
+              cliente_id: reuniao.cliente_id,
+              reuniao_id,
+              titulo: t.titulo,
+              descricao: t.descricao ?? null,
+              categoria: t.categoria ?? null,
+              prioridade: t.prioridade ?? null,
+              prazo_sugerido: t.prazo_sugerido ?? null,
+              responsavel_sugerido_id: t.responsavel_sugerido_id && validProfileIds.has(t.responsavel_sugerido_id) ? t.responsavel_sugerido_id : null,
+              origem: "ia_reuniao",
+              status: "aguardando_aprovacao",
+              criado_por: userData.user.id,
+            }));
+
+            if (inserts.length > 0) {
+              const { error } = await supa.from("tarefas_sugeridas").insert(inserts);
+              if (!error) tarefasInseridas = inserts.length;
+            }
+          }
+          status.tarefas = { ok: true, latency_ms: tFinal - startTime, count: tarefasInseridas, substituidas: tarefasSubstituidas };
+        } else {
+          status.tarefas = { ok: false, error: tarefasResult.reason?.message };
+        }
       } catch (e) {
         status.operacional = status.operacional ?? { ok: false, error: (e as Error).message };
         status.tarefas = status.tarefas ?? { ok: false, error: (e as Error).message };
       }
     })();
 
-    await Promise.allSettled([runCliente, runOper]);
+    await Promise.allSettled([runCliente, runOperAndTasks]);
 
     // Atualiza reunião (resumos só sobrescrevem se autorizado ou se estavam vazios)
     const updates: any = { ia_processed_at: new Date().toISOString(), ia_status: status };
