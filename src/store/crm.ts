@@ -458,6 +458,7 @@ function mapCustomField(row: any): CustomField {
 
 // ===================== Store =====================
 let realtimeStarted = false;
+let _reloadTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useCRM = create<State>()((set, get) => ({
   responsaveis: [],
