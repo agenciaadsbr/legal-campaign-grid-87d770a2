@@ -264,6 +264,7 @@ interface State {
   createCicloPosts: (payload: { cliente_id: string; tipo: "mensal" | "trimestral" | "semestral"; observacao?: string; criar_alerta?: boolean }) => Promise<void>;
   // internas
   _loadAll: () => Promise<void>;
+  _scheduleReload: () => void;
 }
 
 const today = () => new Date().toISOString();
