@@ -1478,7 +1478,8 @@ export const useCRM = create<State>()((set, get) => ({
 function startRealtime() {
   if (realtimeStarted) return;
   realtimeStarted = true;
-  const reload = () => useCRM.getState()._loadAll();
+  // Realtime usa o mesmo agendador debounced — múltiplos eventos colapsam em 1 reload.
+  const reload = () => useCRM.getState()._scheduleReload();
   const tables = [
     "clientes",
     "contratos",
