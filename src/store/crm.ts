@@ -884,6 +884,23 @@ export const useCRM = create<State>()((set, get) => ({
     if ((patch as any).is_urgent !== undefined) dbPatch.is_urgent = (patch as any).is_urgent;
     if ((patch as any).formato !== undefined) dbPatch.formato = (patch as any).formato;
     if ((patch as any).qtd_slides !== undefined) dbPatch.qtd_slides = (patch as any).qtd_slides;
+    // Patch otimista local — UI responde imediatamente
+    set({
+      cards: get().cards.map(c => c.id === id ? {
+        ...c,
+        ...(patch.titulo_card !== undefined ? { titulo_card: patch.titulo_card } : {}),
+        ...((patch as any).descricao !== undefined ? { descricao: (patch as any).descricao } : {}),
+        ...(patch.status_card !== undefined ? { status_card: patch.status_card } : {}),
+        ...(patch.responsaveis !== undefined ? { responsaveis: patch.responsaveis } : {}),
+        ...((patch as any).responsaveis_postagem !== undefined ? { responsaveis_postagem: (patch as any).responsaveis_postagem } : {}),
+        ...((patch as any).data_agendada !== undefined ? { data_agendada: (patch as any).data_agendada } : {}),
+        ...(patch.data_inicio_tarefa !== undefined ? { data_inicio_tarefa: patch.data_inicio_tarefa || null } : {}),
+        ...(patch.data_limite_tarefa !== undefined ? { data_limite_tarefa: patch.data_limite_tarefa || null } : {}),
+        ...((patch as any).is_urgent !== undefined ? { is_urgent: (patch as any).is_urgent } : {}),
+        ...((patch as any).formato !== undefined ? { formato: (patch as any).formato } : {}),
+        ...((patch as any).qtd_slides !== undefined ? { qtd_slides: (patch as any).qtd_slides } : {}),
+      } : c)
+    });
     await supabase.from("cards").update(dbPatch).eq("id", id);
 
     // Atividades
