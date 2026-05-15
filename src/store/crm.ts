@@ -846,11 +846,14 @@ export const useCRM = create<State>()((set, get) => ({
   moveCard: async (cardId, novoStatus) => {
     const prev = get().cards.find(c => c.id === cardId);
     if (!prev) return;
-    
+
+    // Patch otimista local — UI responde imediatamente
+    set({ cards: get().cards.map(c => c.id === cardId ? { ...c, status_card: novoStatus } : c) });
+
     await supabase.from("cards").update({ status: novoStatus as any }).eq("id", cardId);
-    
+
     if (novoStatus !== prev.status_card) {
-      await get().addAtividade({
+      void get().addAtividade({
         clienteId: prev.cliente_id,
         acao: "status",
         descricao: `Status alterado: ${prev.status_card} → ${novoStatus}`,
