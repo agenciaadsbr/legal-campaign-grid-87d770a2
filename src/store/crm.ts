@@ -965,6 +965,12 @@ export const useCRM = create<State>()((set, get) => ({
       return;
     }
     toast.success("Tarefa excluída");
+    // Patch otimista local
+    set({
+      cards: get().cards.filter(c => c.id !== cardId),
+      posts: get().posts.filter(p => !postIds.includes(p.id)),
+      comentarios: get().comentarios.filter(co => !co.post_id || !postIds.includes(co.post_id)),
+    });
     get()._scheduleReload();
   },
 
