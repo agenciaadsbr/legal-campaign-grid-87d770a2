@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
       }
     })();
 
-    await Promise.allSettled([runCliente, runOper]);
+    await Promise.allSettled([runCliente, runOperAndTasks]);
 
     // Atualiza reunião (resumos só sobrescrevem se autorizado ou se estavam vazios)
     const updates: any = { ia_processed_at: new Date().toISOString(), ia_status: status };
