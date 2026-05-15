@@ -57,6 +57,7 @@ Deno.serve(async (req) => {
       return `- ${p?.nome ?? p?.email ?? e.profile_id} (id=${e.profile_id}) | cargo=${e.cargo ?? p?.cargo ?? ""} | áreas=${(e.areas ?? []).join(",")} | skills=${(e.skills ?? []).join(",")} | setores=${(e.setores ?? []).join(",")}`;
     }).join("\n");
 
+    const startTime = Date.now();
     const status: any = { cliente: null, operacional: null, tarefas: null };
     let resumoClienteOut: string | null = null;
     let resumoOperOut: string | null = null;
