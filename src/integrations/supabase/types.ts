@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "alertas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_metricas"
+            referencedColumns: ["cliente_id"]
+          },
         ]
       }
       anexos_demandas: {
@@ -236,6 +243,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clientes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cards_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_metricas"
+            referencedColumns: ["cliente_id"]
           },
         ]
       }
@@ -558,6 +572,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "comentarios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_metricas"
+            referencedColumns: ["cliente_id"]
+          },
+          {
             foreignKeyName: "comentarios_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
@@ -681,6 +702,13 @@ export type Database = {
             referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contratos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_metricas"
+            referencedColumns: ["cliente_id"]
+          },
         ]
       }
       custom_fields: {
@@ -757,6 +785,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clientes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegacoes_reuniao_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_metricas"
+            referencedColumns: ["cliente_id"]
           },
           {
             foreignKeyName: "delegacoes_reuniao_responsavel_id_fkey"
@@ -1510,6 +1545,13 @@ export type Database = {
             referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "project_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_metricas"
+            referencedColumns: ["cliente_id"]
+          },
         ]
       }
       responsabilidades_equipe: {
@@ -1837,7 +1879,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      clientes_metricas: {
+        Row: {
+          cliente_id: string | null
+          posts_atrasados: number | null
+          posts_pendentes: number | null
+          posts_postados: number | null
+          tarefas_atrasadas: number | null
+          tarefas_urgentes: number | null
+        }
+        Relationships: []
+      }
+      clientes_ultimo_comentario: {
+        Row: {
+          cliente_id: string | null
+          comentario_id: string | null
+          comentario_texto: string | null
+          created_at: string | null
+          usuario_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comentarios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comentarios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_metricas"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_write: { Args: { _user_id: string }; Returns: boolean }
