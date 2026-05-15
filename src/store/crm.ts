@@ -950,7 +950,6 @@ export const useCRM = create<State>()((set, get) => ({
     await supabase.from("posts").update(dbPatch).eq("id", id);
     get()._scheduleReload();
   },
-  },
 
   deleteCard: async (cardId) => {
     // Apaga comentários dos posts deste card
