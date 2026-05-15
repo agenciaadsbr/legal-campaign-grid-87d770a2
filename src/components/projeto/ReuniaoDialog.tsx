@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useReunioes, type Reuniao } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
 import { useTarefasSugeridas } from "@/store/tarefasSugeridas";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Copy, Sparkles, Plus, Wand2, Loader2, CheckCircle2, AlertTriangle, RefreshCw, Users } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -42,6 +43,34 @@ export function ReuniaoDialog({
   const [reprocDialog, setReprocDialog] = useState(false);
   const [iaStatus, setIaStatus] = useState<any>(null);
   const [iaProcessedAt, setIaProcessedAt] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const progressInterval = useRef<any>(null);
+
+  useEffect(() => {
+    if (iaBusy) {
+      setProgress(5);
+      if (progressInterval.current) clearInterval(progressInterval.current);
+      progressInterval.current = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) return 95;
+          const inc = prev < 40 ? 5 : (prev < 70 ? 2 : 1);
+          return prev + inc;
+        });
+      }, 500);
+    } else {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
+      if (progress > 0) {
+        setProgress(100);
+        setTimeout(() => setProgress(0), 1000);
+      }
+    }
+    return () => {
+      if (progressInterval.current) clearInterval(progressInterval.current);
+    };
+  }, [iaBusy]);
 
   const [titulo, setTitulo] = useState("");
   const [data, setData] = useState("");
@@ -316,16 +345,41 @@ export function ReuniaoDialog({
               </Button>
             </div>
           </div>
+          {iaBusy && (
+            <div className="mt-3 space-y-1.5">
+              <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-medium">
+                <span>Analisando reunião com I.A...</span>
+                <span>{progress}%</span>
+              </div>
+              <Progress value={progress} className="h-1.5" />
+            </div>
+          )}
           {!reuniao && <p className="text-[11px] text-muted-foreground mt-2">Salve a reunião primeiro para processar com IA.</p>}
         </div>
 
-        <Tabs defaultValue="resumos" className="mt-2">
+        <Tabs defaultValue="transcricao" className="mt-2">
           <TabsList className="h-8">
-            <TabsTrigger value="resumos" className="text-xs h-7">Resumos</TabsTrigger>
             <TabsTrigger value="transcricao" className="text-xs h-7">Transcrição</TabsTrigger>
+            <TabsTrigger value="resumos" className="text-xs h-7">Resumos</TabsTrigger>
             <TabsTrigger value="observacoes" className="text-xs h-7">Observações</TabsTrigger>
             <TabsTrigger value="delegacao" className="text-xs h-7">Delegação interna</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="transcricao" className="mt-3">
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-xs">Transcrição <span className="text-muted-foreground">(cole aqui o texto do TLDV, Zoom, Otter...)</span></Label>
+              <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copiar(transcricao, "Transcrição")}>
+                <Copy className="h-3 w-3 mr-1" /> Copiar
+              </Button>
+            </div>
+            <Textarea 
+              rows={12} 
+              value={transcricao} 
+              onChange={(e) => setTranscricao(e.target.value)} 
+              placeholder="Cole a transcrição completa aqui para que a IA possa extrair resumos e tarefas..." 
+              className="font-mono text-[11px] leading-relaxed"
+            />
+          </TabsContent>
 
           <TabsContent value="resumos" className="space-y-3 mt-3">
             <div>
@@ -377,12 +431,8 @@ export function ReuniaoDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="transcricao" className="mt-3">
-            <Textarea rows={14} value={transcricao} onChange={(e) => setTranscricao(e.target.value)} placeholder="Cole aqui a transcrição completa da reunião..." />
-          </TabsContent>
-
           <TabsContent value="observacoes" className="mt-3">
-            <Textarea rows={8} value={observacoes} onChange={(e) => setObsDelegacao(e.target.value)} placeholder="Observações internas, contexto, riscos..." />
+            <Textarea rows={8} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações internas, contexto, riscos..." />
           </TabsContent>
 
           <TabsContent value="delegacao" className="mt-3 space-y-3">
