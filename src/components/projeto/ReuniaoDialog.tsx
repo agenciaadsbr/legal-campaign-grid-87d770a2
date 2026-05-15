@@ -431,12 +431,8 @@ export function ReuniaoDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="transcricao" className="mt-3">
-            <Textarea rows={14} value={transcricao} onChange={(e) => setTranscricao(e.target.value)} placeholder="Cole aqui a transcrição completa da reunião..." />
-          </TabsContent>
-
           <TabsContent value="observacoes" className="mt-3">
-            <Textarea rows={8} value={observacoes} onChange={(e) => setObsDelegacao(e.target.value)} placeholder="Observações internas, contexto, riscos..." />
+            <Textarea rows={8} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações internas, contexto, riscos..." />
           </TabsContent>
 
           <TabsContent value="delegacao" className="mt-3 space-y-3">
