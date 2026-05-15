@@ -1,73 +1,62 @@
-# Plano — Workflow / Continuidade para a aba Posts
+# Plano — Acelerar carregamento do Dash Tasks (sem quebrar nada)
 
-## Objetivo
+## Diagnóstico
 
-Habilitar, dentro do detalhe de um Post, a mesma funcionalidade de **Workflow / Continuidade** já usada nas demais áreas (criar próxima etapa que depende da conclusão da tarefa atual), porém adaptada à realidade da aba Posts, onde existem **dois papéis distintos**:
+Mapeei o `useCRM` (`src/store/crm.ts`) e a página de Clientes. Os 4 gargalos principais:
 
-- **Responsáveis pela criação do post** (designer / quem produz)
-- **Responsáveis pela postagem** (quem efetivamente publica nas redes)
+1. **`_loadAll()` é chamado após CADA mutação (38 ocorrências no store).** Criar 1 card, mover 1 post, alterar 1 comentário → recarrega responsáveis, clientes, contratos, colunas, modelos, status, nichos, profiles, custom_fields, **+ todos os cards, posts e comentários paginados de 1000 em 1000**. Em uma base com 95 clientes isso significa milhares de linhas trafegadas a cada clique.
+2. **Realtime dispara `_loadAll()` em 13 tabelas, sem debounce.** Qualquer alteração de qualquer usuário em qualquer tabela faz a tela inteira recarregar tudo. Em uso simultâneo, o sistema fica em loop de recarga.
+3. **`comentarios` é baixado inteiro só para preencher a coluna "Último comentário"** de cada cliente. Hoje é a tabela com mais linhas.
+4. **`cards` e `posts` são baixados inteiros** mesmo quando a tela só precisa de contagens agregadas (Posts atrasados / Tarefas atrasadas / Tarefas urgentes). Por isso aparece o badge "Sincronizando dados detalhados..." e as colunas ficam vazias até terminar.
 
-Hoje o card "WORKFLOW / CONTINUIDADE" no detalhe do Post mostra apenas a mensagem _"Continuidade entre etapas está disponível para tarefas das demais áreas. Posts não possuem etapas vinculadas."_ — esse placeholder será substituído pela funcionalidade real.
+Tudo isso é seguro de corrigir — nenhuma funcionalidade existente depende do reload geral; depende apenas de o estado local ficar consistente, o que dá pra fazer com updates locais + realtime delta.
 
-Escopo: **somente a aba Posts**. Nenhuma alteração em Demandas, Projeto Completo, Kanbans ou outras áreas.
+## Mudanças propostas
 
----
+### 1. Eliminar o reload geral após mutações (frontend, `src/store/crm.ts`)
+- Substituir todos os `await get()._loadAll()` em `addCliente`, `updateCliente`, `deleteCliente`, `addCard`, `updateCard`, `moveCard`, `deleteCard`, `addPost`, `updatePost`, `addComentario`, `addAlerta`, `createCicloPosts`, etc. por **patch local do estado** com a linha já retornada pelo Supabase (insert/update já devolvem o registro; delete já tem o id).
+- Resultado: mutação fica instantânea, sem refetch de milhares de linhas.
 
-## Mudanças
+### 2. Realtime mais inteligente
+- Trocar o handler único que chama `_loadAll()` por handlers por tabela que aplicam o **delta do payload** (`eventType`, `new`, `old`) direto no slice correspondente (`cards`, `posts`, `comentarios`, `alertas`, `clientes`, `contratos`).
+- Tabelas de configuração raramente mudadas (`status_options`, `nichos`, `colunas_cliente`, `modelos_colunas`, `custom_fields`, `responsaveis`) ficam com debounce de 2s antes de refazer só aquela query.
+- Realtime continua ativo em todas as 13 tabelas; só para de reprocessar tudo a cada evento.
 
-### 1. Banco — novo campo para "responsáveis pela postagem"
+### 3. Coluna "Último comentário" via agregação
+- Criar uma **view materializável leve** ou função SQL `clientes_ultimo_comentario(cliente_id, texto, autor, created_at)` que retorne apenas a última observação por cliente (não a lista inteira).
+- O store passa a hidratar `cliente.ultimo_comentario` por essa view no carregamento inicial; o histórico completo de comentários continua sendo carregado **sob demanda** quando o usuário abre o dialog de histórico (já existe esse fluxo).
 
-Adicionar coluna `responsaveis_postagem uuid[]` (default `'{}'`) na tabela `cards`. O campo `responsaveis` existente continua representando os **responsáveis pela criação**. Sem migração de dados antigos (campo novo nasce vazio, totalmente compatível).
+### 4. Métricas de cards/posts agregadas no banco
+- Criar a view `clientes_metricas(cliente_id, posts_atrasados, tarefas_atrasadas, tarefas_urgentes, posts_pendentes, posts_postados)` calculada com `count(*) filter (where ...)` direto em `cards`.
+- A página de Clientes consome essa view (1 select rápido, ~95 linhas) em vez de baixar todos os cards.
+- O store continua tendo o slice `cards` para as outras telas (Kanban, Projeto Completo, Posts), mas esse slice passa a ser **lazy**: só carrega quando o usuário entra em uma rota que precisa dele (`/clientes/:id`, `/clientes/:id/posts`, etc.). A tela de listagem de Clientes deixa de esperar por ele.
 
-### 2. Detalhe do Post — dois blocos de responsáveis
+### 5. Pequenos ganhos
+- Cache em memória dos dados estáticos (`responsaveis`, `nichos`, `status_options`, `custom_fields`, `colunas_cliente`, `modelos_colunas`) com TTL de 5 min, evitando refetch quando o usuário troca de rota.
+- Remover o `for…of` sequencial de `authoresPorAuthId` (já é rápido, mas fica como `Object.fromEntries`).
+- Garantir índices em `cards(cliente_id)`, `cards(status)`, `cards(is_urgent)`, `cards(data_limite_tarefa)`, `comentarios(cliente_id, created_at desc)`, `posts(card_id)` — a maioria já existe via FKs, vou validar e criar só os faltantes.
 
-Em `src/components/clientes/PostDetalheDialog.tsx`, na seção "Responsáveis" (Card 1):
+## Garantias de não-regressão
 
-- Renomear o bloco atual para **"Responsáveis pela criação"** (lê/grava `card.responsaveis`).
-- Adicionar logo abaixo um segundo bloco **"Responsáveis pela postagem"** com o mesmo Popover de seleção, lendo/gravando `card.responsaveis_postagem`.
-- Visual idêntico ao já existente (avatares coloridos + popover de toggle).
+- Nenhum dado é apagado: as mudanças são só de leitura/cache.
+- Todas as funcionalidades atuais continuam (Kanban, Projeto Completo, Posts, Reuniões, Comentários, Alertas, Workflow, IA).
+- O badge "Sincronizando dados detalhados..." pode permanecer enquanto o slice `cards` carrega em rotas que ainda dependem dele.
+- Realtime continua ligado nas mesmas tabelas.
 
-### 3. Substituir o placeholder pelo WorkflowSection real
+## Resumo técnico (para devs)
 
-Em `PostDetalheDialog.tsx`, remover o card placeholder "WORKFLOW / CONTINUIDADE" e renderizar `<WorkflowSection pai={demandaStub} />`, passando um stub `Demanda`-like construído a partir de `card` + `post` (categoria `"Posts"`, `cliente_id`, `id` = `card.id`, `descricao`, `link_meister`, `responsaveis`, etc.). O `WorkflowSection` já tem o branch `categoria === "Posts"` que cria um Card+Post via `createCardRascunho` e grava a dependência em `task_dependencies` — esse caminho passa a funcionar quando o **pai** também é um Post.
+```text
+src/store/crm.ts
+  - _loadAll → divide em loadCore() (rápido) + loadHeavy(slice) sob demanda
+  - 38× await get()._loadAll() → patch local + retorno otimizado do Supabase
+  - startRealtime() → handler por tabela com delta + debounce 2s para configs
+  - novo: loadMetricasClientes() consumindo view clientes_metricas
+  - novo: loadUltimoComentario() consumindo view clientes_ultimo_comentario
 
-### 4. WorkflowSection — suportar dois responsáveis quando a próxima etapa for "Posts"
+supabase/migrations/*
+  - CREATE VIEW public.clientes_metricas (security_invoker=on)
+  - CREATE VIEW public.clientes_ultimo_comentario (security_invoker=on)
+  - CREATE INDEX se necessário em cards/comentarios
+```
 
-Em `src/components/demandas/WorkflowSection.tsx`:
-
-- Quando `categoria === "Posts"` na próxima etapa, exibir **dois seletores de responsáveis** lado a lado: "Responsáveis pela criação" e "Responsáveis pela postagem" (estados separados `responsaveisCriacaoIds` e `responsaveisPostagemIds`).
-- No `salvar()` do branch Posts, gravar `responsaveis: responsaveisCriacaoIds` e `responsaveis_postagem: responsaveisPostagemIds` no `updateCard`.
-- "Herdar responsáveis" do pai: se o pai for um Post, herda os dois conjuntos respectivamente; se o pai for de outra área, herda apenas para "criação" (postagem fica vazia).
-- Quando a próxima etapa **não** for Posts, o comportamento atual permanece intacto (um único bloco de responsáveis).
-
-### 5. Compatibilidade
-
-- Campo `responsaveis_postagem` é opcional e default `[]` — posts antigos continuam funcionando sem alteração.
-- Nenhuma remoção de dados (legenda, anexos, comentários, status, datas, link Meta etc. permanecem).
-- Nenhuma mudança em Kanbans, listagens, relatórios ou edge functions.
-
----
-
-## Detalhes técnicos
-
-**Arquivos alterados**
-
-- `supabase/migrations/*` (nova): `ALTER TABLE public.cards ADD COLUMN responsaveis_postagem uuid[] NOT NULL DEFAULT '{}';`
-- `src/store/crm.ts`: incluir `responsaveis_postagem` no tipo `Card`, no fetch e no `updateCard`.
-- `src/components/clientes/PostDetalheDialog.tsx`:
-  - novo bloco "Responsáveis pela postagem";
-  - troca do placeholder por `<WorkflowSection pai={demandaStub} />`;
-  - `demandaStub` passa a expor `responsaveis` e `responsaveis_postagem` para herança.
-- `src/components/demandas/WorkflowSection.tsx`:
-  - estado `responsaveisPostagemIds`;
-  - UI condicional (dois blocos quando `categoria === "Posts"`);
-  - persistência no `updateCard` do branch Posts;
-  - lógica de "herdar responsáveis" estendida para o caso pai-Post.
-
-**Não tocar**: `TaskFormBase.tsx`, `DemandaDetalheDialog.tsx`, `PostsKanbanCliente.tsx`, `AreaTab.tsx`, `ProjetoCliente.tsx`, edge functions, tipos do Supabase exceto regeneração automática.
-
----
-
-## Resultado esperado
-
-Dentro de qualquer Post, o bloco "Workflow / Continuidade" passa a permitir criar a próxima etapa (em qualquer categoria, incluindo outro Post) com dependência registrada em `task_dependencies`. Quando essa próxima etapa for um Post, o usuário define separadamente quem cria e quem publica. Posts antigos continuam abrindo normalmente, com o segundo campo apenas vazio.
+Quer que eu siga com essa implementação?
