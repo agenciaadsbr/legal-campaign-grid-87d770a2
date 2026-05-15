@@ -602,7 +602,19 @@ export const useCRM = create<State>()((set, get) => ({
     }
   },
 
-  // ============= Clientes =============
+  /**
+   * Agenda um reload completo com debounce de 600ms.
+   * Múltiplas chamadas seguidas (ex: várias mutações ou bursts de realtime)
+   * colapsam em uma única recarga, evitando o "loop de sincronização".
+   */
+  _scheduleReload: () => {
+    if (_reloadTimer) clearTimeout(_reloadTimer);
+    _reloadTimer = setTimeout(() => {
+      _reloadTimer = null;
+      void get()._loadAll();
+    }, 600);
+  },
+
   addCliente: async (data) => {
     const { data: inserted, error } = await supabase
       .from("clientes")
