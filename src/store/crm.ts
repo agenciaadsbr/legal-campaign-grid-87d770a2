@@ -945,8 +945,11 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.data_postagem !== undefined) dbPatch.data_postagem = patch.data_postagem || null;
     if (patch.link_post !== undefined) dbPatch.link_post = patch.link_post || null;
     if (patch.link_meister !== undefined) dbPatch.link_meister = patch.link_meister || null;
+    // Patch otimista local
+    set({ posts: get().posts.map(p => p.id === id ? { ...p, ...patch } : p) });
     await supabase.from("posts").update(dbPatch).eq("id", id);
     get()._scheduleReload();
+  },
   },
 
   deleteCard: async (cardId) => {
