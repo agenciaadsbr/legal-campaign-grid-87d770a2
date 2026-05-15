@@ -730,7 +730,7 @@ export const useCRM = create<State>()((set, get) => ({
       console.warn("Falha ao gerar estrutura operacional automática", e);
     }
 
-    await get()._loadAll();
+    get()._scheduleReload();
     return inserted.id;
   },
 
@@ -777,7 +777,7 @@ export const useCRM = create<State>()((set, get) => ({
         await supabase.from("contratos").update({ data_inicio: inicio, data_fim: fim }).eq("id", cur.id);
       }
     }
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   deleteCliente: async (id) => {
@@ -789,7 +789,7 @@ export const useCRM = create<State>()((set, get) => ({
       await supabase.from("cards").delete().eq("cliente_id", id);
     }
     await supabase.from("clientes").delete().eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   // ============= Responsáveis =============
@@ -834,12 +834,12 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.email !== undefined) dbPatch.email = patch.email;
     if (patch.avatar_url !== undefined) dbPatch.avatar_url = patch.avatar_url;
     await supabase.from("responsaveis").update(dbPatch).eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   deleteResponsavel: async (id) => {
     await supabase.from("responsaveis").delete().eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   // ============= Cards / Posts =============
@@ -862,7 +862,7 @@ export const useCRM = create<State>()((set, get) => ({
       });
     }
 
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   updateCard: async (id, patch) => {
@@ -912,7 +912,7 @@ export const useCRM = create<State>()((set, get) => ({
       });
     }
 
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   updatePost: async (id, patch) => {
@@ -926,7 +926,7 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.link_post !== undefined) dbPatch.link_post = patch.link_post || null;
     if (patch.link_meister !== undefined) dbPatch.link_meister = patch.link_meister || null;
     await supabase.from("posts").update(dbPatch).eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   deleteCard: async (cardId) => {
@@ -943,7 +943,7 @@ export const useCRM = create<State>()((set, get) => ({
       return;
     }
     toast.success("Tarefa excluída");
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   iniciarTarefa: async (cardId, { responsaveis, data_agendada, titulo, descricao, formato, qtd_slides }) => {
@@ -967,7 +967,7 @@ export const useCRM = create<State>()((set, get) => ({
       return;
     }
     toast.success("Tarefa iniciada");
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   createCardRascunho: async ({ cliente_id, mes_referencia }) => {
@@ -1025,7 +1025,7 @@ export const useCRM = create<State>()((set, get) => ({
       return null;
     }
 
-    await get()._loadAll();
+    get()._scheduleReload();
     return { cardId: cardRow.id, postId: postRow.id };
   },
 
@@ -1076,24 +1076,24 @@ export const useCRM = create<State>()((set, get) => ({
       });
     }
 
-    await get()._loadAll();
+    get()._scheduleReload();
     return data.id;
   },
 
   updateComentario: async (id, patch) => {
     await supabase.from("comentarios").update(patch).eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   deleteComentario: async (id) => {
     await supabase.from("comentarios").delete().eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   // ============= Alertas =============
   resolverAlerta: async (id) => {
     await supabase.from("alertas").update({ status: "Resolvido" as any }).eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   // ============= Colunas =============
@@ -1111,7 +1111,7 @@ export const useCRM = create<State>()((set, get) => ({
       fixa: col.fixa ?? false,
       opcoes: (col.opcoes ?? []) as any,
     });
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   updateColumn: async (key, patch) => {
@@ -1125,21 +1125,21 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.cor !== undefined) dbPatch.cor = patch.cor;
     if (patch.opcoes !== undefined) dbPatch.opcoes = patch.opcoes;
     await supabase.from("colunas_cliente").update(dbPatch).eq("key", key);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   deleteColumn: async (key) => {
     const c = get().colunasCliente.find((x) => x.key === key);
     if (c?.fixa) return;
     await supabase.from("colunas_cliente").delete().eq("key", key);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   reorderColumns: async (keys) => {
     await Promise.all(
       keys.map((k, i) => supabase.from("colunas_cliente").update({ ordem: i }).eq("key", k)),
     );
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   saveModeloColunas: async (nome) => {
@@ -1147,7 +1147,7 @@ export const useCRM = create<State>()((set, get) => ({
       nome,
       colunas: get().colunasCliente as any,
     });
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   applyModeloColunas: async (id) => {
@@ -1175,12 +1175,12 @@ export const useCRM = create<State>()((set, get) => ({
         })),
       );
     }
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   deleteModeloColunas: async (id) => {
     await supabase.from("modelos_colunas").delete().eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   // ============= Custom Fields =============
@@ -1193,12 +1193,12 @@ export const useCRM = create<State>()((set, get) => ({
       opcoes: (f.opcoes ?? []) as any,
       ordem,
     });
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   deleteCustomField: async (id) => {
     await supabase.from("custom_fields").delete().eq("id", id);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   // ============= Nichos =============
@@ -1208,7 +1208,7 @@ export const useCRM = create<State>()((set, get) => ({
     if (get().nichos.some((x) => x.label.toLowerCase() === label.toLowerCase())) return false;
     const { error } = await supabase.from("nichos").insert({ label, cor: n.cor });
     if (error) return false;
-    await get()._loadAll();
+    get()._scheduleReload();
     return true;
   },
 
@@ -1234,7 +1234,7 @@ export const useCRM = create<State>()((set, get) => ({
     if (novoLabel && novoLabel !== oldLabel) {
       await supabase.from("clientes").update({ nicho: novoLabel }).eq("nicho", oldLabel);
     }
-    await get()._loadAll();
+    get()._scheduleReload();
     return afetados;
   },
 
@@ -1242,7 +1242,7 @@ export const useCRM = create<State>()((set, get) => ({
     const afetados = get().clientes.filter((c) => c.nicho === label).length;
     await supabase.from("clientes").update({ nicho: null }).eq("nicho", label);
     await supabase.from("nichos").delete().eq("label", label);
-    await get()._loadAll();
+    get()._scheduleReload();
     return afetados;
   },
 
@@ -1254,7 +1254,7 @@ export const useCRM = create<State>()((set, get) => ({
     const proximaOrdem = get().statusOptions.length;
     const { error } = await supabase.from("status_options").insert({ label, cor: opt.cor, ordem: proximaOrdem });
     if (error) return false;
-    await get()._loadAll();
+    get()._scheduleReload();
     return true;
   },
 
@@ -1265,7 +1265,7 @@ export const useCRM = create<State>()((set, get) => ({
         supabase.from("status_options").update({ ordem: idx }).eq("label", label),
       ),
     );
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   updateStatusOption: async (oldLabel, patch) => {
@@ -1290,7 +1290,7 @@ export const useCRM = create<State>()((set, get) => ({
     if (novoLabel && novoLabel !== oldLabel) {
       await supabase.from("clientes").update({ status: novoLabel as any }).eq("status", oldLabel as any);
     }
-    await get()._loadAll();
+    get()._scheduleReload();
     return afetados;
   },
 
@@ -1301,7 +1301,7 @@ export const useCRM = create<State>()((set, get) => ({
       await supabase.from("clientes").update({ status: fallback as any }).eq("status", label as any);
     }
     await supabase.from("status_options").delete().eq("label", label);
-    await get()._loadAll();
+    get()._scheduleReload();
     return afetados;
   },
 
@@ -1313,7 +1313,7 @@ export const useCRM = create<State>()((set, get) => ({
     const proximaOrdem = get().statusPostOptions.length;
     const { error } = await supabase.from("status_post_options").insert({ label, cor: opt.cor, ordem: proximaOrdem });
     if (error) return false;
-    await get()._loadAll();
+    get()._scheduleReload();
     return true;
   },
 
@@ -1323,7 +1323,7 @@ export const useCRM = create<State>()((set, get) => ({
         supabase.from("status_post_options").update({ ordem: idx }).eq("label", label),
       ),
     );
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 
   updateStatusPostOption: async (oldLabel, patch) => {
@@ -1349,7 +1349,7 @@ export const useCRM = create<State>()((set, get) => ({
       await supabase.from("cards").update({ status: novoLabel as any }).eq("status", oldLabel as any);
       await supabase.from("posts").update({ status: novoLabel as any }).eq("status", oldLabel as any);
     }
-    await get()._loadAll();
+    get()._scheduleReload();
     return afetados;
   },
 
@@ -1361,7 +1361,7 @@ export const useCRM = create<State>()((set, get) => ({
       await supabase.from("posts").update({ status: fallback as any }).eq("status", label as any);
     }
     await supabase.from("status_post_options").delete().eq("label", label);
-    await get()._loadAll();
+    get()._scheduleReload();
     return afetados;
   },
   addAtividade: async ({ clienteId, acao, descricao, refId, tipo, area, titulo_tarefa, payload }) => {
@@ -1470,7 +1470,7 @@ export const useCRM = create<State>()((set, get) => ({
     }
 
     toast.success(`Ciclo ${tipo} criado com sucesso!`);
-    await get()._loadAll();
+    get()._scheduleReload();
   },
 }));
 
