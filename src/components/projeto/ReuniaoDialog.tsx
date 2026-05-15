@@ -43,6 +43,34 @@ export function ReuniaoDialog({
   const [reprocDialog, setReprocDialog] = useState(false);
   const [iaStatus, setIaStatus] = useState<any>(null);
   const [iaProcessedAt, setIaProcessedAt] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const progressInterval = useRef<any>(null);
+
+  useEffect(() => {
+    if (iaBusy) {
+      setProgress(5);
+      if (progressInterval.current) clearInterval(progressInterval.current);
+      progressInterval.current = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) return 95;
+          const inc = prev < 40 ? 5 : (prev < 70 ? 2 : 1);
+          return prev + inc;
+        });
+      }, 500);
+    } else {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
+      if (progress > 0) {
+        setProgress(100);
+        setTimeout(() => setProgress(0), 1000);
+      }
+    }
+    return () => {
+      if (progressInterval.current) clearInterval(progressInterval.current);
+    };
+  }, [iaBusy]);
 
   const [titulo, setTitulo] = useState("");
   const [data, setData] = useState("");
