@@ -5,8 +5,10 @@ import { useDelegations, useDelegationsBootstrap } from "@/store/delegations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, ExternalLink, Pencil, Trash2, Users } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, Calendar, ExternalLink, Pencil, Trash2, Users, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { ReuniaoDialog } from "./ReuniaoDialog";
+import { cn } from "@/lib/utils";
 
 export function ReunioesTab({ clienteId }: { clienteId: string }) {
   useReunioesBootstrap();
