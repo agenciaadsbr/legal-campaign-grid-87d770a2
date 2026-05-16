@@ -1558,37 +1558,103 @@ export type Database = {
         Row: {
           areas: string[]
           cargo: string | null
+          checklist_padrao: string | null
           created_at: string
+          demandas_ia: string | null
+          entregaveis_esperados: string | null
+          ferramentas_utilizadas: string | null
+          funcao_principal: string | null
           id: string
           observacoes: string | null
+          observacoes_ia: string | null
+          palavras_chave_ia: string | null
+          prazo_padrao_sugerido: string | null
+          prioridade_padrao: string | null
           profile_id: string
+          quando_acionar: string | null
+          quando_nao_acionar: string | null
+          regras_atribuicao: Json | null
+          regras_prioridade: string | null
           responsabilidades: string | null
+          responsabilidades_fixas: string | null
           setores: string[]
+          setores_areas_texto: string | null
+          setores_compativeis: string[] | null
           skills: string[]
+          skills_competencias_texto: string | null
+          status: string | null
+          supervisor_padrao_id: string | null
+          tarefas_diarias: string | null
+          tarefas_semanais: string | null
+          tipos_participacao: string[] | null
           updated_at: string
         }
         Insert: {
           areas?: string[]
           cargo?: string | null
+          checklist_padrao?: string | null
           created_at?: string
+          demandas_ia?: string | null
+          entregaveis_esperados?: string | null
+          ferramentas_utilizadas?: string | null
+          funcao_principal?: string | null
           id?: string
           observacoes?: string | null
+          observacoes_ia?: string | null
+          palavras_chave_ia?: string | null
+          prazo_padrao_sugerido?: string | null
+          prioridade_padrao?: string | null
           profile_id: string
+          quando_acionar?: string | null
+          quando_nao_acionar?: string | null
+          regras_atribuicao?: Json | null
+          regras_prioridade?: string | null
           responsabilidades?: string | null
+          responsabilidades_fixas?: string | null
           setores?: string[]
+          setores_areas_texto?: string | null
+          setores_compativeis?: string[] | null
           skills?: string[]
+          skills_competencias_texto?: string | null
+          status?: string | null
+          supervisor_padrao_id?: string | null
+          tarefas_diarias?: string | null
+          tarefas_semanais?: string | null
+          tipos_participacao?: string[] | null
           updated_at?: string
         }
         Update: {
           areas?: string[]
           cargo?: string | null
+          checklist_padrao?: string | null
           created_at?: string
+          demandas_ia?: string | null
+          entregaveis_esperados?: string | null
+          ferramentas_utilizadas?: string | null
+          funcao_principal?: string | null
           id?: string
           observacoes?: string | null
+          observacoes_ia?: string | null
+          palavras_chave_ia?: string | null
+          prazo_padrao_sugerido?: string | null
+          prioridade_padrao?: string | null
           profile_id?: string
+          quando_acionar?: string | null
+          quando_nao_acionar?: string | null
+          regras_atribuicao?: Json | null
+          regras_prioridade?: string | null
           responsabilidades?: string | null
+          responsabilidades_fixas?: string | null
           setores?: string[]
+          setores_areas_texto?: string | null
+          setores_compativeis?: string[] | null
           skills?: string[]
+          skills_competencias_texto?: string | null
+          status?: string | null
+          supervisor_padrao_id?: string | null
+          tarefas_diarias?: string | null
+          tarefas_semanais?: string | null
+          tipos_participacao?: string[] | null
           updated_at?: string
         }
         Relationships: []
