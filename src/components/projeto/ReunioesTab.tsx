@@ -37,11 +37,14 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
           Nenhuma reunião registrada. Clique em <span className="font-medium">Nova reunião</span> para começar.
         </CardContent></Card>
       ) : (
-        <div className="space-y-2">
-          {reunioes.map((r) => {
-            const resp = responsaveis.find((x) => x.id === r.responsavel_id);
-            return (
-              <Card key={r.id} className="hover:bg-accent/30 transition-colors">
+      <div className="space-y-2">
+        {reunioes.map((r) => {
+          const resp = responsaveis.find((x) => x.id === r.responsavel_id);
+          const hasSummaries = r.resumo_cliente || r.resumo_tarefas;
+          
+          return (
+            <Collapsible key={r.id}>
+              <Card className="hover:bg-accent/30 transition-colors">
                 <CardContent className="p-3">
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
@@ -66,24 +69,18 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                           </a>
                         )}
                       </div>
-                      {(r.resumo_cliente || r.resumo_tarefas) && (
-                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                          {r.resumo_cliente && (
-                            <div className="rounded border border-border bg-card p-2">
-                              <div className="font-medium text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Resumo cliente</div>
-                              <div className="line-clamp-3 whitespace-pre-wrap">{r.resumo_cliente}</div>
-                            </div>
-                          )}
-                          {r.resumo_tarefas && (
-                            <div className="rounded border border-border bg-card p-2">
-                              <div className="font-medium text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Resumo tarefas</div>
-                              <div className="line-clamp-3 whitespace-pre-wrap">{r.resumo_tarefas}</div>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
-                    <div className="flex gap-1 shrink-0">
+                    
+                    <div className="flex items-center gap-1 shrink-0">
+                      {hasSummaries && (
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+                            <FileText className="h-3.5 w-3.5" />
+                            Resumos
+                            <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+                          </Button>
+                        </CollapsibleTrigger>
+                      )}
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEdit(r); setOpen(true); }} title="Editar">
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -92,11 +89,37 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                       </Button>
                     </div>
                   </div>
+
+                  <CollapsibleContent className="mt-3 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {r.resumo_cliente && (
+                        <div className="flex flex-col rounded-md border border-red-200 bg-red-50/50 shadow-sm overflow-hidden">
+                          <div className="bg-red-100/50 px-3 py-1.5 border-b border-red-200 flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-red-800">Resumo Cliente</span>
+                          </div>
+                          <div className="p-3 text-xs text-red-950 max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-red-200 scrollbar-track-transparent">
+                            <div className="whitespace-pre-wrap leading-relaxed">{r.resumo_cliente}</div>
+                          </div>
+                        </div>
+                      )}
+                      {r.resumo_tarefas && (
+                        <div className="flex flex-col rounded-md border border-red-200 bg-red-50/50 shadow-sm overflow-hidden">
+                          <div className="bg-red-100/50 px-3 py-1.5 border-b border-red-200 flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-red-800">Resumo Tarefas</span>
+                          </div>
+                          <div className="p-3 text-xs text-red-950 max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-red-200 scrollbar-track-transparent">
+                            <div className="whitespace-pre-wrap leading-relaxed">{r.resumo_tarefas}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            </Collapsible>
+          );
+        })}
+      </div>
       )}
 
       <ReuniaoDialog open={open} onOpenChange={setOpen} clienteId={clienteId} reuniao={edit} />
