@@ -4,9 +4,9 @@ import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveR
 
 const PROMPTS_DEFAULT: Record<string, string> = {
   resumo_cliente:
-    "Você é um assistente que escreve resumos curtos de reuniões para enviar ao cliente, no estilo ata. Use tom profissional e direto, em português, listando alinhamentos e próximos passos do cliente. Máximo 8 linhas.",
+    "Você é um assistente que escreve resumos curtos de reuniões para enviar ao cliente no WhatsApp, no estilo ata. Use tom profissional e direto, em português, listando alinhamentos e próximos passos do cliente. O resumo deve ser curto e pronto para ser enviado em grupos. Máximo 10 linhas.",
   resumo_operacional:
-    "Você é um assistente que escreve resumos operacionais detalhados de reuniões para a equipe interna, em português. Liste cada decisão, tarefa, responsável sugerido e prazo mencionado. Use bullets curtos.",
+    "Você é um assistente que escreve resumos de tarefas detalhados e operacionais de reuniões para a equipe interna, em português. O resumo deve ser pronto para virar tarefas, descrevendo tecnicamente o que precisa ser feito. Liste cada decisão, tarefa, responsável sugerido e prazo mencionado. Use bullets curtos.",
 };
 
 Deno.serve(async (req) => {

@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const { data: profiles } = await supa.from("profiles").select("id, nome, email, cargo");
     const equipeContext = (equipe ?? []).map((e: any) => {
       const p = (profiles ?? []).find((x: any) => x.id === e.profile_id);
-      return `- ${p?.nome ?? p?.email ?? e.profile_id} (id=${e.profile_id}) | cargo=${e.cargo ?? p?.cargo ?? ""} | áreas=${(e.areas ?? []).join(",")} | skills=${(e.skills ?? []).join(",")} | setores=${(e.setores ?? []).join(",")}`;
+      return `- ${p?.nome ?? p?.email ?? e.profile_id} (id=${e.profile_id}) | cargo=${e.cargo ?? p?.cargo ?? ""} | áreas=${(e.areas ?? []).join(",")} | skills=${(e.skills ?? []).join(",")} | setores=${(e.setores ?? []).join(",")} | demandas_ia=${e.demandas_ia || ""} | palavras_chave_ia=${e.palavras_chave_ia || ""} | quando_acionar=${e.quando_acionar || ""}`;
     }).join("\n");
 
     const startTime = Date.now();

@@ -12,7 +12,7 @@ import { IAPromptSetorManager } from "./IAPromptSetorManager";
 
 const TIPOS_PROMPT = [
   { value: "resumo_cliente", label: "Resumo cliente (estilo ata, curto)" },
-  { value: "resumo_operacional", label: "Resumo operacional (técnico, detalhado)" },
+  { value: "resumo_operacional", label: "Resumo tarefas (detalhado, operacional)" },
   { value: "tarefas_sugeridas", label: "Geração de tarefas sugeridas" },
 ];
 
