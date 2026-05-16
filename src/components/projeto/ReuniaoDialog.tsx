@@ -397,7 +397,7 @@ export function ReuniaoDialog({
                   </Button>
                 </div>
               </div>
-              <Textarea rows={5} value={resumoCliente} onChange={(e) => setResumoCliente(e.target.value)} placeholder="O que foi alinhado, próximos passos pelo cliente..." />
+              <Textarea rows={5} value={resumoCliente} onChange={(e) => setResumoCliente(e.target.value)} placeholder="O que foi alinhado, próximos passos pelo cliente..." className="border-red-200 focus-visible:ring-red-300 bg-red-50/10" />
             </div>
 
             <div>
@@ -424,7 +424,7 @@ export function ReuniaoDialog({
                   </Button>
                 </div>
               </div>
-              <Textarea rows={7} value={resumoTarefas} onChange={(e) => setResumoTarefas(e.target.value)} placeholder="- Atualizar landing page&#10;- Criar 4 vídeos para Instagram..." />
+              <Textarea rows={7} value={resumoTarefas} onChange={(e) => setResumoTarefas(e.target.value)} placeholder="- Atualizar landing page&#10;- Criar 4 vídeos para Instagram..." className="border-red-200 focus-visible:ring-red-300 bg-red-50/10" />
               {!reuniao && (
                 <p className="text-[10px] text-muted-foreground mt-1">Salve a reunião primeiro para poder gerar tarefas sugeridas.</p>
               )}
