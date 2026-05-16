@@ -23,7 +23,7 @@ const TarefasSchema = z.object({
     checklist: z.string().optional(),
     entregavel_esperado: z.string().optional(),
     justificativa_atribuicao: z.string().optional(),
-  })).max(30),
+  })).max(100),
 });
 
 type Modo = "novo" | "substituir" | "manter";
@@ -150,14 +150,14 @@ Deno.serve(async (req) => {
             model: client(realModel),
             system: sysOper,
             temperature: Number(agOper.temperatura ?? 0.3),
-            maxTokens: 4000,
+            maxTokens: 8000,
             prompt: `Transcrição completa da reunião "${reuniao.titulo}":\n\n${transcricao}\n\nLembre-se: gere o briefing operacional completo e detalhado conforme as instruções do prompt de sistema.`,
           }),
           generateText({
             model: client(realModel),
             system: sysTarefas,
             temperature: Number(agOper.temperatura ?? 0.2),
-            maxTokens: 4000,
+            maxTokens: 8000,
             prompt: `Extraia as tarefas operacionais detalhadas da reunião "${reuniao.titulo}".\n\nTranscrição:\n${transcricao}`,
             experimental_output: Output.object({ schema: TarefasSchema }),
           })
