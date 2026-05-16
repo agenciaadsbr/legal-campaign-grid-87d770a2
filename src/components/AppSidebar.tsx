@@ -1,5 +1,7 @@
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -32,7 +34,18 @@ export function AppSidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, roles, signOut } = useAuth();
-  const initial = (user?.email ?? "?").charAt(0).toUpperCase();
+  const [profile, setProfile] = useState<{ nome: string | null } | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("profiles").select("nome").eq("id", user.id).maybeSingle().then(({ data }) => {
+        setProfile(data);
+      });
+    }
+  }, [user]);
+
+  const displayName = profile?.nome || user?.email || "?";
+  const initial = displayName.charAt(0).toUpperCase();
   const roleLabel = roles[0] ?? "—";
 
   const handleSignOut = async () => {
@@ -94,7 +107,7 @@ export function AppSidebar() {
             </div>
             <div className="leading-tight overflow-hidden flex-1">
               <div className="text-xs font-medium text-sidebar-foreground truncate">
-                {user?.email ?? "—"}
+                {displayName}
               </div>
               <div className="text-[10px] text-sidebar-foreground/60 capitalize">{roleLabel}</div>
             </div>

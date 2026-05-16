@@ -28,9 +28,10 @@ interface RoleRow { user_id: string; role: AppRole }
 interface ResponsavelRow { id: string; nome: string; email: string | null }
 interface CargoRow { id: string; label: string }
 
-const ROLES: AppRole[] = ["admin", "editor", "viewer"];
+const ROLES: AppRole[] = ["super_admin", "admin", "editor", "viewer"];
 
 const ROLE_BADGE: Record<AppRole, { variant: "default" | "secondary" | "outline"; label: string; className: string }> = {
+  super_admin: { variant: "default", label: "Super Admin", className: "bg-purple-600 text-white" },
   admin: { variant: "default", label: "Admin", className: "bg-primary text-primary-foreground" },
   editor: { variant: "secondary", label: "Editor", className: "" },
   viewer: { variant: "outline", label: "Viewer", className: "" },

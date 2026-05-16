@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const isAdmin = roles.includes("admin");
+  const isAdmin = roles.includes("admin") || roles.includes("super_admin");
   const canWrite = isAdmin || roles.includes("editor");
 
   return (
