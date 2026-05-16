@@ -90,10 +90,41 @@ export function TarefasSugeridasTab() {
                         {t.categoria && <span>· {t.categoria}</span>}
                         {t.prioridade && <span>· Prioridade: {t.prioridade}</span>}
                         {resp && <span>· Sugerido p/ {resp.nome}</span>}
+                        {t.supervisor_sugerido_id && (
+                          <span>· Supervisor: {responsaveis.find(r => r.id === t.supervisor_sugerido_id)?.nome || "N/A"}</span>
+                        )}
                         {t.prazo_sugerido && <span>· Prazo: {new Date(t.prazo_sugerido).toLocaleDateString("pt-BR")}</span>}
                       </div>
+                      
+                      {t.justificativa_atribuicao && (
+                        <div className="mt-2 flex items-start gap-1.5 p-2 rounded bg-primary/5 border border-primary/10 text-[11px] leading-relaxed italic text-muted-foreground">
+                          <Sparkles className="h-3 w-3 mt-0.5 shrink-0 text-primary/60" />
+                          <span>{t.justificativa_atribuicao}</span>
+                        </div>
+                      )}
+
                       {t.descricao && (
                         <p className="text-xs mt-1.5 text-foreground/80 line-clamp-3 whitespace-pre-wrap">{t.descricao}</p>
+                      )}
+                      
+                      {(t.checklist || t.entregavel_esperado || t.apoio) && (
+                        <div className="mt-2 space-y-1">
+                          {t.entregavel_esperado && (
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="font-semibold uppercase">Entregável:</span> {t.entregavel_esperado}
+                            </div>
+                          )}
+                          {t.apoio && (
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="font-semibold uppercase">Apoio:</span> {t.apoio}
+                            </div>
+                          )}
+                          {t.checklist && (
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="font-semibold uppercase">Checklist:</span> {t.checklist}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                     {t.status === "aguardando_aprovacao" && isAdmin && (
