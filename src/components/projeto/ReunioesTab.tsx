@@ -98,9 +98,11 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                           <div className="bg-red-100/50 px-3 py-1.5 border-b border-red-200 flex items-center justify-between">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-red-800">Resumo Cliente</span>
                           </div>
-                          <div className="p-3 text-xs text-red-950 max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-red-200 scrollbar-track-transparent">
-                            <div className="whitespace-pre-wrap leading-relaxed">{r.resumo_cliente}</div>
-                          </div>
+                          <ScrollArea className="h-[250px] w-full p-3">
+                            <div className="text-xs text-red-950 whitespace-pre-wrap leading-relaxed pr-3">
+                              {r.resumo_cliente}
+                            </div>
+                          </ScrollArea>
                         </div>
                       )}
                       {r.resumo_tarefas && (
@@ -108,9 +110,11 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                           <div className="bg-red-100/50 px-3 py-1.5 border-b border-red-200 flex items-center justify-between">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-red-800">Resumo Tarefas</span>
                           </div>
-                          <div className="p-3 text-xs text-red-950 max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-red-200 scrollbar-track-transparent">
-                            <div className="whitespace-pre-wrap leading-relaxed">{r.resumo_tarefas}</div>
-                          </div>
+                          <ScrollArea className="h-[250px] w-full p-3">
+                            <div className="text-xs text-red-950 whitespace-pre-wrap leading-relaxed pr-3">
+                              {r.resumo_tarefas}
+                            </div>
+                          </ScrollArea>
                         </div>
                       )}
                     </div>
