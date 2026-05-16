@@ -19,7 +19,7 @@ const Schema = z.object({
     checklist: z.string().optional(),
     entregavel_esperado: z.string().optional(),
     justificativa_atribuicao: z.string().optional(),
-  })).max(20),
+  })).max(100),
 });
 
 Deno.serve(async (req) => {
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     const result = await generateText({
       model: client(realModel),
       system: systemPrompt,
-      maxTokens: 4000,
+      maxTokens: 8000,
       prompt: `Extraia as tarefas desta reunião:\n\n${transcricao}`,
       experimental_output: Output.object({ schema: Schema }),
     });

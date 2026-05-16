@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     const result = await generateText({
       model: client(realModel),
       system: systemPrompt,
-      maxTokens: tipo === "resumo_operacional" ? 4000 : 1000,
+      maxTokens: tipo === "resumo_operacional" ? 8000 : 1000,
       prompt: `${contexto ? `Contexto: ${contexto}\n\n` : ""}Transcrição:\n${transcricao}`,
     });
     const latency = Date.now() - t0;
