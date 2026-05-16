@@ -13,6 +13,11 @@ export interface TarefaSugerida {
   descricao: string | null;
   categoria: string | null;
   responsavel_sugerido_id: string | null;
+  supervisor_sugerido_id: string | null;
+  apoio: string | null;
+  checklist: string | null;
+  entregavel_esperado: string | null;
+  justificativa_atribuicao: string | null;
   prioridade: string | null;
   prazo_sugerido: string | null;
   origem: string;
