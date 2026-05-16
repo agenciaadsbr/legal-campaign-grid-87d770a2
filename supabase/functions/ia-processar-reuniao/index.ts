@@ -122,12 +122,28 @@ Deno.serve(async (req) => {
         const client = getProviderClient(agOper.provider);
         const modelId = agOper.model || defaultModelFor(agOper.provider);
         const realModel = resolveRealModelId(agOper.provider, modelId);
+        const fallbackRules = `
+MAPA DE FALLBACK OBRIGATÓRIO (se a ficha de responsabilidades não for suficiente):
+1. Tráfego/Campanhas/Performance (revisar, ajustar, orçamento, leads, Meta/Google Ads): Executor=Greice, Supervisor=Robson. Categoria: Tráfego.
+2. Relatórios/Saldos/Acessos (enviar relatório, atualizar saldo, recarga, estrutura Google/FB): Executor=Dalton, Supervisor=Robson. Categoria: Relatórios ou Saldos.
+3. CRM/IA/Automação/Técnico (configurar CRM, pixel, UTM, integração, erro técnico): Executor=Erick, Supervisor=Robson. Categoria: CRM, IA / Automação ou Suporte Técnico.
+4. Landing Page/Site (criar/ajustar LP, texto/imagem na página, layout web): Executor=Bruno, Supervisor=Robson. Categoria: Web / Landing Pages.
+5. Design/Criativos Estáticos (arte, post, carrossel, imagem de anúncio): Executor=Lorenzo, Supervisor=Robson. Categoria: Design.
+6. Vídeo/Edição (reels, cortes, legenda, vídeo com IA): Executor=Bianca, Supervisor=Robson. Categoria: Vídeo.
+7. Social Media (agendar/publicar postagem pronta): Executor=Pablo, Supervisor=Robson. Categoria: Social Media.
+8. Comercial (agendar reunião comercial, follow-up, qualificar lead): Executor=Thauana/Flor, Supervisor=Tales. Categoria: Comercial.
+9. Estratégia/Performance/Retenção (reunião estratégica, análise de funil, cliente insatisfeito): Executor=Tales, Supervisor=Cristiano. Categoria: Estratégia ou Reuniões de Performance.
+10. Financeiro/Administrativo/Decisão Crítica: Executor=Cristiano, Supervisor=Cristiano. Categoria: Financeiro ou Administrativo.
+11. Gestão de Projetos (delegar, cobrar, organizar): Executor/Supervisor=Robson. Categoria: Gestão de Projetos.
+`;
+
         const sysBase = [
           agOper.prompt,
           agOper.contexto_adicional,
+          fallbackRules,
           agOper.regras_categorizacao ? `Regras de categorização:\n${agOper.regras_categorizacao}` : null,
           agOper.regras_responsaveis ? `Regras de responsáveis:\n${agOper.regras_responsaveis}` : null,
-          equipeContext ? `Equipe disponível (use o id exato em responsavel_sugerido_id):\n${equipeContext}` : null,
+          equipeContext ? `BASE DE RESPONSABILIDADES (FONTE PRINCIPAL - USE OS IDs EXATOS):\n${equipeContext}` : null,
         ].filter(Boolean).join("\n\n");
 
         // Executa resumo operacional e extração de tarefas em paralelo para ganhar tempo
