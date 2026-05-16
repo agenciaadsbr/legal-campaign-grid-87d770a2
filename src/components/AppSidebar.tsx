@@ -107,7 +107,7 @@ export function AppSidebar() {
             </div>
             <div className="leading-tight overflow-hidden flex-1">
               <div className="text-xs font-medium text-sidebar-foreground truncate">
-                {user?.email ?? "—"}
+                {displayName}
               </div>
               <div className="text-[10px] text-sidebar-foreground/60 capitalize">{roleLabel}</div>
             </div>
