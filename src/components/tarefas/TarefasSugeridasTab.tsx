@@ -90,10 +90,41 @@ export function TarefasSugeridasTab() {
                         {t.categoria && <span>· {t.categoria}</span>}
                         {t.prioridade && <span>· Prioridade: {t.prioridade}</span>}
                         {resp && <span>· Sugerido p/ {resp.nome}</span>}
+                        {t.supervisor_sugerido_id && (
+                          <span>· Supervisor: {responsaveis.find(r => r.id === t.supervisor_sugerido_id)?.nome || "N/A"}</span>
+                        )}
                         {t.prazo_sugerido && <span>· Prazo: {new Date(t.prazo_sugerido).toLocaleDateString("pt-BR")}</span>}
                       </div>
+                      
+                      {t.justificativa_atribuicao && (
+                        <div className="mt-2 flex items-start gap-1.5 p-2 rounded bg-primary/5 border border-primary/10 text-[11px] leading-relaxed italic text-muted-foreground">
+                          <Sparkles className="h-3 w-3 mt-0.5 shrink-0 text-primary/60" />
+                          <span>{t.justificativa_atribuicao}</span>
+                        </div>
+                      )}
+
                       {t.descricao && (
                         <p className="text-xs mt-1.5 text-foreground/80 line-clamp-3 whitespace-pre-wrap">{t.descricao}</p>
+                      )}
+                      
+                      {(t.checklist || t.entregavel_esperado || t.apoio) && (
+                        <div className="mt-2 space-y-1">
+                          {t.entregavel_esperado && (
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="font-semibold uppercase">Entregável:</span> {t.entregavel_esperado}
+                            </div>
+                          )}
+                          {t.apoio && (
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="font-semibold uppercase">Apoio:</span> {t.apoio}
+                            </div>
+                          )}
+                          {t.checklist && (
+                            <div className="text-[10px] text-muted-foreground">
+                              <span className="font-semibold uppercase">Checklist:</span> {t.checklist}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                     {t.status === "aguardando_aprovacao" && isAdmin && (
@@ -136,10 +167,22 @@ function SugestaoDialog({ open, onOpenChange, item }: { open: boolean; onOpenCha
   const [clienteId, setClienteId] = useState(item?.cliente_id ?? "");
   const [titulo, setTitulo] = useState(item?.titulo ?? "");
   const [descricao, setDescricao] = useState(item?.descricao ?? "");
-  const [categoria, setCategoria] = useState(item?.categoria ?? "Personalizado");
+  const [categoria, setCategoria] = useState(item?.categoria ?? "Tráfego");
   const [respId, setRespId] = useState(item?.responsavel_sugerido_id ?? "");
+  const [supervisorId, setSupervisorId] = useState(item?.supervisor_sugerido_id ?? "");
   const [prioridade, setPrioridade] = useState(item?.prioridade ?? "Media");
   const [prazo, setPrazo] = useState(item?.prazo_sugerido ?? "");
+  const [apoio, setApoio] = useState(item?.apoio ?? "");
+  const [checklist, setChecklist] = useState(item?.checklist ?? "");
+  const [entregavel, setEntregavel] = useState(item?.entregavel_esperado ?? "");
+  const [justificativa, setJustificativa] = useState(item?.justificativa_atribuicao ?? "");
+
+  const categorias = [
+    "Tráfego", "Design", "Vídeo", "Web / Landing Pages", "CRM", "IA / Automação",
+    "Relatórios", "Saldos", "Comercial", "Atendimento", "Gestão de Projetos",
+    "Financeiro", "Administrativo", "Social Media", "Suporte Técnico",
+    "Reuniões de Performance", "Estratégia"
+  ];
 
   const handleSave = async () => {
     if (!clienteId || !titulo.trim()) {
@@ -152,9 +195,14 @@ function SugestaoDialog({ open, onOpenChange, item }: { open: boolean; onOpenCha
       descricao: descricao || null,
       categoria,
       responsavel_sugerido_id: respId || null,
+      supervisor_sugerido_id: supervisorId || null,
       prioridade,
       prazo_sugerido: prazo || null,
-      origem: "manual",
+      apoio: apoio || null,
+      checklist: checklist || null,
+      entregavel_esperado: entregavel || null,
+      justificativa_atribuicao: justificativa || null,
+      origem: item?.origem || "manual",
     };
     if (item) await update(item.id, payload);
     else await create(payload);
@@ -189,7 +237,7 @@ function SugestaoDialog({ open, onOpenChange, item }: { open: boolean; onOpenCha
               <Select value={categoria} onValueChange={setCategoria}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["EditorVideo","TrafegoPago","LandingPage","IAAtendimento","Personalizado"].map((c) => (
+                  {categorias.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
@@ -215,9 +263,37 @@ function SugestaoDialog({ open, onOpenChange, item }: { open: boolean; onOpenCha
               </Select>
             </div>
             <div>
+              <Label className="text-xs">Supervisor sugerido</Label>
+              <Select value={supervisorId || "__none__"} onValueChange={(v) => setSupervisorId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Nenhum —</SelectItem>
+                  {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label className="text-xs">Prazo sugerido</Label>
               <Input type="date" value={prazo ?? ""} onChange={(e) => setPrazo(e.target.value)} />
             </div>
+            <div>
+              <Label className="text-xs">Apoio técnico/operacional</Label>
+              <Input value={apoio} onChange={(e) => setApoio(e.target.value)} placeholder="Ex: Robson" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Entregável esperado</Label>
+              <Input value={entregavel} onChange={(e) => setEntregavel(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Justificativa da atribuição</Label>
+              <Input value={justificativa} onChange={(e) => setJustificativa(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Checklist padrão</Label>
+            <Textarea rows={2} value={checklist} onChange={(e) => setChecklist(e.target.value)} />
           </div>
         </div>
         <DialogFooter>

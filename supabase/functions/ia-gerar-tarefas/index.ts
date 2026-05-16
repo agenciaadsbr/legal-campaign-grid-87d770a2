@@ -13,6 +13,12 @@ const Schema = z.object({
     categoria: z.string().optional(),
     prioridade: z.enum(["baixa", "media", "alta", "urgente"]).optional(),
     prazo_sugerido: z.string().optional(), // ISO date
+    responsavel_sugerido_id: z.string().uuid().optional().nullable(),
+    supervisor_sugerido_id: z.string().uuid().optional().nullable(),
+    apoio: z.string().optional(),
+    checklist: z.string().optional(),
+    entregavel_esperado: z.string().optional(),
+    justificativa_atribuicao: z.string().optional(),
   })).max(20),
 });
 
@@ -74,6 +80,12 @@ Deno.serve(async (req) => {
         categoria: t.categoria ?? null,
         prioridade: t.prioridade ?? null,
         prazo_sugerido: t.prazo_sugerido ?? null,
+        responsavel_sugerido_id: t.responsavel_sugerido_id ?? null,
+        supervisor_sugerido_id: t.supervisor_sugerido_id ?? null,
+        apoio: t.apoio ?? null,
+        checklist: t.checklist ?? null,
+        entregavel_esperado: t.entregavel_esperado ?? null,
+        justificativa_atribuicao: t.justificativa_atribuicao ?? null,
         origem: "ia_reuniao",
         status: "aguardando_aprovacao",
         criado_por: userData.user.id,
