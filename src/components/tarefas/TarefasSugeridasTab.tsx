@@ -237,7 +237,7 @@ function SugestaoDialog({ open, onOpenChange, item }: { open: boolean; onOpenCha
               <Select value={categoria} onValueChange={setCategoria}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["EditorVideo","TrafegoPago","LandingPage","IAAtendimento","Personalizado"].map((c) => (
+                  {categorias.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
@@ -263,9 +263,37 @@ function SugestaoDialog({ open, onOpenChange, item }: { open: boolean; onOpenCha
               </Select>
             </div>
             <div>
+              <Label className="text-xs">Supervisor sugerido</Label>
+              <Select value={supervisorId || "__none__"} onValueChange={(v) => setSupervisorId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Nenhum —</SelectItem>
+                  {responsaveis.map((r) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label className="text-xs">Prazo sugerido</Label>
               <Input type="date" value={prazo ?? ""} onChange={(e) => setPrazo(e.target.value)} />
             </div>
+            <div>
+              <Label className="text-xs">Apoio técnico/operacional</Label>
+              <Input value={apoio} onChange={(e) => setApoio(e.target.value)} placeholder="Ex: Robson" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Entregável esperado</Label>
+              <Input value={entregavel} onChange={(e) => setEntregavel(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Justificativa da atribuição</Label>
+              <Input value={justificativa} onChange={(e) => setJustificativa(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Checklist padrão</Label>
+            <Textarea rows={2} value={checklist} onChange={(e) => setChecklist(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
