@@ -13,6 +13,12 @@ const Schema = z.object({
     categoria: z.string().optional(),
     prioridade: z.enum(["baixa", "media", "alta", "urgente"]).optional(),
     prazo_sugerido: z.string().optional(), // ISO date
+    responsavel_sugerido_id: z.string().uuid().optional().nullable(),
+    supervisor_sugerido_id: z.string().uuid().optional().nullable(),
+    apoio: z.string().optional(),
+    checklist: z.string().optional(),
+    entregavel_esperado: z.string().optional(),
+    justificativa_atribuicao: z.string().optional(),
   })).max(20),
 });
 
