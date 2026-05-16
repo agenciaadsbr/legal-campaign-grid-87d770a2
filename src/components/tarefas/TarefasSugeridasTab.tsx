@@ -195,9 +195,14 @@ function SugestaoDialog({ open, onOpenChange, item }: { open: boolean; onOpenCha
       descricao: descricao || null,
       categoria,
       responsavel_sugerido_id: respId || null,
+      supervisor_sugerido_id: supervisorId || null,
       prioridade,
       prazo_sugerido: prazo || null,
-      origem: "manual",
+      apoio: apoio || null,
+      checklist: checklist || null,
+      entregavel_esperado: entregavel || null,
+      justificativa_atribuicao: justificativa || null,
+      origem: item?.origem || "manual",
     };
     if (item) await update(item.id, payload);
     else await create(payload);
