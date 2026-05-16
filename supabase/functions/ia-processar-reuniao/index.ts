@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
           model: client(realModel),
           system: sys,
           temperature: Number(agCliente.temperatura ?? 0.4),
+          maxTokens: 1000,
           prompt: `Título da Reunião: ${reuniao.titulo}\n\nTranscrição para processar:\n${transcricao}`,
         });
         const tIn = result.usage?.inputTokens ?? 0;
