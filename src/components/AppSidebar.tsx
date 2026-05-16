@@ -32,7 +32,18 @@ export function AppSidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, roles, signOut } = useAuth();
-  const initial = (user?.email ?? "?").charAt(0).toUpperCase();
+  const [profile, setProfile] = useState<{ nome: string | null } | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("profiles").select("nome").eq("id", user.id).maybeSingle().then(({ data }) => {
+        setProfile(data);
+      });
+    }
+  }, [user]);
+
+  const displayName = profile?.nome || user?.email || "?";
+  const initial = displayName.charAt(0).toUpperCase();
   const roleLabel = roles[0] ?? "—";
 
   const handleSignOut = async () => {
