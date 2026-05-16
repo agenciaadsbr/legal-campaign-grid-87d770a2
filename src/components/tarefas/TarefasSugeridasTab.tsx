@@ -167,10 +167,22 @@ function SugestaoDialog({ open, onOpenChange, item }: { open: boolean; onOpenCha
   const [clienteId, setClienteId] = useState(item?.cliente_id ?? "");
   const [titulo, setTitulo] = useState(item?.titulo ?? "");
   const [descricao, setDescricao] = useState(item?.descricao ?? "");
-  const [categoria, setCategoria] = useState(item?.categoria ?? "Personalizado");
+  const [categoria, setCategoria] = useState(item?.categoria ?? "Tráfego");
   const [respId, setRespId] = useState(item?.responsavel_sugerido_id ?? "");
+  const [supervisorId, setSupervisorId] = useState(item?.supervisor_sugerido_id ?? "");
   const [prioridade, setPrioridade] = useState(item?.prioridade ?? "Media");
   const [prazo, setPrazo] = useState(item?.prazo_sugerido ?? "");
+  const [apoio, setApoio] = useState(item?.apoio ?? "");
+  const [checklist, setChecklist] = useState(item?.checklist ?? "");
+  const [entregavel, setEntregavel] = useState(item?.entregavel_esperado ?? "");
+  const [justificativa, setJustificativa] = useState(item?.justificativa_atribuicao ?? "");
+
+  const categorias = [
+    "Tráfego", "Design", "Vídeo", "Web / Landing Pages", "CRM", "IA / Automação",
+    "Relatórios", "Saldos", "Comercial", "Atendimento", "Gestão de Projetos",
+    "Financeiro", "Administrativo", "Social Media", "Suporte Técnico",
+    "Reuniões de Performance", "Estratégia"
+  ];
 
   const handleSave = async () => {
     if (!clienteId || !titulo.trim()) {
