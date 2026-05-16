@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
     const result = await generateText({
       model: client(realModel),
       system: systemPrompt,
+      maxTokens: 4000,
       prompt: `Extraia as tarefas desta reunião:\n\n${transcricao}`,
       experimental_output: Output.object({ schema: Schema }),
     });
