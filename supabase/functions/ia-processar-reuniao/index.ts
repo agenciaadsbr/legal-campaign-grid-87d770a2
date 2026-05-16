@@ -55,6 +55,16 @@ Deno.serve(async (req) => {
     const agOper = (agentes ?? []).find((a: any) => a.tipo === "operacional");
     if (!agCliente || !agOper) return jsonResponse({ error: "Configure ambos agentes em Configurações → IA → Agentes" }, 400);
 
+    // Prioriza prompts da tabela ia_prompts se existirem e estiverem ativos
+    const { data: promptsTable } = await supa.from("ia_prompts").select("*").eq("ativo", true);
+    const pCliente = (promptsTable ?? []).find(p => p.tipo === "resumo_cliente");
+    const pOper = (promptsTable ?? []).find(p => p.tipo === "resumo_operacional");
+    const pTarefas = (promptsTable ?? []).find(p => p.tipo === "tarefas_sugeridas");
+
+    const promptClienteFinal = pCliente?.conteudo || agCliente.prompt;
+    const promptOperFinal = pOper?.conteudo || agOper.prompt;
+    const promptTarefasFinal = pTarefas?.conteudo || agOper.prompt; // Fallback para agOper se não houver específico
+
     const { data: equipe } = await supa.from("responsabilidades_equipe").select(`
       profile_id, cargo, demandas_ia, palavras_chave_ia, quando_acionar, quando_nao_acionar, 
       tipos_participacao, setores_compativeis, regras_atribuicao, supervisor_padrao_id,
@@ -94,13 +104,13 @@ Deno.serve(async (req) => {
         const client = getProviderClient(agCliente.provider);
         const modelId = agCliente.model || defaultModelFor(agCliente.provider);
         const realModel = resolveRealModelId(agCliente.provider, modelId);
-        const sys = [agCliente.prompt, agCliente.contexto_adicional].filter(Boolean).join("\n\n");
+        const sys = [promptClienteFinal, agCliente.contexto_adicional].filter(Boolean).join("\n\n");
         const t0 = Date.now();
         const result = await generateText({
           model: client(realModel),
           system: sys,
           temperature: Number(agCliente.temperatura ?? 0.4),
-          prompt: `Reunião: ${reuniao.titulo}\n\nTranscrição:\n${transcricao}`,
+          prompt: `Título da Reunião: ${reuniao.titulo}\n\nTranscrição para processar:\n${transcricao}`,
         });
         const tIn = result.usage?.inputTokens ?? 0;
         const tOut = result.usage?.outputTokens ?? 0;
@@ -116,49 +126,36 @@ Deno.serve(async (req) => {
       }
     })();
 
-    // Agentes 2 e 3 — Operacional e Tarefas (Executados em paralelo se possível, ou otimizados)
+    // Agentes 2 e 3 — Operacional e Tarefas
     const runOperAndTasks = (async () => {
       try {
         const client = getProviderClient(agOper.provider);
         const modelId = agOper.model || defaultModelFor(agOper.provider);
         const realModel = resolveRealModelId(agOper.provider, modelId);
-        const fallbackRules = `
-MAPA DE FALLBACK OBRIGATÓRIO (se a ficha de responsabilidades não for suficiente):
-1. Tráfego/Campanhas/Performance (revisar, ajustar, orçamento, leads, Meta/Google Ads): Executor=Greice, Supervisor=Robson. Categoria: Tráfego.
-2. Relatórios/Saldos/Acessos (enviar relatório, atualizar saldo, recarga, estrutura Google/FB): Executor=Dalton, Supervisor=Robson. Categoria: Relatórios ou Saldos.
-3. CRM/IA/Automação/Técnico (configurar CRM, pixel, UTM, integração, erro técnico): Executor=Erick, Supervisor=Robson. Categoria: CRM, IA / Automação ou Suporte Técnico.
-4. Landing Page/Site (criar/ajustar LP, texto/imagem na página, layout web): Executor=Bruno, Supervisor=Robson. Categoria: Web / Landing Pages.
-5. Design/Criativos Estáticos (arte, post, carrossel, imagem de anúncio): Executor=Lorenzo, Supervisor=Robson. Categoria: Design.
-6. Vídeo/Edição (reels, cortes, legenda, vídeo com IA): Executor=Bianca, Supervisor=Robson. Categoria: Vídeo.
-7. Social Media (agendar/publicar postagem pronta): Executor=Pablo, Supervisor=Robson. Categoria: Social Media.
-8. Comercial (agendar reunião comercial, follow-up, qualificar lead): Executor=Thauana/Flor, Supervisor=Tales. Categoria: Comercial.
-9. Estratégia/Performance/Retenção (reunião estratégica, análise de funil, cliente insatisfeito): Executor=Tales, Supervisor=Cristiano. Categoria: Estratégia ou Reuniões de Performance.
-10. Financeiro/Administrativo/Decisão Crítica: Executor=Cristiano, Supervisor=Cristiano. Categoria: Financeiro ou Administrativo.
-11. Gestão de Projetos (delegar, cobrar, organizar): Executor/Supervisor=Robson. Categoria: Gestão de Projetos.
-`;
-
-        const sysBase = [
-          agOper.prompt,
+        
+        const contextBase = [
           agOper.contexto_adicional,
-          fallbackRules,
           agOper.regras_categorizacao ? `Regras de categorização:\n${agOper.regras_categorizacao}` : null,
           agOper.regras_responsaveis ? `Regras de responsáveis:\n${agOper.regras_responsaveis}` : null,
           equipeContext ? `BASE DE RESPONSABILIDADES (FONTE PRINCIPAL - USE OS IDs EXATOS):\n${equipeContext}` : null,
         ].filter(Boolean).join("\n\n");
 
-        // Executa resumo operacional e extração de tarefas em paralelo para ganhar tempo
+        const sysOper = [promptOperFinal, contextBase].filter(Boolean).join("\n\n");
+        const sysTarefas = [promptTarefasFinal, contextBase].filter(Boolean).join("\n\n");
+
+        // Executa resumo operacional e extração de tarefas em paralelo
         const [resumoResult, tarefasResult] = await Promise.allSettled([
           generateText({
             model: client(realModel),
-            system: sysBase,
+            system: sysOper,
             temperature: Number(agOper.temperatura ?? 0.3),
-            prompt: `Produza um briefing operacional detalhado da reunião abaixo. Liste decisões, contexto, demandas, riscos e próximos passos. Use bullets ricos em contexto técnico.\n\nReunião: ${reuniao.titulo}\n\nTranscrição:\n${transcricao}`,
+            prompt: `Transcrição completa da reunião "${reuniao.titulo}":\n\n${transcricao}\n\nLembre-se: gere o briefing operacional completo e detalhado conforme as instruções do prompt de sistema.`,
           }),
           generateText({
             model: client(realModel),
-            system: sysBase,
-            temperature: Number(agOper.temperatura ?? 0.3),
-            prompt: `Extraia as tarefas operacionais desta reunião. Cada tarefa deve ser detalhada (não genérica), com contexto rico na descrição. Sugira responsável apenas se houver match claro com a equipe disponível.\n\nReunião: ${reuniao.titulo}\n\nTranscrição:\n${transcricao}`,
+            system: sysTarefas,
+            temperature: Number(agOper.temperatura ?? 0.2),
+            prompt: `Extraia as tarefas operacionais detalhadas da reunião "${reuniao.titulo}".\n\nTranscrição:\n${transcricao}`,
             experimental_output: Output.object({ schema: TarefasSchema }),
           })
         ]);
