@@ -14,11 +14,22 @@ export function DelegationSettingsManager() {
   const { responsaveis } = useCRM();
   const { config, loadConfig, updateConfig } = useDelegations();
   const [loading, setLoading] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
   
   const [authorizedIds, setAuthorizedIds] = useState<string[]>([]);
   const [prazoPadrao, setPrazoPadrao] = useState(1);
   const [tiposAuto, setTiposAuto] = useState<string[]>([]);
   const [responsavelPadrao, setResponsavelPadrao] = useState<string>("");
+
+  useEffect(() => {
+    const init = async () => {
+      if (!config) {
+        await loadConfig();
+      }
+      setInitLoading(false);
+    };
+    init();
+  }, []);
 
   useEffect(() => {
     if (config) {
@@ -52,11 +63,21 @@ export function DelegationSettingsManager() {
     );
   };
 
-  if (!config) {
+  if (initLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center text-muted-foreground text-sm">
+          Nenhuma configuração de delegação encontrada.
+        </CardContent>
+      </Card>
     );
   }
 
