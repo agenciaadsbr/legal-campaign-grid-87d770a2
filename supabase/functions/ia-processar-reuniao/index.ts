@@ -55,12 +55,31 @@ Deno.serve(async (req) => {
     const agOper = (agentes ?? []).find((a: any) => a.tipo === "operacional");
     if (!agCliente || !agOper) return jsonResponse({ error: "Configure ambos agentes em Configurações → IA → Agentes" }, 400);
 
-    const { data: equipe } = await supa.from("responsabilidades_equipe").select("profile_id, cargo, areas, skills, setores");
+    const { data: equipe } = await supa.from("responsabilidades_equipe").select(`
+      profile_id, cargo, demandas_ia, palavras_chave_ia, quando_acionar, quando_nao_acionar, 
+      tipos_participacao, setores_compativeis, regras_atribuicao, supervisor_padrao_id,
+      prioridade_padrao, prazo_padrao_sugerido, entregaveis_esperados, checklist_padrao
+    `);
     const { data: profiles } = await supa.from("profiles").select("id, nome, email, cargo");
+    
     const equipeContext = (equipe ?? []).map((e: any) => {
       const p = (profiles ?? []).find((x: any) => x.id === e.profile_id);
-      return `- ${p?.nome ?? p?.email ?? e.profile_id} (id=${e.profile_id}) | cargo=${e.cargo ?? p?.cargo ?? ""} | áreas=${(e.areas ?? []).join(",")} | skills=${(e.skills ?? []).join(",")} | setores=${(e.setores ?? []).join(",")} | demandas_ia=${e.demandas_ia || ""} | palavras_chave_ia=${e.palavras_chave_ia || ""} | quando_acionar=${e.quando_acionar || ""}`;
-    }).join("\n");
+      return [
+        `- USUÁRIO: ${p?.nome ?? p?.email ?? e.profile_id} (id=${e.profile_id})`,
+        `  CARGO: ${e.cargo ?? p?.cargo ?? "N/A"}`,
+        `  DEMANDAS IA: ${e.demandas_ia || "N/A"}`,
+        `  PALAVRAS-CHAVE: ${e.palavras_chave_ia || "N/A"}`,
+        `  QUANDO ACIONAR: ${e.quando_acionar || "N/A"}`,
+        `  QUANDO NÃO ACIONAR: ${e.quando_nao_acionar || "N/A"}`,
+        `  SETORES COMPATÍVEIS: ${(e.setores_compativeis ?? []).join(", ")}`,
+        `  TIPO PARTICIPAÇÃO: ${(e.tipos_participacao ?? []).join(", ")}`,
+        `  SUPERVISOR PADRÃO ID: ${e.supervisor_padrao_id || "N/A"}`,
+        `  PRIORIDADE PADRÃO: ${e.prioridade_padrao || "N/A"}`,
+        `  PRAZO PADRÃO: ${e.prazo_padrao_sugerido || "N/A"}`,
+        `  ENTREGÁVEL: ${e.entregaveis_esperados || "N/A"}`,
+        `  CHECKLIST: ${e.checklist_padrao || "N/A"}`
+      ].join("\n");
+    }).join("\n\n");
 
     const startTime = Date.now();
     const status: any = { cliente: null, operacional: null, tarefas: null };
