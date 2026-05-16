@@ -895,8 +895,10 @@ export type Database = {
       }
       demandas: {
         Row: {
+          apoio: string | null
           aprovado_por: string | null
           categoria: Database["public"]["Enums"]["demanda_categoria"]
+          checklist: string | null
           cliente_id: string
           created_at: string
           criado_por: string | null
@@ -904,7 +906,9 @@ export type Database = {
           data_inicio: string | null
           data_limite: string | null
           descricao: string | null
+          entregavel_esperado: string | null
           id: string
+          justificativa_atribuicao: string | null
           link_drive: string | null
           link_meister: string | null
           marcado_ja_possui: boolean
@@ -917,13 +921,16 @@ export type Database = {
           responsavel_id: string | null
           status: Database["public"]["Enums"]["demanda_status"]
           subtipo: string | null
+          supervisor_id: string | null
           template_id: string | null
           titulo: string
           updated_at: string
         }
         Insert: {
+          apoio?: string | null
           aprovado_por?: string | null
           categoria?: Database["public"]["Enums"]["demanda_categoria"]
+          checklist?: string | null
           cliente_id: string
           created_at?: string
           criado_por?: string | null
@@ -931,7 +938,9 @@ export type Database = {
           data_inicio?: string | null
           data_limite?: string | null
           descricao?: string | null
+          entregavel_esperado?: string | null
           id?: string
+          justificativa_atribuicao?: string | null
           link_drive?: string | null
           link_meister?: string | null
           marcado_ja_possui?: boolean
@@ -944,13 +953,16 @@ export type Database = {
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
           subtipo?: string | null
+          supervisor_id?: string | null
           template_id?: string | null
           titulo: string
           updated_at?: string
         }
         Update: {
+          apoio?: string | null
           aprovado_por?: string | null
           categoria?: Database["public"]["Enums"]["demanda_categoria"]
+          checklist?: string | null
           cliente_id?: string
           created_at?: string
           criado_por?: string | null
@@ -958,7 +970,9 @@ export type Database = {
           data_inicio?: string | null
           data_limite?: string | null
           descricao?: string | null
+          entregavel_esperado?: string | null
           id?: string
+          justificativa_atribuicao?: string | null
           link_drive?: string | null
           link_meister?: string | null
           marcado_ja_possui?: boolean
@@ -971,11 +985,20 @@ export type Database = {
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
           subtipo?: string | null
+          supervisor_id?: string | null
           template_id?: string | null
           titulo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "demandas_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documentos_globais: {
         Row: {
@@ -1819,60 +1842,83 @@ export type Database = {
       }
       tarefas_sugeridas: {
         Row: {
+          apoio: string | null
           aprovado_por: string | null
           categoria: string | null
+          checklist: string | null
           cliente_id: string
           created_at: string
           criado_por: string | null
           demanda_id: string | null
           descricao: string | null
+          entregavel_esperado: string | null
           id: string
+          justificativa_atribuicao: string | null
           origem: string
           prazo_sugerido: string | null
           prioridade: string | null
           responsavel_sugerido_id: string | null
           reuniao_id: string | null
           status: string
+          supervisor_sugerido_id: string | null
           titulo: string
           updated_at: string
         }
         Insert: {
+          apoio?: string | null
           aprovado_por?: string | null
           categoria?: string | null
+          checklist?: string | null
           cliente_id: string
           created_at?: string
           criado_por?: string | null
           demanda_id?: string | null
           descricao?: string | null
+          entregavel_esperado?: string | null
           id?: string
+          justificativa_atribuicao?: string | null
           origem?: string
           prazo_sugerido?: string | null
           prioridade?: string | null
           responsavel_sugerido_id?: string | null
           reuniao_id?: string | null
           status?: string
+          supervisor_sugerido_id?: string | null
           titulo: string
           updated_at?: string
         }
         Update: {
+          apoio?: string | null
           aprovado_por?: string | null
           categoria?: string | null
+          checklist?: string | null
           cliente_id?: string
           created_at?: string
           criado_por?: string | null
           demanda_id?: string | null
           descricao?: string | null
+          entregavel_esperado?: string | null
           id?: string
+          justificativa_atribuicao?: string | null
           origem?: string
           prazo_sugerido?: string | null
           prioridade?: string | null
           responsavel_sugerido_id?: string | null
           reuniao_id?: string | null
           status?: string
+          supervisor_sugerido_id?: string | null
           titulo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tarefas_sugeridas_supervisor_sugerido_id_fkey"
+            columns: ["supervisor_sugerido_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_dependencies: {
         Row: {
