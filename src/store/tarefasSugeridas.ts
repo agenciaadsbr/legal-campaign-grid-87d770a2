@@ -13,6 +13,11 @@ export interface TarefaSugerida {
   descricao: string | null;
   categoria: string | null;
   responsavel_sugerido_id: string | null;
+  supervisor_sugerido_id: string | null;
+  apoio: string | null;
+  checklist: string | null;
+  entregavel_esperado: string | null;
+  justificativa_atribuicao: string | null;
   prioridade: string | null;
   prazo_sugerido: string | null;
   origem: string;
@@ -95,6 +100,11 @@ export const useTarefasSugeridas = create<State>((set, get) => ({
       prioridade: item.prioridade || "Media",
       data_limite: item.prazo_sugerido,
       responsaveis_ids: item.responsavel_sugerido_id ? [item.responsavel_sugerido_id] : [],
+      supervisor_id: item.supervisor_sugerido_id,
+      apoio: item.apoio,
+      checklist: item.checklist,
+      entregavel_esperado: item.entregavel_esperado,
+      justificativa_atribuicao: item.justificativa_atribuicao,
       status: "Planejamento",
       criado_por: user.user?.id ?? null,
       origem_reuniao_id: item.reuniao_id,

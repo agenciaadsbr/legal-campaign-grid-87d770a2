@@ -18,6 +18,11 @@ const TarefasSchema = z.object({
     prioridade: z.enum(["baixa", "media", "alta", "urgente"]).optional(),
     prazo_sugerido: z.string().optional(),
     responsavel_sugerido_id: z.string().uuid().optional().nullable(),
+    supervisor_sugerido_id: z.string().uuid().optional().nullable(),
+    apoio: z.string().optional(),
+    checklist: z.string().optional(),
+    entregavel_esperado: z.string().optional(),
+    justificativa_atribuicao: z.string().optional(),
   })).max(30),
 });
 
@@ -50,12 +55,31 @@ Deno.serve(async (req) => {
     const agOper = (agentes ?? []).find((a: any) => a.tipo === "operacional");
     if (!agCliente || !agOper) return jsonResponse({ error: "Configure ambos agentes em Configurações → IA → Agentes" }, 400);
 
-    const { data: equipe } = await supa.from("responsabilidades_equipe").select("profile_id, cargo, areas, skills, setores");
+    const { data: equipe } = await supa.from("responsabilidades_equipe").select(`
+      profile_id, cargo, demandas_ia, palavras_chave_ia, quando_acionar, quando_nao_acionar, 
+      tipos_participacao, setores_compativeis, regras_atribuicao, supervisor_padrao_id,
+      prioridade_padrao, prazo_padrao_sugerido, entregaveis_esperados, checklist_padrao
+    `);
     const { data: profiles } = await supa.from("profiles").select("id, nome, email, cargo");
+    
     const equipeContext = (equipe ?? []).map((e: any) => {
       const p = (profiles ?? []).find((x: any) => x.id === e.profile_id);
-      return `- ${p?.nome ?? p?.email ?? e.profile_id} (id=${e.profile_id}) | cargo=${e.cargo ?? p?.cargo ?? ""} | áreas=${(e.areas ?? []).join(",")} | skills=${(e.skills ?? []).join(",")} | setores=${(e.setores ?? []).join(",")} | demandas_ia=${e.demandas_ia || ""} | palavras_chave_ia=${e.palavras_chave_ia || ""} | quando_acionar=${e.quando_acionar || ""}`;
-    }).join("\n");
+      return [
+        `- USUÁRIO: ${p?.nome ?? p?.email ?? e.profile_id} (id=${e.profile_id})`,
+        `  CARGO: ${e.cargo ?? p?.cargo ?? "N/A"}`,
+        `  DEMANDAS IA: ${e.demandas_ia || "N/A"}`,
+        `  PALAVRAS-CHAVE: ${e.palavras_chave_ia || "N/A"}`,
+        `  QUANDO ACIONAR: ${e.quando_acionar || "N/A"}`,
+        `  QUANDO NÃO ACIONAR: ${e.quando_nao_acionar || "N/A"}`,
+        `  SETORES COMPATÍVEIS: ${(e.setores_compativeis ?? []).join(", ")}`,
+        `  TIPO PARTICIPAÇÃO: ${(e.tipos_participacao ?? []).join(", ")}`,
+        `  SUPERVISOR PADRÃO ID: ${e.supervisor_padrao_id || "N/A"}`,
+        `  PRIORIDADE PADRÃO: ${e.prioridade_padrao || "N/A"}`,
+        `  PRAZO PADRÃO: ${e.prazo_padrao_sugerido || "N/A"}`,
+        `  ENTREGÁVEL: ${e.entregaveis_esperados || "N/A"}`,
+        `  CHECKLIST: ${e.checklist_padrao || "N/A"}`
+      ].join("\n");
+    }).join("\n\n");
 
     const startTime = Date.now();
     const status: any = { cliente: null, operacional: null, tarefas: null };
@@ -98,12 +122,28 @@ Deno.serve(async (req) => {
         const client = getProviderClient(agOper.provider);
         const modelId = agOper.model || defaultModelFor(agOper.provider);
         const realModel = resolveRealModelId(agOper.provider, modelId);
+        const fallbackRules = `
+MAPA DE FALLBACK OBRIGATÓRIO (se a ficha de responsabilidades não for suficiente):
+1. Tráfego/Campanhas/Performance (revisar, ajustar, orçamento, leads, Meta/Google Ads): Executor=Greice, Supervisor=Robson. Categoria: Tráfego.
+2. Relatórios/Saldos/Acessos (enviar relatório, atualizar saldo, recarga, estrutura Google/FB): Executor=Dalton, Supervisor=Robson. Categoria: Relatórios ou Saldos.
+3. CRM/IA/Automação/Técnico (configurar CRM, pixel, UTM, integração, erro técnico): Executor=Erick, Supervisor=Robson. Categoria: CRM, IA / Automação ou Suporte Técnico.
+4. Landing Page/Site (criar/ajustar LP, texto/imagem na página, layout web): Executor=Bruno, Supervisor=Robson. Categoria: Web / Landing Pages.
+5. Design/Criativos Estáticos (arte, post, carrossel, imagem de anúncio): Executor=Lorenzo, Supervisor=Robson. Categoria: Design.
+6. Vídeo/Edição (reels, cortes, legenda, vídeo com IA): Executor=Bianca, Supervisor=Robson. Categoria: Vídeo.
+7. Social Media (agendar/publicar postagem pronta): Executor=Pablo, Supervisor=Robson. Categoria: Social Media.
+8. Comercial (agendar reunião comercial, follow-up, qualificar lead): Executor=Thauana/Flor, Supervisor=Tales. Categoria: Comercial.
+9. Estratégia/Performance/Retenção (reunião estratégica, análise de funil, cliente insatisfeito): Executor=Tales, Supervisor=Cristiano. Categoria: Estratégia ou Reuniões de Performance.
+10. Financeiro/Administrativo/Decisão Crítica: Executor=Cristiano, Supervisor=Cristiano. Categoria: Financeiro ou Administrativo.
+11. Gestão de Projetos (delegar, cobrar, organizar): Executor/Supervisor=Robson. Categoria: Gestão de Projetos.
+`;
+
         const sysBase = [
           agOper.prompt,
           agOper.contexto_adicional,
+          fallbackRules,
           agOper.regras_categorizacao ? `Regras de categorização:\n${agOper.regras_categorizacao}` : null,
           agOper.regras_responsaveis ? `Regras de responsáveis:\n${agOper.regras_responsaveis}` : null,
-          equipeContext ? `Equipe disponível (use o id exato em responsavel_sugerido_id):\n${equipeContext}` : null,
+          equipeContext ? `BASE DE RESPONSABILIDADES (FONTE PRINCIPAL - USE OS IDs EXATOS):\n${equipeContext}` : null,
         ].filter(Boolean).join("\n\n");
 
         // Executa resumo operacional e extração de tarefas em paralelo para ganhar tempo
@@ -178,6 +218,11 @@ Deno.serve(async (req) => {
               prioridade: t.prioridade ?? null,
               prazo_sugerido: t.prazo_sugerido ?? null,
               responsavel_sugerido_id: t.responsavel_sugerido_id && validProfileIds.has(t.responsavel_sugerido_id) ? t.responsavel_sugerido_id : null,
+              supervisor_sugerido_id: t.supervisor_sugerido_id && validProfileIds.has(t.supervisor_sugerido_id) ? t.supervisor_sugerido_id : null,
+              apoio: t.apoio ?? null,
+              checklist: t.checklist ?? null,
+              entregavel_esperado: t.entregavel_esperado ?? null,
+              justificativa_atribuicao: t.justificativa_atribuicao ?? null,
               origem: "ia_reuniao",
               status: "aguardando_aprovacao",
               criado_por: userData.user.id,
