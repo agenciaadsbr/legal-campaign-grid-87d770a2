@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       model: client(realModel),
       system: systemPrompt,
       maxTokens: 8000,
-      prompt: `Extraia as tarefas desta reunião:\n\n${transcricao}`,
+      prompt: `Extraia TODAS as tarefas acionáveis desta reunião e retorne em formato JSON conforme o schema. Não limite a quantidade de tarefas — inclua todas as identificadas.\n\nTranscrição/Resumo:\n${transcricao}`,
       experimental_output: Output.object({ schema: Schema }),
     });
 
