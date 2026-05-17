@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { generateText, Output } from "npm:ai";
+import { generateText } from "npm:ai";
 import { z } from "npm:zod";
 import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId, estimateCost } from "../_shared/ai-gateway.ts";
 
@@ -25,6 +25,21 @@ const Schema = z.object({
 const PRIORIDADES_VALIDAS = new Set(["baixa", "media", "alta", "urgente"]);
 const isUuid = (v: unknown): v is string =>
   typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+function parseJsonObject(text: string): unknown {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
+    const arrayStart = cleaned.indexOf("[");
+    const arrayEnd = cleaned.lastIndexOf("]");
+    if (arrayStart >= 0 && arrayEnd > arrayStart) return { tarefas: JSON.parse(cleaned.slice(arrayStart, arrayEnd + 1)) };
+    throw new Error("A IA não retornou um JSON válido de tarefas.");
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -63,12 +78,35 @@ Deno.serve(async (req) => {
     const result = await generateText({
       model: client(realModel),
       system: systemPrompt,
-      maxTokens: 8000,
-      prompt: `Extraia TODAS as tarefas acionáveis desta reunião e retorne em formato JSON conforme o schema. Não limite a quantidade de tarefas — inclua todas as identificadas.\n\nTranscrição/Resumo:\n${transcricao}`,
-      experimental_output: Output.object({ schema: Schema }),
+      maxOutputTokens: 8000,
+      prompt: `Extraia TODAS as tarefas acionáveis desta reunião e responda SOMENTE com JSON válido, sem markdown, sem comentários e sem texto fora do JSON.
+
+O JSON deve seguir exatamente este formato:
+{
+  "tarefas": [
+    {
+      "titulo": "título curto da tarefa",
+      "descricao": "descrição objetiva ou null",
+      "categoria": "IAAtendimento, Trafego, Video, Personalizado, Urgencia, LP ou null",
+      "prioridade": "baixa, media, alta, urgente ou null",
+      "prazo_sugerido": "YYYY-MM-DD ou null",
+      "responsavel_sugerido_id": null,
+      "supervisor_sugerido_id": null,
+      "apoio": "apoio necessário ou null",
+      "checklist": "checklist textual ou null",
+      "entregavel_esperado": "entregável esperado ou null",
+      "justificativa_atribuicao": "justificativa ou null"
+    }
+  ]
+}
+
+Regras: mantenha a chave "tarefas" sempre presente; se não houver tarefas, use "tarefas": []; use null quando não souber um campo; não invente UUIDs; não limite a quantidade de tarefas.
+
+Transcrição/Resumo:
+${transcricao}`,
     });
 
-    const parsed = (result as any).experimental_output as z.infer<typeof Schema> | undefined;
+    const parsed = Schema.parse(parseJsonObject(result.text)) as z.infer<typeof Schema>;
     const tarefas = parsed?.tarefas ?? [];
 
     const tokensIn = result.usage?.inputTokens ?? 0;
