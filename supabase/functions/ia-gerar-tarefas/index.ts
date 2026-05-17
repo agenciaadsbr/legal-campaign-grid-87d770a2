@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     const result = await generateText({
       model: client(realModel),
       system: systemPrompt,
-      maxTokens: 8000,
+      maxOutputTokens: 8000,
       prompt: `Extraia TODAS as tarefas acionáveis desta reunião e responda SOMENTE com JSON válido, sem markdown, sem comentários e sem texto fora do JSON.
 
 O JSON deve seguir exatamente este formato:
