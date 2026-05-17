@@ -1,0 +1,1 @@
+UPDATE ia_config SET model = 'openai/gpt-4o-mini' WHERE ativo = true AND provider = 'gpt';
