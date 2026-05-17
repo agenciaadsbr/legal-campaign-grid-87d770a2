@@ -1,0 +1,1 @@
+UPDATE ia_config SET ativo = true WHERE provider = 'gpt' AND id = (SELECT id FROM ia_config WHERE provider = 'gpt' ORDER BY updated_at DESC LIMIT 1);
