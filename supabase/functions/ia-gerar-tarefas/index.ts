@@ -8,19 +8,23 @@ const DEFAULT_PROMPT =
 
 const Schema = z.object({
   tarefas: z.array(z.object({
-    titulo: z.string().min(3).max(200),
-    descricao: z.string().max(2000).optional(),
-    categoria: z.string().optional(),
-    prioridade: z.enum(["baixa", "media", "alta", "urgente"]).optional(),
-    prazo_sugerido: z.string().optional(), // ISO date
-    responsavel_sugerido_id: z.string().uuid().optional().nullable(),
-    supervisor_sugerido_id: z.string().uuid().optional().nullable(),
-    apoio: z.string().optional(),
-    checklist: z.string().optional(),
-    entregavel_esperado: z.string().optional(),
-    justificativa_atribuicao: z.string().optional(),
-  })).max(100),
+    titulo: z.string().min(1).max(500),
+    descricao: z.string().optional().nullable(),
+    categoria: z.string().optional().nullable(),
+    prioridade: z.string().optional().nullable(),
+    prazo_sugerido: z.string().optional().nullable(),
+    responsavel_sugerido_id: z.string().optional().nullable(),
+    supervisor_sugerido_id: z.string().optional().nullable(),
+    apoio: z.string().optional().nullable(),
+    checklist: z.string().optional().nullable(),
+    entregavel_esperado: z.string().optional().nullable(),
+    justificativa_atribuicao: z.string().optional().nullable(),
+  })),
 });
+
+const PRIORIDADES_VALIDAS = new Set(["baixa", "media", "alta", "urgente"]);
+const isUuid = (v: unknown): v is string =>
+  typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -79,10 +83,10 @@ Deno.serve(async (req) => {
         titulo: t.titulo,
         descricao: t.descricao ?? null,
         categoria: t.categoria ?? null,
-        prioridade: t.prioridade ?? null,
-        prazo_sugerido: t.prazo_sugerido ?? null,
-        responsavel_sugerido_id: t.responsavel_sugerido_id ?? null,
-        supervisor_sugerido_id: t.supervisor_sugerido_id ?? null,
+        prioridade: PRIORIDADES_VALIDAS.has(String(t.prioridade ?? "").toLowerCase()) ? String(t.prioridade).toLowerCase() : null,
+        prazo_sugerido: t.prazo_sugerido && /^\d{4}-\d{2}-\d{2}/.test(t.prazo_sugerido) ? t.prazo_sugerido : null,
+        responsavel_sugerido_id: isUuid(t.responsavel_sugerido_id) ? t.responsavel_sugerido_id : null,
+        supervisor_sugerido_id: isUuid(t.supervisor_sugerido_id) ? t.supervisor_sugerido_id : null,
         apoio: t.apoio ?? null,
         checklist: t.checklist ?? null,
         entregavel_esperado: t.entregavel_esperado ?? null,
