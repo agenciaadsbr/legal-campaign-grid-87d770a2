@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { generateText, Output } from "npm:ai";
+import { generateText } from "npm:ai";
 import { z } from "npm:zod";
 import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId, estimateCost } from "../_shared/ai-gateway.ts";
 
@@ -25,6 +25,21 @@ const Schema = z.object({
 const PRIORIDADES_VALIDAS = new Set(["baixa", "media", "alta", "urgente"]);
 const isUuid = (v: unknown): v is string =>
   typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+function parseJsonObject(text: string): unknown {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
+    const arrayStart = cleaned.indexOf("[");
+    const arrayEnd = cleaned.lastIndexOf("]");
+    if (arrayStart >= 0 && arrayEnd > arrayStart) return { tarefas: JSON.parse(cleaned.slice(arrayStart, arrayEnd + 1)) };
+    throw new Error("A IA não retornou um JSON válido de tarefas.");
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
