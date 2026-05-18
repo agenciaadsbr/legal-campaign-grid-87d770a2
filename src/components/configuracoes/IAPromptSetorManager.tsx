@@ -47,7 +47,7 @@ export function IAPromptSetorManager() {
             <PromptSetorRow 
               key={setor} 
               setor={setor} 
-              label={CATEGORIA_LABEL[setor]} 
+              label={LABEL_SETOR[setor] ?? setor} 
               prompt={prompt} 
               onSave={upsertSetorPrompt} 
             />
