@@ -258,7 +258,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
     id: post.id,
     cliente_id: card.cliente_id,
     titulo: card.titulo_card,
-    categoria: "Personalizado",
+    categoria: "Posts",
     subtipo: card.formato || null,
     prioridade: prioridadeAtual,
     descricao: card.descricao || "",
