@@ -483,10 +483,12 @@ export const useCRM = create<State>()((set, get) => ({
   loaded: false,
   heavyDataLoading: false,
   heavyDataLoaded: false,
+  crmError: null,
+  lastLoadAttemptAt: null,
 
   _loadAll: async () => {
     if (get().loading) return;
-    set({ loading: true });
+    set({ loading: true, crmError: null, lastLoadAttemptAt: new Date().toISOString() });
 
     // Timeout/fallback por query individual — não deixar uma tabela lenta travar as outras.
     const safe = async <T,>(
