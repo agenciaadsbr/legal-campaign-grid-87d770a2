@@ -26,7 +26,7 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X, RefreshCw } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -394,7 +394,7 @@ function Coluna({
 export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = {}) {
   const { clienteId } = useParams();
   const navigate = useNavigate();
-  const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho, updateCard } = useCRM();
+  const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho, updateCard, deleteCard } = useCRM();
   const { canWrite } = useAuth();
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -731,6 +731,22 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                 setSelectionMode(false);
               }}
             />
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-9 gap-1.5"
+              disabled={selectedIds.size === 0}
+              onClick={async () => {
+                if (!window.confirm(`Deseja excluir ${selectedIds.size} post(s) selecionado(s)?`)) return;
+                const ids = Array.from(selectedIds);
+                await Promise.all(ids.map(id => deleteCard(id)));
+                setSelectedIds(new Set());
+                setSelectionMode(false);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir selecionados
+            </Button>
             <Button
               size="sm"
               variant="ghost"
