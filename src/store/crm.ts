@@ -459,6 +459,33 @@ function mapCustomField(row: any): CustomField {
 // ===================== Store =====================
 let realtimeStarted = false;
 let _reloadTimer: ReturnType<typeof setTimeout> | null = null;
+let _loadInFlight = false;
+
+const SUPABASE_QUERY_TIMEOUT_MS = 8000;
+
+async function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = SUPABASE_QUERY_TIMEOUT_MS): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`Tempo esgotado ao carregar ${label}`)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function safeQuery<T extends { data: any; error: any }>(promise: PromiseLike<T>, label: string): Promise<T> {
+  try {
+    const result = await withTimeout(Promise.resolve(promise), label);
+    if (result.error) console.warn(`[CRM] Falha ao carregar ${label}:`, result.error.message ?? result.error);
+    return result;
+  } catch (error) {
+    console.warn(`[CRM] ${label} ignorado para não travar o sistema:`, error);
+    return { data: null, error } as T;
+  }
+}
 
 export const useCRM = create<State>()((set, get) => ({
   responsaveis: [],
@@ -481,7 +508,14 @@ export const useCRM = create<State>()((set, get) => ({
   heavyDataLoaded: false,
 
   _loadAll: async () => {
-    if (get().loading) return;
+    if (_loadInFlight) return;
+    _loadInFlight = true;
+    const unlockTimer = setTimeout(() => {
+      if (useCRM.getState().loading) {
+        console.warn("[CRM] Liberando interface enquanto os dados continuam carregando em segundo plano.");
+        useCRM.setState({ loading: false, loaded: true });
+      }
+    }, 3000);
     set({ loading: true });
 
     try {
@@ -498,16 +532,16 @@ export const useCRM = create<State>()((set, get) => ({
         profilesRes,
         customFieldsRes,
       ] = await Promise.all([
-        supabase.from("responsaveis").select("*").order("nome"),
-        supabase.from("clientes").select("*").order("created_at", { ascending: false }),
-        supabase.from("contratos").select("*"),
-        supabase.from("colunas_cliente").select("*").order("ordem"),
-        supabase.from("modelos_colunas").select("*").order("created_at"),
-        supabase.from("status_options").select("*").order("ordem", { ascending: true }),
-        supabase.from("nichos").select("*").order("label"),
-        supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
-        supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
-        supabase.from("custom_fields").select("*").order("ordem"),
+        safeQuery(supabase.from("responsaveis").select("*").order("nome"), "responsáveis"),
+        safeQuery(supabase.from("clientes").select("*").order("created_at", { ascending: false }), "clientes"),
+        safeQuery(supabase.from("contratos").select("*"), "contratos"),
+        safeQuery(supabase.from("colunas_cliente").select("*").order("ordem"), "colunas"),
+        safeQuery(supabase.from("modelos_colunas").select("*").order("created_at"), "modelos de colunas"),
+        safeQuery(supabase.from("status_options").select("*").order("ordem", { ascending: true }), "status de clientes"),
+        safeQuery(supabase.from("nichos").select("*").order("label"), "nichos"),
+        safeQuery(supabase.from("status_post_options").select("*").order("ordem", { ascending: true }), "status de posts"),
+        safeQuery(supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"), "perfis"),
+        safeQuery(supabase.from("custom_fields").select("*").order("ordem"), "campos personalizados"),
       ]);
 
       const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
@@ -564,7 +598,7 @@ export const useCRM = create<State>()((set, get) => ({
           while (true) {
             let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
             if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
-            const { data, error } = await q;
+            const { data, error } = await safeQuery(q, table);
             if (error) return { data: all, error };
             const rows = data ?? [];
             all.push(...rows);
@@ -578,7 +612,7 @@ export const useCRM = create<State>()((set, get) => ({
           fetchAll("cards", { column: "posicao", ascending: true }),
           fetchAll("posts"),
           fetchAll("comentarios", { column: "created_at", ascending: true }),
-          supabase.from("alertas").select("*").order("created_at", { ascending: false }),
+          safeQuery(supabase.from("alertas").select("*").order("created_at", { ascending: false }), "alertas"),
         ]);
 
         const comentarios = (comentariosRes.data ?? []).map(mapComentario);
@@ -601,7 +635,11 @@ export const useCRM = create<State>()((set, get) => ({
 
     } catch (err) {
       console.error("Erro crítico em _loadAll:", err);
-      set({ loading: false, heavyDataLoading: false });
+      set({ loading: false, loaded: true, heavyDataLoading: false });
+    } finally {
+      _loadInFlight = false;
+      clearTimeout(unlockTimer);
+      if (get().loading) set({ loading: false, loaded: true });
     }
   },
 
