@@ -1585,11 +1585,36 @@ function startRealtime() {
  */
 export function useCRMBootstrap() {
   useEffect(() => {
-    const s = useCRM.getState();
-    if (!s.loaded && !s.loading) {
-      s._loadAll();
-    }
-    startRealtime();
+    let cancelled = false;
+
+    const tryStart = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (cancelled) return;
+        if (!data.session?.user) return; // sem sessão → não dispara queries que ficariam penduradas
+        const s = useCRM.getState();
+        if (!s.loaded && !s.loading) s._loadAll();
+        startRealtime();
+      } catch (err) {
+        console.warn("[crm] bootstrap abortado:", err);
+      }
+    };
+
+    tryStart();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+      if (event === "SIGNED_IN" && session?.user) {
+        const s = useCRM.getState();
+        if (!s.loaded && !s.loading) s._loadAll();
+        startRealtime();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 }
 
