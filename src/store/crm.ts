@@ -508,6 +508,12 @@ export const useCRM = create<State>()((set, get) => ({
 
   _loadAll: async () => {
     if (get().loading) return;
+    const unlockTimer = setTimeout(() => {
+      if (useCRM.getState().loading) {
+        console.warn("[CRM] Liberando interface enquanto os dados continuam carregando em segundo plano.");
+        useCRM.setState({ loading: false, loaded: true });
+      }
+    }, 3000);
     set({ loading: true });
 
     try {
@@ -627,7 +633,10 @@ export const useCRM = create<State>()((set, get) => ({
 
     } catch (err) {
       console.error("Erro crítico em _loadAll:", err);
-      set({ loading: false, heavyDataLoading: false });
+      set({ loading: false, loaded: true, heavyDataLoading: false });
+    } finally {
+      clearTimeout(unlockTimer);
+      if (get().loading) set({ loading: false, loaded: true });
     }
   },
 
