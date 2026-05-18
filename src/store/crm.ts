@@ -841,9 +841,19 @@ export const useCRM = create<State>()((set, get) => ({
     if (_reloadTimer) clearTimeout(_reloadTimer);
     _reloadTimer = setTimeout(() => {
       _reloadTimer = null;
+      const s = get();
+      // Evita reentrância: se já está carregando essencial ou pesado, re-agenda.
+      if (s.loading || s.heavyDataLoading) {
+        _reloadTimer = setTimeout(() => {
+          _reloadTimer = null;
+          void get()._loadAll();
+        }, 1200);
+        return;
+      }
       void get()._loadAll();
     }, 600);
   },
+
 
   addCliente: async (data) => {
     const { data: inserted, error } = await supabase
