@@ -590,7 +590,7 @@ export const useCRM = create<State>()((set, get) => ({
           while (true) {
             let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
             if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
-            const { data, error } = await q;
+            const { data, error } = await safeQuery(q, table);
             if (error) return { data: all, error };
             const rows = data ?? [];
             all.push(...rows);
@@ -604,7 +604,7 @@ export const useCRM = create<State>()((set, get) => ({
           fetchAll("cards", { column: "posicao", ascending: true }),
           fetchAll("posts"),
           fetchAll("comentarios", { column: "created_at", ascending: true }),
-          supabase.from("alertas").select("*").order("created_at", { ascending: false }),
+          safeQuery(supabase.from("alertas").select("*").order("created_at", { ascending: false }), "alertas"),
         ]);
 
         const comentarios = (comentariosRes.data ?? []).map(mapComentario);
