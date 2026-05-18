@@ -524,16 +524,16 @@ export const useCRM = create<State>()((set, get) => ({
         profilesRes,
         customFieldsRes,
       ] = await Promise.all([
-        supabase.from("responsaveis").select("*").order("nome"),
-        supabase.from("clientes").select("*").order("created_at", { ascending: false }),
-        supabase.from("contratos").select("*"),
-        supabase.from("colunas_cliente").select("*").order("ordem"),
-        supabase.from("modelos_colunas").select("*").order("created_at"),
-        supabase.from("status_options").select("*").order("ordem", { ascending: true }),
-        supabase.from("nichos").select("*").order("label"),
-        supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
-        supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
-        supabase.from("custom_fields").select("*").order("ordem"),
+        safeQuery(supabase.from("responsaveis").select("*").order("nome"), "responsáveis"),
+        safeQuery(supabase.from("clientes").select("*").order("created_at", { ascending: false }), "clientes"),
+        safeQuery(supabase.from("contratos").select("*"), "contratos"),
+        safeQuery(supabase.from("colunas_cliente").select("*").order("ordem"), "colunas"),
+        safeQuery(supabase.from("modelos_colunas").select("*").order("created_at"), "modelos de colunas"),
+        safeQuery(supabase.from("status_options").select("*").order("ordem", { ascending: true }), "status de clientes"),
+        safeQuery(supabase.from("nichos").select("*").order("label"), "nichos"),
+        safeQuery(supabase.from("status_post_options").select("*").order("ordem", { ascending: true }), "status de posts"),
+        safeQuery(supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"), "perfis"),
+        safeQuery(supabase.from("custom_fields").select("*").order("ordem"), "campos personalizados"),
       ]);
 
       const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
