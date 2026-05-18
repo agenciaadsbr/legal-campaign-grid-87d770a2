@@ -1306,15 +1306,7 @@ export type Database = {
           resposta?: string
           usuario_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "ia_tarefa_consultas_demanda_id_fkey"
-            columns: ["demanda_id"]
-            isOneToOne: false
-            referencedRelation: "demandas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       modelos_colunas: {
         Row: {
