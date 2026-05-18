@@ -614,16 +614,30 @@ export const useCRM = create<State>()((set, get) => ({
         return { data: all, error: null };
       };
 
-      const heavy = Promise.all([
-        fetchAll("cards", { column: "posicao", ascending: true }),
-        fetchAll("posts"),
-        fetchAll("comentarios", { column: "created_at", ascending: true }),
-        supabase.from("alertas").select("*").order("created_at", { ascending: false }),
-      ]);
+      const withTimeoutP = <T,>(p: Promise<T>, ms: number, fallback: T): Promise<T> =>
+        Promise.race([
+          p,
+          new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+        ]);
 
-      const [cardsRes, postsRes, comentariosRes, alertasRes] = await withTimeout(
-        heavy, 45000, "carregamento pesado do CRM",
+      const [cardsRes, postsRes, comentariosRes, alertasRes] = await withTimeoutP(
+        Promise.all([
+          fetchAll("cards", { column: "posicao", ascending: true }),
+          fetchAll("posts"),
+          fetchAll("comentarios", { column: "created_at", ascending: true }),
+          supabase.from("alertas").select("*").order("created_at", { ascending: false }).then(
+            (r) => ({ data: r.data ?? [], error: r.error }),
+          ),
+        ]),
+        45000,
+        [
+          { data: [], error: new Error("timeout") },
+          { data: [], error: new Error("timeout") },
+          { data: [], error: new Error("timeout") },
+          { data: [], error: new Error("timeout") },
+        ] as any,
       );
+
 
       const comentarios = (comentariosRes.data ?? []).map(mapComentario);
       const cards = (cardsRes.data ?? []).map(mapCard);
