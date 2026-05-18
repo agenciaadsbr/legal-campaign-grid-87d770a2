@@ -767,30 +767,70 @@ export const useCRM = create<State>()((set, get) => ({
           { data: [], error: new Error("timeout") },
         ] as any,
       );
+      // Detecta erro transitório por resultado de cada fetch (PGRST002/503/504/timeout/network).
+      const isTransientLite = (err: any) => {
+        if (!err) return false;
+        const code = String(err.code ?? "").toUpperCase();
+        const msg = String(err.message ?? err).toLowerCase();
+        return (
+          code === "PGRST002" ||
+          msg.includes("failed to fetch") ||
+          msg.includes("timeout") ||
+          msg.includes("network") ||
+          msg.includes("503") ||
+          msg.includes("504") ||
+          msg.includes("schema cache")
+        );
+      };
 
+      const cur = get();
+      const cardsTransient = cardsRes.error && isTransientLite(cardsRes.error) && cur.cards.length > 0;
+      const postsTransient = postsRes.error && isTransientLite(postsRes.error) && cur.posts.length > 0;
+      const comentariosTransient =
+        comentariosRes.error && isTransientLite(comentariosRes.error) && cur.comentarios.length > 0;
+      const alertasTransient =
+        alertasRes.error && isTransientLite(alertasRes.error) && cur.alertas.length > 0;
 
-      const comentarios = (comentariosRes.data ?? []).map(mapComentario);
-      const cards = (cardsRes.data ?? []).map(mapCard);
+      const comentarios = comentariosTransient ? cur.comentarios : (comentariosRes.data ?? []).map(mapComentario);
+      const cards = cardsTransient ? cur.cards : (cardsRes.data ?? []).map(mapCard);
+      const posts = postsTransient ? cur.posts : (postsRes.data ?? []).map(mapPost);
+      const alertas = alertasTransient ? cur.alertas : (alertasRes.data ?? []).map(mapAlerta);
 
-      // Re-mapeia clientes agora que temos os comentários
-      const clientesAtualizados = clientesRowsRef.map((r) =>
-        mapCliente(r, contratosRowsRef, comentarios, responsaveisRef, authoresRef),
-      );
+      // Re-mapeia clientes agora que temos os comentários (apenas se o ref de clientes está válido)
+      const clientesAtualizados =
+        clientesRowsRef.length > 0
+          ? clientesRowsRef.map((r) => mapCliente(r, contratosRowsRef, comentarios, responsaveisRef, authoresRef))
+          : cur.clientes;
+
+      // heavyDataLoaded só vira true se NÃO houve falha transitória pendente —
+      // assim o realtime/scheduleReload pode tentar novamente mais tarde.
+      const anyTransient = cardsTransient || postsTransient || comentariosTransient || alertasTransient
+        || (cardsRes.error && !cur.cards.length) || (postsRes.error && !cur.posts.length);
 
       set({
         cards,
-        posts: (postsRes.data ?? []).map(mapPost),
+        posts,
         comentarios,
-        alertas: (alertasRes.data ?? []).map(mapAlerta),
+        alertas,
         clientes: clientesAtualizados,
-        heavyDataLoaded: true,
+        heavyDataLoaded: !anyTransient,
       });
+
+      if (cardsRes.error || postsRes.error || comentariosRes.error || alertasRes.error) {
+        console.warn("[crm] carregamento pesado parcial/transitório:", {
+          cards: cardsRes.error?.message,
+          posts: postsRes.error?.message,
+          comentarios: comentariosRes.error?.message,
+          alertas: alertasRes.error?.message,
+        });
+      }
     } catch (err) {
       console.error("[crm] Falha no carregamento pesado:", err);
     } finally {
       set({ heavyDataLoading: false });
     }
   },
+
 
   /**
    * Agenda um reload completo com debounce de 600ms.
