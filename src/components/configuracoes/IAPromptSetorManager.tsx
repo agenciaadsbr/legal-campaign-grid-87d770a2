@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Save, HelpCircle } from "lucide-react";
 import { CATEGORIA_LABEL, DemandaCategoria } from "@/lib/demandas-categorias";
 
-const SETORES: DemandaCategoria[] = [
+const SETORES: string[] = [
+  "Posts",
   "EditorVideo",
   "TrafegoPago",
   "LandingPage",
@@ -14,8 +15,13 @@ const SETORES: DemandaCategoria[] = [
   "Personalizado",
   "Planejamento",
   "Operacional",
-  "Suporte"
+  "Suporte",
 ];
+
+const LABEL_SETOR: Record<string, string> = {
+  Posts: "Posts",
+  ...CATEGORIA_LABEL,
+};
 
 export function IAPromptSetorManager() {
   const { setorPrompts, loadSetorPrompts, upsertSetorPrompt, loaded } = useIAConsultas();
@@ -41,7 +47,7 @@ export function IAPromptSetorManager() {
             <PromptSetorRow 
               key={setor} 
               setor={setor} 
-              label={CATEGORIA_LABEL[setor]} 
+              label={LABEL_SETOR[setor] ?? setor} 
               prompt={prompt} 
               onSave={upsertSetorPrompt} 
             />

@@ -105,7 +105,20 @@ export const useIAConsultas = create<State>((set, get) => ({
       });
 
       if (error) {
-        toast.error("Erro na consulta de IA: " + error.message);
+        const msg = String(error.message || "").toLowerCase();
+        const status = (error as any).context?.status ?? (error as any).status;
+        if (status === 429 || msg.includes("rate") || msg.includes("limit")) {
+          toast.error("Limite de uso da IA atingido. Tente novamente em instantes.");
+        } else if (status === 402 || msg.includes("credit") || msg.includes("payment")) {
+          toast.error("Créditos da IA esgotados. Avise o administrador.");
+        } else {
+          toast.error("Não foi possível consultar a IA agora.");
+        }
+        return null;
+      }
+
+      if (data?.error) {
+        toast.error(`Erro na consulta de IA: ${data.error}`);
         return null;
       }
 
@@ -114,7 +127,7 @@ export const useIAConsultas = create<State>((set, get) => ({
       
       return data;
     } catch (err: any) {
-      toast.error("Falha ao consultar IA: " + err.message);
+      toast.error("Não foi possível consultar a IA agora.");
       return null;
     } finally {
       set({ loading: false });

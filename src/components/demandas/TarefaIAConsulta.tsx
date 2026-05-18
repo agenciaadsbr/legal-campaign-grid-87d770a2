@@ -10,8 +10,8 @@ import {
   Copy, 
   MessageSquarePlus,
   Clock,
-  ExternalLink,
-  Bot
+  Bot,
+  User as UserIcon
 } from "lucide-react";
 import { useIAConsultas } from "@/store/iaConsultas";
 import { useReunioes } from "@/store/reunioes";
@@ -28,11 +28,15 @@ interface Props {
   onAddComment?: (text: string) => void;
 }
 
+const RESPOSTA_LIMITE = 280;
+
 export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [pergunta, setPergunta] = useState("");
   const [resposta, setResposta] = useState<any>(null);
-  
+  const [ready, setReady] = useState(false);
+  const [expandido, setExpandido] = useState<Record<string, boolean>>({});
+
   const { 
     consultarIA, 
     loading, 
@@ -43,23 +47,41 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
   } = useIAConsultas();
   
   const { reunioes, load: loadReunioes } = useReunioes();
-  const { clientes } = useCRM();
+  const { clientes, authoresPorAuthId } = useCRM();
   const { user } = useAuth();
 
   useEffect(() => {
+    let cancelado = false;
     if (isOpen) {
-      loadConsultasByDemanda(demanda.id);
-      loadSetorPrompts();
-      loadReunioes();
+      setReady(false);
+      (async () => {
+        try {
+          await Promise.all([
+            loadSetorPrompts(),
+            loadReunioes(),
+            loadConsultasByDemanda(demanda.id),
+          ]);
+        } finally {
+          if (!cancelado) setReady(true);
+        }
+      })();
     }
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, demanda.id]);
 
   const handleConsultar = async () => {
-    if (!pergunta.trim() || loading) return;
+    if (!pergunta.trim() || loading || !ready) return;
 
     const cliente = clientes.find(c => c.id === demanda.cliente_id);
     const reunioesCliente = reunioes.filter(r => r.cliente_id === demanda.cliente_id);
     const promptSetor = setorPrompts.find(p => p.setor === demanda.categoria)?.prompt;
+
+    if (reunioesCliente.length === 0) {
+      toast.info("Este cliente ainda não tem reuniões cadastradas. A IA usará apenas o briefing.");
+    }
 
     const res = await consultarIA({
       demanda_id: demanda.id,
@@ -74,6 +96,7 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
       reunioes: reunioesCliente.map(r => ({
         titulo: r.titulo,
         data: r.data,
+        tipo: r.tipo,
         transcricao: r.transcricao,
         resumo_operacional: r.resumo_tarefas,
         resumo_cliente: r.resumo_cliente,
@@ -86,6 +109,7 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
       setResposta(res);
       setPergunta("");
     }
+    // Em caso de erro mantém a pergunta para o usuário tentar de novo
   };
 
   const handleCopy = () => {
@@ -99,6 +123,18 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
     onAddComment(`**Consulta IA:** ${resposta.resposta}`);
     toast.success("Resposta adicionada como comentário!");
   };
+
+  const nomeUsuario = (uid?: string | null) => {
+    if (!uid) return "Sistema";
+    return authoresPorAuthId?.[uid]?.nome || "Usuário";
+  };
+
+  const corConfianca = (n?: string | null) =>
+    n === "Alto"
+      ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/30"
+      : n === "Médio"
+      ? "text-amber-500 bg-amber-500/10 border-amber-500/30"
+      : "text-destructive bg-destructive/10 border-destructive/30";
 
   return (
     <div className="mt-2 border-t pt-2">
@@ -126,9 +162,10 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
               
               <div className="flex gap-2">
                 <Textarea
-                  placeholder="Digite aqui sua dúvida... (Ex: Qual foi o pedido exato do cliente?)"
+                  placeholder="Digite aqui sua dúvida... (Ex: Quais temas o cliente quer postar?)"
                   value={pergunta}
                   onChange={(e) => setPergunta(e.target.value)}
+                  disabled={!ready || loading}
                   className="text-xs min-h-[60px] resize-none bg-background"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -138,12 +175,15 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
                   }}
                 />
               </div>
-              
-              <div className="flex justify-end">
+
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">
+                  {!ready ? "Carregando reuniões do cliente…" : ""}
+                </span>
                 <Button 
                   size="sm" 
                   onClick={handleConsultar} 
-                  disabled={loading || !pergunta.trim()}
+                  disabled={loading || !ready || !pergunta.trim()}
                   className="h-8 gap-2"
                 >
                   {loading ? (
@@ -169,7 +209,7 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
                     </div>
                   </div>
                   
-                  <p className="text-xs leading-relaxed">{resposta.resposta}</p>
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{resposta.resposta}</p>
                   
                   {resposta.fontes?.length > 0 && (
                     <div className="pt-2 border-t mt-2">
@@ -186,12 +226,8 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
 
                   {resposta.nivel_confianca && (
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Nível de confiança:</span>
-                      <span className={cn(
-                        "text-[10px] font-bold",
-                        resposta.nivel_confianca === "Alto" ? "text-emerald-500" :
-                        resposta.nivel_confianca === "Médio" ? "text-amber-500" : "text-destructive"
-                      )}>
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Confiança:</span>
+                      <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded border", corConfianca(resposta.nivel_confianca))}>
                         {resposta.nivel_confianca}
                       </span>
                     </div>
@@ -201,20 +237,67 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
             </CardContent>
           </Card>
 
-          {/* Histórico Local */}
+          {/* Histórico */}
           {tarefaConsultas.length > 0 && (
             <div className="space-y-2">
               <span className="text-[10px] font-bold uppercase text-muted-foreground px-1">Histórico de consultas</span>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                {tarefaConsultas.map((c) => (
-                  <div key={c.id} className="p-2 rounded border bg-muted/20 text-[11px] space-y-1">
-                    <div className="flex justify-between items-center text-[9px] text-muted-foreground">
-                      <span className="font-medium italic">"{c.pergunta}"</span>
-                      <span>{new Date(c.created_at).toLocaleString('pt-BR')}</span>
+              <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                {tarefaConsultas.map((c) => {
+                  const longa = (c.resposta?.length || 0) > RESPOSTA_LIMITE;
+                  const aberto = !!expandido[c.id];
+                  const textoResposta = longa && !aberto
+                    ? c.resposta.slice(0, RESPOSTA_LIMITE) + "…"
+                    : c.resposta;
+                  return (
+                    <div key={c.id} className="p-2.5 rounded border bg-muted/20 text-[11px] space-y-1.5">
+                      <div className="space-y-0.5">
+                        <span className="text-[9px] font-bold uppercase text-muted-foreground">Pergunta</span>
+                        <p className="font-semibold text-foreground leading-snug">{c.pergunta}</p>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <span className="text-[9px] font-bold uppercase text-muted-foreground">Resposta</span>
+                        <p className="text-foreground/90 leading-snug whitespace-pre-wrap">{textoResposta}</p>
+                        {longa && (
+                          <button
+                            type="button"
+                            className="text-[10px] text-primary hover:underline"
+                            onClick={() => setExpandido((s) => ({ ...s, [c.id]: !aberto }))}
+                          >
+                            {aberto ? "Ver menos" : "Ver mais"}
+                          </button>
+                        )}
+                      </div>
+
+                      {Array.isArray(c.fontes) && c.fontes.length > 0 && (
+                        <div className="space-y-0.5">
+                          <span className="text-[9px] font-bold uppercase text-muted-foreground">Fontes</span>
+                          <div className="flex flex-wrap gap-1">
+                            {c.fontes.map((f: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[9px] py-0 h-4 bg-muted/50">
+                                {f}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-1 border-t border-border/50 text-[9px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <UserIcon className="h-2.5 w-2.5" />
+                          {nomeUsuario(c.usuario_id)}
+                          <span className="opacity-60">·</span>
+                          {new Date(c.created_at).toLocaleString('pt-BR')}
+                        </span>
+                        {c.nivel_confianca && (
+                          <span className={cn("font-bold px-1.5 py-0.5 rounded border", corConfianca(c.nivel_confianca))}>
+                            {c.nivel_confianca}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-muted-foreground leading-tight line-clamp-2">{c.resposta}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
