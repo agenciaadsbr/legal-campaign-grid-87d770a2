@@ -459,6 +459,7 @@ function mapCustomField(row: any): CustomField {
 // ===================== Store =====================
 let realtimeStarted = false;
 let _reloadTimer: ReturnType<typeof setTimeout> | null = null;
+let _loadInFlight = false;
 
 const SUPABASE_QUERY_TIMEOUT_MS = 8000;
 
@@ -507,7 +508,8 @@ export const useCRM = create<State>()((set, get) => ({
   heavyDataLoaded: false,
 
   _loadAll: async () => {
-    if (get().loading) return;
+    if (_loadInFlight) return;
+    _loadInFlight = true;
     const unlockTimer = setTimeout(() => {
       if (useCRM.getState().loading) {
         console.warn("[CRM] Liberando interface enquanto os dados continuam carregando em segundo plano.");
@@ -635,6 +637,7 @@ export const useCRM = create<State>()((set, get) => ({
       console.error("Erro crítico em _loadAll:", err);
       set({ loading: false, loaded: true, heavyDataLoading: false });
     } finally {
+      _loadInFlight = false;
       clearTimeout(unlockTimer);
       if (get().loading) set({ loading: false, loaded: true });
     }
