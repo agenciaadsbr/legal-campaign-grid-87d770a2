@@ -484,14 +484,32 @@ export const useCRM = create<State>()((set, get) => ({
     if (get().loading) return;
     set({ loading: true });
 
-    // Timeout de segurança: nunca deixar o overlay "Carregando CRM..." preso.
-    const withTimeout = <T,>(p: Promise<T>, ms: number, label: string): Promise<T> =>
-      Promise.race([
-        p,
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error(`Timeout em ${label} após ${ms}ms`)), ms),
-        ),
-      ]);
+    // Timeout/fallback por query individual — não deixar uma tabela lenta travar as outras.
+    const safe = async <T,>(
+      label: string,
+      run: () => PromiseLike<{ data: T[] | null; error: any }>,
+      ms = 15000,
+    ): Promise<{ data: T[]; error: any }> => {
+      try {
+        const res = await Promise.race([
+          Promise.resolve(run()),
+          new Promise<{ data: null; error: any }>((resolve) =>
+            setTimeout(
+              () => resolve({ data: null, error: new Error(`timeout ${ms}ms`) }),
+              ms,
+            ),
+          ),
+        ]);
+        if (res.error) {
+          console.warn(`[crm] erro ao carregar ${label}:`, res.error);
+          return { data: [], error: res.error };
+        }
+        return { data: (res.data as T[]) ?? [], error: null };
+      } catch (err) {
+        console.warn(`[crm] exceção ao carregar ${label}:`, err);
+        return { data: [], error: err };
+      }
+    };
 
     let clientesRowsRef: any[] = [];
     let contratosRowsRef: any[] = [];
@@ -499,20 +517,6 @@ export const useCRM = create<State>()((set, get) => ({
     let authoresRef: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
 
     try {
-      // 1. Carrega dados ESSENCIAIS primeiro para liberar a tela branca
-      const essentials = Promise.all([
-        supabase.from("responsaveis").select("*").order("nome"),
-        supabase.from("clientes").select("*").order("created_at", { ascending: false }),
-        supabase.from("contratos").select("*"),
-        supabase.from("colunas_cliente").select("*").order("ordem"),
-        supabase.from("modelos_colunas").select("*").order("created_at"),
-        supabase.from("status_options").select("*").order("ordem", { ascending: true }),
-        supabase.from("nichos").select("*").order("label"),
-        supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
-        supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
-        supabase.from("custom_fields").select("*").order("ordem"),
-      ]);
-
       const [
         responsaveisRes,
         clientesRes,
@@ -524,26 +528,27 @@ export const useCRM = create<State>()((set, get) => ({
         statusPostRes,
         profilesRes,
         customFieldsRes,
-      ] = await withTimeout(essentials, 20000, "carregamento essencial do CRM");
+      ] = await Promise.all([
+        safe<any>("responsaveis", () => supabase.from("responsaveis").select("*").order("nome")),
+        safe<any>("clientes", () => supabase.from("clientes").select("*").order("created_at", { ascending: false })),
+        safe<any>("contratos", () => supabase.from("contratos").select("*")),
+        safe<any>("colunas_cliente", () => supabase.from("colunas_cliente").select("*").order("ordem")),
+        safe<any>("modelos_colunas", () => supabase.from("modelos_colunas").select("*").order("created_at")),
+        safe<any>("status_options", () => supabase.from("status_options").select("*").order("ordem", { ascending: true })),
+        safe<any>("nichos", () => supabase.from("nichos").select("*").order("label")),
+        safe<any>("status_post_options", () => supabase.from("status_post_options").select("*").order("ordem", { ascending: true })),
+        safe<any>("profiles", () => supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id")),
+        safe<any>("custom_fields", () => supabase.from("custom_fields").select("*").order("ordem")),
+      ]);
 
-      // log de erros parciais sem travar
-      for (const [name, res] of [
-        ["responsaveis", responsaveisRes], ["clientes", clientesRes], ["contratos", contratosRes],
-        ["colunas_cliente", colunasRes], ["modelos_colunas", modelosRes], ["status_options", statusRes],
-        ["nichos", nichosRes], ["status_post_options", statusPostRes], ["profiles", profilesRes],
-        ["custom_fields", customFieldsRes],
-      ] as const) {
-        if ((res as any).error) console.warn(`[crm] erro ao carregar ${name}:`, (res as any).error);
-      }
-
-      const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
-      const contratos = (contratosRes.data ?? []).map(mapContrato);
+      const responsaveis = responsaveisRes.data.map(mapResponsavel);
+      const contratos = contratosRes.data.map(mapContrato);
       responsaveisRef = responsaveis;
-      clientesRowsRef = clientesRes.data ?? [];
-      contratosRowsRef = contratosRes.data ?? [];
+      clientesRowsRef = clientesRes.data;
+      contratosRowsRef = contratosRes.data;
 
       const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
-      for (const p of profilesRes.data ?? []) {
+      for (const p of profilesRes.data) {
         const resp = p.responsavel_id ? responsaveis.find((r) => r.id === p.responsavel_id) : undefined;
         authoresPorAuthId[p.id] = {
           nome: resp?.nome ?? p.nome ?? p.email ?? "Usuário",
@@ -553,7 +558,6 @@ export const useCRM = create<State>()((set, get) => ({
       }
       authoresRef = authoresPorAuthId;
 
-      // Mapeia clientes mesmo sem comentários e cards por enquanto
       const clientes = clientesRowsRef.map((r) =>
         mapCliente(r, contratosRowsRef, [], responsaveis, authoresPorAuthId),
       );
@@ -562,22 +566,25 @@ export const useCRM = create<State>()((set, get) => ({
         responsaveis,
         clientes,
         contratos,
-        colunasCliente: (colunasRes.data ?? []).map(mapColuna),
-        modelosColunas: (modelosRes.data ?? []).map(mapModelo),
-        statusOptions: (statusRes.data ?? []).map(mapStatusOpt),
-        nichos: (nichosRes.data ?? []).map(mapNicho),
+        colunasCliente: colunasRes.data.map(mapColuna),
+        modelosColunas: modelosRes.data.map(mapModelo),
+        statusOptions: statusRes.data.map(mapStatusOpt),
+        nichos: nichosRes.data.map(mapNicho),
         statusPostOptions: [
           { label: "Aguardando etapa anterior", cor: "#f59e0b" },
-          ...(statusPostRes.data ?? []).map(mapStatusOpt).filter(o => o.label !== "Aguardando etapa anterior")
+          ...statusPostRes.data.map(mapStatusOpt).filter((o) => o.label !== "Aguardando etapa anterior"),
         ],
         authoresPorAuthId,
-        customFields: (customFieldsRes.data ?? []).map(mapCustomField),
+        customFields: customFieldsRes.data.map(mapCustomField),
         loaded: true,
       });
+
+      if (clientesRes.error) {
+        toast.error("Não foi possível carregar os clientes. Verifique sua conexão.");
+      }
     } catch (err) {
       console.error("[crm] Falha no carregamento essencial:", err);
       toast.error("Falha ao carregar dados do CRM. Verifique sua conexão e tente recarregar.");
-      // marca loaded=true para destravar UI mostrando estado vazio em vez de overlay infinito
       set({ loaded: true });
     } finally {
       set({ loading: false });
@@ -607,16 +614,30 @@ export const useCRM = create<State>()((set, get) => ({
         return { data: all, error: null };
       };
 
-      const heavy = Promise.all([
-        fetchAll("cards", { column: "posicao", ascending: true }),
-        fetchAll("posts"),
-        fetchAll("comentarios", { column: "created_at", ascending: true }),
-        supabase.from("alertas").select("*").order("created_at", { ascending: false }),
-      ]);
+      const withTimeoutP = <T,>(p: Promise<T>, ms: number, fallback: T): Promise<T> =>
+        Promise.race([
+          p,
+          new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+        ]);
 
-      const [cardsRes, postsRes, comentariosRes, alertasRes] = await withTimeout(
-        heavy, 45000, "carregamento pesado do CRM",
+      const [cardsRes, postsRes, comentariosRes, alertasRes] = await withTimeoutP(
+        Promise.all([
+          fetchAll("cards", { column: "posicao", ascending: true }),
+          fetchAll("posts"),
+          fetchAll("comentarios", { column: "created_at", ascending: true }),
+          supabase.from("alertas").select("*").order("created_at", { ascending: false }).then(
+            (r) => ({ data: r.data ?? [], error: r.error }),
+          ),
+        ]),
+        45000,
+        [
+          { data: [], error: new Error("timeout") },
+          { data: [], error: new Error("timeout") },
+          { data: [], error: new Error("timeout") },
+          { data: [], error: new Error("timeout") },
+        ] as any,
       );
+
 
       const comentarios = (comentariosRes.data ?? []).map(mapComentario);
       const cards = (cardsRes.data ?? []).map(mapCard);
