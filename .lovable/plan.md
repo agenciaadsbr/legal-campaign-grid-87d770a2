@@ -1,60 +1,65 @@
-## Causa identificada
+## Diagnóstico
 
-A tela fica presa em "Carregando CRM..." por uma combinação de dois problemas, ambos confirmados pelos logs do console/rede:
+A tela não está mais presa por falta de `finally`, mas ainda aparece `Carregando CRM...` porque o carregamento essencial do CRM depende de 10 queries Supabase em paralelo. Se qualquer uma delas fica pendurada por falha de rede/REST/Supabase, o `Promise.all` inteiro estoura o timeout e descarta também as queries que poderiam ter retornado dados.
 
-1. **Refresh token falhando indefinidamente**: o navegador está mostrando, a cada 20s, `POST /auth/v1/token?grant_type=refresh_token` → `Failed to fetch`. Enquanto isso, todas as próximas chamadas Supabase ficam aguardando o token ser renovado e travam silenciosamente — nunca dão erro, nunca resolvem.
+Sinais confirmados:
+- Console: `Timeout em carregamento essencial do CRM após 20000ms`.
+- Network: várias chamadas `/rest/v1/...` com `Failed to fetch`.
+- Supabase read query também falhou com `Connection terminated due to connection timeout`, indicando instabilidade/timeout na camada Supabase, não exclusão de dados.
+- O overlay some após o timeout, mas os clientes podem ficar vazios porque o bloco essencial é tratado como tudo-ou-nada.
 
-2. **`_loadAll` do `useCRM` dispara antes da sessão estar pronta e não tem timeout/abort**:
-   - `useCRMBootstrap()` (em `AppLayout`) chama `s._loadAll()` no mount sem checar `useAuth().loading` ou `user`.
-   - Dentro de `_loadAll` há `if (get().loading) return;` + `set({ loading: true })`. Se as 10 queries do `Promise.all` ficarem penduradas (refresh token travado), `loading` permanece `true` para sempre e o overlay "Carregando CRM..." nunca some.
-   - O `try/catch` só recupera em caso de erro lançado — uma promise que nunca resolve não cai no `catch`.
-   - O bloco `if (!get().heavyDataLoading)` também sofre do mesmo problema na fase pesada.
+## Correção proposta
 
-O `RequireAuth` não chega a redirecionar para `/auth` porque o `getSession()` inicial resolve com a sessão antiga válida em cache (refresh ainda não venceu), então `user` existe e a UI tenta renderizar `AppLayout` → dispara `_loadAll` → trava nas queries.
+### 1. Tornar o carregamento essencial tolerante a falhas parciais
+Arquivo: `src/store/crm.ts`
 
-## Correções (mínimas, sem mexer em layout, componentes ou dados)
+- Trocar o `Promise.all` essencial por um carregamento individual/seguro por tabela.
+- Cada query terá timeout próprio curto, fallback para array vazio e `console.warn` específico.
+- Se `clientes` responder mas `profiles`, `custom_fields` ou outra tabela falhar, a lista de clientes ainda será exibida.
+- Se `clientes` falhar, o loading finaliza e a UI mostra estado vazio/toast, sem travar.
 
-### 1. `src/store/crm.ts` — tornar `_loadAll` resiliente
+### 2. Evitar que reloads/realtime fiquem disparando loops durante instabilidade
+Arquivo: `src/store/crm.ts`
 
-- Adicionar **timeout de segurança** (ex.: 20s) em torno do `Promise.all` essencial. Se estourar:
-  - `set({ loading: false })`
-  - mostrar `toast.error("Falha ao carregar dados — verifique sua conexão.")`
-  - logar no console o motivo
-- Envolver também o bloco pesado (cards/posts/comentários/alertas) em try/catch próprio, com `set({ heavyDataLoading: false })` no `finally`, para nunca deixar `heavyDataLoading: true` preso.
-- Manter o guard `if (get().loading) return;`, mas adicionar contraponto: se já houver `loaded: true`, permitir reload (já é o caso, ok).
-- Tratar erros parciais das queries (`res.error`) com `console.warn` em vez de descartar silenciosamente.
+- Ajustar `_scheduleReload()` para não iniciar novo carregamento enquanto `loading` ou `heavyDataLoading` estiverem ativos.
+- Evitar múltiplas tentativas sobrepostas quando o Supabase está retornando `Failed to fetch`.
 
-### 2. `src/store/crm.ts` — `useCRMBootstrap` gated por auth
+### 3. Garantir estado final consistente após falha
+Arquivo: `src/store/crm.ts`
 
-- Importar `useAuth` (ou usar `supabase.auth.getSession()` direto) e só chamar `s._loadAll()` quando houver `user` e `loading === false`.
-- Não iniciar `startRealtime()` antes de ter sessão (canal realtime sem auth costuma ficar pendurado também).
-- Manter idempotência (sem disparar duas vezes).
+- Em qualquer falha essencial: `loading=false` sempre.
+- Em qualquer falha pesada: `heavyDataLoading=false` sempre.
+- Manter `loaded=true` para remover o overlay e impedir tela presa.
+- Não alterar layout, textos, filtros, componentes, dados ou permissões.
 
-### 3. `src/hooks/auth-provider.tsx` — não travar em refresh token
+### 4. Ajuste pequeno na condição do overlay se necessário
+Arquivo: `src/pages/Clientes.tsx`
 
-- O `onAuthStateChange` já lida com `SIGNED_OUT`. Adicionar tratamento de `TOKEN_REFRESHED` falho:
-  - Se `supabase.auth.getSession()` retornar erro de rede, ainda assim chamar `setLoading(false)` (já é feito) e limpar sessão para `RequireAuth` redirecionar a `/auth`, evitando UI presa.
-- Garantir que `setLoading(false)` esteja em `finally` do `getSession().then(...)` (atualmente está dentro do `.then` — se rejeitar, fica `loading=true` para sempre). Trocar para `.then(...).catch(...).finally(() => setLoading(false))`.
+- Manter o visual igual.
+- Apenas garantir que o overlay dependa do estado real de carregamento inicial, sem reaparecer indefinidamente por carga pesada com lista vazia após falha.
 
-### 4. Pequenos logs temporários (removidos depois)
+## O que não será feito
 
-Logs mínimos no `_loadAll` apenas durante esta correção: início, contagem de cada array retornado, erros. Remover ao final ou deixar atrás de `if (import.meta.env.DEV)`.
-
-## Arquivos afetados
-
-- `src/store/crm.ts` — timeout em `_loadAll`, `finally` para `heavyDataLoading`, gate de auth em `useCRMBootstrap`, realtime só após sessão.
-- `src/hooks/auth-provider.tsx` — `.finally(setLoading(false))` no `getSession()`.
-
-## O que NÃO será alterado
-
-- Layout, componentes visuais, textos, ordem de elementos, tema.
-- Schema, dados, políticas RLS (não vou rodar migrations — o erro é cliente, não banco).
-- Estrutura dos stores, mappers, queries (somente envolver com timeout/try-finally).
-- Auth, filtros, módulos, funcionalidades existentes.
+- Não remover funcionalidades.
+- Não apagar registros.
+- Não alterar RLS ou schema sem evidência direta.
+- Não refatorar módulos inteiros.
+- Não alterar layout/experiência visual.
 
 ## Como validar
 
-1. Recarregar `/clientes` → overlay "Carregando CRM..." some em ≤20s mesmo se refresh token continuar falhando.
-2. Em caso de falha real de rede, aparece toast de erro em vez de tela travada.
-3. Login/logout e troca de cliente seguem funcionando.
-4. Abas Projeto Completo, Posts, Demandas continuam exibindo dados.
+1. Abrir `/clientes`.
+2. Confirmar que `Carregando CRM...` finaliza mesmo se alguma query Supabase falhar.
+3. Confirmar que clientes aparecem quando a query de `clientes` responde, mesmo que tabelas auxiliares falhem.
+4. Confirmar que console mostra qual tabela falhou, sem loop infinito.
+5. Confirmar que posts/dados pesados seguem carregando em segundo plano quando Supabase responde.
+
+## Resposta final após implementação
+
+Informarei:
+- causa do problema;
+- arquivos ajustados;
+- queries/estados corrigidos;
+- como o loading passa a finalizar sempre;
+- se foi erro de Supabase/RLS/auth/query/useEffect;
+- como testar.
