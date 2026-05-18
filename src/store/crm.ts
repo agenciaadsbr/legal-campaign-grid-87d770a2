@@ -485,7 +485,7 @@ export const useCRM = create<State>()((set, get) => ({
     set({ loading: true });
 
     try {
-      // 1. Carrega dados ESSENCIAIS primeiro para liberar a tela branca
+      // 1. Carrega dados ESSENCIAIS (light) — sempre.
       const [
         responsaveisRes,
         clientesRes,
@@ -523,9 +523,11 @@ export const useCRM = create<State>()((set, get) => ({
         };
       }
 
-      // Mapeia clientes mesmo sem comentários e cards por enquanto
+      // Usa comentários já em memória (se houver) para hidratar "último comentário"
+      // sem precisar re-baixar a tabela toda.
+      const comentariosAtuais = get().comentarios;
       const clientes = (clientesRes.data ?? []).map((r) =>
-        mapCliente(r, contratosRes.data ?? [], [], responsaveis, authoresPorAuthId),
+        mapCliente(r, contratosRes.data ?? [], comentariosAtuais, responsaveis, authoresPorAuthId),
       );
 
       set({
@@ -546,10 +548,12 @@ export const useCRM = create<State>()((set, get) => ({
         loading: false,
       });
 
-      // 2. Carrega dados PESADOS em segundo plano (Cards, Posts, Comentários, Alertas)
-      if (!get().heavyDataLoading) {
+      // 2. Carrega dados PESADOS UMA ÚNICA VEZ. Depois disso, deltas
+      // chegam via realtime + patches otimistas locais — evita re-fetch
+      // de milhares de linhas a cada mutação/evento.
+      if (!get().heavyDataLoaded && !get().heavyDataLoading) {
         set({ heavyDataLoading: true });
-        
+
         const fetchAll = async (
           table: "cards" | "posts" | "comentarios",
           orderBy?: { column: string; ascending?: boolean },
@@ -579,8 +583,7 @@ export const useCRM = create<State>()((set, get) => ({
 
         const comentarios = (comentariosRes.data ?? []).map(mapComentario);
         const cards = (cardsRes.data ?? []).map(mapCard);
-        
-        // Re-mapeia clientes agora que temos os comentários
+
         const clientesAtualizados = (clientesRes.data ?? []).map((r) =>
           mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
         );
@@ -603,16 +606,16 @@ export const useCRM = create<State>()((set, get) => ({
   },
 
   /**
-   * Agenda um reload completo com debounce de 600ms.
-   * Múltiplas chamadas seguidas (ex: várias mutações ou bursts de realtime)
-   * colapsam em uma única recarga, evitando o "loop de sincronização".
+   * Agenda um reload LEVE (só configs + clientes/contratos) com debounce de 2s.
+   * Slices pesados (cards/posts/comentários/alertas) NÃO são re-baixados;
+   * eles ficam consistentes via patches otimistas e realtime delta.
    */
   _scheduleReload: () => {
     if (_reloadTimer) clearTimeout(_reloadTimer);
     _reloadTimer = setTimeout(() => {
       _reloadTimer = null;
       void get()._loadAll();
-    }, 600);
+    }, 2000);
   },
 
   addCliente: async (data) => {
