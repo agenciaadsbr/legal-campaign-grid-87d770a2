@@ -1471,7 +1471,7 @@ export default function Clientes() {
 
   return (
     <div className="px-5 py-4 space-y-3 animate-fade-in">
-      {loading && (
+      {(loading || (heavyDataLoading && clientes.length === 0)) && (
         <div className="fixed inset-0 z-[100] bg-background/50 backdrop-blur-sm flex items-center justify-center">
           <div className="flex flex-col items-center gap-2">
             <Zap className="h-8 w-8 text-primary animate-pulse" />

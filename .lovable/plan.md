@@ -1,63 +1,62 @@
-# Plano — Acelerar o Dash Tasks e corrigir o "Carregando CRM..." travado
+# Plano — Acelerar carregamento do Dash Tasks (sem quebrar nada)
 
 ## Diagnóstico
 
-A tela de Clientes fica em "Carregando CRM..." porque o `useCRM` (`src/store/crm.ts`) baixa em paralelo TODOS os dados do sistema antes de liberar a UI — incluindo milhares de linhas de `cards`, `posts` e `comentarios` paginados de 1000 em 1000. Pior: a cada mutação (criar card, mover post, comentar) e a cada evento de realtime de QUALQUER usuário em QUALQUER uma das 13 tabelas, o store chama `_loadAll()` de novo, recarregando tudo. Em uso simultâneo isso vira loop de recarga e congela a tela.
+Mapeei o `useCRM` (`src/store/crm.ts`) e a página de Clientes. Os 4 gargalos principais:
 
-Os 4 gargalos:
+1. **`_loadAll()` é chamado após CADA mutação (38 ocorrências no store).** Criar 1 card, mover 1 post, alterar 1 comentário → recarrega responsáveis, clientes, contratos, colunas, modelos, status, nichos, profiles, custom_fields, **+ todos os cards, posts e comentários paginados de 1000 em 1000**. Em uma base com 95 clientes isso significa milhares de linhas trafegadas a cada clique.
+2. **Realtime dispara `_loadAll()` em 13 tabelas, sem debounce.** Qualquer alteração de qualquer usuário em qualquer tabela faz a tela inteira recarregar tudo. Em uso simultâneo, o sistema fica em loop de recarga.
+3. **`comentarios` é baixado inteiro só para preencher a coluna "Último comentário"** de cada cliente. Hoje é a tabela com mais linhas.
+4. **`cards` e `posts` são baixados inteiros** mesmo quando a tela só precisa de contagens agregadas (Posts atrasados / Tarefas atrasadas / Tarefas urgentes). Por isso aparece o badge "Sincronizando dados detalhados..." e as colunas ficam vazias até terminar.
 
-1. **`_loadAll()` chamado após cada mutação** (38 ocorrências no store) — 1 clique = milhares de linhas trafegadas.
-2. **Realtime dispara `_loadAll()` em 13 tabelas sem debounce** — qualquer alteração de qualquer usuário recarrega tudo na tela de todo mundo.
-3. **`comentarios` baixado inteiro** só para preencher a coluna "Último comentário" da lista de clientes.
-4. **`cards` e `posts` baixados inteiros** mesmo quando a tela de Clientes só precisa de contagens agregadas (Posts atrasados / Tarefas atrasadas / Tarefas urgentes). É o que prende a tela em "Carregando CRM…" e faz aparecer "Sincronizando dados detalhados...".
+Tudo isso é seguro de corrigir — nenhuma funcionalidade existente depende do reload geral; depende apenas de o estado local ficar consistente, o que dá pra fazer com updates locais + realtime delta.
 
-## Mudanças
+## Mudanças propostas
 
-### 1. Boot rápido em duas fases (`src/store/crm.ts`)
-- Dividir `_loadAll()` em `loadCore()` (rápido — responsáveis, clientes, contratos, colunas, status, nichos, profiles, custom_fields) e `loadHeavy(slice)` sob demanda (cards/posts/comentários só quando a rota precisa).
-- A tela de Clientes deixa de esperar por cards/posts/comentarios — libera a UI assim que o core carrega.
+### 1. Eliminar o reload geral após mutações (frontend, `src/store/crm.ts`)
+- Substituir todos os `await get()._loadAll()` em `addCliente`, `updateCliente`, `deleteCliente`, `addCard`, `updateCard`, `moveCard`, `deleteCard`, `addPost`, `updatePost`, `addComentario`, `addAlerta`, `createCicloPosts`, etc. por **patch local do estado** com a linha já retornada pelo Supabase (insert/update já devolvem o registro; delete já tem o id).
+- Resultado: mutação fica instantânea, sem refetch de milhares de linhas.
 
-### 2. Eliminar reload geral após mutações
-- Trocar todos os `await get()._loadAll()` em `addCliente`, `updateCliente`, `deleteCliente`, `addCard`, `updateCard`, `moveCard`, `deleteCard`, `addPost`, `updatePost`, `addComentario`, `addAlerta`, `createCicloPosts`, etc. por **patch local do estado** usando a linha já retornada pelo Supabase. Mutação fica instantânea.
+### 2. Realtime mais inteligente
+- Trocar o handler único que chama `_loadAll()` por handlers por tabela que aplicam o **delta do payload** (`eventType`, `new`, `old`) direto no slice correspondente (`cards`, `posts`, `comentarios`, `alertas`, `clientes`, `contratos`).
+- Tabelas de configuração raramente mudadas (`status_options`, `nichos`, `colunas_cliente`, `modelos_colunas`, `custom_fields`, `responsaveis`) ficam com debounce de 2s antes de refazer só aquela query.
+- Realtime continua ativo em todas as 13 tabelas; só para de reprocessar tudo a cada evento.
 
-### 3. Realtime delta (não recarga total)
-- Substituir o handler único que chama `_loadAll()` por handlers por tabela que aplicam o **delta do payload** (`eventType`, `new`, `old`) direto no slice correspondente.
-- Tabelas de configuração raramente alteradas (`status_options`, `nichos`, `colunas_cliente`, `modelos_colunas`, `custom_fields`, `responsaveis`) ganham debounce de 2s antes de refazer só aquela query.
-- Realtime continua ativo nas mesmas 13 tabelas; só para de reprocessar tudo a cada evento — fim do loop de recarga.
+### 3. Coluna "Último comentário" via agregação
+- Criar uma **view materializável leve** ou função SQL `clientes_ultimo_comentario(cliente_id, texto, autor, created_at)` que retorne apenas a última observação por cliente (não a lista inteira).
+- O store passa a hidratar `cliente.ultimo_comentario` por essa view no carregamento inicial; o histórico completo de comentários continua sendo carregado **sob demanda** quando o usuário abre o dialog de histórico (já existe esse fluxo).
 
-### 4. Agregações no banco para a lista de Clientes
-- Criar view `clientes_metricas(cliente_id, posts_atrasados, tarefas_atrasadas, tarefas_urgentes, posts_pendentes, posts_postados)` calculada com `count(*) filter (where ...)` em `cards`.
-- Criar view `clientes_ultimo_comentario(cliente_id, texto, autor, created_at)` retornando só a última observação por cliente.
-- A página de Clientes consome essas duas views (~95 linhas cada) em vez de baixar todos os cards e comentários. Histórico completo continua carregando sob demanda quando o usuário abre o dialog.
+### 4. Métricas de cards/posts agregadas no banco
+- Criar a view `clientes_metricas(cliente_id, posts_atrasados, tarefas_atrasadas, tarefas_urgentes, posts_pendentes, posts_postados)` calculada com `count(*) filter (where ...)` direto em `cards`.
+- A página de Clientes consome essa view (1 select rápido, ~95 linhas) em vez de baixar todos os cards.
+- O store continua tendo o slice `cards` para as outras telas (Kanban, Projeto Completo, Posts), mas esse slice passa a ser **lazy**: só carrega quando o usuário entra em uma rota que precisa dele (`/clientes/:id`, `/clientes/:id/posts`, etc.). A tela de listagem de Clientes deixa de esperar por ele.
 
-### 5. Ganhos menores
-- Cache em memória com TTL 5 min para dados estáticos (`responsaveis`, `nichos`, `status_options`, `custom_fields`, `colunas_cliente`, `modelos_colunas`) — evita refetch ao trocar de rota.
-- Garantir índices em `cards(cliente_id, status, is_urgent, data_limite_tarefa)`, `comentarios(cliente_id, created_at desc)`, `posts(card_id)` — criar só os que faltarem.
+### 5. Pequenos ganhos
+- Cache em memória dos dados estáticos (`responsaveis`, `nichos`, `status_options`, `custom_fields`, `colunas_cliente`, `modelos_colunas`) com TTL de 5 min, evitando refetch quando o usuário troca de rota.
+- Remover o `for…of` sequencial de `authoresPorAuthId` (já é rápido, mas fica como `Object.fromEntries`).
+- Garantir índices em `cards(cliente_id)`, `cards(status)`, `cards(is_urgent)`, `cards(data_limite_tarefa)`, `comentarios(cliente_id, created_at desc)`, `posts(card_id)` — a maioria já existe via FKs, vou validar e criar só os faltantes.
 
 ## Garantias de não-regressão
 
-- Nenhuma funcionalidade muda: Kanban, Projeto Completo, Posts, Reuniões, Comentários, Alertas, Workflow e IA continuam idênticos.
-- As views são só leitura — nada é apagado.
-- Realtime continua ligado nas mesmas tabelas; só fica mais inteligente.
-- O badge "Sincronizando dados detalhados..." some na tela de Clientes (não precisa mais dos slices pesados).
+- Nenhum dado é apagado: as mudanças são só de leitura/cache.
+- Todas as funcionalidades atuais continuam (Kanban, Projeto Completo, Posts, Reuniões, Comentários, Alertas, Workflow, IA).
+- O badge "Sincronizando dados detalhados..." pode permanecer enquanto o slice `cards` carrega em rotas que ainda dependem dele.
+- Realtime continua ligado nas mesmas tabelas.
 
-## Resumo técnico
+## Resumo técnico (para devs)
 
 ```text
 src/store/crm.ts
-  - _loadAll → loadCore() (rápido) + loadHeavy(slice) sob demanda
-  - 38× await _loadAll() → patch local com retorno do Supabase
-  - startRealtime() → handler por tabela com delta + debounce 2s p/ configs
-  - novo: loadMetricasClientes()        → view clientes_metricas
-  - novo: loadUltimoComentario()        → view clientes_ultimo_comentario
+  - _loadAll → divide em loadCore() (rápido) + loadHeavy(slice) sob demanda
+  - 38× await get()._loadAll() → patch local + retorno otimizado do Supabase
+  - startRealtime() → handler por tabela com delta + debounce 2s para configs
+  - novo: loadMetricasClientes() consumindo view clientes_metricas
+  - novo: loadUltimoComentario() consumindo view clientes_ultimo_comentario
 
 supabase/migrations/*
-  - CREATE VIEW public.clientes_metricas           (security_invoker=on)
-  - CREATE VIEW public.clientes_ultimo_comentario  (security_invoker=on)
-  - CREATE INDEX se necessário em cards/comentarios/posts
-
-src/pages/Clientes.tsx
-  - consome as views; deixa de depender dos slices cards/posts/comentarios
+  - CREATE VIEW public.clientes_metricas (security_invoker=on)
+  - CREATE VIEW public.clientes_ultimo_comentario (security_invoker=on)
+  - CREATE INDEX se necessário em cards/comentarios
 ```
 
-Posso implementar?
+Quer que eu siga com essa implementação?
