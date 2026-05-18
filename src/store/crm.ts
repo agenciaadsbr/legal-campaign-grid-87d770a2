@@ -192,10 +192,6 @@ interface State {
   loaded: boolean;
   heavyDataLoading: boolean;
   heavyDataLoaded: boolean;
-  /** Última mensagem técnica de erro do carregamento do CRM (apenas diagnóstico). */
-  crmError: string | null;
-  /** ISO timestamp da última tentativa de _loadAll, para diferenciar "ainda não carregou" de "tentou e falhou". */
-  lastLoadAttemptAt: string | null;
 
   // ações cliente
   addCliente: (
@@ -483,84 +479,13 @@ export const useCRM = create<State>()((set, get) => ({
   loaded: false,
   heavyDataLoading: false,
   heavyDataLoaded: false,
-  crmError: null,
-  lastLoadAttemptAt: null,
 
   _loadAll: async () => {
     if (get().loading) return;
-    set({ loading: true, crmError: null, lastLoadAttemptAt: new Date().toISOString() });
-
-    // Detecta erros transitórios de Supabase/PostgREST (PGRST002, 503, 504, Failed to fetch, timeout local).
-    const isTransient = (err: any): boolean => {
-      if (!err) return false;
-      const code = String(err.code ?? "").toUpperCase();
-      const msg = String(err.message ?? err).toLowerCase();
-      const status = Number(err.status ?? err.statusCode ?? 0);
-      if (code === "PGRST002") return true;
-      if (status === 503 || status === 504) return true;
-      if (msg.includes("failed to fetch")) return true;
-      if (msg.includes("timeout")) return true;
-      if (msg.includes("network")) return true;
-      if (msg.includes("503") || msg.includes("504")) return true;
-      if (msg.includes("could not query the database for the schema cache")) return true;
-      return false;
-    };
-
-    // Timeout/retry por query individual — não deixa uma tabela lenta travar as outras.
-    // Diferencia { transient: true } (erro transitório → preservar dados em memória) de
-    // { transient: false } (erro definitivo → tratar como vazio).
-    const safe = async <T,>(
-      label: string,
-      run: () => PromiseLike<{ data: T[] | null; error: any }>,
-      ms = 15000,
-    ): Promise<{ data: T[]; error: any; transient: boolean }> => {
-      const attempt = async (): Promise<{ data: T[] | null; error: any }> => {
-        try {
-          return await Promise.race([
-            Promise.resolve(run()),
-            new Promise<{ data: null; error: any }>((resolve) =>
-              setTimeout(
-                () => resolve({ data: null, error: new Error(`timeout ${ms}ms`) }),
-                ms,
-              ),
-            ),
-          ]);
-        } catch (err) {
-          return { data: null, error: err };
-        }
-      };
-
-      let res = await attempt();
-      if (res.error && isTransient(res.error)) {
-        // 1 retry curto após 800ms para erros transitórios (PGRST002/503/504/network).
-        await new Promise((r) => setTimeout(r, 800));
-        res = await attempt();
-      }
-
-      if (res.error) {
-        const transient = isTransient(res.error);
-        const e: any = res.error;
-        // Log técnico real (tabela, code, message, details, hint)
-        // eslint-disable-next-line no-console
-        console.error(`[crm] erro ao carregar ${label}`, {
-          tabela: label,
-          code: e?.code ?? null,
-          message: e?.message ?? String(e),
-          details: e?.details ?? null,
-          hint: e?.hint ?? null,
-          transient,
-        });
-        return { data: [], error: res.error, transient };
-      }
-      return { data: (res.data as T[]) ?? [], error: null, transient: false };
-    };
-
-    let clientesRowsRef: any[] = [];
-    let contratosRowsRef: any[] = [];
-    let responsaveisRef: Responsavel[] = [];
-    let authoresRef: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
+    set({ loading: true });
 
     try {
+      // 1. Carrega dados ESSENCIAIS primeiro para liberar a tela branca
       const [
         responsaveisRes,
         clientesRes,
@@ -573,57 +498,23 @@ export const useCRM = create<State>()((set, get) => ({
         profilesRes,
         customFieldsRes,
       ] = await Promise.all([
-        safe<any>("responsaveis", () => supabase.from("responsaveis").select("*").order("nome")),
-        safe<any>("clientes", () => supabase.from("clientes").select("*").order("created_at", { ascending: false })),
-        safe<any>("contratos", () => supabase.from("contratos").select("*")),
-        safe<any>("colunas_cliente", () => supabase.from("colunas_cliente").select("*").order("ordem")),
-        safe<any>("modelos_colunas", () => supabase.from("modelos_colunas").select("*").order("created_at")),
-        safe<any>("status_options", () => supabase.from("status_options").select("*").order("ordem", { ascending: true })),
-        safe<any>("nichos", () => supabase.from("nichos").select("*").order("label")),
-        safe<any>("status_post_options", () => supabase.from("status_post_options").select("*").order("ordem", { ascending: true })),
-        safe<any>("profiles", () => supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id")),
-        safe<any>("custom_fields", () => supabase.from("custom_fields").select("*").order("ordem")),
+        supabase.from("responsaveis").select("*").order("nome"),
+        supabase.from("clientes").select("*").order("created_at", { ascending: false }),
+        supabase.from("contratos").select("*"),
+        supabase.from("colunas_cliente").select("*").order("ordem"),
+        supabase.from("modelos_colunas").select("*").order("created_at"),
+        supabase.from("status_options").select("*").order("ordem", { ascending: true }),
+        supabase.from("nichos").select("*").order("label"),
+        supabase.from("status_post_options").select("*").order("ordem", { ascending: true }),
+        supabase.from("profiles").select("id,nome,email,avatar_url,responsavel_id"),
+        supabase.from("custom_fields").select("*").order("ordem"),
       ]);
 
-      // Estado atual: usado para preservar dados em memória quando a falha é transitória.
-      const cur = get();
+      const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
+      const contratos = (contratosRes.data ?? []).map(mapContrato);
 
-      // Helper: escolhe o resultado novo OU mantém o atual quando a falha é transitória
-      // e já havia dados carregados (evita "zerar falso" no Dashboard).
-      const pickRows = <R,>(res: { data: any[]; error: any; transient: boolean }, current: R[]): { rows: any[]; keepCurrent: boolean } => {
-        if (res.error && res.transient && current.length > 0) {
-          return { rows: [], keepCurrent: true };
-        }
-        return { rows: res.data, keepCurrent: false };
-      };
-
-      // Responsáveis
-      const respPick = pickRows(responsaveisRes, cur.responsaveis);
-      const responsaveis = respPick.keepCurrent ? cur.responsaveis : respPick.rows.map(mapResponsavel);
-
-      // Contratos
-      const contratosPick = pickRows(contratosRes, cur.contratos);
-      const contratos = contratosPick.keepCurrent ? cur.contratos : contratosPick.rows.map(mapContrato);
-      contratosRowsRef = contratosPick.keepCurrent
-        ? cur.contratos.map((c) => ({
-            id: c.id,
-            cliente_id: c.cliente_id,
-            status: c.status,
-            data_inicio: c.data_inicio,
-            data_fim: c.data_fim,
-            total_posts: c.total_posts,
-            posts_concluidos: c.posts_concluidos,
-          }))
-        : contratosRes.data;
-
-      responsaveisRef = responsaveis;
-
-      // Profiles → autores (não precisamos preservar; é apenas mapa de UI)
       const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
-      const profilesSource = profilesRes.error && profilesRes.transient
-        ? Object.entries(cur.authoresPorAuthId).map(([id, a]) => ({ id, nome: a.nome, email: "", avatar_url: a.avatar_url, responsavel_id: null }))
-        : profilesRes.data;
-      for (const p of profilesSource) {
+      for (const p of profilesRes.data ?? []) {
         const resp = p.responsavel_id ? responsaveis.find((r) => r.id === p.responsavel_id) : undefined;
         authoresPorAuthId[p.id] = {
           nome: resp?.nome ?? p.nome ?? p.email ?? "Usuário",
@@ -631,206 +522,85 @@ export const useCRM = create<State>()((set, get) => ({
           avatar_url: resp?.avatar_url ?? p.avatar_url ?? undefined,
         };
       }
-      authoresRef = authoresPorAuthId;
 
-      // Clientes: a tabela crítica. Se falha transitória e já havia clientes, preserva.
-      const clientesTransientKeep = clientesRes.error && clientesRes.transient && cur.clientes.length > 0;
-      let clientes: Cliente[];
-      if (clientesTransientKeep) {
-        clientes = cur.clientes;
-        clientesRowsRef = cur.clientes.map((c) => ({
-          id: c.id,
-          nome: c.nome_cliente,
-          nicho: c.nicho,
-          descricao: c.observacoes,
-          status_cliente: c.status_cliente,
-          data_inicio_onboarding: c.data_inicio_onboarding,
-          prazo_onboarding: c.prazo_onboarding,
-          data_ativacao: c.data_ativacao,
-          responsaveis_ids: c.responsaveis,
-          campos_personalizados: c.custom,
-          created_at: c.created_at,
-          primary_status: c.primary_status,
-          plano: c.plano,
-          valor_venda: c.valor_venda,
-          nicho_extra: c.nicho_extra,
-          data_contratacao: c.data_contratacao,
-          status_relacionamento: c.status_relacionamento,
-          status_performance: c.status_performance,
-          link_relatorio: c.link_relatorio,
-        }));
-      } else {
-        clientesRowsRef = clientesRes.data;
-        clientes = clientesRowsRef.map((r) =>
-          mapCliente(r, contratosRowsRef, [], responsaveis, authoresPorAuthId),
-        );
-      }
-
-      // Tabelas auxiliares: se falha transitória e já tínhamos dados, preservar.
-      const colunasPick = pickRows(colunasRes, cur.colunasCliente);
-      const modelosPick = pickRows(modelosRes, cur.modelosColunas);
-      const statusPick = pickRows(statusRes, cur.statusOptions);
-      const nichosPick = pickRows(nichosRes, cur.nichos);
-      const statusPostPick = pickRows(statusPostRes, cur.statusPostOptions);
-      const customFieldsPick = pickRows(customFieldsRes, cur.customFields);
-
-      const statusPostOptions = statusPostPick.keepCurrent
-        ? cur.statusPostOptions
-        : [
-            { label: "Aguardando etapa anterior", cor: "#f59e0b" },
-            ...statusPostPick.rows.map(mapStatusOpt).filter((o) => o.label !== "Aguardando etapa anterior"),
-          ];
+      // Mapeia clientes mesmo sem comentários e cards por enquanto
+      const clientes = (clientesRes.data ?? []).map((r) =>
+        mapCliente(r, contratosRes.data ?? [], [], responsaveis, authoresPorAuthId),
+      );
 
       set({
         responsaveis,
         clientes,
         contratos,
-        colunasCliente: colunasPick.keepCurrent ? cur.colunasCliente : colunasPick.rows.map(mapColuna),
-        modelosColunas: modelosPick.keepCurrent ? cur.modelosColunas : modelosPick.rows.map(mapModelo),
-        statusOptions: statusPick.keepCurrent ? cur.statusOptions : statusPick.rows.map(mapStatusOpt),
-        nichos: nichosPick.keepCurrent ? cur.nichos : nichosPick.rows.map(mapNicho),
-        statusPostOptions,
+        colunasCliente: (colunasRes.data ?? []).map(mapColuna),
+        modelosColunas: (modelosRes.data ?? []).map(mapModelo),
+        statusOptions: (statusRes.data ?? []).map(mapStatusOpt),
+        nichos: (nichosRes.data ?? []).map(mapNicho),
+        statusPostOptions: [
+          { label: "Aguardando etapa anterior", cor: "#f59e0b" },
+          ...(statusPostRes.data ?? []).map(mapStatusOpt).filter(o => o.label !== "Aguardando etapa anterior")
+        ],
         authoresPorAuthId,
-        customFields: customFieldsPick.keepCurrent ? cur.customFields : customFieldsPick.rows.map(mapCustomField),
+        customFields: (customFieldsRes.data ?? []).map(mapCustomField),
         loaded: true,
+        loading: false,
       });
 
-      // Mensagem só quando é primeira carga E clientes falhou (não há nada em tela).
-      if (clientesRes.error) {
-        const e: any = clientesRes.error;
-        const technical = `[clientes] ${e?.code ?? ""} ${e?.message ?? e}`.trim();
-        set({ crmError: technical });
-        if (!clientesTransientKeep) {
-          toast.error("Não foi possível carregar os clientes. Verifique sua conexão.");
-        } else {
-          // Falha transitória mas há dados em memória → não polui a UI; só registra.
-          console.warn("[crm] falha transitória em clientes — mantendo dados em memória.");
-        }
-      }
-    } catch (err) {
-      console.error("[crm] Falha no carregamento essencial:", err);
-      set({ crmError: String((err as any)?.message ?? err) });
-      // Só exibe toast quando não há dados em memória
-      if (get().clientes.length === 0) {
-        toast.error("Falha ao carregar dados do CRM. Verifique sua conexão e tente recarregar.");
-      }
-      set({ loaded: true });
-    } finally {
-      set({ loading: false });
-    }
+      // 2. Carrega dados PESADOS em segundo plano (Cards, Posts, Comentários, Alertas)
+      if (!get().heavyDataLoading) {
+        set({ heavyDataLoading: true });
+        
+        const fetchAll = async (
+          table: "cards" | "posts" | "comentarios",
+          orderBy?: { column: string; ascending?: boolean },
+        ): Promise<{ data: any[]; error: any }> => {
+          const PAGE = 1000;
+          const all: any[] = [];
+          let from = 0;
+          while (true) {
+            let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
+            if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+            const { data, error } = await q;
+            if (error) return { data: all, error };
+            const rows = data ?? [];
+            all.push(...rows);
+            if (rows.length < PAGE) break;
+            from += PAGE;
+          }
+          return { data: all, error: null };
+        };
 
-
-    // 2. Carrega dados PESADOS em segundo plano (Cards, Posts, Comentários, Alertas)
-    if (get().heavyDataLoading || get().heavyDataLoaded) return;
-    set({ heavyDataLoading: true });
-    try {
-      const fetchAll = async (
-        table: "cards" | "posts" | "comentarios",
-        orderBy?: { column: string; ascending?: boolean },
-      ): Promise<{ data: any[]; error: any }> => {
-        const PAGE = 1000;
-        const all: any[] = [];
-        let from = 0;
-        while (true) {
-          let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
-          if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
-          const { data, error } = await q;
-          if (error) return { data: all, error };
-          const rows = data ?? [];
-          all.push(...rows);
-          if (rows.length < PAGE) break;
-          from += PAGE;
-        }
-        return { data: all, error: null };
-      };
-
-      const withTimeoutP = <T,>(p: Promise<T>, ms: number, fallback: T): Promise<T> =>
-        Promise.race([
-          p,
-          new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-        ]);
-
-      const [cardsRes, postsRes, comentariosRes, alertasRes] = await withTimeoutP(
-        Promise.all([
+        const [cardsRes, postsRes, comentariosRes, alertasRes] = await Promise.all([
           fetchAll("cards", { column: "posicao", ascending: true }),
           fetchAll("posts"),
           fetchAll("comentarios", { column: "created_at", ascending: true }),
-          supabase.from("alertas").select("*").order("created_at", { ascending: false }).then(
-            (r) => ({ data: r.data ?? [], error: r.error }),
-          ),
-        ]),
-        45000,
-        [
-          { data: [], error: new Error("timeout") },
-          { data: [], error: new Error("timeout") },
-          { data: [], error: new Error("timeout") },
-          { data: [], error: new Error("timeout") },
-        ] as any,
-      );
-      // Detecta erro transitório por resultado de cada fetch (PGRST002/503/504/timeout/network).
-      const isTransientLite = (err: any) => {
-        if (!err) return false;
-        const code = String(err.code ?? "").toUpperCase();
-        const msg = String(err.message ?? err).toLowerCase();
-        return (
-          code === "PGRST002" ||
-          msg.includes("failed to fetch") ||
-          msg.includes("timeout") ||
-          msg.includes("network") ||
-          msg.includes("503") ||
-          msg.includes("504") ||
-          msg.includes("schema cache")
+          supabase.from("alertas").select("*").order("created_at", { ascending: false }),
+        ]);
+
+        const comentarios = (comentariosRes.data ?? []).map(mapComentario);
+        const cards = (cardsRes.data ?? []).map(mapCard);
+        
+        // Re-mapeia clientes agora que temos os comentários
+        const clientesAtualizados = (clientesRes.data ?? []).map((r) =>
+          mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
         );
-      };
 
-      const cur = get();
-      const cardsTransient = cardsRes.error && isTransientLite(cardsRes.error) && cur.cards.length > 0;
-      const postsTransient = postsRes.error && isTransientLite(postsRes.error) && cur.posts.length > 0;
-      const comentariosTransient =
-        comentariosRes.error && isTransientLite(comentariosRes.error) && cur.comentarios.length > 0;
-      const alertasTransient =
-        alertasRes.error && isTransientLite(alertasRes.error) && cur.alertas.length > 0;
-
-      const comentarios = comentariosTransient ? cur.comentarios : (comentariosRes.data ?? []).map(mapComentario);
-      const cards = cardsTransient ? cur.cards : (cardsRes.data ?? []).map(mapCard);
-      const posts = postsTransient ? cur.posts : (postsRes.data ?? []).map(mapPost);
-      const alertas = alertasTransient ? cur.alertas : (alertasRes.data ?? []).map(mapAlerta);
-
-      // Re-mapeia clientes agora que temos os comentários (apenas se o ref de clientes está válido)
-      const clientesAtualizados =
-        clientesRowsRef.length > 0
-          ? clientesRowsRef.map((r) => mapCliente(r, contratosRowsRef, comentarios, responsaveisRef, authoresRef))
-          : cur.clientes;
-
-      // heavyDataLoaded só vira true se NÃO houve falha transitória pendente —
-      // assim o realtime/scheduleReload pode tentar novamente mais tarde.
-      const anyTransient = cardsTransient || postsTransient || comentariosTransient || alertasTransient
-        || (cardsRes.error && !cur.cards.length) || (postsRes.error && !cur.posts.length);
-
-      set({
-        cards,
-        posts,
-        comentarios,
-        alertas,
-        clientes: clientesAtualizados,
-        heavyDataLoaded: !anyTransient,
-      });
-
-      if (cardsRes.error || postsRes.error || comentariosRes.error || alertasRes.error) {
-        console.warn("[crm] carregamento pesado parcial/transitório:", {
-          cards: cardsRes.error?.message,
-          posts: postsRes.error?.message,
-          comentarios: comentariosRes.error?.message,
-          alertas: alertasRes.error?.message,
+        set({
+          cards,
+          posts: (postsRes.data ?? []).map(mapPost),
+          comentarios,
+          alertas: (alertasRes.data ?? []).map(mapAlerta),
+          clientes: clientesAtualizados,
+          heavyDataLoading: false,
+          heavyDataLoaded: true,
         });
       }
+
     } catch (err) {
-      console.error("[crm] Falha no carregamento pesado:", err);
-    } finally {
-      set({ heavyDataLoading: false });
+      console.error("Erro crítico em _loadAll:", err);
+      set({ loading: false, heavyDataLoading: false });
     }
   },
-
 
   /**
    * Agenda um reload completo com debounce de 600ms.
@@ -841,19 +611,9 @@ export const useCRM = create<State>()((set, get) => ({
     if (_reloadTimer) clearTimeout(_reloadTimer);
     _reloadTimer = setTimeout(() => {
       _reloadTimer = null;
-      const s = get();
-      // Evita reentrância: se já está carregando essencial ou pesado, re-agenda.
-      if (s.loading || s.heavyDataLoading) {
-        _reloadTimer = setTimeout(() => {
-          _reloadTimer = null;
-          void get()._loadAll();
-        }, 1200);
-        return;
-      }
       void get()._loadAll();
     }, 600);
   },
-
 
   addCliente: async (data) => {
     const { data: inserted, error } = await supabase
@@ -1786,36 +1546,11 @@ function startRealtime() {
  */
 export function useCRMBootstrap() {
   useEffect(() => {
-    let cancelled = false;
-
-    const tryStart = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (cancelled) return;
-        if (!data.session?.user) return; // sem sessão → não dispara queries que ficariam penduradas
-        const s = useCRM.getState();
-        if (!s.loaded && !s.loading) s._loadAll();
-        startRealtime();
-      } catch (err) {
-        console.warn("[crm] bootstrap abortado:", err);
-      }
-    };
-
-    tryStart();
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (cancelled) return;
-      if (event === "SIGNED_IN" && session?.user) {
-        const s = useCRM.getState();
-        if (!s.loaded && !s.loading) s._loadAll();
-        startRealtime();
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      sub.subscription.unsubscribe();
-    };
+    const s = useCRM.getState();
+    if (!s.loaded && !s.loading) {
+      s._loadAll();
+    }
+    startRealtime();
   }, []);
 }
 

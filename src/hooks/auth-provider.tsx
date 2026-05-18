@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
@@ -41,34 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setRoles([]);
       }
-      // Token de refresh inválido/expirado → limpa sessão para desbloquear UI
-      if (event === "TOKEN_REFRESHED" && !newSession) {
-        supabase.auth.signOut().catch(() => {});
-      }
     });
 
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (error) {
-          console.warn("[auth] getSession erro:", error);
-          // refresh falhou — força logout local para sair do loop
-          supabase.auth.signOut().catch(() => {});
-          setSession(null);
-          setUser(null);
-          return;
-        }
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
-        if (data.session?.user) loadUserData(data.session.user.id);
-      })
-      .catch((err) => {
-        console.warn("[auth] getSession falhou:", err);
-        supabase.auth.signOut().catch(() => {});
-        setSession(null);
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+      if (data.session?.user) loadUserData(data.session.user.id);
+      setLoading(false);
+    });
 
     return () => sub.subscription.unsubscribe();
   }, []);
