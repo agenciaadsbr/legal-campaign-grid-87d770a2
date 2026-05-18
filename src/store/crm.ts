@@ -485,7 +485,7 @@ export const useCRM = create<State>()((set, get) => ({
     set({ loading: true });
 
     try {
-      // 1. Carrega dados ESSENCIAIS primeiro para liberar a tela branca
+      // 1. Carrega dados ESSENCIAIS (light) — sempre.
       const [
         responsaveisRes,
         clientesRes,
@@ -523,9 +523,11 @@ export const useCRM = create<State>()((set, get) => ({
         };
       }
 
-      // Mapeia clientes mesmo sem comentários e cards por enquanto
+      // Usa comentários já em memória (se houver) para hidratar "último comentário"
+      // sem precisar re-baixar a tabela toda.
+      const comentariosAtuais = get().comentarios;
       const clientes = (clientesRes.data ?? []).map((r) =>
-        mapCliente(r, contratosRes.data ?? [], [], responsaveis, authoresPorAuthId),
+        mapCliente(r, contratosRes.data ?? [], comentariosAtuais, responsaveis, authoresPorAuthId),
       );
 
       set({
@@ -546,10 +548,12 @@ export const useCRM = create<State>()((set, get) => ({
         loading: false,
       });
 
-      // 2. Carrega dados PESADOS em segundo plano (Cards, Posts, Comentários, Alertas)
-      if (!get().heavyDataLoading) {
+      // 2. Carrega dados PESADOS UMA ÚNICA VEZ. Depois disso, deltas
+      // chegam via realtime + patches otimistas locais — evita re-fetch
+      // de milhares de linhas a cada mutação/evento.
+      if (!get().heavyDataLoaded && !get().heavyDataLoading) {
         set({ heavyDataLoading: true });
-        
+
         const fetchAll = async (
           table: "cards" | "posts" | "comentarios",
           orderBy?: { column: string; ascending?: boolean },
@@ -579,8 +583,7 @@ export const useCRM = create<State>()((set, get) => ({
 
         const comentarios = (comentariosRes.data ?? []).map(mapComentario);
         const cards = (cardsRes.data ?? []).map(mapCard);
-        
-        // Re-mapeia clientes agora que temos os comentários
+
         const clientesAtualizados = (clientesRes.data ?? []).map((r) =>
           mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
         );
@@ -603,16 +606,16 @@ export const useCRM = create<State>()((set, get) => ({
   },
 
   /**
-   * Agenda um reload completo com debounce de 600ms.
-   * Múltiplas chamadas seguidas (ex: várias mutações ou bursts de realtime)
-   * colapsam em uma única recarga, evitando o "loop de sincronização".
+   * Agenda um reload LEVE (só configs + clientes/contratos) com debounce de 2s.
+   * Slices pesados (cards/posts/comentários/alertas) NÃO são re-baixados;
+   * eles ficam consistentes via patches otimistas e realtime delta.
    */
   _scheduleReload: () => {
     if (_reloadTimer) clearTimeout(_reloadTimer);
     _reloadTimer = setTimeout(() => {
       _reloadTimer = null;
       void get()._loadAll();
-    }, 600);
+    }, 2000);
   },
 
   addCliente: async (data) => {
@@ -1506,15 +1509,87 @@ export const useCRM = create<State>()((set, get) => ({
 function startRealtime() {
   if (realtimeStarted) return;
   realtimeStarted = true;
-  // Realtime usa o mesmo agendador debounced — múltiplos eventos colapsam em 1 reload.
-  const reload = () => useCRM.getState()._scheduleReload();
-  const tables = [
-    "clientes",
-    "contratos",
-    "cards",
-    "posts",
-    "comentarios",
-    "alertas",
+
+  // Tabelas com delta direto no slice correspondente (sem refetch).
+  const HEAVY_DELTA_TABLES: Record<string, (payload: any) => void> = {
+    cards: (p) => {
+      const s = useCRM.getState();
+      if (p.eventType === "DELETE") {
+        useCRM.setState({ cards: s.cards.filter((c) => c.id !== p.old?.id) });
+      } else if (p.new) {
+        const mapped = mapCard(p.new);
+        const exists = s.cards.some((c) => c.id === mapped.id);
+        useCRM.setState({
+          cards: exists
+            ? s.cards.map((c) => (c.id === mapped.id ? mapped : c))
+            : [...s.cards, mapped],
+        });
+      }
+    },
+    posts: (p) => {
+      const s = useCRM.getState();
+      if (p.eventType === "DELETE") {
+        useCRM.setState({ posts: s.posts.filter((x) => x.id !== p.old?.id) });
+      } else if (p.new) {
+        const mapped = mapPost(p.new);
+        const exists = s.posts.some((x) => x.id === mapped.id);
+        useCRM.setState({
+          posts: exists
+            ? s.posts.map((x) => (x.id === mapped.id ? mapped : x))
+            : [...s.posts, mapped],
+        });
+      }
+    },
+    comentarios: (p) => {
+      const s = useCRM.getState();
+      if (p.eventType === "DELETE") {
+        useCRM.setState({ comentarios: s.comentarios.filter((x) => x.id !== p.old?.id) });
+      } else if (p.new) {
+        const mapped = mapComentario(p.new);
+        const exists = s.comentarios.some((x) => x.id === mapped.id);
+        useCRM.setState({
+          comentarios: exists
+            ? s.comentarios.map((x) => (x.id === mapped.id ? mapped : x))
+            : [...s.comentarios, mapped],
+        });
+      }
+    },
+    alertas: (p) => {
+      const s = useCRM.getState();
+      if (p.eventType === "DELETE") {
+        useCRM.setState({ alertas: s.alertas.filter((x) => x.id !== p.old?.id) });
+      } else if (p.new) {
+        const mapped = mapAlerta(p.new);
+        const exists = s.alertas.some((x) => x.id === mapped.id);
+        useCRM.setState({
+          alertas: exists
+            ? s.alertas.map((x) => (x.id === mapped.id ? mapped : x))
+            : [mapped, ...s.alertas],
+        });
+      }
+    },
+    clientes: (p) => {
+      const s = useCRM.getState();
+      if (p.eventType === "DELETE") {
+        useCRM.setState({ clientes: s.clientes.filter((x) => x.id !== p.old?.id) });
+      } else if (p.new) {
+        const mapped = mapCliente(p.new, s.contratos as any, s.comentarios, s.responsaveis, s.authoresPorAuthId);
+        const exists = s.clientes.some((x) => x.id === mapped.id);
+        useCRM.setState({
+          clientes: exists
+            ? s.clientes.map((x) => (x.id === mapped.id ? mapped : x))
+            : [mapped, ...s.clientes],
+        });
+      }
+    },
+    contratos: () => {
+      // contratos influenciam datas exibidas em cliente — agenda reload leve
+      useCRM.getState()._scheduleReload();
+    },
+  };
+
+  // Tabelas de configuração raramente alteradas — debounce para reload leve.
+  const CONFIG_TABLES = new Set([
     "colunas_cliente",
     "status_options",
     "status_post_options",
@@ -1522,8 +1597,8 @@ function startRealtime() {
     "responsaveis",
     "custom_fields",
     "modelos_colunas",
-  ];
-  // Remove canal anterior (HMR) para evitar erro "callbacks after subscribe()"
+  ]);
+
   try {
     supabase.getChannels()
       .filter((c: any) => c.topic === "realtime:crm-realtime")
@@ -1532,9 +1607,15 @@ function startRealtime() {
     /* noop */
   }
   const channel = supabase.channel("crm-realtime");
-  tables.forEach((t) => {
-    channel.on("postgres_changes" as any, { event: "*", schema: "public", table: t }, () => {
-      reload();
+  const allTables = [...Object.keys(HEAVY_DELTA_TABLES), ...CONFIG_TABLES];
+  allTables.forEach((t) => {
+    channel.on("postgres_changes" as any, { event: "*", schema: "public", table: t }, (payload: any) => {
+      const handler = HEAVY_DELTA_TABLES[t];
+      if (handler) {
+        try { handler(payload); } catch (e) { console.warn("realtime delta failed", t, e); }
+      } else if (CONFIG_TABLES.has(t)) {
+        useCRM.getState()._scheduleReload();
+      }
     });
   });
   channel.subscribe();
