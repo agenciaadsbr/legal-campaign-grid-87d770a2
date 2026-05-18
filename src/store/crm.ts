@@ -192,6 +192,10 @@ interface State {
   loaded: boolean;
   heavyDataLoading: boolean;
   heavyDataLoaded: boolean;
+  /** Última mensagem técnica de erro do carregamento do CRM (apenas diagnóstico). */
+  crmError: string | null;
+  /** ISO timestamp da última tentativa de _loadAll, para diferenciar "ainda não carregou" de "tentou e falhou". */
+  lastLoadAttemptAt: string | null;
 
   // ações cliente
   addCliente: (
