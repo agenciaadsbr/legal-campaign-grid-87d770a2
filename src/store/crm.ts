@@ -484,20 +484,23 @@ export const useCRM = create<State>()((set, get) => ({
     if (get().loading) return;
     set({ loading: true });
 
+    // Timeout de segurança: nunca deixar o overlay "Carregando CRM..." preso.
+    const withTimeout = <T,>(p: Promise<T>, ms: number, label: string): Promise<T> =>
+      Promise.race([
+        p,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout em ${label} após ${ms}ms`)), ms),
+        ),
+      ]);
+
+    let clientesRowsRef: any[] = [];
+    let contratosRowsRef: any[] = [];
+    let responsaveisRef: Responsavel[] = [];
+    let authoresRef: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
+
     try {
       // 1. Carrega dados ESSENCIAIS primeiro para liberar a tela branca
-      const [
-        responsaveisRes,
-        clientesRes,
-        contratosRes,
-        colunasRes,
-        modelosRes,
-        statusRes,
-        nichosRes,
-        statusPostRes,
-        profilesRes,
-        customFieldsRes,
-      ] = await Promise.all([
+      const essentials = Promise.all([
         supabase.from("responsaveis").select("*").order("nome"),
         supabase.from("clientes").select("*").order("created_at", { ascending: false }),
         supabase.from("contratos").select("*"),
@@ -510,8 +513,34 @@ export const useCRM = create<State>()((set, get) => ({
         supabase.from("custom_fields").select("*").order("ordem"),
       ]);
 
+      const [
+        responsaveisRes,
+        clientesRes,
+        contratosRes,
+        colunasRes,
+        modelosRes,
+        statusRes,
+        nichosRes,
+        statusPostRes,
+        profilesRes,
+        customFieldsRes,
+      ] = await withTimeout(essentials, 20000, "carregamento essencial do CRM");
+
+      // log de erros parciais sem travar
+      for (const [name, res] of [
+        ["responsaveis", responsaveisRes], ["clientes", clientesRes], ["contratos", contratosRes],
+        ["colunas_cliente", colunasRes], ["modelos_colunas", modelosRes], ["status_options", statusRes],
+        ["nichos", nichosRes], ["status_post_options", statusPostRes], ["profiles", profilesRes],
+        ["custom_fields", customFieldsRes],
+      ] as const) {
+        if ((res as any).error) console.warn(`[crm] erro ao carregar ${name}:`, (res as any).error);
+      }
+
       const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
       const contratos = (contratosRes.data ?? []).map(mapContrato);
+      responsaveisRef = responsaveis;
+      clientesRowsRef = clientesRes.data ?? [];
+      contratosRowsRef = contratosRes.data ?? [];
 
       const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
       for (const p of profilesRes.data ?? []) {
@@ -522,10 +551,11 @@ export const useCRM = create<State>()((set, get) => ({
           avatar_url: resp?.avatar_url ?? p.avatar_url ?? undefined,
         };
       }
+      authoresRef = authoresPorAuthId;
 
       // Mapeia clientes mesmo sem comentários e cards por enquanto
-      const clientes = (clientesRes.data ?? []).map((r) =>
-        mapCliente(r, contratosRes.data ?? [], [], responsaveis, authoresPorAuthId),
+      const clientes = clientesRowsRef.map((r) =>
+        mapCliente(r, contratosRowsRef, [], responsaveis, authoresPorAuthId),
       );
 
       set({
@@ -543,62 +573,71 @@ export const useCRM = create<State>()((set, get) => ({
         authoresPorAuthId,
         customFields: (customFieldsRes.data ?? []).map(mapCustomField),
         loaded: true,
-        loading: false,
       });
-
-      // 2. Carrega dados PESADOS em segundo plano (Cards, Posts, Comentários, Alertas)
-      if (!get().heavyDataLoading) {
-        set({ heavyDataLoading: true });
-        
-        const fetchAll = async (
-          table: "cards" | "posts" | "comentarios",
-          orderBy?: { column: string; ascending?: boolean },
-        ): Promise<{ data: any[]; error: any }> => {
-          const PAGE = 1000;
-          const all: any[] = [];
-          let from = 0;
-          while (true) {
-            let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
-            if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
-            const { data, error } = await q;
-            if (error) return { data: all, error };
-            const rows = data ?? [];
-            all.push(...rows);
-            if (rows.length < PAGE) break;
-            from += PAGE;
-          }
-          return { data: all, error: null };
-        };
-
-        const [cardsRes, postsRes, comentariosRes, alertasRes] = await Promise.all([
-          fetchAll("cards", { column: "posicao", ascending: true }),
-          fetchAll("posts"),
-          fetchAll("comentarios", { column: "created_at", ascending: true }),
-          supabase.from("alertas").select("*").order("created_at", { ascending: false }),
-        ]);
-
-        const comentarios = (comentariosRes.data ?? []).map(mapComentario);
-        const cards = (cardsRes.data ?? []).map(mapCard);
-        
-        // Re-mapeia clientes agora que temos os comentários
-        const clientesAtualizados = (clientesRes.data ?? []).map((r) =>
-          mapCliente(r, contratosRes.data ?? [], comentarios, responsaveis, authoresPorAuthId),
-        );
-
-        set({
-          cards,
-          posts: (postsRes.data ?? []).map(mapPost),
-          comentarios,
-          alertas: (alertasRes.data ?? []).map(mapAlerta),
-          clientes: clientesAtualizados,
-          heavyDataLoading: false,
-          heavyDataLoaded: true,
-        });
-      }
-
     } catch (err) {
-      console.error("Erro crítico em _loadAll:", err);
-      set({ loading: false, heavyDataLoading: false });
+      console.error("[crm] Falha no carregamento essencial:", err);
+      toast.error("Falha ao carregar dados do CRM. Verifique sua conexão e tente recarregar.");
+      // marca loaded=true para destravar UI mostrando estado vazio em vez de overlay infinito
+      set({ loaded: true });
+    } finally {
+      set({ loading: false });
+    }
+
+    // 2. Carrega dados PESADOS em segundo plano (Cards, Posts, Comentários, Alertas)
+    if (get().heavyDataLoading || get().heavyDataLoaded) return;
+    set({ heavyDataLoading: true });
+    try {
+      const fetchAll = async (
+        table: "cards" | "posts" | "comentarios",
+        orderBy?: { column: string; ascending?: boolean },
+      ): Promise<{ data: any[]; error: any }> => {
+        const PAGE = 1000;
+        const all: any[] = [];
+        let from = 0;
+        while (true) {
+          let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
+          if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+          const { data, error } = await q;
+          if (error) return { data: all, error };
+          const rows = data ?? [];
+          all.push(...rows);
+          if (rows.length < PAGE) break;
+          from += PAGE;
+        }
+        return { data: all, error: null };
+      };
+
+      const heavy = Promise.all([
+        fetchAll("cards", { column: "posicao", ascending: true }),
+        fetchAll("posts"),
+        fetchAll("comentarios", { column: "created_at", ascending: true }),
+        supabase.from("alertas").select("*").order("created_at", { ascending: false }),
+      ]);
+
+      const [cardsRes, postsRes, comentariosRes, alertasRes] = await withTimeout(
+        heavy, 45000, "carregamento pesado do CRM",
+      );
+
+      const comentarios = (comentariosRes.data ?? []).map(mapComentario);
+      const cards = (cardsRes.data ?? []).map(mapCard);
+
+      // Re-mapeia clientes agora que temos os comentários
+      const clientesAtualizados = clientesRowsRef.map((r) =>
+        mapCliente(r, contratosRowsRef, comentarios, responsaveisRef, authoresRef),
+      );
+
+      set({
+        cards,
+        posts: (postsRes.data ?? []).map(mapPost),
+        comentarios,
+        alertas: (alertasRes.data ?? []).map(mapAlerta),
+        clientes: clientesAtualizados,
+        heavyDataLoaded: true,
+      });
+    } catch (err) {
+      console.error("[crm] Falha no carregamento pesado:", err);
+    } finally {
+      set({ heavyDataLoading: false });
     }
   },
 
