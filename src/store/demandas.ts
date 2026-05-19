@@ -478,6 +478,16 @@ export const useDemandasStore = create<State>((set, get) => ({
         titulo_tarefa: next.titulo,
         payload: { de: prev.status, para: next.status }
       });
+
+      // Se a tarefa concluída liberar dependências
+      if (next.status === "Concluido" || next.status === "Entregue") {
+        const filhas = get().dependencies.filter(d => d.depends_on_task_id === id && !d.liberado);
+        for (const dep of filhas) {
+          if (dep.modo_liberacao === "automatico") {
+            await get().liberarDependencia(dep.id);
+          }
+        }
+      }
     }
 
     if (patch.responsaveis_ids && JSON.stringify(patch.responsaveis_ids) !== JSON.stringify(prev.responsaveis_ids)) {
