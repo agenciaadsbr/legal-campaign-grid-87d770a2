@@ -246,17 +246,17 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
       if (!error) createdCount++;
     } else if (item.template_type === 'multi_step') {
       // 1. Criar card pai
-      const { data: parent, error: pErr } = await supabase.from('demandas').insert({
+      const { data: parent, error: pErr } = await supabase.from('demandas').insert([{
         cliente_id: clienteId,
         titulo: item.titulo,
         categoria: 'Operacional',
-        status: 'Planejamento',
+        status: 'Planejamento' as any,
         prioridade: 'Media',
         is_parent: true,
         template_type: 'multi_step',
         criado_por: uid,
         origem: 'template_operacional'
-      }).select('id').single();
+      }]).select('id').single();
 
       if (pErr || !parent) continue;
       createdCount++;
@@ -271,7 +271,7 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
           titulo: step.nome,
           categoria: step.categoria,
           subtipo: step.subtipo,
-          status: isAguardando ? 'Aguardando etapa anterior' : 'Planejamento',
+          status: (isAguardando ? 'Aguardando etapa anterior' : 'Planejamento') as any,
           prioridade: 'Media',
           responsavel_id: step.responsavel_id,
           responsaveis_ids: step.responsavel_id ? [step.responsavel_id] : [],
