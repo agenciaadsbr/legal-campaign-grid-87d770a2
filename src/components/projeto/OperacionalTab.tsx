@@ -33,7 +33,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
   const [alertOpen, setAlertOpen] = useState(false);
 
   useOperationalTemplatesBootstrap();
-  const templates = useOperationalTemplates((s) => s.templates);
+  const { templates, loading: templatesLoading } = useOperationalTemplates();
 
   const demandasOrdenadas = useMemo(() => {
     const ordemMap = new Map(templates.map((t) => [t.id, t.ordem]));
@@ -59,11 +59,14 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     try {
       const data = await prepararEstruturaOperacional(clienteId);
       if (data.length === 0) {
-        toast.info("Estrutura operacional já está completa para este cliente.");
+        toast.info("A estrutura operacional já foi gerada ou não há novos itens para este cliente.");
         return;
       }
       setPreviewData(data);
       setPreviewOpen(true);
+    } catch (error: any) {
+      console.error("Erro ao preparar estrutura:", error);
+      toast.error("Erro ao preparar estrutura operacional");
     } finally {
       setGenerating(false);
     }
@@ -80,9 +83,9 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     <div className="space-y-3">
       {isAdmin && (
         <div className="flex justify-end">
-          <Button size="sm" variant="outline" onClick={handleGerarClick} disabled={generating}>
+          <Button size="sm" variant="outline" onClick={handleGerarClick} disabled={generating || templatesLoading}>
             <Sparkles className="h-4 w-4 mr-1" />
-            {generating ? "Gerando…" : "Gerar estrutura operacional"}
+            {generating ? "Gerando…" : templatesLoading ? "Carregando…" : "Gerar estrutura operacional"}
           </Button>
         </div>
       )}
