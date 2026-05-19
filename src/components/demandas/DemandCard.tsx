@@ -10,7 +10,7 @@ import {
 import { isAguardandoDependencia, getFilhas } from "@/lib/workflow";
 import { useCRM } from "@/store/crm";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, AlertTriangle, Lock, Link2 } from "lucide-react";
+import { Calendar, AlertTriangle, Lock, Link2, Zap } from "lucide-react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -111,6 +111,11 @@ export function DemandCard({
           {temFilhas && (
             <span title="Possui próxima etapa vinculada" className="text-muted-foreground">
               <Link2 className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {demanda.is_parent && (
+            <span title="Task Multietapa" className="text-primary">
+              <Zap className="h-3.5 w-3.5 fill-current" />
             </span>
           )}
           {urgente && !selectionMode && (
