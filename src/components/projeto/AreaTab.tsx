@@ -60,6 +60,9 @@ export function AreaTab({
   categoria,
   emptyHint,
   demandaInicial,
+  allowBulkDelete,
+  extraTop,
+  novaTarefaExtra,
 }: Props) {
   const { responsaveis } = useCRM();
   const createRascunho = useDemandas((s) => s.createRascunho);
