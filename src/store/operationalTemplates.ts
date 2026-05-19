@@ -265,7 +265,7 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
       const stepIdToRealId = new Map<string, string>();
       for (const step of item.subtarefas) {
         const isAguardando = !!step.depends_on;
-        const { data: sub, error: sErr } = await supabase.from('demandas').insert({
+        const { data: sub, error: sErr } = await supabase.from('demandas').insert([{
           cliente_id: clienteId,
           parent_id: parent.id,
           titulo: step.nome,
@@ -277,7 +277,7 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
           responsaveis_ids: step.responsavel_id ? [step.responsavel_id] : [],
           criado_por: uid,
           origem: 'template_operacional'
-        }).select('id').single();
+        }]).select('id').single();
 
         if (!sErr && sub) {
           createdCount++;
