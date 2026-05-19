@@ -229,19 +229,19 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
 
   for (const item of payload) {
     if (item.template_type === 'single') {
-      const { data, error } = await supabase.from('demandas').insert({
+      const { data, error } = await supabase.from('demandas').insert([{
         cliente_id: clienteId,
         titulo: item.titulo,
         categoria: item.categoria,
         subtipo: item.subtipo,
-        status: 'Planejamento',
+        status: 'Planejamento' as any,
         prioridade: item.prioridade,
         responsavel_id: item.responsavel_id,
         responsaveis_ids: item.responsavel_id ? [item.responsavel_id] : [],
         criado_por: uid,
         origem: 'template_operacional',
         template_id: item.id
-      }).select('id').single();
+      }]).select('id').single();
       
       if (!error) createdCount++;
     } else if (item.template_type === 'multi_step') {
