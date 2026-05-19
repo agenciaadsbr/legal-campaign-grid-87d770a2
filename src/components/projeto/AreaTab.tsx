@@ -44,6 +44,12 @@ interface Props {
   emptyHint?: string;
   /** Demanda a ser aberta automaticamente (deep-link de Minhas Tarefas). */
   demandaInicial?: Demanda | null;
+  /** Quando true, exibe botão "Excluir selecionados" no modo seleção. */
+  allowBulkDelete?: boolean;
+  /** Slot opcional renderizado acima do Kanban (ex.: faixa de Cards Pai na Operacional). */
+  extraTop?: React.ReactNode;
+  /** Slot opcional dentro do dropdown de "Nova tarefa" (ex.: "Novo Card Pai"). */
+  novaTarefaExtra?: React.ReactNode;
 }
 
 export function AreaTab({
