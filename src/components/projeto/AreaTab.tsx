@@ -266,6 +266,18 @@ export function AreaTab({
                 }}
               />
 
+              {allowBulkDelete && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  disabled={selectedIds.size === 0 || deletingBulk}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  Excluir selecionados
+                </Button>
+              )}
+
               <Button
                 size="sm"
                 variant="ghost"
