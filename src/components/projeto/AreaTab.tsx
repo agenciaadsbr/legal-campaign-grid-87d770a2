@@ -181,9 +181,18 @@ export function AreaTab({
               <CheckSquare className="h-4 w-4 mr-1" />
               {selectionMode ? "Cancelar seleção" : "Selecionar"}
             </Button>
-            <Button size="sm" onClick={handleNovaTarefa}>
-              <Plus className="h-4 w-4 mr-1" /> Nova tarefa de {CATEGORIA_LABEL[categoria]}
-            </Button>
+            {novaTarefaExtra ? (
+              <div className="flex items-center gap-1">
+                <Button size="sm" onClick={handleNovaTarefa}>
+                  <Plus className="h-4 w-4 mr-1" /> Nova tarefa
+                </Button>
+                {novaTarefaExtra}
+              </div>
+            ) : (
+              <Button size="sm" onClick={handleNovaTarefa}>
+                <Plus className="h-4 w-4 mr-1" /> Nova tarefa de {CATEGORIA_LABEL[categoria]}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
