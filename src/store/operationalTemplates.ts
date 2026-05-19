@@ -264,7 +264,8 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
 
       // 2. Criar subtarefas
       const stepIdToRealId = new Map<string, string>();
-      for (const step of item.subtarefas) {
+      const subtarefasData = item.subtarefas || [];
+      for (const step of subtarefasData) {
         const isAguardando = !!step.depends_on;
         const { data: sub, error: sErr } = await supabase.from('demandas').insert([{
           cliente_id: clienteId,
@@ -323,5 +324,6 @@ export async function gerarEstruturaOperacional(clienteId: string): Promise<numb
   // Agora recomenda-se usar preparar + confirmar
   const data = await prepararEstruturaOperacional(clienteId);
   if (data.length === 0) return 0;
+  if (!data || data.length === 0) return 0;
   return await confirmarGeracaoEstrutura(clienteId, data);
 }
