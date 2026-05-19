@@ -37,43 +37,84 @@ export function EstruturasAutomaticasManager() {
   return (
     <div className="space-y-3">
       <Card>
-        <CardHeader className="p-4">
+        <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm">Estruturas automáticas — Onboarding Operacional</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Templates de tarefas criadas automaticamente quando um novo cliente é cadastrado.
-            Clientes antigos podem receber a estrutura via botão "Gerar estrutura operacional" na aba Operacional do projeto.
+            Defina as tarefas e fluxos criados automaticamente para novos clientes.
           </p>
         </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-2">
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Nome do novo template (ex: Configurar Pixel)"
-              value={novoNome}
-              onChange={(e) => setNovoNome(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-              className="h-8 text-xs"
-            />
-            <Button size="sm" onClick={handleAdd}>
-              <Plus className="h-4 w-4 mr-1" /> Adicionar
-            </Button>
-          </div>
+        <CardContent className="p-4 pt-0">
+          <Tabs defaultValue="single">
+            <TabsList className="grid grid-cols-2 mb-4">
+              <TabsTrigger value="single" className="gap-2">
+                <ListTodo className="h-4 w-4" /> Tarefas Únicas
+              </TabsTrigger>
+              <TabsTrigger value="multi" className="gap-2">
+                <Layers className="h-4 w-4" /> Fluxos Multietapa
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="space-y-1">
-            {templates.length === 0 && (
-              <div className="text-xs text-muted-foreground p-3 text-center">
-                Nenhum template cadastrado.
+            <TabsContent value="single" className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Nome do novo template (ex: Configurar Pixel)"
+                  value={novoNome}
+                  onChange={(e) => setNovoNome(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                  className="h-8 text-xs"
+                />
+                <Button size="sm" onClick={handleAdd}>
+                  <Plus className="h-4 w-4 mr-1" /> Adicionar
+                </Button>
               </div>
-            )}
-            {templates.map((t) => (
-              <TemplateRow
-                key={t.id}
-                template={t}
-                responsaveis={responsaveis}
-                onUpdate={(patch) => update(t.id, patch)}
-                onRemove={() => remove(t.id)}
-              />
-            ))}
-          </div>
+
+              <div className="space-y-1">
+                {templates.length === 0 && (
+                  <div className="text-xs text-muted-foreground p-3 text-center">
+                    Nenhum template cadastrado.
+                  </div>
+                )}
+                {templates.map((t) => (
+                  <TemplateRow
+                    key={t.id}
+                    template={t}
+                    responsaveis={responsaveis}
+                    onUpdate={(patch) => update(t.id, patch)}
+                    onRemove={() => remove(t.id)}
+                  />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="multi" className="space-y-4">
+              <div className="space-y-3">
+                {useOperationalTemplates.getState().flows.length === 0 && (
+                  <div className="text-xs text-muted-foreground p-8 text-center border-2 border-dashed rounded-lg">
+                    <Zap className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                    Fluxos padrão carregados via sistema. Edição de fluxos em breve.
+                  </div>
+                )}
+                {useOperationalTemplates.getState().flows.map((f) => (
+                  <div key={f.id} className="p-3 border rounded-md bg-muted/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold flex items-center gap-2">
+                        <Zap className="h-3.5 w-3.5 text-primary" /> {f.nome}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase font-medium">{f.steps.length} etapas</span>
+                    </div>
+                    <div className="space-y-1 pl-4 border-l-2">
+                      {f.steps.map((s) => (
+                        <div key={s.id} className="text-[11px] text-muted-foreground flex items-center justify-between">
+                          <span>• {s.nome}</span>
+                          <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded">{CATEGORIA_LABEL[s.categoria]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
