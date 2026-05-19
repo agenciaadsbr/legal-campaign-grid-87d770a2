@@ -281,7 +281,9 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
 
         if (!sErr && sub) {
           createdCount++;
-          // Se houver dependência, registra na tabela task_dependencies
+          // Armazena o ID real para as dependências das próximas subtarefas
+          stepIdToRealId.set(step.id, sub.id);
+          
           if (step.depends_on && stepIdToRealId.has(step.depends_on)) {
             await (supabase as any).from('task_dependencies').insert({
               task_id: sub.id,
