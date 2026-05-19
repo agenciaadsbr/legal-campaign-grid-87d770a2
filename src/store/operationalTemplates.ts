@@ -65,35 +65,39 @@ export const useOperationalTemplates = create<State>((set, get) => ({
     if (get().loading) return;
     set({ loading: true });
     
-    const [tplRes, flowRes, stepsRes] = await Promise.all([
-      (supabase as any).from("operational_templates").select("*").order("ordem", { ascending: true }),
-      (supabase as any).from("operational_flow_templates").select("*").eq("ativo", true).order("ordem", { ascending: true }),
-      (supabase as any).from("operational_flow_steps").select("*").order("ordem", { ascending: true }),
-    ]);
+    try {
+      const [tplRes, flowRes, stepsRes] = await Promise.all([
+        supabase.from("operational_templates").select("*").order("ordem", { ascending: true }),
+        supabase.from("operational_flow_templates").select("*").eq("ativo", true).order("ordem", { ascending: true }),
+        supabase.from("operational_flow_steps").select("*").order("ordem", { ascending: true }),
+      ]);
 
-    if (tplRes.error) {
-      toast.error("Erro ao carregar templates operacionais", { description: tplRes.error.message });
+      if (tplRes.error) throw tplRes.error;
+      if (flowRes.error) throw flowRes.error;
+      if (stepsRes.error) throw stepsRes.error;
+
+      const stepsByFlowId = (stepsRes.data ?? []).reduce((acc: any, step: any) => {
+        if (!acc[step.flow_id]) acc[step.flow_id] = [];
+        acc[step.flow_id].push(step);
+        return acc;
+      }, {});
+
+      const flows = (flowRes.data ?? []).map((f: any) => ({
+        ...f,
+        steps: stepsByFlowId[f.id] ?? [],
+      }));
+
+      set({ 
+        templates: (tplRes.data ?? []) as OperationalTemplate[], 
+        flows: flows as OperationalFlowTemplate[],
+        loaded: true, 
+        loading: false 
+      });
+    } catch (error: any) {
+      console.error("Erro ao carregar templates operacionais:", error);
+      toast.error("Erro ao carregar templates operacionais", { description: error.message });
       set({ loading: false });
-      return;
     }
-
-    const stepsByFlowId = (stepsRes.data ?? []).reduce((acc: any, step: any) => {
-      if (!acc[step.flow_id]) acc[step.flow_id] = [];
-      acc[step.flow_id].push(step);
-      return acc;
-    }, {});
-
-    const flows = (flowRes.data ?? []).map((f: any) => ({
-      ...f,
-      steps: stepsByFlowId[f.id] ?? [],
-    }));
-
-    set({ 
-      templates: (tplRes.data ?? []) as OperationalTemplate[], 
-      flows: flows as OperationalFlowTemplate[],
-      loaded: true, 
-      loading: false 
-    });
   },
 
   async create(t) {
@@ -172,13 +176,25 @@ export function useOperationalTemplatesBootstrap() {
  * Retorna uma lista de planos de criação (templates e fluxos).
  */
 export async function prepararEstruturaOperacional(clienteId: string) {
-  const { templates, flows } = useOperationalTemplates.getState();
+  let { templates, flows, loaded } = useOperationalTemplates.getState();
   
+  if (!loaded) {
+    await useOperationalTemplates.getState().load();
+    const state = useOperationalTemplates.getState();
+    templates = state.templates;
+    flows = state.flows;
+  }
+
   // 1. Carrega demandas já existentes para evitar duplicação
-  const { data: existentes } = await (supabase as any)
+  const { data: existentes, error: eErr } = await supabase
     .from("demandas")
     .select("id, template_id, titulo, is_parent")
     .eq("cliente_id", clienteId);
+
+  if (eErr) {
+    console.error("Erro ao verificar demandas existentes:", eErr);
+    throw eErr;
+  }
 
   const existentesArray = (existentes as any[]) ?? [];
   const jaUsadosIds = new Set<string>(existentesArray.map((d) => d.template_id).filter(Boolean));
@@ -209,7 +225,7 @@ export async function prepararEstruturaOperacional(clienteId: string) {
       prioridade: 'Media' as DemandaPrioridade,
       template_type: 'multi_step' as const,
       subtarefas: f.steps.map(s => ({
-        id: s.id, // Adicionado ID original para mapeamento de dependências
+        id: s.id,
         nome: s.nome,
         categoria: s.categoria,
         subtipo: s.subtipo,
@@ -229,91 +245,102 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
   let createdCount = 0;
 
   for (const item of payload) {
-    if (item.template_type === 'single') {
-      const { data, error } = await supabase.from('demandas').insert([{
-        cliente_id: clienteId,
-        titulo: item.titulo,
-        categoria: item.categoria,
-        subtipo: item.subtipo,
-        status: 'Planejamento' as any,
-        prioridade: item.prioridade,
-        responsavel_id: item.responsavel_id,
-        responsaveis_ids: item.responsavel_id ? [item.responsavel_id] : [],
-        criado_por: uid,
-        origem: 'template_operacional',
-        template_id: item.id
-      }]).select('id').single();
-      
-      if (!error) createdCount++;
-    } else if (item.template_type === 'multi_step') {
-      // 1. Criar card pai
-      const { data: parent, error: pErr } = await supabase.from('demandas').insert([{
-        cliente_id: clienteId,
-        titulo: item.titulo,
-        categoria: 'Operacional',
-        status: 'Planejamento' as any,
-        prioridade: 'Media',
-        is_parent: true,
-        template_type: 'multi_step',
-        criado_por: uid,
-        origem: 'template_operacional'
-      }]).select('id').single();
-
-      if (pErr || !parent) continue;
-      createdCount++;
-
-      // 2. Criar subtarefas
-      const stepIdToRealId = new Map<string, string>();
-      const subtarefasData = item.subtarefas || [];
-      for (const step of subtarefasData) {
-        const isAguardando = !!step.depends_on;
-        const { data: sub, error: sErr } = await supabase.from('demandas').insert([{
+    try {
+      if (item.template_type === 'single') {
+        const { error } = await supabase.from('demandas').insert([{
           cliente_id: clienteId,
-          parent_id: parent.id,
-          titulo: step.nome,
-          categoria: step.categoria,
-          subtipo: step.subtipo,
-          status: (isAguardando ? 'Aguardando etapa anterior' : 'Planejamento') as any,
+          titulo: item.titulo,
+          categoria: item.categoria,
+          subtipo: item.subtipo,
+          status: 'Planejamento' as any,
+          prioridade: item.prioridade,
+          responsavel_id: item.responsavel_id,
+          responsaveis_ids: item.responsavel_id ? [item.responsavel_id] : [],
+          criado_por: uid,
+          origem: 'template_operacional',
+          template_id: item.id
+        }]);
+        
+        if (error) {
+          console.error(`Erro ao criar tarefa "${item.titulo}":`, error);
+          continue;
+        }
+        createdCount++;
+      } else if (item.template_type === 'multi_step') {
+        // 1. Criar card pai
+        const { data: parent, error: pErr } = await supabase.from('demandas').insert([{
+          cliente_id: clienteId,
+          titulo: item.titulo,
+          categoria: 'Operacional',
+          status: 'Planejamento' as any,
           prioridade: 'Media',
-          responsavel_id: step.responsavel_id,
-          responsaveis_ids: step.responsavel_id ? [step.responsavel_id] : [],
+          is_parent: true,
+          template_type: 'multi_step',
           criado_por: uid,
           origem: 'template_operacional'
         }]).select('id').single();
 
-        if (!sErr && sub) {
-          createdCount++;
-          // Armazena o ID real para as dependências das próximas subtarefas
-          stepIdToRealId.set(step.id, sub.id);
-          
-          if (step.depends_on && stepIdToRealId.has(step.depends_on)) {
-            await (supabase as any).from('task_dependencies').insert([{
-              task_id: sub.id,
-              depends_on_task_id: stepIdToRealId.get(step.depends_on),
-              modo_liberacao: 'automatico',
-              liberado: false
-            }]);
+        if (pErr || !parent) {
+          console.error(`Erro ao criar card pai "${item.titulo}":`, pErr);
+          continue;
+        }
+        createdCount++;
+
+        // 2. Criar subtarefas
+        const stepIdToRealId = new Map<string, string>();
+        const subtarefasData = item.subtarefas || [];
+        for (const step of subtarefasData) {
+          const isAguardando = !!step.depends_on;
+          const { data: sub, error: sErr } = await supabase.from('demandas').insert([{
+            cliente_id: clienteId,
+            parent_id: parent.id,
+            titulo: step.nome,
+            categoria: step.categoria,
+            subtipo: step.subtipo,
+            status: (isAguardando ? 'Aguardando etapa anterior' : 'Planejamento') as any,
+            prioridade: 'Media',
+            responsavel_id: step.responsavel_id,
+            responsaveis_ids: step.responsavel_id ? [step.responsavel_id] : [],
+            criado_por: uid,
+            origem: 'template_operacional'
+          }]).select('id').single();
+
+          if (!sErr && sub) {
+            createdCount++;
+            stepIdToRealId.set(step.id, sub.id);
+            
+            if (step.depends_on && stepIdToRealId.has(step.depends_on)) {
+              const { error: dErr } = await supabase.from('task_dependencies').insert([{
+                task_id: sub.id,
+                depends_on_task_id: stepIdToRealId.get(step.depends_on),
+                modo_liberacao: 'automatico',
+                liberado: false
+              }]);
+              if (dErr) console.error("Erro ao criar dependência:", dErr);
+            }
+          } else {
+            console.error(`Erro ao criar subtarefa "${step.nome}":`, sErr);
           }
-          // Idealmente aqui mapearíamos o step.id original se o payload trouxesse
-          // Mas como estamos recriando do zero, precisamos de uma forma de relacionar.
-          // Por simplicidade neste exemplo, assumimos ordem linear se necessário ou
-          // ajustamos o template para passar IDs.
         }
       }
+    } catch (err) {
+      console.error("Erro fatal durante geração de estrutura:", err);
     }
   }
 
   if (createdCount > 0) {
-    // Busca informações do cliente para o histórico
-    const { data: cli } = await supabase.from('clientes').select('nome').eq('id', clienteId).single();
-    
-    await addAtividade({
-      clienteId,
-      acao: 'onboarding',
-      descricao: `Estrutura operacional gerada: ${createdCount} itens criados para ${cli?.nome || 'o cliente'}.`,
-      tipo: 'Gerencial',
-      area: 'Operacional'
-    });
+    try {
+      const { data: cli } = await supabase.from('clientes').select('nome').eq('id', clienteId).single();
+      await addAtividade({
+        clienteId,
+        acao: 'onboarding',
+        descricao: `Estrutura operacional gerada: ${createdCount} itens criados para ${cli?.nome || 'o cliente'}.`,
+        tipo: 'Gerencial',
+        area: 'Operacional'
+      });
+    } catch (actErr) {
+      console.error("Erro ao registrar atividade:", actErr);
+    }
   }
 
   return createdCount;
