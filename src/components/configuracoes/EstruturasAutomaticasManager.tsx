@@ -151,6 +151,15 @@ function TemplateRow({
         className="h-7 text-xs flex-1"
       />
       <Select
+        value={template.categoria}
+        onValueChange={(v) => onUpdate({ categoria: v as any })}
+      >
+        <SelectTrigger className="h-7 w-32 text-xs"><SelectValue placeholder="Área" /></SelectTrigger>
+        <SelectContent>
+          {CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{CATEGORIA_LABEL[c]}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select
         value={template.prioridade}
         onValueChange={(v) => onUpdate({ prioridade: v as any })}
       >
