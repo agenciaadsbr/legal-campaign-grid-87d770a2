@@ -209,6 +209,7 @@ export async function prepararEstruturaOperacional(clienteId: string) {
       prioridade: 'Media' as DemandaPrioridade,
       template_type: 'multi_step' as const,
       subtarefas: f.steps.map(s => ({
+        id: s.id, // Adicionado ID original para mapeamento de dependências
         nome: s.nome,
         categoria: s.categoria,
         subtipo: s.subtipo,
