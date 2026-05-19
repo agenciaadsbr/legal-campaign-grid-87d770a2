@@ -1,11 +1,22 @@
 import { useState, useMemo } from "react";
-import { Rocket, Sparkles } from "lucide-react";
+import { Rocket, Sparkles, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useDemandas, type Demanda } from "@/store/demandas";
-import { gerarEstruturaOperacional, useOperationalTemplates, useOperationalTemplatesBootstrap } from "@/store/operationalTemplates";
+import { prepararEstruturaOperacional, confirmarGeracaoEstrutura, useOperationalTemplates, useOperationalTemplatesBootstrap } from "@/store/operationalTemplates";
 import { AreaTab } from "@/components/projeto/AreaTab";
+import { OperationalPreviewModal } from "@/components/projeto/OperationalPreviewModal";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   clienteId: string;
@@ -17,6 +28,9 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
   const { isAdmin } = useAuth();
   const reload = useDemandas((s) => s.load);
   const [generating, setGenerating] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [alertOpen, setAlertOpen] = useState(false);
 
   useOperationalTemplatesBootstrap();
   const templates = useOperationalTemplates((s) => s.templates);
@@ -27,23 +41,38 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
       const oa = a.template_id ? (ordemMap.get(a.template_id) ?? 9999) : 9999;
       const ob = b.template_id ? (ordemMap.get(b.template_id) ?? 9999) : 9999;
       if (oa !== ob) return oa - ob;
-      // fallback: manter ordem original se mesma ordem
       return 0;
     });
   }, [demandas, templates]);
 
-  const handleGerar = async () => {
+  const handleGerarClick = async () => {
+    const jaTem = demandas.length > 0;
+    if (jaTem) {
+      setAlertOpen(true);
+    } else {
+      await startGeneration();
+    }
+  };
+
+  const startGeneration = async () => {
     setGenerating(true);
     try {
-      const n = await gerarEstruturaOperacional(clienteId);
-      if (n > 0) {
-        toast.success(`${n} ${n === 1 ? "card de estrutura criado" : "cards de estrutura criados"}`);
-        await reload();
-      } else {
+      const data = await prepararEstruturaOperacional(clienteId);
+      if (data.length === 0) {
         toast.info("Estrutura operacional já está completa para este cliente.");
+        return;
       }
+      setPreviewData(data);
+      setPreviewOpen(true);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleConfirm = async (payload: any[]) => {
+    const n = await confirmarGeracaoEstrutura(clienteId, payload);
+    if (n > 0) {
+      await reload();
     }
   };
 
@@ -51,7 +80,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     <div className="space-y-3">
       {isAdmin && (
         <div className="flex justify-end">
-          <Button size="sm" variant="outline" onClick={handleGerar} disabled={generating}>
+          <Button size="sm" variant="outline" onClick={handleGerarClick} disabled={generating}>
             <Sparkles className="h-4 w-4 mr-1" />
             {generating ? "Gerando…" : "Gerar estrutura operacional"}
           </Button>
@@ -66,6 +95,32 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
         emptyHint='Nenhuma tarefa operacional ainda. Use "Gerar estrutura operacional" para criar o pacote padrão de onboarding.'
         demandaInicial={demandaInicial ?? null}
       />
+
+      <OperationalPreviewModal
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        clienteId={clienteId}
+        previewData={previewData}
+        onConfirm={handleConfirm}
+      />
+
+      <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Estrutura já existente
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Este cliente já possui uma estrutura operacional gerada. Deseja gerar novamente os itens ausentes?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={startGeneration}>Gerar somente itens ausentes</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
