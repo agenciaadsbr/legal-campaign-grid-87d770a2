@@ -339,6 +339,44 @@ export function AreaTab({
           }
         }}
       />
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefas selecionadas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir as tarefas selecionadas? Essa ação não poderá ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingBulk}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletingBulk}
+              onClick={async (e) => {
+                e.preventDefault();
+                setDeletingBulk(true);
+                try {
+                  const ids = Array.from(selectedIds);
+                  await Promise.all(ids.map((id) => deleteDemanda(id)));
+                  toast.success(
+                    `${ids.length} ${ids.length === 1 ? "tarefa excluída" : "tarefas excluídas"}`,
+                  );
+                  setSelectedIds(new Set());
+                  setSelectionMode(false);
+                  setConfirmDeleteOpen(false);
+                  await reloadDemandas(true);
+                } catch (err) {
+                  toast.error("Erro ao excluir tarefas");
+                } finally {
+                  setDeletingBulk(false);
+                }
+              }}
+            >
+              {deletingBulk ? "Excluindo…" : "Excluir selecionados"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
