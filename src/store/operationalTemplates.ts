@@ -2,14 +2,16 @@ import { create } from "zustand";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { DemandaPrioridade, DemandaStatus } from "@/lib/demandas-categorias";
+import type { DemandaPrioridade, DemandaStatus, DemandaCategoria } from "@/lib/demandas-categorias";
+import { useAtividades } from "@/store/atividades";
+import { useCRM } from "@/store/crm";
 
 export interface OperationalTemplate {
   id: string;
   nome: string;
   descricao: string | null;
   ordem: number;
-  categoria: string;
+  categoria: DemandaCategoria;
   prioridade: DemandaPrioridade;
   status_inicial: DemandaStatus;
   ativo: boolean;
@@ -20,8 +22,30 @@ export interface OperationalTemplate {
   updated_at: string;
 }
 
+export interface OperationalFlowTemplate {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  ordem: number;
+  steps: OperationalFlowStep[];
+}
+
+export interface OperationalFlowStep {
+  id: string;
+  flow_id: string;
+  nome: string;
+  categoria: DemandaCategoria;
+  subtipo: string | null;
+  responsavel_padrao_id: string | null;
+  ordem: number;
+  prioridade: DemandaPrioridade;
+  depends_on_step_id: string | null;
+  modo_liberacao: "automatico" | "manual";
+}
+
 interface State {
   templates: OperationalTemplate[];
+  flows: OperationalFlowTemplate[];
   loaded: boolean;
   loading: boolean;
   load: () => Promise<void>;
@@ -33,22 +57,43 @@ interface State {
 
 export const useOperationalTemplates = create<State>((set, get) => ({
   templates: [],
+  flows: [],
   loaded: false,
   loading: false,
 
   async load() {
     if (get().loading) return;
     set({ loading: true });
-    const { data, error } = await (supabase as any)
-      .from("operational_templates")
-      .select("*")
-      .order("ordem", { ascending: true });
-    if (error) {
-      toast.error("Erro ao carregar templates operacionais", { description: error.message });
+    
+    const [tplRes, flowRes, stepsRes] = await Promise.all([
+      (supabase as any).from("operational_templates").select("*").order("ordem", { ascending: true }),
+      (supabase as any).from("operational_flow_templates").select("*").eq("ativo", true).order("ordem", { ascending: true }),
+      (supabase as any).from("operational_flow_steps").select("*").order("ordem", { ascending: true }),
+    ]);
+
+    if (tplRes.error) {
+      toast.error("Erro ao carregar templates operacionais", { description: tplRes.error.message });
       set({ loading: false });
       return;
     }
-    set({ templates: (data ?? []) as OperationalTemplate[], loaded: true, loading: false });
+
+    const stepsByFlowId = (stepsRes.data ?? []).reduce((acc: any, step: any) => {
+      if (!acc[step.flow_id]) acc[step.flow_id] = [];
+      acc[step.flow_id].push(step);
+      return acc;
+    }, {});
+
+    const flows = (flowRes.data ?? []).map((f: any) => ({
+      ...f,
+      steps: stepsByFlowId[f.id] ?? [],
+    }));
+
+    set({ 
+      templates: (tplRes.data ?? []) as OperationalTemplate[], 
+      flows: flows as OperationalFlowTemplate[],
+      loaded: true, 
+      loading: false 
+    });
   },
 
   async create(t) {
