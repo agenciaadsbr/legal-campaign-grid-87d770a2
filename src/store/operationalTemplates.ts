@@ -323,7 +323,6 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
 export async function gerarEstruturaOperacional(clienteId: string): Promise<number> {
   // Agora recomenda-se usar preparar + confirmar
   const data = await prepararEstruturaOperacional(clienteId);
-  if (data.length === 0) return 0;
   if (!data || data.length === 0) return 0;
   return await confirmarGeracaoEstrutura(clienteId, data);
 }
