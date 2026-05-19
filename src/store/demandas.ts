@@ -33,6 +33,9 @@ export interface Demanda {
   origem?: "manual" | "automatica" | "template_operacional";
   template_id?: string | null;
   marcado_ja_possui?: boolean;
+  is_parent?: boolean;
+  parent_id?: string | null;
+  template_type?: string | null;
   created_at: string;
   updated_at: string;
 }

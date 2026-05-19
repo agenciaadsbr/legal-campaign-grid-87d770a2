@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Demanda, getResponsaveisIds, useDemandas } from "@/store/demandas";
 import {
   PRIORIDADE_COR,
