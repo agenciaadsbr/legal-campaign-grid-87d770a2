@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -11,10 +12,11 @@ import {
   useOperationalTemplates,
   useOperationalTemplatesBootstrap,
   type OperationalTemplate,
+  type OperationalFlowTemplate,
 } from "@/store/operationalTemplates";
 import { useCRM } from "@/store/crm";
-import { Plus, Trash2, GripVertical } from "lucide-react";
-import { PRIORIDADES } from "@/lib/demandas-categorias";
+import { Plus, Trash2, GripVertical, Zap, Layers, ListTodo } from "lucide-react";
+import { PRIORIDADES, CATEGORIAS, CATEGORIA_LABEL } from "@/lib/demandas-categorias";
 
 export function EstruturasAutomaticasManager() {
   useOperationalTemplatesBootstrap();
