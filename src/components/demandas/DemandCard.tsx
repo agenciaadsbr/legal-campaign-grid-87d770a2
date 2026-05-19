@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Demanda, getResponsaveisIds, useDemandas } from "@/store/demandas";
 import {
   PRIORIDADE_COR,
@@ -10,7 +9,7 @@ import {
 import { isAguardandoDependencia, getFilhas } from "@/lib/workflow";
 import { useCRM } from "@/store/crm";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, AlertTriangle, Lock, Link2, Zap } from "lucide-react";
+import { Calendar, AlertTriangle, Lock, Link2 } from "lucide-react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -38,7 +37,6 @@ export function DemandCard({
 }: Props) {
   const { clientes, responsaveis } = useCRM();
   const dependencies = useDemandas((s) => s.dependencies);
-  const demandas = useDemandas((s) => s.demandas);
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
   const respIds = getResponsaveisIds(demanda);
   const resps = responsaveis.filter((r) => respIds.includes(r.id));
@@ -48,21 +46,6 @@ export function DemandCard({
   const urgente = demanda.prioridade === "Urgente";
   const aguardando = isAguardandoDependencia(demanda.id, dependencies);
   const temFilhas = getFilhas(demanda.id, dependencies).length > 0;
-  
-  // Lógica de progresso para cards pai
-  const subtarefas = useMemo(() => {
-    if (!demanda.is_parent) return [];
-    return demandas.filter(d => d.parent_id === demanda.id);
-  }, [demanda.id, demanda.is_parent, demandas]);
-  
-  const concluidoCount = subtarefas.filter(s => s.status === "Concluido" || s.status === "Entregue").length;
-  const totalSub = subtarefas.length;
-  const progressoPct = totalSub > 0 ? Math.round((concluidoCount / totalSub) * 100) : 0;
-  
-  const proximaEtapa = useMemo(() => {
-    if (!demanda.is_parent) return null;
-    return subtarefas.find(s => s.status !== "Concluido" && s.status !== "Entregue" && s.status !== "Aguardando etapa anterior");
-  }, [demanda.is_parent, subtarefas]);
 
   const handleClick = () => {
     if (selectionMode) {
@@ -113,11 +96,6 @@ export function DemandCard({
               <Link2 className="h-3.5 w-3.5" />
             </span>
           )}
-          {demanda.is_parent && (
-            <span title="Task Multietapa" className="text-primary">
-              <Zap className="h-3.5 w-3.5 fill-current" />
-            </span>
-          )}
           {urgente && !selectionMode && (
             <Badge
               className="text-[10px] px-1.5 py-0 h-5"
@@ -133,26 +111,6 @@ export function DemandCard({
       <div className="text-xs text-muted-foreground truncate">
         {cliente?.nome_cliente ?? "—"}
       </div>
-
-      {demanda.is_parent && totalSub > 0 && (
-        <div className="space-y-1.5 py-1">
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase font-semibold">
-            <span>Progresso</span>
-            <span>{concluidoCount}/{totalSub} etapas</span>
-          </div>
-          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-300" 
-              style={{ width: `${progressoPct}%` }}
-            />
-          </div>
-          {proximaEtapa && (
-            <div className="text-[10px] text-muted-foreground italic truncate">
-              Próxima: {proximaEtapa.titulo}
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="flex items-center gap-1.5 flex-wrap">
         <Badge

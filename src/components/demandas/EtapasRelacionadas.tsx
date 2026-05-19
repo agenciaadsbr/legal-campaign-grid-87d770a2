@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Demanda, useDemandas } from "@/store/demandas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import {
   getDemandasFilhas,
   isAguardandoDependencia,
 } from "@/lib/workflow";
-import { Lock, Link2, ArrowRight, Unlock, CheckCircle2, ChevronRight, Zap } from "lucide-react";
+import { Lock, Link2, ArrowRight, Unlock, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Props {
@@ -23,22 +22,7 @@ export function EtapasRelacionadas({ demanda, onOpenDemanda }: Props) {
 
   const pais = getPais(demanda.id, dependencies);
   const filhas = getFilhas(demanda.id, dependencies);
-
-  const parentFlow = useMemo(() => {
-    if (demanda.parent_id) {
-      return demandas.find(d => d.id === demanda.parent_id);
-    }
-    return null;
-  }, [demanda.parent_id, demandas]);
-
-  const subEtapas = useMemo(() => {
-    if (demanda.is_parent) {
-      return demandas.filter(d => d.parent_id === demanda.id);
-    }
-    return [];
-  }, [demanda.id, demanda.is_parent, demandas]);
-
-  if (pais.length === 0 && filhas.length === 0 && !parentFlow && subEtapas.length === 0) return null;
+  if (pais.length === 0 && filhas.length === 0) return null;
 
   const demandasPais = getDemandasPais(demanda.id, dependencies, demandas);
   const demandasFilhas = getDemandasFilhas(demanda.id, dependencies, demandas);
@@ -51,59 +35,7 @@ export function EtapasRelacionadas({ demanda, onOpenDemanda }: Props) {
           Etapas relacionadas
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 px-3 pb-3">
-        {/* Vínculo com Fluxo Pai */}
-        {parentFlow && (
-          <div className="space-y-1">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-              <Zap className="h-2.5 w-2.5" /> Pertence ao fluxo
-            </div>
-            <div className="flex items-center gap-2 rounded-md border bg-primary/5 border-primary/20 px-2 py-1.5">
-              <button
-                type="button"
-                onClick={() => onOpenDemanda?.(parentFlow)}
-                className="text-xs flex-1 text-left truncate hover:underline font-medium"
-              >
-                {parentFlow.titulo}
-              </button>
-              <ChevronRight className="h-3 w-3 text-muted-foreground" />
-            </div>
-          </div>
-        )}
-
-        {/* Sub etapas se for um card pai */}
-        {subEtapas.length > 0 && (
-          <div className="space-y-1">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Etapas deste fluxo
-            </div>
-            <div className="space-y-1 max-h-[150px] overflow-y-auto pr-1">
-              {subEtapas.map(s => {
-                const concluida = s.status === "Concluido" || s.status === "Entregue";
-                const aguardando = s.status === "Aguardando etapa anterior" || isAguardandoDependencia(s.id, dependencies);
-                return (
-                  <div key={s.id} className="flex items-center gap-2 rounded-md border bg-muted/20 px-2 py-1">
-                    {concluida ? (
-                      <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
-                    ) : aguardando ? (
-                      <Lock className="h-3 w-3 text-amber-500 shrink-0" />
-                    ) : (
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 ml-1 mr-0.5" />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onOpenDemanda?.(s)}
-                      className="text-[11px] flex-1 text-left truncate hover:underline"
-                    >
-                      {s.titulo}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
+      <CardContent className="space-y-2 px-3 pb-3">
         {demandasPais.length > 0 && (
           <div className="space-y-1">
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground">

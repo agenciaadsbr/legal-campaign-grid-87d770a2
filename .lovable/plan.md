@@ -1,50 +1,45 @@
-# Operational Structure Engine Implementation Plan
+# Habilitar histórico da IA na aba Posts
 
-I will implement a multi-step operational structure system in the "Operacional" tab. This involves evolving the current "Gerar estrutura operacional" functionality into a smart engine that can handle both single tasks and complex multi-step workflows with dependencies.
+## Diagnóstico
 
-## Technical Details
+O componente `TarefaIAConsulta` já é usado em **PostDetalheDialog.tsx** (linha 856) com toda a UI de histórico, pergunta, resposta, fontes e confiança — idêntica às demais abas. A renderização e o carregamento (`loadConsultasByDemanda`) estão funcionais.
 
-### 1. Database Schema Evolution
-- Enhanced `demandas` table with `is_parent`, `parent_id`, and `template_type`.
-- New `operational_flow_templates` and `operational_flow_steps` tables for pre-defined multi-step workflows.
-- New `task_dependencies` table for task locking logic.
-- Migration already applied to establish these structures and initial data.
+A causa real do histórico não aparecer em **Posts** está no banco:
 
-### 2. Frontend Components
-- **Preview Modal**: A new dialog to review and edit tasks (single and multi-step) before final generation.
-- **Parent Card UI**: Enhanced card in the "Operacional" tab to show progress (e.g., "2/4 steps"), current stage, and status.
-- **Step Dependency UI**: Visual indicators on cards showing their relationship to parent flows and blocking status.
-- **Workflow Locking**: Implementation of UI-level locks for tasks with unmet dependencies.
+- A tabela `ia_tarefa_consultas` tem FK:
+  `demanda_id → demandas(id) ON DELETE CASCADE`
+- Na aba Posts, passamos `demanda_id = post.id` (UUID da tabela `posts_cliente_kanban`, não `demandas`).
+- O `INSERT` no edge function `ia-consultar-tarefa` falha com violação de FK.
+- O erro é silencioso (não é tratado/retornado), então a resposta da IA aparece **uma vez** na sessão, mas nada é persistido — e ao reabrir o post, o histórico fica vazio.
 
-### 3. State Management & Logic
-- Update `useDemandasStore` to handle parent-child relationships and dependency resolution.
-- Enhance `gerarEstruturaOperacional` to support previewing and conditional creation.
-- Logic to automatically unlock "next steps" when a dependency is completed (for automatic mode) or show a "Release" button (for manual mode).
+Nas demais abas (Tráfego, Vídeos, etc.) o `demanda_id` é de fato uma demanda, então a FK aceita e o histórico funciona.
 
-## Proposed Changes
+## Mudança proposta (mínima e segura)
 
-### Database & Types
-- Update `src/integrations/supabase/types.ts` with new columns and tables.
+Criar **uma migração** que apenas remove a FK rígida da coluna `demanda_id`, transformando-a em uma referência polimórfica (aceita id de `demandas` OU `posts_cliente_kanban`):
 
-### Logic (Store)
-- Modify `src/store/operationalTemplates.ts` to include flow template loading and structured generation logic.
-- Update `src/store/demandas.ts` to support hierarchical task management.
+```sql
+ALTER TABLE public.ia_tarefa_consultas
+  DROP CONSTRAINT IF EXISTS ia_tarefa_consultas_demanda_id_fkey;
+```
 
-### UI Components
-- Update `src/components/projeto/OperacionalTab.tsx` to launch the preview modal.
-- Create `src/components/projeto/OperationalPreviewModal.tsx`.
-- Modify `src/components/projeto/AreaTab.tsx` and related Kanban components to display dependency status.
+Nada mais é alterado:
+- Coluna `demanda_id` continua existindo (uuid not null).
+- RLS permanece igual.
+- Dados existentes são preservados.
+- Histórico de demandas comuns continua funcionando normalmente.
+- A partir daí, consultas feitas em Posts passam a salvar e aparecer no histórico, exatamente como nas outras abas.
 
-### Security & RLS
-- All new tables have RLS enabled, allowing authenticated users access while keeping operational data secure.
+## O que NÃO será alterado
 
-## Implementation Steps
+- Nenhum arquivo de UI (`PostDetalheDialog.tsx`, `TarefaIAConsulta.tsx`).
+- Nenhum edge function.
+- Nenhuma store.
+- Nenhum dado existente.
+- Nenhum Kanban, workflow, comentário ou layout.
 
-1.  **Update Types**: Synchronize frontend types with the new database schema.
-2.  **Flow Logic**: Implement the generator logic that parses templates into a flat list of tasks with dependency IDs.
-3.  **Preview Modal**: Build the "Previa antes de gerar" UI where users can edit/remove tasks.
-4.  **Task Hierarchy**: Update the Kanban cards to show parent-flow progress.
-5.  **Dependency Engine**: Implement the logic that checks if a task is "Aguardando etapa anterior" and handles the unlocking flow.
-6.  **History Integration**: Ensure all automatic actions are logged in the `atividades` tab.
+## Validação após aplicar
 
-No existing data will be removed or altered destructively. The layout will remain consistent with the current design system.
+1. Abrir um Post → seção "Está com dúvidas na tarefa?" → fazer uma consulta.
+2. Fechar o Post e reabrir → confirmar que a consulta aparece em "Histórico de consultas" com pergunta, resposta, fontes e selo de confiança.
+3. Conferir aba Tráfego Pago e Vídeos: histórico continua funcionando normalmente.

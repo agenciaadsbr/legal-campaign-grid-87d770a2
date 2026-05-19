@@ -315,12 +315,6 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
       })
     : [];
   const tituloPaiAguardando = paisAguardando[0]?.titulo;
-  
-  // Lógica de progresso para cards pai
-  const subtarefas = demandas.filter(d => d.parent_id === demanda.id);
-  const concluidoCount = subtarefas.filter(s => s.status === "Concluido" || s.status === "Entregue").length;
-  const totalSub = subtarefas.length;
-  const progressoPct = totalSub > 0 ? Math.round((concluidoCount / totalSub) * 100) : 0;
 
   const enviar = async () => {
     if (!user) return;
@@ -468,24 +462,6 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             </div>
           )}
           {/* CARD 1 — Informações da Demanda */}
-          {demanda.is_parent && totalSub > 0 && (
-            <Card className="shrink-0 bg-primary/5 border-primary/20">
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-primary">
-                  <span className="flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5 fill-current" /> Fluxo Operacional
-                  </span>
-                  <span>{concluidoCount} / {totalSub} etapas</span>
-                </div>
-                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all duration-300" 
-                    style={{ width: `${progressoPct}%` }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
           <Card className="shrink-0 overflow-hidden">
             <CardHeader className="pb-1.5 pt-2.5 px-3">
               <div className="flex items-start justify-between gap-3">
