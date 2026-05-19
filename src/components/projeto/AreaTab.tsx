@@ -12,7 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, CheckSquare, X, type LucideIcon } from "lucide-react";
+import { Plus, CheckSquare, X, Trash2, type LucideIcon } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ProjetoKanban } from "@/components/demandas/ProjetoKanban";
 import { DemandaDetalheDialog } from "@/components/demandas/DemandaDetalheDialog";
 import { AvatarStack } from "@/components/AvatarStack";
@@ -34,6 +44,12 @@ interface Props {
   emptyHint?: string;
   /** Demanda a ser aberta automaticamente (deep-link de Minhas Tarefas). */
   demandaInicial?: Demanda | null;
+  /** Quando true, exibe botão "Excluir selecionados" no modo seleção. */
+  allowBulkDelete?: boolean;
+  /** Slot opcional renderizado acima do Kanban (ex.: faixa de Cards Pai na Operacional). */
+  extraTop?: React.ReactNode;
+  /** Slot opcional dentro do dropdown de "Nova tarefa" (ex.: "Novo Card Pai"). */
+  novaTarefaExtra?: React.ReactNode;
 }
 
 export function AreaTab({
@@ -44,16 +60,23 @@ export function AreaTab({
   categoria,
   emptyHint,
   demandaInicial,
+  allowBulkDelete,
+  extraTop,
+  novaTarefaExtra,
 }: Props) {
   const { responsaveis } = useCRM();
   const createRascunho = useDemandas((s) => s.createRascunho);
   const updateDemanda = useDemandas((s) => s.updateDemanda);
+  const deleteDemanda = useDemandas((s) => s.deleteDemanda);
+  const reloadDemandas = useDemandas((s) => s.load);
   const [selecionada, setSelecionada] = useState<Demanda | null>(null);
   const [rascunhoId, setRascunhoId] = useState<string | null>(null);
   const [filtroSubtipo, setFiltroSubtipo] = useState<string>("todos");
   const [filtroResp, setFiltroResp] = useState<string>("todos");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletingBulk, setDeletingBulk] = useState(false);
 
   // Deep-link: abre o detalhe quando uma demanda inicial é fornecida.
   // Se a demanda inicial veio recém-criada como rascunho ("Sem título"),
@@ -158,9 +181,18 @@ export function AreaTab({
               <CheckSquare className="h-4 w-4 mr-1" />
               {selectionMode ? "Cancelar seleção" : "Selecionar"}
             </Button>
-            <Button size="sm" onClick={handleNovaTarefa}>
-              <Plus className="h-4 w-4 mr-1" /> Nova tarefa de {CATEGORIA_LABEL[categoria]}
-            </Button>
+            {novaTarefaExtra ? (
+              <div className="flex items-center gap-1">
+                <Button size="sm" onClick={handleNovaTarefa}>
+                  <Plus className="h-4 w-4 mr-1" /> Nova tarefa
+                </Button>
+                {novaTarefaExtra}
+              </div>
+            ) : (
+              <Button size="sm" onClick={handleNovaTarefa}>
+                <Plus className="h-4 w-4 mr-1" /> Nova tarefa de {CATEGORIA_LABEL[categoria]}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -243,6 +275,18 @@ export function AreaTab({
                 }}
               />
 
+              {allowBulkDelete && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  disabled={selectedIds.size === 0 || deletingBulk}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  Excluir selecionados
+                </Button>
+              )}
+
               <Button
                 size="sm"
                 variant="ghost"
@@ -266,6 +310,8 @@ export function AreaTab({
           </CardContent>
         </Card>
       )}
+
+      {extraTop}
 
       {/* Kanban */}
       {filtradas.length === 0 ? (
@@ -302,6 +348,44 @@ export function AreaTab({
           }
         }}
       />
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefas selecionadas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir as tarefas selecionadas? Essa ação não poderá ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingBulk}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletingBulk}
+              onClick={async (e) => {
+                e.preventDefault();
+                setDeletingBulk(true);
+                try {
+                  const ids = Array.from(selectedIds);
+                  await Promise.all(ids.map((id) => deleteDemanda(id)));
+                  toast.success(
+                    `${ids.length} ${ids.length === 1 ? "tarefa excluída" : "tarefas excluídas"}`,
+                  );
+                  setSelectedIds(new Set());
+                  setSelectionMode(false);
+                  setConfirmDeleteOpen(false);
+                  await reloadDemandas(true);
+                } catch (err) {
+                  toast.error("Erro ao excluir tarefas");
+                } finally {
+                  setDeletingBulk(false);
+                }
+              }}
+            >
+              {deletingBulk ? "Excluindo…" : "Excluir selecionados"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

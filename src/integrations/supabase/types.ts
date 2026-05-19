@@ -181,6 +181,104 @@ export type Database = {
         }
         Relationships: []
       }
+      card_pai: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          id: string
+          responsaveis_ids: string[]
+          status_geral: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          id?: string
+          responsaveis_ids?: string[]
+          status_geral?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          id?: string
+          responsaveis_ids?: string[]
+          status_geral?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      card_pai_etapas: {
+        Row: {
+          card_pai_id: string
+          categoria_alvo: string | null
+          concluido: boolean
+          concluido_em: string | null
+          created_at: string
+          demanda_id: string | null
+          depends_on_etapa_id: string | null
+          id: string
+          liberado: boolean
+          ordem: number
+          responsavel_id: string | null
+          status_interno_valor: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          card_pai_id: string
+          categoria_alvo?: string | null
+          concluido?: boolean
+          concluido_em?: string | null
+          created_at?: string
+          demanda_id?: string | null
+          depends_on_etapa_id?: string | null
+          id?: string
+          liberado?: boolean
+          ordem?: number
+          responsavel_id?: string | null
+          status_interno_valor?: string | null
+          tipo?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          card_pai_id?: string
+          categoria_alvo?: string | null
+          concluido?: boolean
+          concluido_em?: string | null
+          created_at?: string
+          demanda_id?: string | null
+          depends_on_etapa_id?: string | null
+          id?: string
+          liberado?: boolean
+          ordem?: number
+          responsavel_id?: string | null
+          status_interno_valor?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_pai_etapas_card_pai_id_fkey"
+            columns: ["card_pai_id"]
+            isOneToOne: false
+            referencedRelation: "card_pai"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cards: {
         Row: {
           cliente_id: string
@@ -897,6 +995,7 @@ export type Database = {
         Row: {
           apoio: string | null
           aprovado_por: string | null
+          card_pai_id: string | null
           categoria: Database["public"]["Enums"]["demanda_categoria"]
           checklist: string | null
           cliente_id: string
@@ -932,6 +1031,7 @@ export type Database = {
         Insert: {
           apoio?: string | null
           aprovado_por?: string | null
+          card_pai_id?: string | null
           categoria?: Database["public"]["Enums"]["demanda_categoria"]
           checklist?: string | null
           cliente_id: string
@@ -967,6 +1067,7 @@ export type Database = {
         Update: {
           apoio?: string | null
           aprovado_por?: string | null
+          card_pai_id?: string | null
           categoria?: Database["public"]["Enums"]["demanda_categoria"]
           checklist?: string | null
           cliente_id?: string
