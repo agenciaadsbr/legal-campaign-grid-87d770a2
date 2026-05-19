@@ -303,10 +303,13 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
   }
 
   if (createdCount > 0) {
+    // Busca informações do cliente para o histórico
+    const { data: cli } = await supabase.from('clientes').select('nome').eq('id', clienteId).single();
+    
     await addAtividade({
       clienteId,
-      acao: 'workflow',
-      descricao: `Estrutura operacional gerada: ${createdCount} itens criados.`,
+      acao: 'onboarding',
+      descricao: `Estrutura operacional gerada: ${createdCount} itens criados para ${cli?.nome || 'o cliente'}.`,
       tipo: 'Gerencial',
       area: 'Operacional'
     });
