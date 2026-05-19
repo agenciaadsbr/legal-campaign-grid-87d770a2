@@ -908,6 +908,7 @@ export type Database = {
           descricao: string | null
           entregavel_esperado: string | null
           id: string
+          is_parent: boolean | null
           justificativa_atribuicao: string | null
           link_drive: string | null
           link_meister: string | null
@@ -915,6 +916,7 @@ export type Database = {
           origem: string
           origem_reuniao_id: string | null
           origem_sugestao_id: string | null
+          parent_id: string | null
           precisa_aprovacao: boolean
           prioridade: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids: string[]
@@ -923,6 +925,7 @@ export type Database = {
           subtipo: string | null
           supervisor_id: string | null
           template_id: string | null
+          template_type: string | null
           titulo: string
           updated_at: string
         }
@@ -940,6 +943,7 @@ export type Database = {
           descricao?: string | null
           entregavel_esperado?: string | null
           id?: string
+          is_parent?: boolean | null
           justificativa_atribuicao?: string | null
           link_drive?: string | null
           link_meister?: string | null
@@ -947,6 +951,7 @@ export type Database = {
           origem?: string
           origem_reuniao_id?: string | null
           origem_sugestao_id?: string | null
+          parent_id?: string | null
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids?: string[]
@@ -955,6 +960,7 @@ export type Database = {
           subtipo?: string | null
           supervisor_id?: string | null
           template_id?: string | null
+          template_type?: string | null
           titulo: string
           updated_at?: string
         }
@@ -972,6 +978,7 @@ export type Database = {
           descricao?: string | null
           entregavel_esperado?: string | null
           id?: string
+          is_parent?: boolean | null
           justificativa_atribuicao?: string | null
           link_drive?: string | null
           link_meister?: string | null
@@ -979,6 +986,7 @@ export type Database = {
           origem?: string
           origem_reuniao_id?: string | null
           origem_sugestao_id?: string | null
+          parent_id?: string | null
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
           responsaveis_ids?: string[]
@@ -987,10 +995,18 @@ export type Database = {
           subtipo?: string | null
           supervisor_id?: string | null
           template_id?: string | null
+          template_type?: string | null
           titulo?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "demandas_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "demandas_supervisor_id_fkey"
             columns: ["supervisor_id"]
@@ -1347,6 +1363,90 @@ export type Database = {
           created_at?: string
           id?: string
           label?: string
+        }
+        Relationships: []
+      }
+      operational_flow_steps: {
+        Row: {
+          categoria: string
+          created_at: string | null
+          depends_on_step_id: string | null
+          flow_id: string | null
+          id: string
+          modo_liberacao: string | null
+          nome: string
+          ordem: number | null
+          prioridade: string | null
+          responsavel_padrao_id: string | null
+          subtipo: string | null
+        }
+        Insert: {
+          categoria: string
+          created_at?: string | null
+          depends_on_step_id?: string | null
+          flow_id?: string | null
+          id?: string
+          modo_liberacao?: string | null
+          nome: string
+          ordem?: number | null
+          prioridade?: string | null
+          responsavel_padrao_id?: string | null
+          subtipo?: string | null
+        }
+        Update: {
+          categoria?: string
+          created_at?: string | null
+          depends_on_step_id?: string | null
+          flow_id?: string | null
+          id?: string
+          modo_liberacao?: string | null
+          nome?: string
+          ordem?: number | null
+          prioridade?: string | null
+          responsavel_padrao_id?: string | null
+          subtipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_flow_steps_depends_on_step_id_fkey"
+            columns: ["depends_on_step_id"]
+            isOneToOne: false
+            referencedRelation: "operational_flow_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_flow_steps_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "operational_flow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operational_flow_templates: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          ordem: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
