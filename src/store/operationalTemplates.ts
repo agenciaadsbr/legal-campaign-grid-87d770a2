@@ -286,12 +286,12 @@ export async function confirmarGeracaoEstrutura(clienteId: string, payload: any[
           stepIdToRealId.set(step.id, sub.id);
           
           if (step.depends_on && stepIdToRealId.has(step.depends_on)) {
-            await (supabase as any).from('task_dependencies').insert({
+            await (supabase as any).from('task_dependencies').insert([{
               task_id: sub.id,
               depends_on_task_id: stepIdToRealId.get(step.depends_on),
               modo_liberacao: 'automatico',
               liberado: false
-            });
+            }]);
           }
           // Idealmente aqui mapearíamos o step.id original se o payload trouxesse
           // Mas como estamos recriando do zero, precisamos de uma forma de relacionar.
