@@ -194,6 +194,9 @@ function normalizeDemanda(row: any): Demanda {
     origem: row.origem ?? "manual",
     template_id: row.template_id ?? null,
     marcado_ja_possui: !!row.marcado_ja_possui,
+    is_parent: !!row.is_parent,
+    parent_id: row.parent_id ?? null,
+    template_type: row.template_type ?? "single",
   } as Demanda;
 }
 
