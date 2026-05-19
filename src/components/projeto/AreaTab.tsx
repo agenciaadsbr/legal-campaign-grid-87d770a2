@@ -302,6 +302,8 @@ export function AreaTab({
         </Card>
       )}
 
+      {extraTop}
+
       {/* Kanban */}
       {filtradas.length === 0 ? (
         <Card>
