@@ -35,6 +35,9 @@ export interface Demanda {
   marcado_ja_possui?: boolean;
   created_at: string;
   updated_at: string;
+  approval_waiting_since?: string | null;
+  approval_waiting_by?: string | null;
+  approval_previous_status?: string | null;
 }
 
 /** Helper: extrai a lista de responsáveis de uma demanda (com fallback ao legado). */

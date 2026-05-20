@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 const statusMap: Record<string, { bg: string; label: string }> = {
   Criar: { bg: "bg-status-criar/15 text-status-criar border-status-criar/30", label: "Criar" },
-  Revisar: { bg: "bg-status-revisar/15 text-status-revisar border-status-revisar/30", label: "Revisar" },
+  Revisar: { bg: "bg-status-revisar/15 text-status-revisar border-status-revisar/30", label: "Aguardando aprovação do cliente" },
   Agendar: { bg: "bg-status-agendar/15 text-status-agendar border-status-agendar/30", label: "Agendar" },
   Postado: { bg: "bg-status-postado/15 text-status-postado border-status-postado/30", label: "Postado" },
   Renovação: { bg: "bg-status-renovacao/15 text-status-renovacao border-status-renovacao/30", label: "Renovação" },

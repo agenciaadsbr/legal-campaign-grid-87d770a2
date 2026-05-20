@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ExternalLink, AlertCircle, Clock, Circle, Zap, CheckSquare, Square } from "lucide-react";
+import { CheckCircle2, ExternalLink, AlertCircle, Clock, Circle, Zap, CheckSquare, Square, Hourglass } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ColorBadge } from "@/components/StatusBadge";
@@ -28,23 +28,25 @@ const STATUS_COR: Record<string, string> = {
   em_andamento: "hsl(var(--info))",
   atrasado: "hsl(var(--destructive))",
   concluido: "hsl(var(--status-postado))",
+  aprovacao: "hsl(var(--status-revisar))",
 };
 
-type GroupKey = "urgente" | "atrasado" | "em_andamento" | "pendente" | "concluido";
+type GroupKey = "urgente" | "atrasado" | "aprovacao" | "em_andamento" | "pendente" | "concluido";
 
-const GROUP_ORDER: GroupKey[] = ["urgente", "atrasado", "em_andamento", "pendente", "concluido"];
+const GROUP_ORDER: GroupKey[] = ["urgente", "atrasado", "aprovacao", "em_andamento", "pendente", "concluido"];
 
 const GROUP_META: Record<GroupKey, { label: string; icon: typeof Zap; className: string }> = {
-  urgente:      { label: "Urgentes",     icon: Zap,          className: "text-destructive" },
-  atrasado:     { label: "Atrasadas",    icon: AlertCircle,  className: "text-destructive" },
-  em_andamento: { label: "Em andamento", icon: Clock,        className: "text-info" },
-  pendente:     { label: "Pendentes",    icon: Circle,       className: "text-muted-foreground" },
-  concluido:    { label: "Concluídas",   icon: CheckCircle2, className: "text-emerald-500" },
+  urgente:      { label: "Urgentes",                              icon: Zap,          className: "text-destructive" },
+  atrasado:     { label: "Atrasadas",                             icon: AlertCircle,  className: "text-destructive" },
+  aprovacao:    { label: "Aguardando aprovação do cliente",       icon: Hourglass,    className: "text-amber-500" },
+  em_andamento: { label: "Em andamento",                          icon: Clock,        className: "text-info" },
+  pendente:     { label: "Pendentes",                             icon: Circle,       className: "text-muted-foreground" },
+  concluido:    { label: "Concluídas",                            icon: CheckCircle2, className: "text-emerald-500" },
 };
 
 function groupOf(t: UnifiedTask): GroupKey {
   if (t.status === "concluido") return "concluido";
-  if (t.urgente) return "urgente";
+  if (t.urgente && t.status !== "aprovacao") return "urgente";
   return t.status as GroupKey;
 }
 
@@ -52,6 +54,12 @@ function formatPrazo(p: string | null): string {
   if (!p) return "—";
   const d = new Date(p);
   return d.toLocaleDateString("pt-BR");
+}
+
+function aprovacaoBadgeTone(dias: number): "secondary" | "warning" | "destructive" {
+  if (dias >= 7) return "destructive";
+  if (dias >= 3) return "warning";
+  return "secondary";
 }
 
 export function MinhasTarefasTabela({ 
@@ -91,15 +99,24 @@ export function MinhasTarefasTabela({
 
   const grupos = useMemo(() => {
     const buckets: Record<GroupKey, UnifiedTask[]> = {
-      urgente: [], atrasado: [], em_andamento: [], pendente: [], concluido: [],
+      urgente: [], atrasado: [], aprovacao: [], em_andamento: [], pendente: [], concluido: [],
     };
     for (const t of tasks) buckets[groupOf(t)].push(t);
+    // Ordena grupo de aprovação por dias desc, prazo asc
+    buckets.aprovacao.sort((a, b) => {
+      const da = a.approval_dias ?? -1;
+      const db = b.approval_dias ?? -1;
+      if (da !== db) return db - da;
+      const pa = a.prazo ? new Date(a.prazo).getTime() : Infinity;
+      const pb = b.prazo ? new Date(b.prazo).getTime() : Infinity;
+      return pa - pb;
+    });
     return GROUP_ORDER
       .map((k) => ({ key: k, items: buckets[k] }))
       .filter((g) => g.items.length > 0);
   }, [tasks]);
 
-  const colSpan = mostrarResponsavel ? 9 : 8;
+  const colSpan = mostrarResponsavel ? 11 : 10;
 
   if (tasks.length === 0) {
     return (
@@ -134,7 +151,9 @@ export function MinhasTarefasTabela({
                 <TableHead className="w-[120px]">Área</TableHead>
                 <TableHead className="w-[90px]">Prioridade</TableHead>
                 <TableHead className="w-[90px]">Prazo</TableHead>
-                <TableHead className="w-[120px]">Status</TableHead>
+                <TableHead className="w-[160px]">Status</TableHead>
+                <TableHead className="w-[110px]">Entrada em aprovação</TableHead>
+                <TableHead className="w-[120px]">Dias em aprovação</TableHead>
                 <TableHead className="w-[120px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -209,9 +228,29 @@ export function MinhasTarefasTabela({
                             </span>
                           </TableCell>
                           <TableCell>
-                            <div className="inline-flex min-w-[100px]">
+                            <div className="inline-flex min-w-[140px]">
                               <ColorBadge label={STATUS_LABEL[t.status as TaskStatus]} color={STATUS_COR[t.status]} />
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                              {t.approval_waiting_since ? formatPrazo(t.approval_waiting_since) : "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {t.status === "aprovacao" && t.approval_dias != null ? (
+                              (() => {
+                                const tone = aprovacaoBadgeTone(t.approval_dias);
+                                const cor =
+                                  tone === "destructive" ? "hsl(var(--destructive))"
+                                  : tone === "warning" ? "hsl(var(--warning, var(--status-revisar)))"
+                                  : "hsl(var(--muted-foreground))";
+                                const label = `${t.approval_dias} ${t.approval_dias === 1 ? "dia" : "dias"}`;
+                                return <ColorBadge label={label} color={cor} />;
+                              })()
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="inline-flex items-center gap-1">

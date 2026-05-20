@@ -281,6 +281,9 @@ export type Database = {
       }
       cards: {
         Row: {
+          approval_previous_status: string | null
+          approval_waiting_by: string | null
+          approval_waiting_since: string | null
           cliente_id: string
           created_at: string
           data_agendada: string | null
@@ -299,6 +302,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_previous_status?: string | null
+          approval_waiting_by?: string | null
+          approval_waiting_since?: string | null
           cliente_id: string
           created_at?: string
           data_agendada?: string | null
@@ -317,6 +323,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_previous_status?: string | null
+          approval_waiting_by?: string | null
+          approval_waiting_since?: string | null
           cliente_id?: string
           created_at?: string
           data_agendada?: string | null
@@ -994,6 +1003,9 @@ export type Database = {
       demandas: {
         Row: {
           apoio: string | null
+          approval_previous_status: string | null
+          approval_waiting_by: string | null
+          approval_waiting_since: string | null
           aprovado_por: string | null
           card_pai_id: string | null
           categoria: Database["public"]["Enums"]["demanda_categoria"]
@@ -1030,6 +1042,9 @@ export type Database = {
         }
         Insert: {
           apoio?: string | null
+          approval_previous_status?: string | null
+          approval_waiting_by?: string | null
+          approval_waiting_since?: string | null
           aprovado_por?: string | null
           card_pai_id?: string | null
           categoria?: Database["public"]["Enums"]["demanda_categoria"]
@@ -1066,6 +1081,9 @@ export type Database = {
         }
         Update: {
           apoio?: string | null
+          approval_previous_status?: string | null
+          approval_waiting_by?: string | null
+          approval_waiting_since?: string | null
           aprovado_por?: string | null
           card_pai_id?: string | null
           categoria?: Database["public"]["Enums"]["demanda_categoria"]
