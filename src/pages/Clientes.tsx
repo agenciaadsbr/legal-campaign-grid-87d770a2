@@ -463,6 +463,7 @@ function EditarClienteDialog({
     valor_venda: (cliente?.valor_venda != null ? String(cliente.valor_venda) : "") as string,
     responsaveis: cliente?.responsaveis ?? [],
     observacoes: cliente?.observacoes ?? "",
+    oculto: !!cliente?.oculto,
   });
 
   const setInicio = (v: string) =>
@@ -488,12 +489,17 @@ function EditarClienteDialog({
     }
     try {
       const { duracao_meses, prazo_onboarding, valor_venda, ...patch } = form;
+      const ocultoMudou = !!cliente?.oculto !== !!form.oculto;
       await updateCliente(cliente.id, {
         ...(patch as any),
         prazo_onboarding: prazo_onboarding || null,
         valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
       });
-      toast.success("Cliente atualizado");
+      if (ocultoMudou) {
+        toast.success(form.oculto ? "Cliente ocultado do painel" : "Cliente reexibido no painel");
+      } else {
+        toast.success("Cliente atualizado");
+      }
       onOpenChange(false);
     } catch (e: any) {
       toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
@@ -602,6 +608,20 @@ function EditarClienteDialog({
             <Label>Observações</Label>
             <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </div>
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-0.5">
+                <Label className="text-sm">Ocultar cliente do painel</Label>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Clientes ocultos não aparecem na listagem principal, mas continuam no banco e nos relatórios internos. Use "Mostrar ocultos" para reexibir.
+                </p>
+              </div>
+              <Switch
+                checked={!!form.oculto}
+                onCheckedChange={(v) => setForm({ ...form, oculto: !!v })}
+              />
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
@@ -613,13 +633,10 @@ function EditarClienteDialog({
 }
 
 function AcoesCliente({ cliente }: { cliente: any }) {
-  const { updateCliente, deleteCliente } = useCRM();
+  const { deleteCliente } = useCRM();
   const { isAdmin, canWrite } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
-
-  // satisfies linter: updateCliente é usado no dialog filho
-  void updateCliente;
 
   const handleDelete = async () => {
     try {
@@ -631,31 +648,10 @@ function AcoesCliente({ cliente }: { cliente: any }) {
     }
   };
 
-  const handleToggleOculto = async () => {
-    const novo = !cliente.oculto;
-    try {
-      await updateCliente(cliente.id, { oculto: novo } as any);
-      toast.success(novo ? "Cliente ocultado do painel" : "Cliente reexibido no painel");
-    } catch (e: any) {
-      toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
-    }
-  };
-
   if (!canWrite && !isAdmin) return null;
 
   return (
     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-      {canWrite && (
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7"
-          title={cliente.oculto ? "Reexibir no painel" : "Ocultar do painel"}
-          onClick={handleToggleOculto}
-        >
-          {cliente.oculto ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-        </Button>
-      )}
       {canWrite && (
         <Button
           size="icon"
