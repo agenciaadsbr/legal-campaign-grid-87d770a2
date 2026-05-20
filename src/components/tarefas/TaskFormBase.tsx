@@ -409,7 +409,7 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
                 </SelectTrigger>
                 <SelectContent>
                   {categoria === "Posts" ? (
-                    statusPostOptions.map(s => <SelectItem key={s.label} value={s.label}>{s.label}</SelectItem>)
+                    statusPostOptions.map(s => <SelectItem key={s.label} value={s.label}>{displayStatusPostLabel(s.label)}</SelectItem>)
                   ) : (
                     STATUS_DEMANDA.map(s => <SelectItem key={s} value={s}>{STATUS_DEMANDA_LABEL[s]}</SelectItem>)
                   )}
