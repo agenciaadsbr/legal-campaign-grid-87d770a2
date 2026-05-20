@@ -228,9 +228,29 @@ export function MinhasTarefasTabela({
                             </span>
                           </TableCell>
                           <TableCell>
-                            <div className="inline-flex min-w-[100px]">
+                            <div className="inline-flex min-w-[140px]">
                               <ColorBadge label={STATUS_LABEL[t.status as TaskStatus]} color={STATUS_COR[t.status]} />
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                              {t.approval_waiting_since ? formatPrazo(t.approval_waiting_since) : "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {t.status === "aprovacao" && t.approval_dias != null ? (
+                              (() => {
+                                const tone = aprovacaoBadgeTone(t.approval_dias);
+                                const cor =
+                                  tone === "destructive" ? "hsl(var(--destructive))"
+                                  : tone === "warning" ? "hsl(var(--warning, var(--status-revisar)))"
+                                  : "hsl(var(--muted-foreground))";
+                                const label = `${t.approval_dias} ${t.approval_dias === 1 ? "dia" : "dias"}`;
+                                return <ColorBadge label={label} color={cor} />;
+                              })()
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="inline-flex items-center gap-1">
