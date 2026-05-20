@@ -7,9 +7,36 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Calendar, ExternalLink, Pencil, Trash2, Users, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { Plus, Calendar, ExternalLink, Pencil, Trash2, Users, ChevronDown, ChevronUp, FileText, Copy, Check } from "lucide-react";
 import { ReuniaoDialog } from "./ReuniaoDialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+function CopiarResumoButton({ texto, label }: { texto: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopied(true);
+      toast.success(`${label} copiado`);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+  return (
+    <Button
+      size="icon"
+      variant="ghost"
+      className="h-6 w-6 text-red-800 hover:text-red-900 hover:bg-red-200/50"
+      onClick={handleCopy}
+      title={`Copiar ${label}`}
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </Button>
+  );
+}
 
 export function ReunioesTab({ clienteId }: { clienteId: string }) {
   useReunioesBootstrap();
@@ -97,6 +124,7 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                         <div className="flex flex-col rounded-md border border-red-200 bg-red-50/50 shadow-sm overflow-hidden">
                           <div className="bg-red-100/50 px-3 py-1.5 border-b border-red-200 flex items-center justify-between">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-red-800">Resumo Cliente</span>
+                            <CopiarResumoButton texto={r.resumo_cliente} label="Resumo Cliente" />
                           </div>
                           <ScrollArea className="h-[250px] w-full p-3">
                             <div className="text-xs text-red-950 whitespace-pre-wrap leading-relaxed pr-3">
@@ -109,6 +137,7 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                         <div className="flex flex-col rounded-md border border-red-200 bg-red-50/50 shadow-sm overflow-hidden">
                           <div className="bg-red-100/50 px-3 py-1.5 border-b border-red-200 flex items-center justify-between">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-red-800">Resumo Tarefas</span>
+                            <CopiarResumoButton texto={r.resumo_tarefas} label="Resumo Tarefas" />
                           </div>
                           <ScrollArea className="h-[250px] w-full p-3">
                             <div className="text-xs text-red-950 whitespace-pre-wrap leading-relaxed pr-3">
