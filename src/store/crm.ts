@@ -328,6 +328,8 @@ function mapCliente(
     status_relacionamento: row.status_relacionamento ?? null,
     status_performance: row.status_performance ?? null,
     link_relatorio: row.link_relatorio ?? null,
+    oculto: !!row.oculto,
+    oculto_em: row.oculto_em ?? null,
   };
 }
 
