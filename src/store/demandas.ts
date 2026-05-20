@@ -9,6 +9,23 @@ import type {
 } from "@/lib/demandas-categorias";
 import type { TaskDependency, ModoLiberacao } from "@/lib/workflow";
 
+export type ProcessStepType = "tarefa" | "status";
+export type ProcessStepStatus =
+  | "bloqueada"
+  | "pendente"
+  | "em_execucao"
+  | "aguardando_aprovacao"
+  | "concluida"
+  | "atrasada";
+
+export interface ProcessStepConfig {
+  reaproveitar_briefing?: boolean;
+  reaproveitar_anexos?: boolean;
+  reaproveitar_responsaveis?: boolean;
+  bloquear_ate_concluir?: boolean;
+  status_interno_label?: string;
+}
+
 export interface Demanda {
   id: string;
   cliente_id: string;
@@ -18,9 +35,7 @@ export interface Demanda {
   descricao: string | null;
   status: DemandaStatus;
   prioridade: DemandaPrioridade;
-  /** Lista canônica de responsáveis (multi). */
   responsaveis_ids: string[];
-  /** Legado — não usar na UI. Mantido só para compat de leitura durante a transição. */
   responsavel_id: string | null;
   criado_por: string | null;
   data_limite: string | null;
@@ -38,6 +53,14 @@ export interface Demanda {
   approval_waiting_since?: string | null;
   approval_waiting_by?: string | null;
   approval_previous_status?: string | null;
+  // ---- Card Pai multietapa (Fase 1) ----
+  is_card_pai?: boolean;
+  parent_process_id?: string | null;
+  process_step_order?: number | null;
+  process_step_type?: ProcessStepType | null;
+  process_step_status?: ProcessStepStatus | null;
+  process_depends_on?: string | null;
+  process_step_config?: ProcessStepConfig | null;
 }
 
 /** Helper: extrai a lista de responsáveis de uma demanda (com fallback ao legado). */
