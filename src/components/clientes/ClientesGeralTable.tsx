@@ -241,6 +241,7 @@ export function ClientesGeralTable({
   density = "compacto",
   onAbrirHistorico,
   acoesSlot,
+  mostrarOcultos = false,
 }: Props) {
   const { clientes, cards, contratos, nichos, responsaveis, heavyDataLoaded } = useCRM();
   useDemandasBootstrap();
