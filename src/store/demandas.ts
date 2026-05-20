@@ -286,13 +286,19 @@ export const useDemandasStore = create<State>((set, get) => ({
       status: d.status ?? "Planejamento",
       prioridade: d.prioridade ?? "Media",
       responsaveis_ids,
-      // mantém legacy preenchido com o primeiro, p/ compat de leituras antigas
       responsavel_id: responsaveis_ids[0] ?? null,
       criado_por: uid,
       data_limite: d.data_limite ?? null,
       data_inicio: d.data_inicio ?? null,
       data_conclusao: d.data_conclusao ?? null,
       precisa_aprovacao: d.precisa_aprovacao ?? false,
+      is_card_pai: (d as any).is_card_pai ?? false,
+      parent_process_id: (d as any).parent_process_id ?? null,
+      process_step_order: (d as any).process_step_order ?? null,
+      process_step_type: (d as any).process_step_type ?? null,
+      process_step_status: (d as any).process_step_status ?? null,
+      process_depends_on: (d as any).process_depends_on ?? null,
+      process_step_config: (d as any).process_step_config ?? {},
     };
     const { data, error } = await supabase
       .from("demandas")
