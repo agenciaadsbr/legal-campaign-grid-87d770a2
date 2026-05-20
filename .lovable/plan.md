@@ -1,103 +1,81 @@
-# Renomear "Revisar" → "Aguardando aprovação do cliente" + rastreamento
+# Permitir alteração manual de status no "Detalhes da tarefa"
 
-## Objetivo
-Trocar apenas o **rótulo exibido** do status `Revisar` para `Aguardando aprovação do cliente` em todo o sistema, preservando o identificador interno (`Revisar`) — sem migração de dados, sem novo status. Adicionar campo de quando a tarefa entrou nesse status, cálculo de dias aguardando, novas colunas, filtro, grupo e badge visual na Central de Tarefas.
+## Causa raiz
 
----
+O dialog `DemandaDetalheDialog` chama `updateDemanda` corretamente ao trocar o status pelo dropdown, e o `update` chega no Supabase. Porém, existe um trigger no banco que sobrescreve o valor de volta para `Atrasado` antes do `UPDATE` ser efetivado, sempre que `data_limite < now()`:
 
-## 1. Banco de dados (migração)
-
-Adicionar colunas para rastreamento (não destrutivo):
-
-- `demandas.approval_waiting_since timestamptz NULL`
-- `demandas.approval_waiting_by uuid NULL`
-- `demandas.approval_previous_status text NULL`
-- `cards.approval_waiting_since timestamptz NULL`
-- `cards.approval_waiting_by uuid NULL`
-- `cards.approval_previous_status text NULL`
-
-**Trigger** em `demandas` e `cards` (BEFORE UPDATE de `status`):
-- Se `NEW.status = 'Revisar'` e `OLD.status <> 'Revisar'`: preenche `approval_waiting_since = now()`, `approval_waiting_by = auth.uid()`, `approval_previous_status = OLD.status`.
-- Se `OLD.status = 'Revisar'` e `NEW.status <> 'Revisar'`: registra em `atividade_cliente` `"Tarefa saiu de Aguardando aprovação do cliente após X dias."` e limpa os 3 campos.
-- Quando entra: também registra em `atividade_cliente` `"Tarefa movida para Aguardando aprovação do cliente."`.
-
-**Backfill único** (idempotente, dentro da migração):
-- Para `demandas` com `status = 'Revisar'` e `approval_waiting_since IS NULL`: usar a data do registro mais recente em `historico_demandas` com `para_status = 'Revisar'`; se não houver, usar `updated_at`.
-- Para `cards` com `status = 'Revisar'` sem `approval_waiting_since`: usar `updated_at`.
-
-Sem alterar enum `demanda_status` — mantém o valor `Revisar`.
-
----
-
-## 2. Rótulo visível (frontend)
-
-Trocar o **label** sem mudar o identificador interno:
-
-- `src/lib/demandas-categorias.ts` → `STATUS_DEMANDA_LABEL.Revisar = "Aguardando aprovação do cliente"`.
-- `src/components/StatusBadge.tsx` → no `statusMap.Revisar`, `label: "Aguardando aprovação do cliente"`.
-- `src/store/crm.ts` / pontos onde a UI mostra `"Revisar"` literal (posts/cards) → usar helper de label central. Criar `getStatusLabel(status)` em `src/lib/status-labels.ts` reutilizável por Posts/Vídeos/Tráfego/LP/IA/Operacional/Urgências/Kanbans/Dashboard/Relatórios.
-- Comparações internas (`d.status === "Revisar"`, filtros, kanban columns, `STATUS_DEMANDA`) **permanecem** como `"Revisar"`.
-
-Resultado: todas as abas, kanbans, badges, dashboards e relatórios passam a exibir o novo nome automaticamente.
-
----
-
-## 3. Central de Tarefas (`src/lib/minhasTarefas.ts` + componentes)
-
-Estender `UnifiedTask`:
-```ts
-approval_waiting_since?: string | null;
-approval_dias?: number | null; // calculado
+```text
+trigger trg_auto_marcar_demanda_atrasada
+  BEFORE INSERT OR UPDATE ON public.demandas
+  → função auto_marcar_demanda_atrasada():
+      IF data_limite < now()
+         AND status NOT IN ('Concluido','Entregue','Atrasado')
+      THEN NEW.status := 'Atrasado'
 ```
 
-Calcular `approval_dias` = `floor((now - approval_waiting_since) / 86400000)` quando o status interno é `Revisar`.
+Como a tarefa "Renovação Assessoria – R$ 1.297,00" tem `data_limite = 18/05/2026` (passado), qualquer escolha do usuário (Criar, Revisar, Planejamento, etc.) é revertida para `Atrasado` no próprio `BEFORE UPDATE`. O frontend aplica a mudança otimista, recebe a linha de volta com `Atrasado` e re-renderiza o status como `Atrasado` — dando a sensação de que "não muda".
 
-**`MinhasTarefasTabela.tsx`**:
-- Adicionar duas colunas entre "Status" e "Ações":
-  - `Entrada em aprovação` → data formatada `dd/MM/yyyy` ou `—`.
-  - `Dias em aprovação` → `N dias` com badge:
-    - 0–2: badge `secondary` (normal)
-    - 3–6: badge `outline` cor `warning` (atenção leve)
-    - 7+: badge `destructive` (atenção alta)
-- Novo grupo (`GroupKey`) `aprovacao` → "AGUARDANDO APROVAÇÃO DO CLIENTE", separado de Atrasadas / Em andamento / Pendentes / Concluídas. Ordenar por: dias desc → prazo asc → prioridade desc.
-- Em `mapStatus`: tarefas com status interno `Revisar` viram grupo `aprovacao` (não mais `em_andamento`).
+A funcionalidade automática de marcar como atrasado deve continuar existindo (para criação/sync de fundo), mas **não pode sobrescrever uma mudança explícita feita pelo usuário**.
 
-**`MinhasTarefasFiltros.tsx`**:
-- Adicionar opção de filtro `"Aguardando aprovação do cliente"` (mapeia para grupo `aprovacao`).
+## Mudança proposta
 
----
+### 1. Migration: ajustar `auto_marcar_demanda_atrasada`
 
-## 4. Kanbans (Projeto Completo)
+Reescrever a função para respeitar mudanças explícitas de status feitas pelo usuário:
 
-Nenhuma mudança estrutural. A coluna "Revisar" passa a renderizar o label novo via `STATUS_DEMANDA_LABEL`. Posição preservada. Outros status (Planejamento, Criar, Entregue, Concluído, Atrasado, Aguardando etapa anterior) inalterados.
+- **No INSERT**: comportamento atual (se vencida, marca como Atrasado).
+- **No UPDATE**:
+  - Se `NEW.status IS DISTINCT FROM OLD.status` → o usuário (ou código) está mudando o status de propósito → **não sobrescrever**. Apenas devolver `NEW` como está.
+  - Se `NEW.status = OLD.status` (update de outros campos) → manter a lógica atual de auto-marcação quando vencida.
 
----
+Isso preserva:
+- Auto-marcação na criação de tarefas vencidas.
+- Auto-marcação quando algum campo (ex: `data_limite`) é alterado sem mexer no status.
+- Bloqueio existente para tarefas com dependências não liberadas.
 
-## 5. Histórico / Atividades
+E permite:
+- Usuário escolher manualmente qualquer status no dropdown do detalhe (inclusive sair de Atrasado para Criar/Revisar/Planejamento) sem o banco reverter.
 
-Trigger SQL (item 1) já registra entrada e saída do status com a mensagem solicitada e o número de dias. `historico_demandas` continua registrando a transição via trigger existente `log_historico_demanda`.
+### 2. Sem mudanças no frontend
 
----
+`DemandaDetalheDialog`, `updateDemanda` em `src/store/demandas.ts`, `AreaTab`, `OperacionalTab`, `MinhasTarefasTabela` e Kanbans continuam como estão. Nenhum comportamento é removido.
 
-## 6. Arquivos afetados
+## Detalhes técnicos da migration
 
-**Migração nova**: `supabase/migrations/<timestamp>_aprovacao_cliente.sql`
+```sql
+CREATE OR REPLACE FUNCTION public.auto_marcar_demanda_atrasada()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  -- Respeita mudança explícita de status em UPDATE
+  IF TG_OP = 'UPDATE' AND NEW.status IS DISTINCT FROM OLD.status THEN
+    RETURN NEW;
+  END IF;
 
-**Frontend**:
-- `src/lib/demandas-categorias.ts` (label)
-- `src/components/StatusBadge.tsx` (label)
-- `src/lib/status-labels.ts` (novo helper opcional)
-- `src/lib/minhasTarefas.ts` (campos novos + grupo aprovacao)
-- `src/components/tarefas/MinhasTarefasTabela.tsx` (colunas, grupo, badge)
-- `src/components/tarefas/MinhasTarefasFiltros.tsx` (opção de filtro)
-- `src/pages/MinhasTarefas.tsx` (incluir grupo aprovacao em KPIs/render)
-- `src/store/demandas.ts` / `src/store/crm.ts` — apenas tipar os novos campos (sem mudar lógica)
-- `src/integrations/supabase/types.ts` será regenerado após a migração
+  IF NEW.data_limite IS NOT NULL
+     AND NEW.data_limite < now()
+     AND NEW.status NOT IN ('Concluido','Entregue','Atrasado')
+     AND NOT EXISTS (
+       SELECT 1 FROM public.task_dependencies td
+        WHERE td.task_id = NEW.id AND td.liberado = false
+     ) THEN
+    NEW.status := 'Atrasado';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+```
 
----
+## Arquivos afetados
 
-## Garantias
+- Nova migration em `supabase/migrations/` redefinindo a função `auto_marcar_demanda_atrasada`.
 
-- Identificador interno `Revisar` preservado → zero impacto em queries, RLS, triggers e enum existentes.
-- Backfill preenche `approval_waiting_since` para tarefas que já estão em `Revisar`.
-- Nenhum dado removido. Nenhum status criado. Nenhum kanban alterado estruturalmente. Outras funcionalidades da Central de Tarefas intactas.
+## QA esperado
+
+1. Abrir tarefa vencida em "Operacional" → trocar status para "Criar" pelo dropdown do detalhe → valor persiste e badge atualiza.
+2. Trocar de "Atrasado" para "Aguardando aprovação do cliente" → persiste e aparece em Central de Tarefas no grupo correspondente.
+3. Criar nova tarefa com `data_limite` no passado e status `Criar` → continua sendo marcada como `Atrasado` automaticamente.
+4. Editar outros campos (responsáveis, descrição, prioridade) em tarefa vencida sem mexer no status → status permanece `Atrasado`.
+5. Kanbans, Central de Tarefas, AlterarStatusPopover e demais fluxos continuam funcionando.
