@@ -631,10 +631,31 @@ function AcoesCliente({ cliente }: { cliente: any }) {
     }
   };
 
+  const handleToggleOculto = async () => {
+    const novo = !cliente.oculto;
+    try {
+      await updateCliente(cliente.id, { oculto: novo } as any);
+      toast.success(novo ? "Cliente ocultado do painel" : "Cliente reexibido no painel");
+    } catch (e: any) {
+      toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
+    }
+  };
+
   if (!canWrite && !isAdmin) return null;
 
   return (
     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      {canWrite && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          title={cliente.oculto ? "Reexibir no painel" : "Ocultar do painel"}
+          onClick={handleToggleOculto}
+        >
+          {cliente.oculto ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        </Button>
+      )}
       {canWrite && (
         <Button
           size="icon"
