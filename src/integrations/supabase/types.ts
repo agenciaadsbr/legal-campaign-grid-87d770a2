@@ -536,6 +536,8 @@ export type Database = {
           nicho: string | null
           nicho_extra: string | null
           nome: string
+          oculto: boolean
+          oculto_em: string | null
           plano: string | null
           prazo_onboarding: string | null
           primary_status: string
@@ -560,6 +562,8 @@ export type Database = {
           nicho?: string | null
           nicho_extra?: string | null
           nome: string
+          oculto?: boolean
+          oculto_em?: string | null
           plano?: string | null
           prazo_onboarding?: string | null
           primary_status?: string
@@ -584,6 +588,8 @@ export type Database = {
           nicho?: string | null
           nicho_extra?: string | null
           nome?: string
+          oculto?: boolean
+          oculto_em?: string | null
           plano?: string | null
           prazo_onboarding?: string | null
           primary_status?: string
