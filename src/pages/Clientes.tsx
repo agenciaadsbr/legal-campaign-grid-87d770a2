@@ -1426,6 +1426,14 @@ export default function Clientes() {
   const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
     () => localStorage.getItem("clientes:filtroStatusGlobal") ?? "todos",
   );
+  const [mostrarOcultos, setMostrarOcultos] = useState<boolean>(
+    () => localStorage.getItem("clientes:mostrarOcultos") === "1",
+  );
+  useEffect(() => {
+    localStorage.setItem("clientes:mostrarOcultos", mostrarOcultos ? "1" : "0");
+  }, [mostrarOcultos]);
+  const totalOcultos = useMemo(() => clientes.filter((c) => c.oculto).length, [clientes]);
+
 
   // Novos filtros (visão Clientes)
   const [filtroNichos, setFiltroNichos] = useState<string[]>([]);
