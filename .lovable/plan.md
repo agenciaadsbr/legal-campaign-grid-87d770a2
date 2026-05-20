@@ -1,32 +1,62 @@
-# Renomear "Revisar" → "Aguardando aprovação do cliente" na aba Posts
+# Tornar "Aguardando aprovação do cliente" exclusivamente manual
 
-## Diagnóstico
+## Contexto da investigação
 
-O Kanban de Posts (coluna, badges, dropdowns) lê o rótulo direto de `statusPostOptions` (tabela `status_post_options`, label = `"Revisar"`). O `StatusBadge` prioriza essa lista dinâmica e cai no `ColorBadge`, ignorando o mapeamento amigável que já existe para "Revisar". Por isso a UI mostra "Revisar".
+- Status interno no banco continua sendo `Revisar` (em `demanda_status` e em `cards.status`). Apenas o rótulo visível mudou para "Aguardando aprovação do cliente".
+- Auditoria das 8 demandas e 20 cards atualmente em "Revisar": todas têm histórico manual (`historico_demandas` com `usuario_id` preenchido). Logo, **dados existentes não serão alterados**.
+- Não existe hoje, em `src/` ou nos triggers, código que defina `Revisar` automaticamente. Mas vamos blindar o sistema para garantir que isso continue assim, conforme pedido.
 
-Renomear o registro no banco quebraria triggers que verificam o literal `'Revisar'` (`auto_marcar_atrasado`, `update_client_primary_status`, `track_approval_status_card`) e o RPC de KPIs. O usuário pediu para não remover dados nem funcionalidades.
+## Mudanças (não removem layout, kanban, central de tarefas, status, nem dados)
 
-## Solução (apenas camada de exibição)
+### 1. Guard no banco — proibir INSERT com status Revisar
 
-Criar um helper `displayStatusPostLabel(label: string)` em `src/lib/demandas-categorias.ts` (ou novo arquivo `src/lib/statusDisplay.ts`) que retorna `"Aguardando aprovação do cliente"` quando o label de entrada for `"Revisar"`, e o próprio label caso contrário. Usar esse helper em todos os pontos onde `statusPostOptions[].label` é renderizado:
+Migração nova com dois triggers `BEFORE INSERT`:
 
-1. **src/components/StatusBadge.tsx** — passar `displayStatusPostLabel(dyn.label)` para `ColorBadge`. Mantém a cor e a chave de comparação intactas.
-2. **src/components/clientes/PostsKanbanCliente.tsx** — o header da coluna já usa `<StatusBadge>` (será corrigido pelo item 1). Verificar dropdowns/popovers que listam `statusPostOptions.map(...)` e exibir `displayStatusPostLabel(o.label)` mantendo o `value={o.label}`.
-3. **src/components/clientes/PostDetalheDialog.tsx** (linha ~351) — `<SelectItem value={o.label}>{displayStatusPostLabel(o.label)}</SelectItem>`.
-4. **src/components/tarefas/TaskFormBase.tsx** (linha 412) — mesmo padrão no `<Select>`.
-5. **src/pages/MinhasTarefas.tsx** (linha 405) e **src/components/OpcoesEditor.tsx** (linha 244) — onde o label aparece em listas/filtros, usar o helper só para exibição. Em `OpcoesEditor` (tela de configuração de status), manter o label original para não confundir o admin que edita a opção; **não alterar lá**.
+- `demandas`: se `NEW.status = 'Revisar'` no INSERT, força `NEW.status := 'Criar'` (status seguro padrão do fluxo). Isso protege qualquer rotina futura (estrutura operacional, card pai, ciclo, duplicação, import) de criar tarefa já em aprovação.
+- `cards`: se `NEW.status = 'Revisar'` no INSERT, força `NEW.status := 'Criar'`. Protege ciclo de posts, criação em lote, geração via card pai e workflow.
 
-## Não alterar
+Esses guards não afetam UPDATEs (a transição manual via Kanban / formulário continua funcionando exatamente como hoje).
 
-- Banco de dados, triggers, funções, RPCs, enum `demanda_status`.
-- Valor de `status_card` em `cards` (continua `"Revisar"`).
-- Lógica de filtros, drag-and-drop, comparações `=== "Revisar"`.
-- Configurações de Demandas / OpcoesEditor (admin precisa ver/editar o label real).
-- Cores e ordem das colunas.
+### 2. Guard no frontend — não permitir criar tarefa já em aprovação
 
-## Validação
+Locais que hoje têm um Select de status no formulário de **criação** de tarefa/card:
 
-- Abrir `/clientes/.../?tab=posts` → coluna e badges mostram "Aguardando aprovação do cliente".
-- Abrir detalhe de um post → dropdown de status mostra "Aguardando aprovação do cliente" e ao selecionar grava `"Revisar"` no banco.
-- Mover card entre colunas continua funcionando.
-- KPIs, contagens e triggers de atraso/aprovação inalterados.
+- `src/components/tarefas/TaskFormBase.tsx` — quando estiver em modo "novo" (sem `id`), remover a opção `Revisar` do select de status (apenas no momento da criação). Em modo edição, a opção continua disponível (mudança manual permitida).
+- `src/components/clientes/PostsKanbanCliente.tsx` — botão/dialog de "Novo post" parte de `Planejamento`/`Criar` por padrão; garantir que o status inicial nunca seja `Revisar`.
+- Demais fluxos de criação automática já usam `Planejamento`/`Criar` (`src/store/crm.ts`, `src/store/operationalTemplates.ts`, `src/store/cardPai.ts`, `src/store/demandas.ts`) — apenas conferir e adicionar fallback defensivo onde necessário.
+
+### 3. Reforço dos triggers já existentes
+
+`track_approval_status_demanda` e `track_approval_status_card` já só preenchem `approval_waiting_since` em `BEFORE UPDATE OF status` quando há transição real (`OLD.status IS DISTINCT FROM NEW.status`). Nenhuma alteração necessária — apenas confirmar em comentário que o preenchimento de `approval_waiting_since` jamais ocorre em INSERT.
+
+### 4. Central de Tarefas
+
+`src/lib/minhasTarefas.ts` já só classifica como `aprovacao` quando `d.status === 'Revisar'` e só lê `d.approval_waiting_since` do banco (nunca calcula a partir de data futura). Combinado com o guard de INSERT acima, fica garantido que nenhuma tarefa futura sem ação manual aparece como "Aguardando aprovação do cliente". Nenhuma mudança de lógica necessária.
+
+### 5. Atividade
+
+Os logs em `atividade_cliente` já são gerados pelo trigger de update:
+- entrada: "Tarefa movida para Aguardando aprovação do cliente."
+- saída: "Tarefa saiu de Aguardando aprovação do cliente após X dia(s)."
+
+Mantidos exatamente como estão.
+
+### 6. Dados existentes
+
+Mantidos. Conforme você pediu, as 8 demandas + 20 cards em Revisar permanecem (todas têm histórico manual válido).
+
+## Resumo dos arquivos tocados
+
+- **nova migração SQL** (guard de INSERT em `demandas` e `cards`)
+- `src/components/tarefas/TaskFormBase.tsx` — esconder opção "Revisar" só no modo criação
+- `src/components/clientes/PostsKanbanCliente.tsx` — garantir status inicial seguro ao criar post (defensivo)
+
+## Validação manual após implementar
+
+1. Criar nova demanda via formulário → não pode ser salva como Revisar (opção oculta na criação).
+2. Tentar (via console/SQL) `INSERT INTO demandas (..., status) VALUES (..., 'Revisar')` → resultado salvo como `Criar`.
+3. Rodar "Gerar estrutura operacional" → nenhum item criado em Revisar.
+4. Criar ciclo de posts → todos os cards iniciam em `Planejamento`/`Criar`.
+5. Mover tarefa manualmente no Kanban para "Aguardando aprovação do cliente" → `approval_waiting_since` é preenchido, atividade registrada.
+6. Mover de volta → `approval_waiting_since` limpo, atividade de saída registrada com contagem de dias.
+7. Central de Tarefas continua mostrando apenas tarefas que estão em Revisar (manualmente movidas).
