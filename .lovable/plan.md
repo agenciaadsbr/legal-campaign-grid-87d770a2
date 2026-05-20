@@ -1,62 +1,123 @@
-# Tornar "Aguardando aprovação do cliente" exclusivamente manual
+## Fase 1 — Card Pai multietapa (apenas aba Operacional)
 
-## Contexto da investigação
+Esta fase converte o sistema paralelo de "Card Pai" em uma **tarefa normal com etapas internas**, reutilizando o modal `DemandaDetalheDialog` atual. Nenhum dado é apagado e nenhuma outra aba é alterada.
 
-- Status interno no banco continua sendo `Revisar` (em `demanda_status` e em `cards.status`). Apenas o rótulo visível mudou para "Aguardando aprovação do cliente".
-- Auditoria das 8 demandas e 20 cards atualmente em "Revisar": todas têm histórico manual (`historico_demandas` com `usuario_id` preenchido). Logo, **dados existentes não serão alterados**.
-- Não existe hoje, em `src/` ou nos triggers, código que defina `Revisar` automaticamente. Mas vamos blindar o sistema para garantir que isso continue assim, conforme pedido.
+---
 
-## Mudanças (não removem layout, kanban, central de tarefas, status, nem dados)
+### 1. Modelo de dados (migração)
 
-### 1. Guard no banco — proibir INSERT com status Revisar
+Adicionar colunas em `demandas` (sem quebrar nada existente):
 
-Migração nova com dois triggers `BEFORE INSERT`:
+- `is_card_pai BOOLEAN NOT NULL DEFAULT false` — marca a demanda como Card Pai (agrupador, não executa trabalho).
+- `parent_process_id UUID` — id da demanda Card Pai (preenchido nas tarefas filhas).
+- `process_step_order INT` — ordem da etapa dentro do Card Pai.
+- `process_step_type TEXT` — `'tarefa'` ou `'status'`.
+- `process_step_status TEXT` — `'bloqueada' | 'pendente' | 'em_execucao' | 'aguardando_aprovacao' | 'concluida' | 'atrasada'`.
+- `process_depends_on UUID` — id da etapa anterior (auto-referência a `demandas.id`).
+- `process_step_config JSONB DEFAULT '{}'` — flags: `reaproveitar_briefing`, `reaproveitar_anexos`, `reaproveitar_responsaveis`, `bloquear_ate_concluir`.
 
-- `demandas`: se `NEW.status = 'Revisar'` no INSERT, força `NEW.status := 'Criar'` (status seguro padrão do fluxo). Isso protege qualquer rotina futura (estrutura operacional, card pai, ciclo, duplicação, import) de criar tarefa já em aprovação.
-- `cards`: se `NEW.status = 'Revisar'` no INSERT, força `NEW.status := 'Criar'`. Protege ciclo de posts, criação em lote, geração via card pai e workflow.
+Trigger `auto_liberar_proxima_etapa()`:
+- Em `UPDATE OF status` em `demandas`, quando `NEW.status IN ('Concluido','Entregue')` e a demanda tem `parent_process_id`, encontrar a próxima etapa (`process_depends_on = NEW.id`) e mudar `process_step_status` de `'bloqueada'` para `'pendente'`.
 
-Esses guards não afetam UPDATEs (a transição manual via Kanban / formulário continua funcionando exatamente como hoje).
+Etapas tipo `status` ficam como demandas com `process_step_type='status'`, `status='Planejamento'` (não aparecem em Kanban operacional pois filtraremos por `process_step_type <> 'status'` no Kanban — ou ficam ocultas via flag). Detalhe abaixo.
 
-### 2. Guard no frontend — não permitir criar tarefa já em aprovação
+**Dados antigos `card_pai` / `card_pai_etapas`**: permanecem intactos no banco, apenas **deixam de ser lidos/renderizados**.
 
-Locais que hoje têm um Select de status no formulário de **criação** de tarefa/card:
+---
 
-- `src/components/tarefas/TaskFormBase.tsx` — quando estiver em modo "novo" (sem `id`), remover a opção `Revisar` do select de status (apenas no momento da criação). Em modo edição, a opção continua disponível (mudança manual permitida).
-- `src/components/clientes/PostsKanbanCliente.tsx` — botão/dialog de "Novo post" parte de `Planejamento`/`Criar` por padrão; garantir que o status inicial nunca seja `Revisar`.
-- Demais fluxos de criação automática já usam `Planejamento`/`Criar` (`src/store/crm.ts`, `src/store/operationalTemplates.ts`, `src/store/cardPai.ts`, `src/store/demandas.ts`) — apenas conferir e adicionar fallback defensivo onde necessário.
+### 2. Remover UI antiga do Card Pai (sem apagar dados)
 
-### 3. Reforço dos triggers já existentes
+- `OperacionalTab.tsx`: remover `<CardsPaiLista>` do `extraTop` e remover o item "Novo Card Pai" do dropdown.
+- `useCardPaiBootstrap` deixa de ser chamado nessa aba.
+- Arquivos `cardPai/CardPaiUI.tsx` e `store/cardPai.ts` ficam no repositório (não são apagados) mas não são mais importados pela aba Operacional.
 
-`track_approval_status_demanda` e `track_approval_status_card` já só preenchem `approval_waiting_since` em `BEFORE UPDATE OF status` quando há transição real (`OLD.status IS DISTINCT FROM NEW.status`). Nenhuma alteração necessária — apenas confirmar em comentário que o preenchimento de `approval_waiting_since` jamais ocorre em INSERT.
+---
 
-### 4. Central de Tarefas
+### 3. Novo botão "+ Card Pai" na aba Operacional
 
-`src/lib/minhasTarefas.ts` já só classifica como `aprovacao` quando `d.status === 'Revisar'` e só lê `d.approval_waiting_since` do banco (nunca calcula a partir de data futura). Combinado com o guard de INSERT acima, fica garantido que nenhuma tarefa futura sem ação manual aparece como "Aguardando aprovação do cliente". Nenhuma mudança de lógica necessária.
+Em `AreaTab` (ou via `novaTarefaExtra` em `OperacionalTab`): ao lado de "+ Nova tarefa", adicionar **"+ Card Pai"**. Ao clicar, abre o **mesmo** `TaskFormBase` (modo demanda) com:
+- `is_card_pai = true` no payload de criação.
+- Categoria fixa `Operacional`.
 
-### 5. Atividade
+---
 
-Os logs em `atividade_cliente` já são gerados pelo trigger de update:
-- entrada: "Tarefa movida para Aguardando aprovação do cliente."
-- saída: "Tarefa saiu de Aguardando aprovação do cliente após X dia(s)."
+### 4. Modal atual com modo Card Pai
 
-Mantidos exatamente como estão.
+`DemandaDetalheDialog` (e `TaskFormBase` quando aplicável):
+- Se `demanda.is_card_pai`:
+  - Mostra badge **"Card Pai"** no topo.
+  - Mostra subtítulo "Processo multi-etapa com dependências internas."
+  - **Substitui** a seção "Workflow / Continuidade" pelo bloco **"Etapas do Processo"** descrito abaixo.
+- Caso contrário: modal continua **idêntico**.
 
-### 6. Dados existentes
+---
 
-Mantidos. Conforme você pediu, as 8 demandas + 20 cards em Revisar permanecem (todas têm histórico manual válido).
+### 5. Bloco "Etapas do Processo" (dentro do modal)
 
-## Resumo dos arquivos tocados
+Renderiza `demandas WHERE parent_process_id = <card-pai-id> ORDER BY process_step_order`.
 
-- **nova migração SQL** (guard de INSERT em `demandas` e `cards`)
-- `src/components/tarefas/TaskFormBase.tsx` — esconder opção "Revisar" só no modo criação
-- `src/components/clientes/PostsKanbanCliente.tsx` — garantir status inicial seguro ao criar post (defensivo)
+Cada linha mostra ícone de status (✓ ⏳ 🔒 ▶ ⚠), título, responsável, badge "Tarefa"/"Status", e ações:
+- **Tarefa**: botão "Abrir tarefa" → abre `DemandaDetalheDialog` da etapa.
+- **Status**: botão "Concluir etapa" (manual) — para "Aguardando aprovação do cliente" o usuário decide quando concluir.
+- "Liberar manualmente" se bloqueada.
+- Botão remover etapa (admin).
 
-## Validação manual após implementar
+Botão **"+ Adicionar etapa"** abre formulário inline com os campos da tabela do briefing:
+- Tipo (tarefa/status), Título, Área destino (categoria), Subtipo, Responsável, Depende de (etapa anterior), Bloquear até concluir, Reaproveitar briefing/anexos/responsáveis.
 
-1. Criar nova demanda via formulário → não pode ser salva como Revisar (opção oculta na criação).
-2. Tentar (via console/SQL) `INSERT INTO demandas (..., status) VALUES (..., 'Revisar')` → resultado salvo como `Criar`.
-3. Rodar "Gerar estrutura operacional" → nenhum item criado em Revisar.
-4. Criar ciclo de posts → todos os cards iniciam em `Planejamento`/`Criar`.
-5. Mover tarefa manualmente no Kanban para "Aguardando aprovação do cliente" → `approval_waiting_since` é preenchido, atividade registrada.
-6. Mover de volta → `approval_waiting_since` limpo, atividade de saída registrada com contagem de dias.
-7. Central de Tarefas continua mostrando apenas tarefas que estão em Revisar (manualmente movidas).
+Ao salvar uma etapa, cria uma **`demanda` normal** com `parent_process_id`, herdando cliente, briefing/anexos/responsáveis se as flags estiverem ativas. Se `process_depends_on` está setado e essa dependência não está concluída → `process_step_status='bloqueada'`. Senão → `'pendente'`.
+
+---
+
+### 6. Compatibilidade Kanban e Central de Tarefas
+
+- **Kanban Operacional**: continua mostrando todas as demandas da categoria. Card Pai aparece com badge "Card Pai". Etapas do tipo `status` ficam ocultas no Kanban (filtro `process_step_type !== 'status'`). Etapas do tipo `tarefa` aparecem normalmente.
+- **Central de Tarefas (MinhasTarefas)**: continua puxando demandas normalmente. Etapas do tipo `status` são filtradas (não são trabalho real). Etapas do tipo `tarefa` aparecem para os responsáveis.
+- **Regra "Aguardando aprovação do cliente"**: continua **manual** (já implementado anteriormente).
+
+---
+
+### 7. Geração automática — templates iniciais
+
+Atualizar `gerarEstruturaOperacional`:
+- Adicionar 2 novos templates de Card Pai (idempotentes via título + flag):
+  - **"Ativar Campanha Google Ads"** com etapas: Criar LP (Bruno, LpSite), Aprovação Cliente LP (status), Configurar Domínio (Erick, LpSite), Configurar Tags/Pixels (Erick, LpSite), Ativar Campanha (Gleice, TrafegoPago).
+  - **"Ativar Campanha Meta Ads"** com etapas: Criar anúncio (Lorenzo OU Bianca), Aprovação Cliente (status), Ativar Campanha (Gleice, TrafegoPago).
+- Mapeamento de responsáveis usa busca por nome em `profiles` (fallback: deixa vazio).
+
+---
+
+### 8. Arquivos tocados (resumo técnico)
+
+- **Migração SQL**: novas colunas + trigger `auto_liberar_proxima_etapa`.
+- `src/store/demandas.ts`: tipo `Demanda` + helpers `getEtapas`, `getCardPai`.
+- `src/components/projeto/OperacionalTab.tsx`: remover bloco Cards Pai antigos; adicionar botão "+ Card Pai".
+- `src/components/projeto/AreaTab.tsx`: aceitar prop para botão extra de Card Pai.
+- `src/components/demandas/DemandaDetalheDialog.tsx`: badge "Card Pai", subtítulo, render do bloco "Etapas do Processo" quando `is_card_pai`.
+- `src/components/demandas/EtapasProcesso.tsx` (**novo**): componente do bloco com lista de etapas + form de adicionar.
+- `src/components/tarefas/TaskFormBase.tsx`: aceitar `isCardPai` na criação.
+- `src/components/demandas/DemandasKanban.tsx` / `MinhasTarefas`: filtros para esconder etapas `status`.
+- `src/store/operationalTemplates.ts`: novos templates "GoogleAds" e "MetaAds" como Card Pai com etapas.
+
+---
+
+### 9. Não-objetivos desta fase
+
+- Não mexer em comentários, anexos, IA, histórico, alertas, briefing.
+- Não mexer nas outras abas (Posts, Vídeos, Tráfego, LP/Site, IA, Personalizado, Urgência).
+- Não migrar dados antigos de `card_pai` para o novo modelo.
+- Não tocar em Configurações de Estruturas Automáticas (UI).
+
+---
+
+### Testes manuais
+
+1. Criar Card Pai via novo botão → abre modal padrão com badge.
+2. Adicionar etapas tarefa/status com dependências.
+3. Etapas dependentes aparecem 🔒.
+4. Concluir etapa → próxima libera automaticamente.
+5. Etapa tarefa aparece na aba destino e na Central de Tarefas do responsável.
+6. Etapa status NÃO aparece no Kanban nem na Central.
+7. "Gerar estrutura operacional" cria os 2 Cards Pai novos sem duplicar.
+8. Tarefas normais (não-Card-Pai) continuam idênticas.
+9. Bloco antigo "Cards Pai" não aparece mais; dados antigos preservados no banco.
