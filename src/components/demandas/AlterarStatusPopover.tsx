@@ -64,7 +64,7 @@ export function AlterarStatusPopover({ count, options, onApply, disabled }: Prop
                   className="h-2 w-2 rounded-full shrink-0"
                   style={{ backgroundColor: opt.cor }}
                 />
-                <span className="truncate">{opt.label}</span>
+                <span className="truncate">{displayStatusPostLabel(opt.label)}</span>
               </button>
             ))}
           </div>
