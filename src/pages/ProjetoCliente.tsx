@@ -234,9 +234,10 @@ export default function ProjetoCliente() {
             {cliente.nome_cliente.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold">{cliente.nome_cliente}</h1>
               <StatusClienteBadge status={cliente.status_global} size="sm" />
+              <RelatorioHeaderButton clienteId={cliente.id} value={cliente.link_relatorio} />
             </div>
             <p className="text-xs text-muted-foreground">
               Hub de projeto · tarefas organizadas por área
