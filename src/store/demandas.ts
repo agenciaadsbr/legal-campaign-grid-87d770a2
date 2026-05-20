@@ -9,6 +9,23 @@ import type {
 } from "@/lib/demandas-categorias";
 import type { TaskDependency, ModoLiberacao } from "@/lib/workflow";
 
+export type ProcessStepType = "tarefa" | "status";
+export type ProcessStepStatus =
+  | "bloqueada"
+  | "pendente"
+  | "em_execucao"
+  | "aguardando_aprovacao"
+  | "concluida"
+  | "atrasada";
+
+export interface ProcessStepConfig {
+  reaproveitar_briefing?: boolean;
+  reaproveitar_anexos?: boolean;
+  reaproveitar_responsaveis?: boolean;
+  bloquear_ate_concluir?: boolean;
+  status_interno_label?: string;
+}
+
 export interface Demanda {
   id: string;
   cliente_id: string;
@@ -18,9 +35,7 @@ export interface Demanda {
   descricao: string | null;
   status: DemandaStatus;
   prioridade: DemandaPrioridade;
-  /** Lista canônica de responsáveis (multi). */
   responsaveis_ids: string[];
-  /** Legado — não usar na UI. Mantido só para compat de leitura durante a transição. */
   responsavel_id: string | null;
   criado_por: string | null;
   data_limite: string | null;
@@ -38,6 +53,14 @@ export interface Demanda {
   approval_waiting_since?: string | null;
   approval_waiting_by?: string | null;
   approval_previous_status?: string | null;
+  // ---- Card Pai multietapa (Fase 1) ----
+  is_card_pai?: boolean;
+  parent_process_id?: string | null;
+  process_step_order?: number | null;
+  process_step_type?: ProcessStepType | null;
+  process_step_status?: ProcessStepStatus | null;
+  process_depends_on?: string | null;
+  process_step_config?: ProcessStepConfig | null;
 }
 
 /** Helper: extrai a lista de responsáveis de uma demanda (com fallback ao legado). */
@@ -194,6 +217,13 @@ function normalizeDemanda(row: any): Demanda {
     origem: row.origem ?? "manual",
     template_id: row.template_id ?? null,
     marcado_ja_possui: !!row.marcado_ja_possui,
+    is_card_pai: !!row.is_card_pai,
+    parent_process_id: row.parent_process_id ?? null,
+    process_step_order: row.process_step_order ?? null,
+    process_step_type: (row.process_step_type ?? null) as ProcessStepType | null,
+    process_step_status: (row.process_step_status ?? null) as ProcessStepStatus | null,
+    process_depends_on: row.process_depends_on ?? null,
+    process_step_config: (row.process_step_config ?? {}) as ProcessStepConfig,
   } as Demanda;
 }
 
@@ -256,13 +286,19 @@ export const useDemandasStore = create<State>((set, get) => ({
       status: d.status ?? "Planejamento",
       prioridade: d.prioridade ?? "Media",
       responsaveis_ids,
-      // mantém legacy preenchido com o primeiro, p/ compat de leituras antigas
       responsavel_id: responsaveis_ids[0] ?? null,
       criado_por: uid,
       data_limite: d.data_limite ?? null,
       data_inicio: d.data_inicio ?? null,
       data_conclusao: d.data_conclusao ?? null,
       precisa_aprovacao: d.precisa_aprovacao ?? false,
+      is_card_pai: (d as any).is_card_pai ?? false,
+      parent_process_id: (d as any).parent_process_id ?? null,
+      process_step_order: (d as any).process_step_order ?? null,
+      process_step_type: (d as any).process_step_type ?? null,
+      process_step_status: (d as any).process_step_status ?? null,
+      process_depends_on: (d as any).process_depends_on ?? null,
+      process_step_config: (d as any).process_step_config ?? {},
     };
     const { data, error } = await supabase
       .from("demandas")

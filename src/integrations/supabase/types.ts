@@ -1025,6 +1025,7 @@ export type Database = {
           descricao: string | null
           entregavel_esperado: string | null
           id: string
+          is_card_pai: boolean
           is_parent: boolean | null
           justificativa_atribuicao: string | null
           link_drive: string | null
@@ -1034,8 +1035,14 @@ export type Database = {
           origem_reuniao_id: string | null
           origem_sugestao_id: string | null
           parent_id: string | null
+          parent_process_id: string | null
           precisa_aprovacao: boolean
           prioridade: Database["public"]["Enums"]["demanda_prioridade"]
+          process_depends_on: string | null
+          process_step_config: Json
+          process_step_order: number | null
+          process_step_status: string | null
+          process_step_type: string | null
           responsaveis_ids: string[]
           responsavel_id: string | null
           status: Database["public"]["Enums"]["demanda_status"]
@@ -1064,6 +1071,7 @@ export type Database = {
           descricao?: string | null
           entregavel_esperado?: string | null
           id?: string
+          is_card_pai?: boolean
           is_parent?: boolean | null
           justificativa_atribuicao?: string | null
           link_drive?: string | null
@@ -1073,8 +1081,14 @@ export type Database = {
           origem_reuniao_id?: string | null
           origem_sugestao_id?: string | null
           parent_id?: string | null
+          parent_process_id?: string | null
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
+          process_depends_on?: string | null
+          process_step_config?: Json
+          process_step_order?: number | null
+          process_step_status?: string | null
+          process_step_type?: string | null
           responsaveis_ids?: string[]
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
@@ -1103,6 +1117,7 @@ export type Database = {
           descricao?: string | null
           entregavel_esperado?: string | null
           id?: string
+          is_card_pai?: boolean
           is_parent?: boolean | null
           justificativa_atribuicao?: string | null
           link_drive?: string | null
@@ -1112,8 +1127,14 @@ export type Database = {
           origem_reuniao_id?: string | null
           origem_sugestao_id?: string | null
           parent_id?: string | null
+          parent_process_id?: string | null
           precisa_aprovacao?: boolean
           prioridade?: Database["public"]["Enums"]["demanda_prioridade"]
+          process_depends_on?: string | null
+          process_step_config?: Json
+          process_step_order?: number | null
+          process_step_status?: string | null
+          process_step_type?: string | null
           responsaveis_ids?: string[]
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
@@ -1128,6 +1149,20 @@ export type Database = {
           {
             foreignKeyName: "demandas_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demandas_parent_process_id_fkey"
+            columns: ["parent_process_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demandas_process_depends_on_fkey"
+            columns: ["process_depends_on"]
             isOneToOne: false
             referencedRelation: "demandas"
             referencedColumns: ["id"]

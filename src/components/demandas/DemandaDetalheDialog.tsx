@@ -21,6 +21,8 @@ import { Demanda, useDemandas, getResponsaveisIds } from "@/store/demandas";
 import { isAguardandoDependencia, getDemandasPais } from "@/lib/workflow";
 import { WorkflowSection } from "./WorkflowSection";
 import { EtapasRelacionadas } from "./EtapasRelacionadas";
+import { EtapasProcesso } from "./EtapasProcesso";
+import { Badge } from "@/components/ui/badge";
 import { useCRM } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -466,8 +468,11 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             <CardHeader className="pb-1.5 pt-2.5 px-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">
-                    Título da tarefa
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1 flex items-center gap-2">
+                    {demanda.is_card_pai && (
+                      <Badge className="bg-primary text-primary-foreground text-[10px]">Card Pai</Badge>
+                    )}
+                    <span>Título da tarefa</span>
                   </div>
                   <Input
                     ref={tituloInputRef}
@@ -498,6 +503,11 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     {CATEGORIA_LABEL[demanda.categoria]}
                     {demanda.subtipo && ` · ${demanda.subtipo}`}
                   </div>
+                  {demanda.is_card_pai && (
+                    <div className="text-xs text-primary mt-1">
+                      Processo multi-etapa com dependências internas.
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -1248,8 +1258,14 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           }}
         />
 
-        <EtapasRelacionadas demanda={demanda} />
-        {canWrite && <WorkflowSection pai={demanda} />}
+        {demanda.is_card_pai ? (
+          <EtapasProcesso cardPai={demanda} />
+        ) : (
+          <>
+            <EtapasRelacionadas demanda={demanda} />
+            {canWrite && <WorkflowSection pai={demanda} />}
+          </>
+        )}
           </div>
         </fieldset>
         {showSaveButton && (
