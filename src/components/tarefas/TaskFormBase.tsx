@@ -410,9 +410,15 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
                 </SelectTrigger>
                 <SelectContent>
                   {categoria === "Posts" ? (
-                    statusPostOptions.map(s => <SelectItem key={s.label} value={s.label}>{displayStatusPostLabel(s.label)}</SelectItem>)
+                    statusPostOptions
+                      // No modo criação, ocultar "Aguardando aprovação do cliente" (Revisar)
+                      // — esse status só pode ser aplicado manualmente após a tarefa existir.
+                      .filter(s => (initialDemandaId || initialPostId) ? true : s.label !== "Revisar")
+                      .map(s => <SelectItem key={s.label} value={s.label}>{displayStatusPostLabel(s.label)}</SelectItem>)
                   ) : (
-                    STATUS_DEMANDA.map(s => <SelectItem key={s} value={s}>{STATUS_DEMANDA_LABEL[s]}</SelectItem>)
+                    STATUS_DEMANDA
+                      .filter(s => (initialDemandaId || initialPostId) ? true : s !== "Revisar")
+                      .map(s => <SelectItem key={s} value={s}>{STATUS_DEMANDA_LABEL[s]}</SelectItem>)
                   )}
                 </SelectContent>
               </Select>
