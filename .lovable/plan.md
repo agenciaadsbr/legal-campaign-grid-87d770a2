@@ -1,70 +1,46 @@
 ## Objetivo
 
-Adicionar a opção de **ocultar individualmente cada cliente** do painel principal (`/clientes`) e dos cards/gráficos do Dashboard e Relatórios, mantendo o cliente intacto no banco (sem apagar nada).
+Mover a ação **Ocultar / Reexibir cliente** para dentro do **modal "Editar Cliente"**, removendo o ícone de olho da coluna **Ações** da tabela. Toda a lógica de persistência, filtros e "Mostrar ocultos" permanece intacta.
 
-A ocultação considera o **status** do cliente como gatilho visual (ex.: cliente "Encerrado" ou "Pausado" pode ser ocultado com 1 clique), mas o controle é por cliente — cada um tem um flag `oculto`.
+## Mudanças
 
-## Comportamento
+### 1. `src/pages/Clientes.tsx` — `AcoesCliente` (linhas ~615–680)
 
-- Em cada linha do painel de Clientes, novo botão **"Ocultar do painel"** (ícone `EyeOff`) ao lado das ações existentes. Clique → marca `oculto = true` e o cliente some da lista.
-- Toggle no topo do painel: **"Mostrar ocultos"** (switch). Quando ligado, clientes ocultos reaparecem com badge discreto "Oculto" e o botão vira **"Reexibir"**.
-- Contador ao lado do toggle: *"3 clientes ocultos"*.
-- Sugestão automática: ao mudar status para `Encerrado`, toast com ação "Ocultar do painel".
-- **Dashboard e Relatórios**: clientes ocultos são filtrados das listagens, KPIs, gráficos de status e renovações. Nenhum dado é apagado — apenas filtrado em runtime.
+- **Remover** o `<Button>` com ícone `Eye`/`EyeOff` (linhas 648–658) e a função `handleToggleOculto`.
+- Manter botões: **Editar** (canetinha) e **Excluir** (lixeira).
+- A coluna Ações fica visualmente mais limpa.
+
+### 2. `src/pages/Clientes.tsx` — `EditarClienteDialog` (linhas ~430–613)
+
+Adicionar uma nova seção **"Visibilidade do cliente"** ao final do formulário, antes do `DialogFooter`:
+
+- Bloco com `Switch` (componente já existente em `src/components/ui/switch.tsx`) controlado por `form.oculto`.
+- Label: **"Ocultar cliente do painel"**
+- Texto auxiliar (muted): *"Clientes ocultos não aparecem na listagem principal, mas continuam no banco e nos relatórios internos. Use 'Mostrar ocultos' para reexibir."*
+- Estado inicial: `cliente?.oculto ?? false` — vem marcado se já estiver oculto (persistência preservada).
+- No `submit()`, incluir `oculto: form.oculto` no patch enviado ao `updateCliente`. O store já trata o timestamp `oculto_em` automaticamente.
+- Toast diferenciado quando o valor de `oculto` mudar: *"Cliente ocultado do painel"* ou *"Cliente reexibido no painel"*, caso contrário mantém *"Cliente atualizado"*.
+
+### 3. Identificação visual dos ocultos (opcional, mínimo)
+
+Já existe filtragem por `mostrarOcultos`. Sem alterar layout/colunas, manter o comportamento atual. Nenhuma badge nova é adicionada nesta etapa para não poluir — o usuário pediu "sem poluir visualmente" e a opção "levemente apagados OU badge" é alternativa; mantemos como está hoje (registros aparecem normalmente quando o toggle do header está ligado).
 
 ## O que **não** muda
 
-- Demandas, posts, contratos, alertas e atividades do cliente continuam intactos.
-- Kanbans dentro do Projeto Completo continuam funcionando para clientes ocultos (acessíveis via link direto).
-- Tabela `clientes` ganha apenas uma coluna nova; nada é removido.
-
-## Mudanças técnicas
-
-### 1. Banco (migration)
-
-Adicionar 2 colunas em `public.clientes`:
-- `oculto boolean NOT NULL DEFAULT false`
-- `oculto_em timestamptz` (registra quando foi ocultado, para auditoria/UI)
-
-Index parcial para queries rápidas:
-```text
-CREATE INDEX idx_clientes_oculto ON public.clientes(oculto) WHERE oculto = true;
-```
-
-Nenhuma policy nova — herda as RLS existentes de `clientes`.
-
-### 2. Store (`src/store/crm.ts`)
-
-- Tipo `Cliente` ganha `oculto?: boolean` e `oculto_em?: string | null`.
-- Nova função `toggleOcultarCliente(id, oculto)` que faz `update` no Supabase e atualiza o estado local.
-
-### 3. UI — Painel principal (`src/pages/Clientes.tsx`)
-
-- Estado local `mostrarOcultos` (persistido em `localStorage`).
-- Filtro: por padrão exclui `cliente.oculto === true`.
-- Header: switch "Mostrar ocultos" + contador.
-- Linha da tabela: botão `EyeOff`/`Eye` com tooltip "Ocultar do painel" / "Reexibir".
-- Badge "Oculto" (variante muted) quando exibido com toggle ligado.
-
-### 4. Dashboard e Relatórios
-
-- `src/pages/Dashboard.tsx`, `src/components/dashboard/*` e `src/pages/Relatorios.tsx`: aplicar `.filter(c => !c.oculto)` nas listas de clientes consumidas para KPIs, donut de status, próximos prazos, renovações e gráficos.
-- Sem alterar lógica de negócio — apenas filtro de visualização.
+- Coluna `oculto` / `oculto_em` no banco.
+- Função `updateCliente` no `src/store/crm.ts`.
+- Toggle **"Mostrar ocultos"** no header da página (linhas ~1657–1660).
+- Filtros aplicados em `ClientesGeralTable`, `Dashboard.tsx`, `Relatorios.tsx`.
+- Ordenação, paginação, busca, tarefas, projeto completo, acessos, relatórios.
 
 ## Arquivos afetados
 
-- `supabase/migrations/<timestamp>_add_clientes_oculto.sql` (novo)
-- `src/store/crm.ts`
-- `src/pages/Clientes.tsx`
-- `src/pages/Dashboard.tsx`
-- `src/components/dashboard/StatusClientesDonut.tsx`
-- `src/components/dashboard/ProximosPrazosCard.tsx`
-- `src/components/dashboard/RenovacoesCard.tsx`
-- `src/components/dashboard/DashboardPorColaborador.tsx`
-- `src/pages/Relatorios.tsx`
+- `src/pages/Clientes.tsx` (apenas: `AcoesCliente` e `EditarClienteDialog`)
 
-## Garantias
+## Validação
 
-- Nenhum dado existente é apagado.
-- Nenhum kanban, demanda ou funcionalidade é alterado.
-- Layout geral preservado — apenas 1 botão por linha + 1 switch no header do painel de Clientes.
+1. Abrir Editar Cliente → ver switch "Ocultar cliente do painel" (refletindo estado atual).
+2. Ativar e salvar → cliente some da listagem.
+3. Ligar "Mostrar ocultos" → cliente reaparece.
+4. Reabrir Editar → switch vem marcado; desativar e salvar → volta à listagem normal.
+5. Confirmar que o ícone de olho não existe mais na coluna Ações.
