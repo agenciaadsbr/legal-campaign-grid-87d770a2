@@ -8,6 +8,7 @@ import {
 import { LayoutGrid } from "lucide-react";
 import { DropdownOption } from "@/store/crm";
 import { cn } from "@/lib/utils";
+import { displayStatusPostLabel } from "@/lib/statusDisplay";
 
 interface Props {
   count: number;
