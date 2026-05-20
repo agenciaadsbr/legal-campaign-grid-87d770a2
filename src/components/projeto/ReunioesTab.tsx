@@ -7,9 +7,36 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Calendar, ExternalLink, Pencil, Trash2, Users, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { Plus, Calendar, ExternalLink, Pencil, Trash2, Users, ChevronDown, ChevronUp, FileText, Copy, Check } from "lucide-react";
 import { ReuniaoDialog } from "./ReuniaoDialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+function CopiarResumoButton({ texto, label }: { texto: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopied(true);
+      toast.success(`${label} copiado`);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+  return (
+    <Button
+      size="icon"
+      variant="ghost"
+      className="h-6 w-6 text-red-800 hover:text-red-900 hover:bg-red-200/50"
+      onClick={handleCopy}
+      title={`Copiar ${label}`}
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </Button>
+  );
+}
 
 export function ReunioesTab({ clienteId }: { clienteId: string }) {
   useReunioesBootstrap();
