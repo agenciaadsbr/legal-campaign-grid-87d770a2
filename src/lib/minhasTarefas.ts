@@ -30,6 +30,10 @@ export interface UnifiedTask {
   origem_categoria?: string | null;
   /** True se a demanda tem dependência ainda não liberada. */
   aguardando_liberacao?: boolean;
+  /** Data em que entrou em "Aguardando aprovação do cliente". */
+  approval_waiting_since?: string | null;
+  /** Dias inteiros aguardando aprovação (null se não aplicável). */
+  approval_dias?: number | null;
 }
 
 const PRIO_RANK: Record<TaskPrioridade, number> = {
