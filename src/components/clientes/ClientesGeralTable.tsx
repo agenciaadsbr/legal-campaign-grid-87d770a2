@@ -349,6 +349,7 @@ export function ClientesGeralTable({
     demandas,
     sortKey,
     sortDir,
+    mostrarOcultos,
   ]);
 
   const denseTh =
