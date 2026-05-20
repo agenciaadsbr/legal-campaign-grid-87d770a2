@@ -172,9 +172,11 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         let status: TaskStatus = "pendente";
         if (d.status === "Concluido") status = "concluido";
         else if (d.status === "Atrasado") status = "atrasado";
-        else if (d.status === "Criar" || d.status === "Revisar" || d.status === "Entregue") status = "em_andamento";
-        if (status !== "concluido" && isAtrasado(d.data_limite, status)) status = "atrasado";
+        else if (d.status === "Revisar") status = "aprovacao";
+        else if (d.status === "Criar" || d.status === "Entregue") status = "em_andamento";
+        if (status !== "concluido" && status !== "aprovacao" && isAtrasado(d.data_limite, status)) status = "atrasado";
 
+        const approval_waiting_since = d.status === "Revisar" ? (d.approval_waiting_since ?? null) : null;
         out.push({
           id: `demanda:${d.id}`,
           fonte: "demanda",
@@ -193,6 +195,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           link: `/clientes/${d.cliente_id}/projeto?tab=${categoriaParaAba(d.categoria)}&demanda=${d.id}`,
           origem_categoria: d.categoria,
           aguardando_liberacao: isAguardandoDependencia(d.id, dependencies),
+          approval_waiting_since,
+          approval_dias: diasDesde(approval_waiting_since),
         });
       });
   }
