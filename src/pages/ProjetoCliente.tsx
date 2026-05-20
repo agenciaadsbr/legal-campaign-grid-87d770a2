@@ -13,6 +13,7 @@ import { AvatarStack } from "@/components/AvatarStack";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusClienteBadge } from "@/components/StatusClienteBadge";
+import { RelatorioHeaderButton } from "@/components/clientes/RelatorioHeaderButton";
 import {
   Dialog,
   DialogContent,
