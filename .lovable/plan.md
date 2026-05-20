@@ -1,111 +1,103 @@
-# Aba Operacional — Excluir Selecionados + Card Pai Inteligente
+# Renomear "Revisar" → "Aguardando aprovação do cliente" + rastreamento
 
-Escopo restrito: **apenas a aba Operacional do Projeto Completo**. Nenhuma outra aba, workflow ou dado existente será alterado/removido.
-
----
-
-## Parte 1 — "Excluir selecionados" no modo Selecionar
-
-### Onde
-`src/components/projeto/AreaTab.tsx` (componente é compartilhado por todas as áreas).
-
-### Como (sem afetar outras abas)
-- Adicionar nova prop opcional `allowBulkDelete?: boolean` em `AreaTab`.
-- `OperacionalTab` passa `allowBulkDelete` quando `isAdmin === true`.
-- Outras abas continuam sem o botão (prop não passada → `undefined` → não renderiza).
-
-### Botão na barra de seleção em massa
-- Renderizar `<Button variant="destructive">Excluir selecionados</Button>` ao lado de "Limpar/Sair".
-- `disabled={selectedIds.size === 0}`.
-- Ao clicar: abrir `AlertDialog` (já existe em `@/components/ui/alert-dialog`) com mensagem exata: *"Tem certeza que deseja excluir as tarefas selecionadas? Essa ação não poderá ser desfeita."* Botões: **Cancelar** / **Excluir selecionados**.
-- Ao confirmar:
-  - Chamar `useDemandas.getState().removeDemanda(id)` (já existe) para cada id selecionado em paralelo.
-  - `toast.success(\`${n} tarefa(s) excluída(s)\`)`.
-  - Sair do modo seleção, recarregar (`useDemandas.load()`), atualizar contadores (já são derivados).
-  - Atividades: trigger `log_atividade_demanda` no banco já registra DELETE? Verificar — se não, fazer insert manual em `atividade_cliente` (tipo `demanda`, acao `excluido_em_lote`).
+## Objetivo
+Trocar apenas o **rótulo exibido** do status `Revisar` para `Aguardando aprovação do cliente` em todo o sistema, preservando o identificador interno (`Revisar`) — sem migração de dados, sem novo status. Adicionar campo de quando a tarefa entrou nesse status, cálculo de dias aguardando, novas colunas, filtro, grupo e badge visual na Central de Tarefas.
 
 ---
 
-## Parte 2 — Card Pai inteligente (camada nova)
+## 1. Banco de dados (migração)
 
-Implementado como **camada aditiva**, sem mexer no fluxo de cards comuns.
+Adicionar colunas para rastreamento (não destrutivo):
 
-### 2.1 Schema (migração)
+- `demandas.approval_waiting_since timestamptz NULL`
+- `demandas.approval_waiting_by uuid NULL`
+- `demandas.approval_previous_status text NULL`
+- `cards.approval_waiting_since timestamptz NULL`
+- `cards.approval_waiting_by uuid NULL`
+- `cards.approval_previous_status text NULL`
 
-**Novas tabelas:**
+**Trigger** em `demandas` e `cards` (BEFORE UPDATE de `status`):
+- Se `NEW.status = 'Revisar'` e `OLD.status <> 'Revisar'`: preenche `approval_waiting_since = now()`, `approval_waiting_by = auth.uid()`, `approval_previous_status = OLD.status`.
+- Se `OLD.status = 'Revisar'` e `NEW.status <> 'Revisar'`: registra em `atividade_cliente` `"Tarefa saiu de Aguardando aprovação do cliente após X dias."` e limpa os 3 campos.
+- Quando entra: também registra em `atividade_cliente` `"Tarefa movida para Aguardando aprovação do cliente."`.
 
-- `card_pai`
-  - `id`, `cliente_id`, `titulo`, `descricao`, `status_geral` (texto livre: Em andamento / Pausado / Concluído), `responsaveis_ids uuid[]`, `created_at`, `updated_at`, `criado_por`.
-- `card_pai_etapas`
-  - `id`, `card_pai_id`, `ordem`, `tipo` (`tarefa_real` | `status_interno`), `titulo`, `categoria_alvo` (texto: aba destino quando tarefa real), `responsavel_id`, `status_interno_valor` (texto livre quando status interno), `demanda_id` (FK soft p/ `demandas.id` quando tarefa real vinculada), `depends_on_etapa_id`, `liberado bool default true`, `concluido bool default false`, `concluido_em`, `created_at`, `updated_at`.
+**Backfill único** (idempotente, dentro da migração):
+- Para `demandas` com `status = 'Revisar'` e `approval_waiting_since IS NULL`: usar a data do registro mais recente em `historico_demandas` com `para_status = 'Revisar'`; se não houver, usar `updated_at`.
+- Para `cards` com `status = 'Revisar'` sem `approval_waiting_since`: usar `updated_at`.
 
-**Campo novo em `demandas`:**
-- `card_pai_id uuid NULL` (referência soft p/ `card_pai.id`) — identifica tarefas reais vinculadas a um Card Pai. Sem FK rígido (mesmo padrão usado em `ia_tarefa_consultas`).
+Sem alterar enum `demanda_status` — mantém o valor `Revisar`.
 
-**RLS:** copiar o padrão `auth_read` / `rw_*_insert/update` / `admin_*_delete` usado em `demandas`.
+---
 
-**Triggers:**
-- Em `demandas` AFTER UPDATE: se `status` mudou para Concluído/Entregue e a demanda possui `card_pai_id`, marcar a etapa correspondente em `card_pai_etapas` como `concluido=true` e liberar a próxima etapa cuja `depends_on_etapa_id` seja essa.
+## 2. Rótulo visível (frontend)
 
-### 2.2 Store
-Novo `src/store/cardPai.ts` (zustand) com:
-- `load(clienteId)`, `criarCardPai`, `atualizarCardPai`, `removerCardPai`.
-- `adicionarEtapa`, `atualizarEtapa`, `removerEtapa`, `reordenarEtapas`.
-- `concluirEtapaInterna`, `liberarEtapa`.
-- `vincularDemandaExistente(etapaId, demandaId)` — verifica duplicidade por título+cliente+categoria antes de criar nova.
-- `criarTarefaRealParaEtapa(etapaId)` — chama `addDemanda` com categoria alvo + `card_pai_id`.
+Trocar o **label** sem mudar o identificador interno:
 
-### 2.3 UI
+- `src/lib/demandas-categorias.ts` → `STATUS_DEMANDA_LABEL.Revisar = "Aguardando aprovação do cliente"`.
+- `src/components/StatusBadge.tsx` → no `statusMap.Revisar`, `label: "Aguardando aprovação do cliente"`.
+- `src/store/crm.ts` / pontos onde a UI mostra `"Revisar"` literal (posts/cards) → usar helper de label central. Criar `getStatusLabel(status)` em `src/lib/status-labels.ts` reutilizável por Posts/Vídeos/Tráfego/LP/IA/Operacional/Urgências/Kanbans/Dashboard/Relatórios.
+- Comparações internas (`d.status === "Revisar"`, filtros, kanban columns, `STATUS_DEMANDA`) **permanecem** como `"Revisar"`.
 
-**`OperacionalTab.tsx`** — substituir o botão único de criação por DropdownMenu:
-- "Nova tarefa comum" → fluxo atual (`createRascunho`).
-- "Novo Card Pai" → abre `CardPaiFormDialog`.
+Resultado: todas as abas, kanbans, badges, dashboards e relatórios passam a exibir o novo nome automaticamente.
 
-**Renderização no Kanban Operacional:**
-- `ProjetoKanban` / `DemandCard` recebem prop opcional `cardPaiMap` para enriquecer cards cuja origem seja Card Pai. Para o MVP, cards pai serão demandas-fantasma renderizadas em uma faixa separada acima do Kanban (mais simples e isolado): novo componente `CardsPaiLista` mostrando cada Card Pai como card especial com:
-  - Badge "Card Pai"
-  - Progresso `X/Y etapas`
-  - Próxima etapa (primeira não concluída e liberada)
-  - Avatares dos responsáveis envolvidos
-  - Click → abre `CardPaiDetalheDialog`.
+---
 
-**`CardPaiDetalheDialog`** (novo) — abas/seções:
-- Cabeçalho: título, descrição, status geral, responsáveis.
-- **Etapas do Processo**: lista ordenável; cada etapa mostra tipo, título, responsável, status (bloqueada/liberada/concluída), botão "Concluir" (status interno) ou link p/ a tarefa real (abre `DemandaDetalheDialog`). Botão "Adicionar etapa" com escolha tarefa real / status interno.
-- **Comentários, Anexos, Atividades**: reuso dos componentes já existentes (vinculando por `card_pai_id`).
+## 3. Central de Tarefas (`src/lib/minhasTarefas.ts` + componentes)
 
-**`CardPaiFormDialog`** (novo) — criar/editar título, descrição, etapas iniciais, responsáveis.
+Estender `UnifiedTask`:
+```ts
+approval_waiting_since?: string | null;
+approval_dias?: number | null; // calculado
+```
 
-### 2.4 Sincronização e progresso
-- Progresso calculado em runtime no store: `concluidas/total`, `pendentes`, `bloqueadas`, `aguardando_cliente` (etapas internas cujo título/status_interno_valor contenha "aguardando"), `atrasadas` (etapas com `demanda.data_limite < now()`).
-- Trigger SQL (acima) garante sincronização quando a tarefa real é concluída em outra aba.
+Calcular `approval_dias` = `floor((now - approval_waiting_since) / 86400000)` quando o status interno é `Revisar`.
 
-### 2.5 "Gerar estrutura operacional"
-- Continua criando cards normais como hoje.
-- **Aditivo**: ao final, verifica se já existe Card Pai por título para o cliente; se não, cria os 4 sugeridos vazios (somente título + etapas-modelo): *Ativação Google Ads, Ativação Meta Ads, Produção de Posts, Produção de Vídeos*. Não duplica, não apaga nada.
+**`MinhasTarefasTabela.tsx`**:
+- Adicionar duas colunas entre "Status" e "Ações":
+  - `Entrada em aprovação` → data formatada `dd/MM/yyyy` ou `—`.
+  - `Dias em aprovação` → `N dias` com badge:
+    - 0–2: badge `secondary` (normal)
+    - 3–6: badge `outline` cor `warning` (atenção leve)
+    - 7+: badge `destructive` (atenção alta)
+- Novo grupo (`GroupKey`) `aprovacao` → "AGUARDANDO APROVAÇÃO DO CLIENTE", separado de Atrasadas / Em andamento / Pendentes / Concluídas. Ordenar por: dias desc → prazo asc → prioridade desc.
+- Em `mapStatus`: tarefas com status interno `Revisar` viram grupo `aprovacao` (não mais `em_andamento`).
 
-### 2.6 Não-duplicação ao criar tarefa real via etapa
-Antes de inserir em `demandas`, query: `titulo ilike $1 AND cliente_id = $2 AND categoria = $3`. Se encontrar, vincula em vez de criar.
+**`MinhasTarefasFiltros.tsx`**:
+- Adicionar opção de filtro `"Aguardando aprovação do cliente"` (mapeia para grupo `aprovacao`).
 
-### 2.7 Atividades
-Inserts em `atividade_cliente` (tipo `card_pai`) para: criação, etapa criada/excluída, tarefa real vinculada, status interno alterado, responsável alterado, etapa liberada/bloqueada/concluída, exclusão em lote.
+---
+
+## 4. Kanbans (Projeto Completo)
+
+Nenhuma mudança estrutural. A coluna "Revisar" passa a renderizar o label novo via `STATUS_DEMANDA_LABEL`. Posição preservada. Outros status (Planejamento, Criar, Entregue, Concluído, Atrasado, Aguardando etapa anterior) inalterados.
+
+---
+
+## 5. Histórico / Atividades
+
+Trigger SQL (item 1) já registra entrada e saída do status com a mensagem solicitada e o número de dias. `historico_demandas` continua registrando a transição via trigger existente `log_historico_demanda`.
+
+---
+
+## 6. Arquivos afetados
+
+**Migração nova**: `supabase/migrations/<timestamp>_aprovacao_cliente.sql`
+
+**Frontend**:
+- `src/lib/demandas-categorias.ts` (label)
+- `src/components/StatusBadge.tsx` (label)
+- `src/lib/status-labels.ts` (novo helper opcional)
+- `src/lib/minhasTarefas.ts` (campos novos + grupo aprovacao)
+- `src/components/tarefas/MinhasTarefasTabela.tsx` (colunas, grupo, badge)
+- `src/components/tarefas/MinhasTarefasFiltros.tsx` (opção de filtro)
+- `src/pages/MinhasTarefas.tsx` (incluir grupo aprovacao em KPIs/render)
+- `src/store/demandas.ts` / `src/store/crm.ts` — apenas tipar os novos campos (sem mudar lógica)
+- `src/integrations/supabase/types.ts` será regenerado após a migração
 
 ---
 
 ## Garantias
 
-- Nenhum arquivo de outras abas (Posts, Vídeos, Tráfego, LP, IA, Central de Tarefas) é tocado.
-- Cards normais continuam usando o fluxo atual (`AreaTab` + `ProjetoKanban` + `DemandaDetalheDialog`).
-- Toda lógica nova é isolada em arquivos novos (`store/cardPai.ts`, `components/projeto/cardPai/*`) e duas pequenas edições cirúrgicas em `AreaTab.tsx` (prop opcional) e `OperacionalTab.tsx` (dropdown + faixa de Cards Pai).
-- Migração apenas **adiciona** tabelas/coluna; não altera nem remove dados existentes.
-
----
-
-## Ordem de execução
-1. Migração (tabelas, coluna, RLS, trigger de sincronização).
-2. Store `cardPai.ts` + tipos.
-3. UI: `CardPaiFormDialog`, `CardPaiDetalheDialog`, `CardsPaiLista`.
-4. Edição cirúrgica em `OperacionalTab.tsx` (dropdown + faixa).
-5. Edição cirúrgica em `AreaTab.tsx` (prop `allowBulkDelete` + botão + AlertDialog).
-6. Ajuste `gerarEstruturaOperacional` para sugerir 4 Cards Pai sem duplicar.
-7. Validação manual conforme checklist do pedido (itens 1–15 da seção VALIDAÇÃO).
+- Identificador interno `Revisar` preservado → zero impacto em queries, RLS, triggers e enum existentes.
+- Backfill preenche `approval_waiting_since` para tarefas que já estão em `Revisar`.
+- Nenhum dado removido. Nenhum status criado. Nenhum kanban alterado estruturalmente. Outras funcionalidades da Central de Tarefas intactas.
