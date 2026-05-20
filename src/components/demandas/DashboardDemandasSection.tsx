@@ -75,7 +75,7 @@ export function DashboardDemandasSection() {
         <Kpi label="Abertas" value={kpis.abertas} icon={ListChecks} accent="hsl(var(--primary))" />
         <Kpi label="Urgentes" value={kpis.urgentes} icon={AlertTriangle} accent="hsl(var(--destructive))" />
         <Kpi label="Atrasadas" value={kpis.atrasadas} icon={Clock} accent="hsl(var(--destructive))" />
-        <Kpi label="Em revisão" value={kpis.emRevisao} icon={RefreshCcw} accent="hsl(var(--status-revisar))" />
+        <Kpi label="Aguardando aprovação do cliente" value={kpis.emRevisao} icon={RefreshCcw} accent="hsl(var(--status-revisar))" />
         <Kpi label="Concluídas hoje" value={kpis.concluidasHoje} icon={CheckCircle2} accent="hsl(var(--status-postado))" />
         <Kpi label="Bloqueadas" value={kpis.bloqueadas} icon={Lock} accent="hsl(38 92% 50%)" />
         <Kpi label="Tempo médio liberação" value={kpis.tempoMedio} icon={Timer} accent="hsl(var(--info))" />
