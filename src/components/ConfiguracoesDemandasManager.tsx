@@ -282,7 +282,7 @@ export function ConfiguracoesDemandasManager() {
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
         Gerencie categorias, prioridades e status de demandas. Status essenciais
-        (Planejamento, Criar, Revisar, Entregue, Concluído, Atrasado) ficam
+        (Planejamento, Criar, Aguardando aprovação do cliente, Entregue, Concluído, Atrasado) ficam
         protegidos contra edição/remoção.
       </p>
       <Tabs defaultValue="categorias">
