@@ -1,46 +1,40 @@
+# Atalho do Relatório no cabeçalho do Projeto Completo
+
 ## Objetivo
+Exibir, no cabeçalho do Projeto Completo do cliente (ao lado do badge de status), o mesmo acesso ao relatório (`cliente.link_relatorio`) já disponível na coluna "Relatório" da aba Clientes — sem duplicar dados nem alterar a coluna existente.
 
-Mover a ação **Ocultar / Reexibir cliente** para dentro do **modal "Editar Cliente"**, removendo o ícone de olho da coluna **Ações** da tabela. Toda a lógica de persistência, filtros e "Mostrar ocultos" permanece intacta.
+## Onde mexer
+Apenas em `src/pages/ProjetoCliente.tsx`, no bloco do header (linhas ~236–245), logo após `<StatusClienteBadge>`.
 
-## Mudanças
+Nenhum outro arquivo é alterado. A coluna `LinkRelatorioCell` em `ClienteCellEditors.tsx` e o uso em `ClientesGeralTable.tsx` ficam intactos.
 
-### 1. `src/pages/Clientes.tsx` — `AcoesCliente` (linhas ~615–680)
+## Comportamento
 
-- **Remover** o `<Button>` com ícone `Eye`/`EyeOff` (linhas 648–658) e a função `handleToggleOculto`.
-- Manter botões: **Editar** (canetinha) e **Excluir** (lixeira).
-- A coluna Ações fica visualmente mais limpa.
+- Lê `cliente.link_relatorio` direto do store (`useCRM`). Como ambos os pontos consomem o mesmo store, a sincronização é automática nos dois sentidos.
+- Se `link_relatorio` existir: renderiza um botão pequeno `variant="outline" size="sm"` com ícone `BarChart3` + texto "Relatório" + ícone `ExternalLink`. Ao clicar, abre o link em nova aba (`target="_blank" rel="noreferrer"`).
+- Se `link_relatorio` estiver vazio: renderiza um botão discreto `variant="ghost" size="sm"` com `Plus` + "Adicionar relatório". Ao clicar, abre um `Popover` (mesmo padrão usado em `LinkRelatorioCell`) com um `Input type="url"` e botões Cancelar/Salvar; ao salvar chama `updateCliente(clienteId, { link_relatorio: v || null })`.
+- O mesmo popover também é usado para editar quando já existe link — adicionar um pequeno botão `Pencil` ao lado, idêntico ao padrão da célula da tabela, para manter consistência e permitir edição rápida.
 
-### 2. `src/pages/Clientes.tsx` — `EditarClienteDialog` (linhas ~430–613)
+## Componente auxiliar
+Para evitar duplicação, extrair um componente leve `RelatorioHeaderButton({ clienteId, value })` dentro do próprio `ProjetoCliente.tsx` (ou num arquivo novo `src/components/clientes/RelatorioHeaderButton.tsx`) — reusa `Popover` + `Input` + `updateCliente` da store, espelhando a lógica de `LinkRelatorioCell` mas com estilo de cabeçalho (botão maior, mais elegante) em vez do estilo compacto da célula.
 
-Adicionar uma nova seção **"Visibilidade do cliente"** ao final do formulário, antes do `DialogFooter`:
+## Visual
+```
+[Nome do Cliente]  [Ativo]  [📊 Relatório ↗]   (com ✏️ ao lado para editar)
+```
+ou, sem link:
+```
+[Nome do Cliente]  [Ativo]  [+ Adicionar relatório]
+```
 
-- Bloco com `Switch` (componente já existente em `src/components/ui/switch.tsx`) controlado por `form.oculto`.
-- Label: **"Ocultar cliente do painel"**
-- Texto auxiliar (muted): *"Clientes ocultos não aparecem na listagem principal, mas continuam no banco e nos relatórios internos. Use 'Mostrar ocultos' para reexibir."*
-- Estado inicial: `cliente?.oculto ?? false` — vem marcado se já estiver oculto (persistência preservada).
-- No `submit()`, incluir `oculto: form.oculto` no patch enviado ao `updateCliente`. O store já trata o timestamp `oculto_em` automaticamente.
-- Toast diferenciado quando o valor de `oculto` mudar: *"Cliente ocultado do painel"* ou *"Cliente reexibido no painel"*, caso contrário mantém *"Cliente atualizado"*.
+Tudo com tokens semânticos (`text-muted-foreground`, `border-border`, etc.), responsivo (header já usa `flex-wrap`).
 
-### 3. Identificação visual dos ocultos (opcional, mínimo)
-
-Já existe filtragem por `mostrarOcultos`. Sem alterar layout/colunas, manter o comportamento atual. Nenhuma badge nova é adicionada nesta etapa para não poluir — o usuário pediu "sem poluir visualmente" e a opção "levemente apagados OU badge" é alternativa; mantemos como está hoje (registros aparecem normalmente quando o toggle do header está ligado).
-
-## O que **não** muda
-
-- Coluna `oculto` / `oculto_em` no banco.
-- Função `updateCliente` no `src/store/crm.ts`.
-- Toggle **"Mostrar ocultos"** no header da página (linhas ~1657–1660).
-- Filtros aplicados em `ClientesGeralTable`, `Dashboard.tsx`, `Relatorios.tsx`.
-- Ordenação, paginação, busca, tarefas, projeto completo, acessos, relatórios.
-
-## Arquivos afetados
-
-- `src/pages/Clientes.tsx` (apenas: `AcoesCliente` e `EditarClienteDialog`)
+## Permissões
+Reutiliza `updateCliente` da store — mesma regra de permissão já aplicada na aba Clientes (sem mudança).
 
 ## Validação
-
-1. Abrir Editar Cliente → ver switch "Ocultar cliente do painel" (refletindo estado atual).
-2. Ativar e salvar → cliente some da listagem.
-3. Ligar "Mostrar ocultos" → cliente reaparece.
-4. Reabrir Editar → switch vem marcado; desativar e salvar → volta à listagem normal.
-5. Confirmar que o ícone de olho não existe mais na coluna Ações.
+1. Cliente com `link_relatorio`: botão "Relatório" aparece ao lado do status; clique abre em nova aba.
+2. Editar via lápis no header → mudança reflete na coluna Relatório da aba Clientes (mesmo store).
+3. Editar via coluna na aba Clientes → reabrir Projeto Completo mostra novo link.
+4. Cliente sem link: botão "Adicionar relatório" abre popover; ao salvar, link passa a aparecer nos dois lugares.
+5. Nenhuma alteração em abas, Kanban, Central de Tarefas, layout geral.
