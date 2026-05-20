@@ -1,81 +1,70 @@
-# Permitir alteração manual de status no "Detalhes da tarefa"
+## Objetivo
 
-## Causa raiz
+Adicionar a opção de **ocultar individualmente cada cliente** do painel principal (`/clientes`) e dos cards/gráficos do Dashboard e Relatórios, mantendo o cliente intacto no banco (sem apagar nada).
 
-O dialog `DemandaDetalheDialog` chama `updateDemanda` corretamente ao trocar o status pelo dropdown, e o `update` chega no Supabase. Porém, existe um trigger no banco que sobrescreve o valor de volta para `Atrasado` antes do `UPDATE` ser efetivado, sempre que `data_limite < now()`:
+A ocultação considera o **status** do cliente como gatilho visual (ex.: cliente "Encerrado" ou "Pausado" pode ser ocultado com 1 clique), mas o controle é por cliente — cada um tem um flag `oculto`.
 
+## Comportamento
+
+- Em cada linha do painel de Clientes, novo botão **"Ocultar do painel"** (ícone `EyeOff`) ao lado das ações existentes. Clique → marca `oculto = true` e o cliente some da lista.
+- Toggle no topo do painel: **"Mostrar ocultos"** (switch). Quando ligado, clientes ocultos reaparecem com badge discreto "Oculto" e o botão vira **"Reexibir"**.
+- Contador ao lado do toggle: *"3 clientes ocultos"*.
+- Sugestão automática: ao mudar status para `Encerrado`, toast com ação "Ocultar do painel".
+- **Dashboard e Relatórios**: clientes ocultos são filtrados das listagens, KPIs, gráficos de status e renovações. Nenhum dado é apagado — apenas filtrado em runtime.
+
+## O que **não** muda
+
+- Demandas, posts, contratos, alertas e atividades do cliente continuam intactos.
+- Kanbans dentro do Projeto Completo continuam funcionando para clientes ocultos (acessíveis via link direto).
+- Tabela `clientes` ganha apenas uma coluna nova; nada é removido.
+
+## Mudanças técnicas
+
+### 1. Banco (migration)
+
+Adicionar 2 colunas em `public.clientes`:
+- `oculto boolean NOT NULL DEFAULT false`
+- `oculto_em timestamptz` (registra quando foi ocultado, para auditoria/UI)
+
+Index parcial para queries rápidas:
 ```text
-trigger trg_auto_marcar_demanda_atrasada
-  BEFORE INSERT OR UPDATE ON public.demandas
-  → função auto_marcar_demanda_atrasada():
-      IF data_limite < now()
-         AND status NOT IN ('Concluido','Entregue','Atrasado')
-      THEN NEW.status := 'Atrasado'
+CREATE INDEX idx_clientes_oculto ON public.clientes(oculto) WHERE oculto = true;
 ```
 
-Como a tarefa "Renovação Assessoria – R$ 1.297,00" tem `data_limite = 18/05/2026` (passado), qualquer escolha do usuário (Criar, Revisar, Planejamento, etc.) é revertida para `Atrasado` no próprio `BEFORE UPDATE`. O frontend aplica a mudança otimista, recebe a linha de volta com `Atrasado` e re-renderiza o status como `Atrasado` — dando a sensação de que "não muda".
+Nenhuma policy nova — herda as RLS existentes de `clientes`.
 
-A funcionalidade automática de marcar como atrasado deve continuar existindo (para criação/sync de fundo), mas **não pode sobrescrever uma mudança explícita feita pelo usuário**.
+### 2. Store (`src/store/crm.ts`)
 
-## Mudança proposta
+- Tipo `Cliente` ganha `oculto?: boolean` e `oculto_em?: string | null`.
+- Nova função `toggleOcultarCliente(id, oculto)` que faz `update` no Supabase e atualiza o estado local.
 
-### 1. Migration: ajustar `auto_marcar_demanda_atrasada`
+### 3. UI — Painel principal (`src/pages/Clientes.tsx`)
 
-Reescrever a função para respeitar mudanças explícitas de status feitas pelo usuário:
+- Estado local `mostrarOcultos` (persistido em `localStorage`).
+- Filtro: por padrão exclui `cliente.oculto === true`.
+- Header: switch "Mostrar ocultos" + contador.
+- Linha da tabela: botão `EyeOff`/`Eye` com tooltip "Ocultar do painel" / "Reexibir".
+- Badge "Oculto" (variante muted) quando exibido com toggle ligado.
 
-- **No INSERT**: comportamento atual (se vencida, marca como Atrasado).
-- **No UPDATE**:
-  - Se `NEW.status IS DISTINCT FROM OLD.status` → o usuário (ou código) está mudando o status de propósito → **não sobrescrever**. Apenas devolver `NEW` como está.
-  - Se `NEW.status = OLD.status` (update de outros campos) → manter a lógica atual de auto-marcação quando vencida.
+### 4. Dashboard e Relatórios
 
-Isso preserva:
-- Auto-marcação na criação de tarefas vencidas.
-- Auto-marcação quando algum campo (ex: `data_limite`) é alterado sem mexer no status.
-- Bloqueio existente para tarefas com dependências não liberadas.
-
-E permite:
-- Usuário escolher manualmente qualquer status no dropdown do detalhe (inclusive sair de Atrasado para Criar/Revisar/Planejamento) sem o banco reverter.
-
-### 2. Sem mudanças no frontend
-
-`DemandaDetalheDialog`, `updateDemanda` em `src/store/demandas.ts`, `AreaTab`, `OperacionalTab`, `MinhasTarefasTabela` e Kanbans continuam como estão. Nenhum comportamento é removido.
-
-## Detalhes técnicos da migration
-
-```sql
-CREATE OR REPLACE FUNCTION public.auto_marcar_demanda_atrasada()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = public
-AS $$
-BEGIN
-  -- Respeita mudança explícita de status em UPDATE
-  IF TG_OP = 'UPDATE' AND NEW.status IS DISTINCT FROM OLD.status THEN
-    RETURN NEW;
-  END IF;
-
-  IF NEW.data_limite IS NOT NULL
-     AND NEW.data_limite < now()
-     AND NEW.status NOT IN ('Concluido','Entregue','Atrasado')
-     AND NOT EXISTS (
-       SELECT 1 FROM public.task_dependencies td
-        WHERE td.task_id = NEW.id AND td.liberado = false
-     ) THEN
-    NEW.status := 'Atrasado';
-  END IF;
-  RETURN NEW;
-END;
-$$;
-```
+- `src/pages/Dashboard.tsx`, `src/components/dashboard/*` e `src/pages/Relatorios.tsx`: aplicar `.filter(c => !c.oculto)` nas listas de clientes consumidas para KPIs, donut de status, próximos prazos, renovações e gráficos.
+- Sem alterar lógica de negócio — apenas filtro de visualização.
 
 ## Arquivos afetados
 
-- Nova migration em `supabase/migrations/` redefinindo a função `auto_marcar_demanda_atrasada`.
+- `supabase/migrations/<timestamp>_add_clientes_oculto.sql` (novo)
+- `src/store/crm.ts`
+- `src/pages/Clientes.tsx`
+- `src/pages/Dashboard.tsx`
+- `src/components/dashboard/StatusClientesDonut.tsx`
+- `src/components/dashboard/ProximosPrazosCard.tsx`
+- `src/components/dashboard/RenovacoesCard.tsx`
+- `src/components/dashboard/DashboardPorColaborador.tsx`
+- `src/pages/Relatorios.tsx`
 
-## QA esperado
+## Garantias
 
-1. Abrir tarefa vencida em "Operacional" → trocar status para "Criar" pelo dropdown do detalhe → valor persiste e badge atualiza.
-2. Trocar de "Atrasado" para "Aguardando aprovação do cliente" → persiste e aparece em Central de Tarefas no grupo correspondente.
-3. Criar nova tarefa com `data_limite` no passado e status `Criar` → continua sendo marcada como `Atrasado` automaticamente.
-4. Editar outros campos (responsáveis, descrição, prioridade) em tarefa vencida sem mexer no status → status permanece `Atrasado`.
-5. Kanbans, Central de Tarefas, AlterarStatusPopover e demais fluxos continuam funcionando.
+- Nenhum dado existente é apagado.
+- Nenhum kanban, demanda ou funcionalidade é alterado.
+- Layout geral preservado — apenas 1 botão por linha + 1 switch no header do painel de Clientes.
