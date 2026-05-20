@@ -113,6 +113,20 @@ export function DemandCard({
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
+        {demanda.is_card_pai && (
+          <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 h-5">
+            Card Pai
+          </Badge>
+        )}
+        {demanda.parent_process_id && (
+          <Badge
+            variant="secondary"
+            className="text-[10px] px-1.5 py-0 h-5 font-normal"
+            title="Etapa de um Card Pai"
+          >
+            Etapa
+          </Badge>
+        )}
         <Badge
           variant="outline"
           className="text-[10px] px-1.5 py-0 h-5 font-normal"
