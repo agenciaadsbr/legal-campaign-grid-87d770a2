@@ -76,6 +76,7 @@ interface Props {
   density?: Density;
   onAbrirHistorico?: (clienteId: string) => void;
   acoesSlot?: (clienteId: string) => React.ReactNode;
+  mostrarOcultos?: boolean;
 }
 
 function startOfDay(d: Date) {
@@ -240,6 +241,7 @@ export function ClientesGeralTable({
   density = "compacto",
   onAbrirHistorico,
   acoesSlot,
+  mostrarOcultos = false,
 }: Props) {
   const { clientes, cards, contratos, nichos, responsaveis, heavyDataLoaded } = useCRM();
   useDemandasBootstrap();
@@ -252,6 +254,7 @@ export function ClientesGeralTable({
     const intervalo = resolveIntervaloPeriodo(filtroPeriodo);
 
     let lista = clientes.filter((c) => {
+      if (!mostrarOcultos && c.oculto) return false;
       if (
         filtroStatusGlobal !== "todos" &&
         (c.status_global ?? "Onboarding") !== filtroStatusGlobal
@@ -346,6 +349,7 @@ export function ClientesGeralTable({
     demandas,
     sortKey,
     sortDir,
+    mostrarOcultos,
   ]);
 
   const denseTh =

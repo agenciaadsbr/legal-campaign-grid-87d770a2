@@ -631,10 +631,31 @@ function AcoesCliente({ cliente }: { cliente: any }) {
     }
   };
 
+  const handleToggleOculto = async () => {
+    const novo = !cliente.oculto;
+    try {
+      await updateCliente(cliente.id, { oculto: novo } as any);
+      toast.success(novo ? "Cliente ocultado do painel" : "Cliente reexibido no painel");
+    } catch (e: any) {
+      toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
+    }
+  };
+
   if (!canWrite && !isAdmin) return null;
 
   return (
     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      {canWrite && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          title={cliente.oculto ? "Reexibir no painel" : "Ocultar do painel"}
+          onClick={handleToggleOculto}
+        >
+          {cliente.oculto ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        </Button>
+      )}
       {canWrite && (
         <Button
           size="icon"
@@ -1405,6 +1426,14 @@ export default function Clientes() {
   const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
     () => localStorage.getItem("clientes:filtroStatusGlobal") ?? "todos",
   );
+  const [mostrarOcultos, setMostrarOcultos] = useState<boolean>(
+    () => localStorage.getItem("clientes:mostrarOcultos") === "1",
+  );
+  useEffect(() => {
+    localStorage.setItem("clientes:mostrarOcultos", mostrarOcultos ? "1" : "0");
+  }, [mostrarOcultos]);
+  const totalOcultos = useMemo(() => clientes.filter((c) => c.oculto).length, [clientes]);
+
 
   // Novos filtros (visão Clientes)
   const [filtroNichos, setFiltroNichos] = useState<string[]>([]);
@@ -1615,6 +1644,25 @@ export default function Clientes() {
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-8 w-56 text-sm" />
           </div>
+          {totalOcultos > 0 && (
+            <button
+              type="button"
+              onClick={() => setMostrarOcultos((v) => !v)}
+              className={cn(
+                "h-8 px-2 inline-flex items-center gap-1.5 text-xs rounded-md border transition-colors",
+                mostrarOcultos
+                  ? "bg-accent text-foreground border-border"
+                  : "bg-background text-muted-foreground hover:text-foreground border-border",
+              )}
+              title={mostrarOcultos ? "Esconder clientes ocultos" : "Mostrar clientes ocultos"}
+            >
+              {mostrarOcultos ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {mostrarOcultos ? "Ocultos visíveis" : "Mostrar ocultos"}
+              <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-muted text-foreground text-[10px] font-semibold">
+                {totalOcultos}
+              </span>
+            </button>
+          )}
           {isAdmin && <ConfiguracoesSheet />}
           {isAdmin && <GerenciarColunas />}
           {canWrite && <NovoClienteDialog />}
@@ -1634,6 +1682,7 @@ export default function Clientes() {
         sortDir={sortDir}
         onSortChange={handleSortChange}
         onAbrirHistorico={setHistoricoClienteId}
+        mostrarOcultos={mostrarOcultos}
         acoesSlot={(clienteId) => {
           const cli = clientes.find((c) => c.id === clienteId);
           return cli ? <AcoesCliente cliente={cli} /> : null;

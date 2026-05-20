@@ -28,7 +28,8 @@ const tooltipStyle = {
 
 export default function Dashboard() {
   useDemandasBootstrap();
-  const { clientes, posts, alertas, cards, responsaveis } = useCRM();
+  const { clientes: clientesAll, posts, alertas, cards, responsaveis } = useCRM();
+  const clientes = useMemo(() => clientesAll.filter((c) => !c.oculto), [clientesAll]);
   const demandas = useDemandas((s) => s.demandas);
 
   const today = new Date().toISOString().slice(0, 10);
