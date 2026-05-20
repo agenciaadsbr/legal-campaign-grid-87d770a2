@@ -352,7 +352,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                       <SelectItem key={o.label} value={o.label}>
                         <span className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full" style={{ background: o.cor }} />
-                          {o.label}
+                          {displayStatusPostLabel(o.label)}
                         </span>
                       </SelectItem>
                     ))}
