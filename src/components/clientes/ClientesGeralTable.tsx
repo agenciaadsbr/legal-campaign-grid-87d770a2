@@ -76,6 +76,7 @@ interface Props {
   density?: Density;
   onAbrirHistorico?: (clienteId: string) => void;
   acoesSlot?: (clienteId: string) => React.ReactNode;
+  mostrarOcultos?: boolean;
 }
 
 function startOfDay(d: Date) {
