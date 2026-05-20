@@ -407,7 +407,16 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   em_andamento: "Em andamento",
   atrasado: "Atrasado",
   concluido: "Concluído",
+  aprovacao: "Aguardando aprovação do cliente",
 };
+
+/** Calcula dias inteiros desde uma data ISO (>=0). */
+export function diasDesde(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+}
 
 export const AREAS_DISPONIVEIS: string[] = [
   "Posts",
