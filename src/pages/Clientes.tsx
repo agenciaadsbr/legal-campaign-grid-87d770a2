@@ -1644,6 +1644,25 @@ export default function Clientes() {
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." className="pl-8 h-8 w-56 text-sm" />
           </div>
+          {totalOcultos > 0 && (
+            <button
+              type="button"
+              onClick={() => setMostrarOcultos((v) => !v)}
+              className={cn(
+                "h-8 px-2 inline-flex items-center gap-1.5 text-xs rounded-md border transition-colors",
+                mostrarOcultos
+                  ? "bg-accent text-foreground border-border"
+                  : "bg-background text-muted-foreground hover:text-foreground border-border",
+              )}
+              title={mostrarOcultos ? "Esconder clientes ocultos" : "Mostrar clientes ocultos"}
+            >
+              {mostrarOcultos ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {mostrarOcultos ? "Ocultos visíveis" : "Mostrar ocultos"}
+              <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-muted text-foreground text-[10px] font-semibold">
+                {totalOcultos}
+              </span>
+            </button>
+          )}
           {isAdmin && <ConfiguracoesSheet />}
           {isAdmin && <GerenciarColunas />}
           {canWrite && <NovoClienteDialog />}
@@ -1663,6 +1682,7 @@ export default function Clientes() {
         sortDir={sortDir}
         onSortChange={handleSortChange}
         onAbrirHistorico={setHistoricoClienteId}
+        mostrarOcultos={mostrarOcultos}
         acoesSlot={(clienteId) => {
           const cli = clientes.find((c) => c.id === clienteId);
           return cli ? <AcoesCliente cliente={cli} /> : null;
