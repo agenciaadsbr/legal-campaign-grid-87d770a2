@@ -92,7 +92,7 @@ export function RelatoriosPosts({ cards, posts }: Props) {
         <KpiCard icon={FileText} label="Total" value={counts.total} tone="primary" />
         <KpiCard icon={CheckCircle2} label="Postados" value={counts.Postado || 0} tone="success" />
         <KpiCard icon={PenLine} label="Em criação" value={counts.Criar || 0} />
-        <KpiCard icon={Search} label="Em revisão" value={counts.Revisar || 0} tone="info" />
+        <KpiCard icon={Search} label="Aguardando aprovação do cliente" value={counts.Revisar || 0} tone="info" />
         <KpiCard icon={CalendarClock} label="Agendados" value={counts.Agendar || 0} tone="warning" />
         <KpiCard icon={RefreshCcw} label="Renovação" value={counts["Renovação"] || 0} />
       </div>
