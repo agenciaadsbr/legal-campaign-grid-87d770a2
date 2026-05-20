@@ -7,7 +7,7 @@ import { CATEGORIA_LABEL } from "@/lib/demandas-categorias";
 import { isAguardandoDependencia, type TaskDependency } from "@/lib/workflow";
 
 export type TaskFonte = "demanda" | "post" | "planejamento" | "documentacao";
-export type TaskStatus = "pendente" | "em_andamento" | "atrasado" | "concluido";
+export type TaskStatus = "pendente" | "em_andamento" | "atrasado" | "concluido" | "aprovacao";
 export type TaskPrioridade = "Baixa" | "Media" | "Alta" | "Urgente";
 
 export interface UnifiedTask {
