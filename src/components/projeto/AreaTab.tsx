@@ -65,6 +65,7 @@ export function AreaTab({
   allowBulkDelete,
   extraTop,
   novaTarefaExtra,
+  onNovoCardPai,
 }: Props) {
   const { responsaveis } = useCRM();
   const createRascunho = useDemandas((s) => s.createRascunho);
