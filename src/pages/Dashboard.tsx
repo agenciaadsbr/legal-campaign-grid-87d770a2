@@ -160,7 +160,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
           <KpiCard compact icon={FileText} label="Total cards" value={postsKpis.totalCards} tone="primary" />
           <KpiCard compact icon={PenLine} label="Em criação" value={postsKpis.criar} />
-          <KpiCard compact icon={Search} label="Em revisão" value={postsKpis.revisar} tone="info" />
+          <KpiCard compact icon={Search} label="Aguardando aprovação do cliente" value={postsKpis.revisar} tone="info" />
           <KpiCard compact icon={Calendar} label="Agendados" value={postsKpis.agendar} tone="warning" />
           <KpiCard compact icon={CheckCircle2} label="Postados" value={postsKpis.postados} tone="success" />
         </div>
