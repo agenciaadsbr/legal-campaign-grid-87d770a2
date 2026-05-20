@@ -489,12 +489,17 @@ function EditarClienteDialog({
     }
     try {
       const { duracao_meses, prazo_onboarding, valor_venda, ...patch } = form;
+      const ocultoMudou = !!cliente?.oculto !== !!form.oculto;
       await updateCliente(cliente.id, {
         ...(patch as any),
         prazo_onboarding: prazo_onboarding || null,
         valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
       });
-      toast.success("Cliente atualizado");
+      if (ocultoMudou) {
+        toast.success(form.oculto ? "Cliente ocultado do painel" : "Cliente reexibido no painel");
+      } else {
+        toast.success("Cliente atualizado");
+      }
       onOpenChange(false);
     } catch (e: any) {
       toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
