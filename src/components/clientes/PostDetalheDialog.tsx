@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { displayStatusPostLabel } from "@/lib/statusDisplay";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -352,7 +353,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                       <SelectItem key={o.label} value={o.label}>
                         <span className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full" style={{ background: o.cor }} />
-                          {o.label}
+                          {displayStatusPostLabel(o.label)}
                         </span>
                       </SelectItem>
                     ))}
