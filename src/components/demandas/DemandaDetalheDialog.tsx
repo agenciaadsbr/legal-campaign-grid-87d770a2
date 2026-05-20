@@ -503,6 +503,11 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     {CATEGORIA_LABEL[demanda.categoria]}
                     {demanda.subtipo && ` · ${demanda.subtipo}`}
                   </div>
+                  {demanda.is_card_pai && (
+                    <div className="text-xs text-primary mt-1">
+                      Processo multi-etapa com dependências internas.
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
