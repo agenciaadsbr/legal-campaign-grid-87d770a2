@@ -124,6 +124,7 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                         <div className="flex flex-col rounded-md border border-red-200 bg-red-50/50 shadow-sm overflow-hidden">
                           <div className="bg-red-100/50 px-3 py-1.5 border-b border-red-200 flex items-center justify-between">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-red-800">Resumo Cliente</span>
+                            <CopiarResumoButton texto={r.resumo_cliente} label="Resumo Cliente" />
                           </div>
                           <ScrollArea className="h-[250px] w-full p-3">
                             <div className="text-xs text-red-950 whitespace-pre-wrap leading-relaxed pr-3">
@@ -136,6 +137,7 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                         <div className="flex flex-col rounded-md border border-red-200 bg-red-50/50 shadow-sm overflow-hidden">
                           <div className="bg-red-100/50 px-3 py-1.5 border-b border-red-200 flex items-center justify-between">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-red-800">Resumo Tarefas</span>
+                            <CopiarResumoButton texto={r.resumo_tarefas} label="Resumo Tarefas" />
                           </div>
                           <ScrollArea className="h-[250px] w-full p-3">
                             <div className="text-xs text-red-950 whitespace-pre-wrap leading-relaxed pr-3">
