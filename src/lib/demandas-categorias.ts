@@ -129,7 +129,7 @@ export const STATUS_DEMANDA: DemandaStatus[] = [
 export const STATUS_DEMANDA_LABEL: Record<DemandaStatus, string> = {
   Planejamento: "Planejamento",
   Criar: "Criar",
-  Revisar: "Revisar",
+  Revisar: "Aguardando aprovação do cliente",
   Entregue: "Entregue",
   Concluido: "Concluído",
   Atrasado: "Atrasado",
