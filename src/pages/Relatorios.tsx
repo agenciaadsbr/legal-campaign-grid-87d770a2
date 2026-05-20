@@ -53,7 +53,8 @@ const STATUS_GLOBAL_COLOR: Record<string, string> = {
 };
 
 export default function Relatorios() {
-  const { posts, cards, clientes, responsaveis } = useCRM();
+  const { posts, cards, clientes: clientesAll, responsaveis } = useCRM();
+  const clientes = useMemo(() => clientesAll.filter((c) => !c.oculto), [clientesAll]);
   const demandas = useDemandas((s) => s.demandas);
 
   const [range, setRange] = useState<RangeKey>("30d");
