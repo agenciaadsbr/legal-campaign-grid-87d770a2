@@ -28,23 +28,25 @@ const STATUS_COR: Record<string, string> = {
   em_andamento: "hsl(var(--info))",
   atrasado: "hsl(var(--destructive))",
   concluido: "hsl(var(--status-postado))",
+  aprovacao: "hsl(var(--status-revisar))",
 };
 
-type GroupKey = "urgente" | "atrasado" | "em_andamento" | "pendente" | "concluido";
+type GroupKey = "urgente" | "atrasado" | "aprovacao" | "em_andamento" | "pendente" | "concluido";
 
-const GROUP_ORDER: GroupKey[] = ["urgente", "atrasado", "em_andamento", "pendente", "concluido"];
+const GROUP_ORDER: GroupKey[] = ["urgente", "atrasado", "aprovacao", "em_andamento", "pendente", "concluido"];
 
 const GROUP_META: Record<GroupKey, { label: string; icon: typeof Zap; className: string }> = {
-  urgente:      { label: "Urgentes",     icon: Zap,          className: "text-destructive" },
-  atrasado:     { label: "Atrasadas",    icon: AlertCircle,  className: "text-destructive" },
-  em_andamento: { label: "Em andamento", icon: Clock,        className: "text-info" },
-  pendente:     { label: "Pendentes",    icon: Circle,       className: "text-muted-foreground" },
-  concluido:    { label: "Concluídas",   icon: CheckCircle2, className: "text-emerald-500" },
+  urgente:      { label: "Urgentes",                              icon: Zap,          className: "text-destructive" },
+  atrasado:     { label: "Atrasadas",                             icon: AlertCircle,  className: "text-destructive" },
+  aprovacao:    { label: "Aguardando aprovação do cliente",       icon: Hourglass,    className: "text-amber-500" },
+  em_andamento: { label: "Em andamento",                          icon: Clock,        className: "text-info" },
+  pendente:     { label: "Pendentes",                             icon: Circle,       className: "text-muted-foreground" },
+  concluido:    { label: "Concluídas",                            icon: CheckCircle2, className: "text-emerald-500" },
 };
 
 function groupOf(t: UnifiedTask): GroupKey {
   if (t.status === "concluido") return "concluido";
-  if (t.urgente) return "urgente";
+  if (t.urgente && t.status !== "aprovacao") return "urgente";
   return t.status as GroupKey;
 }
 
@@ -52,6 +54,12 @@ function formatPrazo(p: string | null): string {
   if (!p) return "—";
   const d = new Date(p);
   return d.toLocaleDateString("pt-BR");
+}
+
+function aprovacaoBadgeTone(dias: number): "secondary" | "warning" | "destructive" {
+  if (dias >= 7) return "destructive";
+  if (dias >= 3) return "warning";
+  return "secondary";
 }
 
 export function MinhasTarefasTabela({ 
