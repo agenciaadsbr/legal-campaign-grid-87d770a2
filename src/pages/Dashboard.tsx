@@ -175,7 +175,7 @@ export default function Dashboard() {
             tone={demandasKpis.urgentes > 0 ? "destructive" : "default"} />
           <KpiCard compact icon={Clock} label="Atrasadas" value={demandasKpis.atrasadas}
             tone={demandasKpis.atrasadas > 0 ? "destructive" : "default"} />
-          <KpiCard compact icon={RefreshCcw} label="Em revisão" value={demandasKpis.emRevisao} tone="info" />
+          <KpiCard compact icon={RefreshCcw} label="Aguardando aprovação do cliente" value={demandasKpis.emRevisao} tone="info" />
           <KpiCard compact icon={CheckCircle2} label="Concluídas hoje" value={demandasKpis.concluidasHoje} tone="success" />
         </div>
       </section>
