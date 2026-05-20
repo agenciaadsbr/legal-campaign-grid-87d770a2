@@ -217,6 +217,13 @@ function normalizeDemanda(row: any): Demanda {
     origem: row.origem ?? "manual",
     template_id: row.template_id ?? null,
     marcado_ja_possui: !!row.marcado_ja_possui,
+    is_card_pai: !!row.is_card_pai,
+    parent_process_id: row.parent_process_id ?? null,
+    process_step_order: row.process_step_order ?? null,
+    process_step_type: (row.process_step_type ?? null) as ProcessStepType | null,
+    process_step_status: (row.process_step_status ?? null) as ProcessStepStatus | null,
+    process_depends_on: row.process_depends_on ?? null,
+    process_step_config: (row.process_step_config ?? {}) as ProcessStepConfig,
   } as Demanda;
 }
 
