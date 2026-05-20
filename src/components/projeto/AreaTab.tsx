@@ -50,6 +50,8 @@ interface Props {
   extraTop?: React.ReactNode;
   /** Slot opcional dentro do dropdown de "Nova tarefa" (ex.: "Novo Card Pai"). */
   novaTarefaExtra?: React.ReactNode;
+  /** Quando definido, exibe botão "+ Card Pai" ao lado de "+ Nova tarefa". */
+  onNovoCardPai?: () => void | Promise<void>;
 }
 
 export function AreaTab({
