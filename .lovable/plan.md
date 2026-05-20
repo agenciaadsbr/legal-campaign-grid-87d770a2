@@ -1,40 +1,31 @@
-# Atalho do Relatório no cabeçalho do Projeto Completo
+# Renomear "Revisar" → "Aguardando aprovação do cliente"
 
-## Objetivo
-Exibir, no cabeçalho do Projeto Completo do cliente (ao lado do badge de status), o mesmo acesso ao relatório (`cliente.link_relatorio`) já disponível na coluna "Relatório" da aba Clientes — sem duplicar dados nem alterar a coluna existente.
+## Decisão importante
 
-## Onde mexer
-Apenas em `src/pages/ProjetoCliente.tsx`, no bloco do header (linhas ~236–245), logo após `<StatusClienteBadge>`.
+O valor interno do status no banco (`demanda_status` enum, coluna `status` em `cards`, `status_post_options.label`, `status_demanda_options.label`) continua sendo `"Revisar"`. Apenas o **rótulo visível ao usuário** muda para `"Aguardando aprovação do cliente"`.
 
-Nenhum outro arquivo é alterado. A coluna `LinkRelatorioCell` em `ClienteCellEditors.tsx` e o uso em `ClientesGeralTable.tsx` ficam intactos.
+Motivo: renomear o enum/linhas no banco quebraria dados, triggers (`track_approval_status_*`, `update_client_primary_status`, `auto_marcar_atrasado`), histórico (`historico_demandas`), `atividade_cliente` e o RPC de KPIs. O usuário pediu para não remover dados nem funcionalidades.
 
-## Comportamento
+`StatusBadge` e `STATUS_DEMANDA_LABEL` já mapeiam `Revisar → "Aguardando aprovação do cliente"`. Os pontos restantes são literais hardcoded em KPIs, dashboards e relatórios.
 
-- Lê `cliente.link_relatorio` direto do store (`useCRM`). Como ambos os pontos consomem o mesmo store, a sincronização é automática nos dois sentidos.
-- Se `link_relatorio` existir: renderiza um botão pequeno `variant="outline" size="sm"` com ícone `BarChart3` + texto "Relatório" + ícone `ExternalLink`. Ao clicar, abre o link em nova aba (`target="_blank" rel="noreferrer"`).
-- Se `link_relatorio` estiver vazio: renderiza um botão discreto `variant="ghost" size="sm"` com `Plus` + "Adicionar relatório". Ao clicar, abre um `Popover` (mesmo padrão usado em `LinkRelatorioCell`) com um `Input type="url"` e botões Cancelar/Salvar; ao salvar chama `updateCliente(clienteId, { link_relatorio: v || null })`.
-- O mesmo popover também é usado para editar quando já existe link — adicionar um pequeno botão `Pencil` ao lado, idêntico ao padrão da célula da tabela, para manter consistência e permitir edição rápida.
+## Arquivos a alterar (apenas textos visíveis)
 
-## Componente auxiliar
-Para evitar duplicação, extrair um componente leve `RelatorioHeaderButton({ clienteId, value })` dentro do próprio `ProjetoCliente.tsx` (ou num arquivo novo `src/components/clientes/RelatorioHeaderButton.tsx`) — reusa `Popover` + `Input` + `updateCliente` da store, espelhando a lógica de `LinkRelatorioCell` mas com estilo de cabeçalho (botão maior, mais elegante) em vez do estilo compacto da célula.
+1. **src/pages/Dashboard.tsx** (linhas 163, 178) — `label="Em revisão"` → `label="Aguardando aprovação do cliente"` nos dois `KpiCard` (posts e demandas).
+2. **src/components/relatorios/RelatoriosPosts.tsx** (linha 95) — `label="Em revisão"` → `label="Aguardando aprovação do cliente"`.
+3. **src/components/demandas/DashboardDemandasSection.tsx** (linha 78) — `label="Em revisão"` → `label="Aguardando aprovação do cliente"`.
+4. **src/components/ConfiguracoesDemandasManager.tsx** (linha 285) — texto explicativo `(Planejamento, Criar, Revisar, Entregue, Concluído, Atrasado)` → trocar `Revisar` por `Aguardando aprovação do cliente`.
+5. **Verificação extra**: rodar busca por outras strings visíveis (`Em revisão`, `>Revisar<`, tooltips, headings de Kanban) e ajustar se aparecerem — Kanban e selects já consomem `STATUS_DEMANDA_LABEL`/`StatusBadge`, então devem renderizar automaticamente o novo rótulo.
 
-## Visual
-```
-[Nome do Cliente]  [Ativo]  [📊 Relatório ↗]   (com ✏️ ao lado para editar)
-```
-ou, sem link:
-```
-[Nome do Cliente]  [Ativo]  [+ Adicionar relatório]
-```
+## Não alterar
 
-Tudo com tokens semânticos (`text-muted-foreground`, `border-border`, etc.), responsivo (header já usa `flex-wrap`).
-
-## Permissões
-Reutiliza `updateCliente` da store — mesma regra de permissão já aplicada na aba Clientes (sem mudança).
+- `src/lib/demandas-categorias.ts` (enum/array/cores) — chave `Revisar` permanece (já mapeia para o label correto).
+- `src/lib/minhasTarefas.ts`, `src/store/crm.ts`, `src/components/StatusBadge.tsx` — comparam pelo valor interno `"Revisar"`; não mexer.
+- Migrations, triggers, RPCs, tipos gerados (`src/integrations/supabase/types.ts`) — intocados.
+- Filtros, KPIs por status, contagens e cores — preservados.
 
 ## Validação
-1. Cliente com `link_relatorio`: botão "Relatório" aparece ao lado do status; clique abre em nova aba.
-2. Editar via lápis no header → mudança reflete na coluna Relatório da aba Clientes (mesmo store).
-3. Editar via coluna na aba Clientes → reabrir Projeto Completo mostra novo link.
-4. Cliente sem link: botão "Adicionar relatório" abre popover; ao salvar, link passa a aparecer nos dois lugares.
-5. Nenhuma alteração em abas, Kanban, Central de Tarefas, layout geral.
+
+- Abrir Dashboard, Relatórios de Posts, Dashboard de Demandas, Configurações de Demandas → confirmar novo rótulo.
+- Abrir Kanban e dropdowns de status → já devem mostrar "Aguardando aprovação do cliente" via `STATUS_DEMANDA_LABEL`.
+- Central de Tarefas e badges seguem funcionando (colunas Entrada/Dias em aprovação inalteradas).
+- Nenhum dado removido; nenhuma funcionalidade alterada.
