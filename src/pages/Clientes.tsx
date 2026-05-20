@@ -463,6 +463,7 @@ function EditarClienteDialog({
     valor_venda: (cliente?.valor_venda != null ? String(cliente.valor_venda) : "") as string,
     responsaveis: cliente?.responsaveis ?? [],
     observacoes: cliente?.observacoes ?? "",
+    oculto: !!cliente?.oculto,
   });
 
   const setInicio = (v: string) =>
