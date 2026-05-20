@@ -1,5 +1,6 @@
 import { StatusCard, useCRM } from "@/store/crm";
 import { cn } from "@/lib/utils";
+import { displayStatusPostLabel } from "@/lib/statusDisplay";
 
 const statusMap: Record<string, { bg: string; label: string }> = {
   Criar: { bg: "bg-status-criar/15 text-status-criar border-status-criar/30", label: "Criar" },
@@ -13,7 +14,7 @@ export function StatusBadge({ status, className }: { status: StatusCard; classNa
   const statusPostOptions = useCRM((s) => s.statusPostOptions);
   const dyn = statusPostOptions.find((o) => o.label === status);
   if (dyn) {
-    return <ColorBadge label={dyn.label} color={dyn.cor} className={className} />;
+    return <ColorBadge label={displayStatusPostLabel(dyn.label)} color={dyn.cor} className={className} />;
   }
   const s = statusMap[status as string];
   if (!s) {
