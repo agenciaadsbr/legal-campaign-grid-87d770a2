@@ -71,6 +71,10 @@ export interface Cliente {
   status_performance?: string | null;
   /** URL de relatório externo (PowerDash, Recarga Wise, etc.) */
   link_relatorio?: string | null;
+  /** Cliente oculto do painel principal e do dashboard (não apaga dados). */
+  oculto?: boolean;
+  /** Data/hora em que o cliente foi ocultado. */
+  oculto_em?: string | null;
 }
 
 export interface Contrato {
