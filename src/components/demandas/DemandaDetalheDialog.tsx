@@ -468,8 +468,11 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             <CardHeader className="pb-1.5 pt-2.5 px-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">
-                    Título da tarefa
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1 flex items-center gap-2">
+                    {demanda.is_card_pai && (
+                      <Badge className="bg-primary text-primary-foreground text-[10px]">Card Pai</Badge>
+                    )}
+                    <span>Título da tarefa</span>
                   </div>
                   <Input
                     ref={tituloInputRef}
