@@ -1250,8 +1250,14 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           }}
         />
 
-        <EtapasRelacionadas demanda={demanda} />
-        {canWrite && <WorkflowSection pai={demanda} />}
+        {demanda.is_card_pai ? (
+          <EtapasProcesso cardPai={demanda} />
+        ) : (
+          <>
+            <EtapasRelacionadas demanda={demanda} />
+            {canWrite && <WorkflowSection pai={demanda} />}
+          </>
+        )}
           </div>
         </fieldset>
         {showSaveButton && (
