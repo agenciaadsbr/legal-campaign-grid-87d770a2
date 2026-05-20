@@ -254,6 +254,7 @@ export function ClientesGeralTable({
     const intervalo = resolveIntervaloPeriodo(filtroPeriodo);
 
     let lista = clientes.filter((c) => {
+      if (!mostrarOcultos && c.oculto) return false;
       if (
         filtroStatusGlobal !== "todos" &&
         (c.status_global ?? "Onboarding") !== filtroStatusGlobal
