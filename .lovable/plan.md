@@ -1,31 +1,32 @@
-# Renomear "Revisar" → "Aguardando aprovação do cliente"
+# Renomear "Revisar" → "Aguardando aprovação do cliente" na aba Posts
 
-## Decisão importante
+## Diagnóstico
 
-O valor interno do status no banco (`demanda_status` enum, coluna `status` em `cards`, `status_post_options.label`, `status_demanda_options.label`) continua sendo `"Revisar"`. Apenas o **rótulo visível ao usuário** muda para `"Aguardando aprovação do cliente"`.
+O Kanban de Posts (coluna, badges, dropdowns) lê o rótulo direto de `statusPostOptions` (tabela `status_post_options`, label = `"Revisar"`). O `StatusBadge` prioriza essa lista dinâmica e cai no `ColorBadge`, ignorando o mapeamento amigável que já existe para "Revisar". Por isso a UI mostra "Revisar".
 
-Motivo: renomear o enum/linhas no banco quebraria dados, triggers (`track_approval_status_*`, `update_client_primary_status`, `auto_marcar_atrasado`), histórico (`historico_demandas`), `atividade_cliente` e o RPC de KPIs. O usuário pediu para não remover dados nem funcionalidades.
+Renomear o registro no banco quebraria triggers que verificam o literal `'Revisar'` (`auto_marcar_atrasado`, `update_client_primary_status`, `track_approval_status_card`) e o RPC de KPIs. O usuário pediu para não remover dados nem funcionalidades.
 
-`StatusBadge` e `STATUS_DEMANDA_LABEL` já mapeiam `Revisar → "Aguardando aprovação do cliente"`. Os pontos restantes são literais hardcoded em KPIs, dashboards e relatórios.
+## Solução (apenas camada de exibição)
 
-## Arquivos a alterar (apenas textos visíveis)
+Criar um helper `displayStatusPostLabel(label: string)` em `src/lib/demandas-categorias.ts` (ou novo arquivo `src/lib/statusDisplay.ts`) que retorna `"Aguardando aprovação do cliente"` quando o label de entrada for `"Revisar"`, e o próprio label caso contrário. Usar esse helper em todos os pontos onde `statusPostOptions[].label` é renderizado:
 
-1. **src/pages/Dashboard.tsx** (linhas 163, 178) — `label="Em revisão"` → `label="Aguardando aprovação do cliente"` nos dois `KpiCard` (posts e demandas).
-2. **src/components/relatorios/RelatoriosPosts.tsx** (linha 95) — `label="Em revisão"` → `label="Aguardando aprovação do cliente"`.
-3. **src/components/demandas/DashboardDemandasSection.tsx** (linha 78) — `label="Em revisão"` → `label="Aguardando aprovação do cliente"`.
-4. **src/components/ConfiguracoesDemandasManager.tsx** (linha 285) — texto explicativo `(Planejamento, Criar, Revisar, Entregue, Concluído, Atrasado)` → trocar `Revisar` por `Aguardando aprovação do cliente`.
-5. **Verificação extra**: rodar busca por outras strings visíveis (`Em revisão`, `>Revisar<`, tooltips, headings de Kanban) e ajustar se aparecerem — Kanban e selects já consomem `STATUS_DEMANDA_LABEL`/`StatusBadge`, então devem renderizar automaticamente o novo rótulo.
+1. **src/components/StatusBadge.tsx** — passar `displayStatusPostLabel(dyn.label)` para `ColorBadge`. Mantém a cor e a chave de comparação intactas.
+2. **src/components/clientes/PostsKanbanCliente.tsx** — o header da coluna já usa `<StatusBadge>` (será corrigido pelo item 1). Verificar dropdowns/popovers que listam `statusPostOptions.map(...)` e exibir `displayStatusPostLabel(o.label)` mantendo o `value={o.label}`.
+3. **src/components/clientes/PostDetalheDialog.tsx** (linha ~351) — `<SelectItem value={o.label}>{displayStatusPostLabel(o.label)}</SelectItem>`.
+4. **src/components/tarefas/TaskFormBase.tsx** (linha 412) — mesmo padrão no `<Select>`.
+5. **src/pages/MinhasTarefas.tsx** (linha 405) e **src/components/OpcoesEditor.tsx** (linha 244) — onde o label aparece em listas/filtros, usar o helper só para exibição. Em `OpcoesEditor` (tela de configuração de status), manter o label original para não confundir o admin que edita a opção; **não alterar lá**.
 
 ## Não alterar
 
-- `src/lib/demandas-categorias.ts` (enum/array/cores) — chave `Revisar` permanece (já mapeia para o label correto).
-- `src/lib/minhasTarefas.ts`, `src/store/crm.ts`, `src/components/StatusBadge.tsx` — comparam pelo valor interno `"Revisar"`; não mexer.
-- Migrations, triggers, RPCs, tipos gerados (`src/integrations/supabase/types.ts`) — intocados.
-- Filtros, KPIs por status, contagens e cores — preservados.
+- Banco de dados, triggers, funções, RPCs, enum `demanda_status`.
+- Valor de `status_card` em `cards` (continua `"Revisar"`).
+- Lógica de filtros, drag-and-drop, comparações `=== "Revisar"`.
+- Configurações de Demandas / OpcoesEditor (admin precisa ver/editar o label real).
+- Cores e ordem das colunas.
 
 ## Validação
 
-- Abrir Dashboard, Relatórios de Posts, Dashboard de Demandas, Configurações de Demandas → confirmar novo rótulo.
-- Abrir Kanban e dropdowns de status → já devem mostrar "Aguardando aprovação do cliente" via `STATUS_DEMANDA_LABEL`.
-- Central de Tarefas e badges seguem funcionando (colunas Entrada/Dias em aprovação inalteradas).
-- Nenhum dado removido; nenhuma funcionalidade alterada.
+- Abrir `/clientes/.../?tab=posts` → coluna e badges mostram "Aguardando aprovação do cliente".
+- Abrir detalhe de um post → dropdown de status mostra "Aguardando aprovação do cliente" e ao selecionar grava `"Revisar"` no banco.
+- Mover card entre colunas continua funcionando.
+- KPIs, contagens e triggers de atraso/aprovação inalterados.
