@@ -111,7 +111,7 @@ export default function CentralReunioes() {
   }, [reunioes]);
 
   const filtradas = useMemo(() => {
-    const q = busca.trim().toLowerCase();
+    const intervalo = resolveIntervaloPeriodo(filtroPeriodo);
     return reunioes.filter((r) => {
       if (clienteFiltro !== "__all__" && r.cliente_id !== clienteFiltro) return false;
       if (tipoFiltro && (r.tipo ?? "").toLowerCase() !== tipoFiltro.toLowerCase()) return false;
@@ -121,8 +121,10 @@ export default function CentralReunioes() {
         if (postFiltro !== "__null__" && r.post_status !== postFiltro) return false;
       }
       if (respFiltro !== "__all__" && r.responsavel_id !== respFiltro) return false;
-      if (dataDe && new Date(r.data) < new Date(dataDe)) return false;
-      if (dataAte && new Date(r.data) > new Date(dataAte + "T23:59:59")) return false;
+      if (intervalo) {
+        const d = new Date(r.data);
+        if (d < intervalo.inicio || d > intervalo.fim) return false;
+      }
       if (q) {
         const cli = clientes.find((c) => c.id === r.cliente_id)?.nome_cliente ?? "";
         const resp = responsaveis.find((p) => p.id === r.responsavel_id)?.nome ?? "";
@@ -131,7 +133,7 @@ export default function CentralReunioes() {
       }
       return true;
     });
-  }, [reunioes, busca, clienteFiltro, tipoFiltro, statusFiltro, postFiltro, respFiltro, dataDe, dataAte, clientes, responsaveis]);
+  }, [reunioes, busca, clienteFiltro, tipoFiltro, statusFiltro, postFiltro, respFiltro, filtroPeriodo, clientes, responsaveis]);
 
   const pagina = filtradas.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
