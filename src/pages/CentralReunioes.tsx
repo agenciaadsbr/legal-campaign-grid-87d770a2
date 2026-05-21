@@ -286,15 +286,15 @@ export default function CentralReunioes() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="text-left px-2 py-1.5 font-semibold">Cliente</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Tipo</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Data</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Status</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Pós-reunião</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Responsável</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Gravação</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Resumo</th>
-                    <th className="text-right px-2 py-1.5 font-semibold">Ações</th>
+                    <th className="text-left px-2 py-1 font-semibold">Cliente</th>
+                    <th className="text-left px-2 py-1 font-semibold">Tipo</th>
+                    <th className="text-left px-2 py-1 font-semibold">Data</th>
+                    <th className="text-left px-2 py-1 font-semibold">Status</th>
+                    <th className="text-left px-2 py-1 font-semibold">Pós-reunião</th>
+                    <th className="text-left px-2 py-1 font-semibold">Responsável</th>
+                    <th className="text-left px-2 py-1 font-semibold">Gravação</th>
+                    <th className="text-left px-2 py-1 font-semibold">Resumo</th>
+                    <th className="text-right px-2 py-1 font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -306,34 +306,34 @@ export default function CentralReunioes() {
                     const alerta = isAlerta(r);
                     return (
                       <tr key={r.id} className="border-t border-border hover:bg-accent/20 transition-colors">
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1 leading-tight">
                           <button onClick={() => handleAbrir(r)} className="text-left hover:underline">
-                            <div className="font-medium">{cli?.nome_cliente ?? "—"}</div>
-                            <div className="text-[11px] text-muted-foreground line-clamp-1">{r.titulo}</div>
+                            <div className="font-medium text-xs leading-tight">{cli?.nome_cliente ?? "—"}</div>
+                            <div className="text-[10px] text-muted-foreground line-clamp-1 leading-tight">{r.titulo}</div>
                           </button>
                         </td>
-                        <td className="px-2 py-1.5 text-xs">{r.tipo ?? "—"}</td>
-                        <td className="px-2 py-1.5 text-xs whitespace-nowrap">
+                        <td className="px-2 py-1 text-xs">{r.tipo ?? "—"}</td>
+                        <td className="px-2 py-1 text-xs whitespace-nowrap">
                           <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(r.data).toLocaleString("pt-BR")}</span>
                         </td>
-                        <td className="px-2 py-1.5"><StatusBadge status={r.status} /></td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1"><StatusBadge status={r.status} /></td>
+                        <td className="px-2 py-1">
                           <div className="flex items-center gap-1">
                             <PostStatusBadge post={r.post_status} />
                             {critica && <AlertTriangle className="h-3.5 w-3.5 text-destructive" aria-label="Pendência crítica" />}
                             {alerta && <Clock className="h-3.5 w-3.5 text-amber-500" aria-label="Em análise há mais de 24h sem tarefa" />}
                           </div>
                         </td>
-                        <td className="px-2 py-1.5 text-xs">{resp?.nome ?? "—"}</td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1 text-xs">{resp?.nome ?? "—"}</td>
+                        <td className="px-2 py-1">
                           {r.link_tldv ? (
                             <a href={r.link_tldv} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5 text-xs"><ExternalLink className="h-3 w-3" /> TLDV</a>
                           ) : <span className="text-[10px] text-muted-foreground">—</span>}
                         </td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1">
                           {temResumo ? <FileText className="h-3.5 w-3.5 text-emerald-600" /> : <span className="text-[10px] text-muted-foreground">—</span>}
                         </td>
-                        <td className="px-2 py-1.5 text-right">
+                        <td className="px-2 py-1 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="icon" variant="ghost" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
