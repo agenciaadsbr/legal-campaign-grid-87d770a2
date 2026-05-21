@@ -275,8 +275,8 @@ export default function CentralReunioes() {
           onChange={(v) => { setFiltroPeriodo(v); setPage(0); }}
           size="xs"
         />
-        </div>
       </div>
+
 
 
       {/* Tabela */}
