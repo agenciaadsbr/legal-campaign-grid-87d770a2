@@ -348,9 +348,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     return `${b} B`;
   };
 
-  const adicionarAnexo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
+  const processarAnexos = async (files: File[]) => {
+    if (files.length === 0 || !demanda) return;
     let okCount = 0;
     const toastId = toast.loading(
       files.length === 1 ? "Enviando anexo..." : `Enviando ${files.length} anexos...`
@@ -407,7 +406,35 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
       console.error(err);
       toast.error("Falha ao adicionar anexo", { id: toastId });
     }
+  };
+
+  const adicionarAnexo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    await processarAnexos(files);
     e.target.value = "";
+  };
+
+  const handleAnexoDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAnexoDragOver(false);
+    if (!canWrite) return;
+    const files = Array.from(e.dataTransfer.files ?? []);
+    await processarAnexos(files);
+  };
+
+  const handleAnexoDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!canWrite) return;
+    if (!Array.from(e.dataTransfer.types || []).includes("Files")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+    setAnexoDragOver(true);
+  };
+
+  const handleAnexoDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setAnexoDragOver(false);
   };
 
   const copiarLink = async () => {
