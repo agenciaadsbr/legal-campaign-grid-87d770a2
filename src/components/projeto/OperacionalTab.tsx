@@ -10,6 +10,7 @@ import { EscolherModeloCardPaiDialog } from "@/components/projeto/cardPai/Escolh
 import {
   CARD_PAI_TEMPLATES,
   findResponsavelIdByNome,
+  findResponsavelIdByNomes,
   type CardPaiTemplateId,
 } from "@/lib/cardPaiTemplates";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
   const { responsaveis } = useCRM();
   const reload = useDemandas((s) => s.load);
   const createDemanda = useDemandas((s) => s.createDemanda);
+  const updateDemanda = useDemandas((s) => s.updateDemanda);
   const [generating, setGenerating] = useState(false);
   const [novoCardPaiId, setNovoCardPaiId] = useState<string | null>(null);
   const [modeloDialogOpen, setModeloDialogOpen] = useState(false);
@@ -93,7 +95,10 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     let faltouResp = false;
     for (let i = 0; i < tpl.steps.length; i++) {
       const step = tpl.steps[i];
-      const respId = findResponsavelIdByNome(responsaveis, step.responsavelNome);
+      const respId =
+        tpl.id === "meta_ads" && step.titulo === "Ativar campanha Meta Ads"
+          ? findResponsavelIdByNomes(responsaveis, ["Gleice", "Grace", "Greice", "GLEICE", "GREICE"])
+          : findResponsavelIdByNome(responsaveis, step.responsavelNome);
       if (step.responsavelNome && !respId) faltouResp = true;
 
       const dependsOnIdx =
