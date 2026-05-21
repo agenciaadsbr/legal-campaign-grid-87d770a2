@@ -80,7 +80,8 @@ export const CARD_PAI_TEMPLATES: CardPaiTemplate[] = [
         categoria: "TrafegoPago",
         subtipo: "Criar campanha",
         responsavelNome: "Gleice",
-        statusInicial: "Aguardando etapa anterior",
+        statusInicial: "Planejamento",
+
         bloqueada: true,
         dependsOnStepIndex: 2,
         observacao:

@@ -106,10 +106,10 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
       const dependsOn = dependsOnRaw && dependsOnRaw.length > 0 ? dependsOnRaw : null;
       const bloqueada = !!step.bloqueada && !!dependsOn;
 
-      const statusFinal: any =
-        step.tipo === "status"
-          ? "Planejamento"
-          : (step.statusInicial ?? "Planejamento");
+      const STATUS_VALIDOS = ["Planejamento","Criar","Revisar","Entregue","Concluido","Atrasado"];
+      const statusBruto = step.tipo === "status" ? "Planejamento" : (step.statusInicial ?? "Planejamento");
+      const statusFinal: any = STATUS_VALIDOS.includes(statusBruto) ? statusBruto : "Planejamento";
+
 
       const novoId = await createDemanda({
         cliente_id: clienteId,
@@ -209,7 +209,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
         subtipo: stepFinal.subtipo ?? null,
         descricao: stepFinal.observacao ?? null,
         prioridade: "Media" as any,
-        status: (stepFinal.statusInicial ?? "Planejamento") as any,
+        status: "Planejamento" as any,
         responsaveis_ids: respId ? [respId] : [],
         ...({
           parent_process_id: cp.id,
