@@ -1,123 +1,134 @@
-## Fase 1 — Card Pai multietapa (apenas aba Operacional)
+# Central de Reuniões — Plano (revisado)
 
-Esta fase converte o sistema paralelo de "Card Pai" em uma **tarefa normal com etapas internas**, reutilizando o modal `DemandaDetalheDialog` atual. Nenhum dado é apagado e nenhuma outra aba é alterada.
+Objetivo: nova página `/central-reunioes` que consome a MESMA tabela `public.reunioes` já usada pela aba Reuniões dentro do Projeto Completo. Sem duplicar dados, sem mexer no fluxo atual, apenas adicionando campos de controle pós-reunião e rastreio de tarefas delegadas.
 
----
+## 1. Migration (aditiva, não destrutiva)
 
-### 1. Modelo de dados (migração)
+`ALTER TABLE public.reunioes ADD COLUMN IF NOT EXISTS ...`:
+- `status TEXT DEFAULT 'agendada'` — agendada | realizada | nao_realizada
+- `post_status TEXT NULL` — nao_analisada | em_analise | delegada | sem_acao
+- `project_id UUID NULL`
+- `motivo_nao_realizada TEXT NULL`
+- `analise_iniciada_em TIMESTAMPTZ NULL`
+- `analise_iniciada_por UUID NULL`
 
-Adicionar colunas em `demandas` (sem quebrar nada existente):
+### Backfill seguro (revisado)
 
-- `is_card_pai BOOLEAN NOT NULL DEFAULT false` — marca a demanda como Card Pai (agrupador, não executa trabalho).
-- `parent_process_id UUID` — id da demanda Card Pai (preenchido nas tarefas filhas).
-- `process_step_order INT` — ordem da etapa dentro do Card Pai.
-- `process_step_type TEXT` — `'tarefa'` ou `'status'`.
-- `process_step_status TEXT` — `'bloqueada' | 'pendente' | 'em_execucao' | 'aguardando_aprovacao' | 'concluida' | 'atrasada'`.
-- `process_depends_on UUID` — id da etapa anterior (auto-referência a `demandas.id`).
-- `process_step_config JSONB DEFAULT '{}'` — flags: `reaproveitar_briefing`, `reaproveitar_anexos`, `reaproveitar_responsaveis`, `bloquear_ate_concluir`.
+Registros futuros (`data >= now()`): `status = 'agendada'`, `post_status = NULL`.
 
-Trigger `auto_liberar_proxima_etapa()`:
-- Em `UPDATE OF status` em `demandas`, quando `NEW.status IN ('Concluido','Entregue')` e a demanda tem `parent_process_id`, encontrar a próxima etapa (`process_depends_on = NEW.id`) e mudar `process_step_status` de `'bloqueada'` para `'pendente'`.
+Registros passados (`data < now()`): `status = 'realizada'` e
+- se `link_tldv IS NOT NULL OR transcricao IS NOT NULL OR resumo_cliente IS NOT NULL OR resumo_tarefas IS NOT NULL` → `post_status = 'nao_analisada'`
+- caso contrário → `post_status = NULL`
 
-Etapas tipo `status` ficam como demandas com `process_step_type='status'`, `status='Planejamento'` (não aparecem em Kanban operacional pois filtraremos por `process_step_type <> 'status'` no Kanban — ou ficam ocultas via flag). Detalhe abaixo.
+Nunca atribuir `sem_acao` automaticamente — só via ação manual do usuário.
 
-**Dados antigos `card_pai` / `card_pai_etapas`**: permanecem intactos no banco, apenas **deixam de ser lidos/renderizados**.
+### Nova tabela `meeting_tasks`
 
----
+`CREATE TABLE IF NOT EXISTS public.meeting_tasks`:
+- `id, meeting_id, client_id, project_id NULL, task_id NULL`
+- `title NOT NULL, description NULL, assigned_to UUID NULL, due_date DATE NULL`
+- `status TEXT DEFAULT 'pendente'`, `created_at, created_by`
 
-### 2. Remover UI antiga do Card Pai (sem apagar dados)
+### RLS (revisado — espelhar tabelas existentes)
 
-- `OperacionalTab.tsx`: remover `<CardsPaiLista>` do `extraTop` e remover o item "Novo Card Pai" do dropdown.
-- `useCardPaiBootstrap` deixa de ser chamado nessa aba.
-- Arquivos `cardPai/CardPaiUI.tsx` e `store/cardPai.ts` ficam no repositório (não são apagados) mas não são mais importados pela aba Operacional.
+Antes de criar políticas, reutilizar exatamente o padrão já aplicado a `demandas` / `reunioes`:
+- SELECT: `to authenticated using (true)` (mesmo `auth_read_*`)
+- INSERT/UPDATE: `with check (can_write(auth.uid()))` (função já existe no projeto — confirmado em `db-functions`)
+- DELETE: `using (has_role(auth.uid(), 'admin'::app_role))` (mesmo padrão de `admin_demandas_delete`)
 
----
+Se por algum motivo `can_write` não existir, NÃO inventar política nova — copiar literalmente as policies de `demandas`.
 
-### 3. Novo botão "+ Card Pai" na aba Operacional
+### Triggers
 
-Em `AreaTab` (ou via `novaTarefaExtra` em `OperacionalTab`): ao lado de "+ Nova tarefa", adicionar **"+ Card Pai"**. Ao clicar, abre o **mesmo** `TaskFormBase` (modo demanda) com:
-- `is_card_pai = true` no payload de criação.
-- Categoria fixa `Operacional`.
+Reaproveitar `log_atividade_*` existente. Adicionar trigger leve que insere em `atividade_cliente` em transições de `status`/`post_status` (criada, realizada, não realizada, em análise, delegada, sem ação).
 
----
+## 2. Store (`src/store/reunioes.ts`)
 
-### 4. Modal atual com modo Card Pai
+Estender `Reuniao` com novos campos. Adicionar ações:
+- `marcarRealizada(id)` — valida `link_tldv || transcricao || resumo_cliente || resumo_tarefas`; seta `status='realizada'`, `post_status='nao_analisada'`
+- `marcarNaoRealizada(id, motivo?)` — `status='nao_realizada'`, `post_status=null`
+- `iniciarAnalise(id)` — `post_status='em_analise'`, registra `analise_iniciada_em/por`
+- `marcarSemAcao(id)` — apenas manual, com confirmação no UI; `post_status='sem_acao'`
+- `delegarTarefas(id, tarefas[])` — ver seção 3
 
-`DemandaDetalheDialog` (e `TaskFormBase` quando aplicável):
-- Se `demanda.is_card_pai`:
-  - Mostra badge **"Card Pai"** no topo.
-  - Mostra subtítulo "Processo multi-etapa com dependências internas."
-  - **Substitui** a seção "Workflow / Continuidade" pelo bloco **"Etapas do Processo"** descrito abaixo.
-- Caso contrário: modal continua **idêntico**.
+Novo store `src/store/meetingTasks.ts` para CRUD de `meeting_tasks`.
 
----
+Helper `nullIfEmpty(uuid)` aplicado em TODOS os campos UUID (`client_id`, `project_id`, `responsavel_id`, `assigned_to`, `meeting_id`, `task_id`) antes de insert/update.
 
-### 5. Bloco "Etapas do Processo" (dentro do modal)
+## 3. Delegação de tarefas (revisado)
 
-Renderiza `demandas WHERE parent_process_id = <card-pai-id> ORDER BY process_step_order`.
+`DelegarTarefasDialog` — lista dinâmica de tarefas. Cada linha tem:
+- título (obrigatório), descrição, responsável, prazo, categoria, prioridade
+- **checkbox "Criar também como tarefa real no sistema"** (desmarcado por padrão)
 
-Cada linha mostra ícone de status (✓ ⏳ 🔒 ▶ ⚠), título, responsável, badge "Tarefa"/"Status", e ações:
-- **Tarefa**: botão "Abrir tarefa" → abre `DemandaDetalheDialog` da etapa.
-- **Status**: botão "Concluir etapa" (manual) — para "Aguardando aprovação do cliente" o usuário decide quando concluir.
-- "Liberar manualmente" se bloqueada.
-- Botão remover etapa (admin).
+Ao confirmar, para cada tarefa:
+1. SEMPRE insere em `meeting_tasks` (rastreabilidade).
+2. Se o checkbox estiver marcado: cria também em `public.demandas` com `origem_reuniao_id` (campo já existe), depois atualiza `meeting_tasks.task_id` com o id da demanda gerada.
+3. Se desmarcado: fica só em `meeting_tasks`.
 
-Botão **"+ Adicionar etapa"** abre formulário inline com os campos da tabela do briefing:
-- Tipo (tarefa/status), Título, Área destino (categoria), Subtipo, Responsável, Depende de (etapa anterior), Bloquear até concluir, Reaproveitar briefing/anexos/responsáveis.
+Validações:
+- bloquear tarefas sem título;
+- normalizar UUIDs vazios para `NULL`;
+- ao final, setar `reuniao.post_status = 'delegada'` e registrar atividade.
 
-Ao salvar uma etapa, cria uma **`demanda` normal** com `parent_process_id`, herdando cliente, briefing/anexos/responsáveis se as flags estiverem ativas. Se `process_depends_on` está setado e essa dependência não está concluída → `process_step_status='bloqueada'`. Senão → `'pendente'`.
+## 4. Página `src/pages/CentralReunioes.tsx`
 
----
+Rota `/central-reunioes` em `App.tsx` (dentro de `RequireAuth/AppLayout`).
 
-### 6. Compatibilidade Kanban e Central de Tarefas
+- Header: "Central de Reuniões" + botão "+ Nova Reunião"
+- 6 widgets clicáveis (Pendentes de análise destacado, Em análise, Delegadas, Sem ação, Agendadas, Não realizadas)
+- Filtros: busca texto, cliente, tipo, status, post_status, responsável, período
+- Tabela: Cliente · Tipo · Data · Status · Pós-reunião · Responsável · Gravação · Resumo (badge) · Ações (Abrir / Marcar realizada / Não realizada / Em análise / Delegar / Sem ação — com confirmação)
+- Badges de pendência: vermelho se `realizada + nao_analisada > 24h`; amarelo se `em_analise > 24h` sem meeting_tasks
 
-- **Kanban Operacional**: continua mostrando todas as demandas da categoria. Card Pai aparece com badge "Card Pai". Etapas do tipo `status` ficam ocultas no Kanban (filtro `process_step_type !== 'status'`). Etapas do tipo `tarefa` aparecem normalmente.
-- **Central de Tarefas (MinhasTarefas)**: continua puxando demandas normalmente. Etapas do tipo `status` são filtradas (não são trabalho real). Etapas do tipo `tarefa` aparecem para os responsáveis.
-- **Regra "Aguardando aprovação do cliente"**: continua **manual** (já implementado anteriormente).
+Performance:
+- Listagem seleciona apenas colunas leves (sem `transcricao`/`resumo_*` completos — usa `length > 0` como boolean)
+- Paginação 50 itens, filtros aplicados via Supabase
+- `Promise.race` com timeout 15s; try/catch/finally → `setLoading(false)`; skeleton; toast em erro
 
----
+## 5. Reaproveitamento do modal `ReuniaoDialog`
 
-### 7. Geração automática — templates iniciais
+- Aceitar `clienteId` opcional → quando ausente, mostra Select de cliente
+- Exibir badges de `status` e `post_status` no header
+- Botões de ação pós-reunião no rodapé com mesma lógica das ações da tabela
+- "Sem ação necessária" sempre via `AlertDialog` de confirmação
 
-Atualizar `gerarEstruturaOperacional`:
-- Adicionar 2 novos templates de Card Pai (idempotentes via título + flag):
-  - **"Ativar Campanha Google Ads"** com etapas: Criar LP (Bruno, LpSite), Aprovação Cliente LP (status), Configurar Domínio (Erick, LpSite), Configurar Tags/Pixels (Erick, LpSite), Ativar Campanha (Gleice, TrafegoPago).
-  - **"Ativar Campanha Meta Ads"** com etapas: Criar anúncio (Lorenzo OU Bianca), Aprovação Cliente (status), Ativar Campanha (Gleice, TrafegoPago).
-- Mapeamento de responsáveis usa busca por nome em `profiles` (fallback: deixa vazio).
+## 6. Integração com aba Reuniões do Projeto
 
----
+`ReunioesTab.tsx` permanece intacto. Apenas adiciona badge discreto de `status`/`post_status` ao lado do título de cada card (read-only). Mesmo store → sincronização automática.
 
-### 8. Arquivos tocados (resumo técnico)
+## 7. Menu lateral
 
-- **Migração SQL**: novas colunas + trigger `auto_liberar_proxima_etapa`.
-- `src/store/demandas.ts`: tipo `Demanda` + helpers `getEtapas`, `getCardPai`.
-- `src/components/projeto/OperacionalTab.tsx`: remover bloco Cards Pai antigos; adicionar botão "+ Card Pai".
-- `src/components/projeto/AreaTab.tsx`: aceitar prop para botão extra de Card Pai.
-- `src/components/demandas/DemandaDetalheDialog.tsx`: badge "Card Pai", subtítulo, render do bloco "Etapas do Processo" quando `is_card_pai`.
-- `src/components/demandas/EtapasProcesso.tsx` (**novo**): componente do bloco com lista de etapas + form de adicionar.
-- `src/components/tarefas/TaskFormBase.tsx`: aceitar `isCardPai` na criação.
-- `src/components/demandas/DemandasKanban.tsx` / `MinhasTarefas`: filtros para esconder etapas `status`.
-- `src/store/operationalTemplates.ts`: novos templates "GoogleAds" e "MetaAds" como Card Pai com etapas.
+Adicionar em `AppSidebar.tsx` (após "Central de Tarefas"):
+`{ title: "Central de Reuniões", url: "/central-reunioes", icon: Calendar }`. Nada removido.
 
----
+## 8. Checklist de validação
 
-### 9. Não-objetivos desta fase
+1. Reuniões antigas nunca viram `sem_acao` automaticamente.
+2. Reuniões antigas com resumo/transcrição/link viram `nao_analisada`.
+3. Reuniões antigas sem conteúdo ficam com `post_status = NULL`.
+4. `sem_acao` só com ação + confirmação do usuário.
+5. Delegar sempre cria `meeting_tasks`.
+6. Demanda real só é criada quando o checkbox for marcado.
+7. RLS espelha `demandas`/`reunioes` — sem bloquear usuários autorizados.
+8. Nenhuma reunião duplicada (mesma tabela canônica).
+9. Resumos/transcrições/links/observações antigos preservados.
+10. Aba Reuniões do Projeto continua funcionando.
 
-- Não mexer em comentários, anexos, IA, histórico, alertas, briefing.
-- Não mexer nas outras abas (Posts, Vídeos, Tráfego, LP/Site, IA, Personalizado, Urgência).
-- Não migrar dados antigos de `card_pai` para o novo modelo.
-- Não tocar em Configurações de Estruturas Automáticas (UI).
+## Arquivos
 
----
+**Criados**
+- `src/pages/CentralReunioes.tsx`
+- `src/components/reunioes/CentralReunioesWidgets.tsx`
+- `src/components/reunioes/CentralReunioesFiltros.tsx`
+- `src/components/reunioes/CentralReunioesTabela.tsx`
+- `src/components/reunioes/DelegarTarefasDialog.tsx`
+- `src/store/meetingTasks.ts`
+- `supabase/migrations/<timestamp>_central_reunioes.sql`
 
-### Testes manuais
-
-1. Criar Card Pai via novo botão → abre modal padrão com badge.
-2. Adicionar etapas tarefa/status com dependências.
-3. Etapas dependentes aparecem 🔒.
-4. Concluir etapa → próxima libera automaticamente.
-5. Etapa tarefa aparece na aba destino e na Central de Tarefas do responsável.
-6. Etapa status NÃO aparece no Kanban nem na Central.
-7. "Gerar estrutura operacional" cria os 2 Cards Pai novos sem duplicar.
-8. Tarefas normais (não-Card-Pai) continuam idênticas.
-9. Bloco antigo "Cards Pai" não aparece mais; dados antigos preservados no banco.
+**Editados**
+- `src/App.tsx` (rota)
+- `src/components/AppSidebar.tsx` (item de menu)
+- `src/store/reunioes.ts` (novos campos + ações pós-reunião)
+- `src/components/projeto/ReuniaoDialog.tsx` (cliente opcional + ações pós-reunião)
+- `src/components/projeto/ReunioesTab.tsx` (badges visuais de status, sem mudar comportamento)
