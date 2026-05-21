@@ -170,3 +170,15 @@ export function findResponsavelIdByNome(
   });
   return match?.id ?? null;
 }
+
+/** Procura responsável aceitando uma lista de variações de primeiro nome. */
+export function findResponsavelIdByNomes(
+  responsaveis: { id: string; nome: string }[],
+  nomes: string[],
+): string | null {
+  for (const nome of nomes) {
+    const id = findResponsavelIdByNome(responsaveis, nome);
+    if (id) return id;
+  }
+  return null;
+}
