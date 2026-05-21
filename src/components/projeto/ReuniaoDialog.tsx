@@ -21,14 +21,18 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 export function ReuniaoDialog({
   open,
   onOpenChange,
-  clienteId,
+  clienteId: clienteIdProp,
   reuniao,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
-  clienteId: string;
+  /** Quando omitido, o usuário deverá selecionar o cliente dentro do diálogo (uso na Central de Reuniões). */
+  clienteId?: string;
   reuniao: Reuniao | null;
 }) {
+  const clientes = useCRM((s) => s.clientes);
+  const [selectedClienteId, setSelectedClienteId] = useState<string>("");
+  const clienteId = clienteIdProp ?? selectedClienteId ?? reuniao?.cliente_id ?? "";
   const create = useReunioes((s) => s.create);
   const update = useReunioes((s) => s.update);
   const responsaveis = useCRM((s) => s.responsaveis);
@@ -103,8 +107,9 @@ export function ReuniaoDialog({
       setResponsavelDelegacaoId(reuniao?.responsavel_delegacao_id ?? "");
       setPrazoDelegacao(reuniao?.prazo_delegacao ?? "");
       setObsDelegacao(reuniao?.observacoes_delegacao ?? "");
+      setSelectedClienteId(reuniao?.cliente_id ?? clienteIdProp ?? "");
     }
-  }, [open, reuniao]);
+  }, [open, reuniao, clienteIdProp]);
 
   // Auto-suggest delegation for specific types
   useEffect(() => {
@@ -129,6 +134,10 @@ export function ReuniaoDialog({
   const handleSave = async () => {
     if (!titulo.trim()) {
       toast.error("Informe o título");
+      return;
+    }
+    if (!clienteId) {
+      toast.error("Selecione o cliente");
       return;
     }
     const payload = {
@@ -294,6 +303,18 @@ export function ReuniaoDialog({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {!clienteIdProp && (
+            <div className="md:col-span-2">
+              <Label className="text-xs">Cliente *</Label>
+              <Select value={selectedClienteId || "__none__"} onValueChange={(v) => setSelectedClienteId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Selecione —</SelectItem>
+                  {clientes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="md:col-span-2">
             <Label className="text-xs">Título</Label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Reunião semanal, alinhamento, kickoff..." />

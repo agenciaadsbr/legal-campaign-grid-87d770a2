@@ -81,6 +81,18 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                         {r.tipo && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{r.tipo}</span>
                         )}
+                        {r.status && r.status !== "agendada" && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1.5">
+                            {r.status === "realizada" ? "Realizada" : "Não realizada"}
+                          </Badge>
+                        )}
+                        {r.post_status && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-300">
+                            {r.post_status === "nao_analisada" ? "Não analisada" :
+                             r.post_status === "em_analise" ? "Em análise" :
+                             r.post_status === "delegada" ? "Delegada" : "Sem ação"}
+                          </Badge>
+                        )}
                         {delegations.find(d => d.reuniao_id === r.id) && (
                           <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-primary/30 text-primary">
                             <Users className="h-2.5 w-2.5 mr-1" />
