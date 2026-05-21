@@ -265,28 +265,30 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
           } as any);
         }
 
-        const finalId = escolherFinal?.id ?? await createDemanda({
-          cliente_id: clienteId,
-          titulo: tituloFinal,
-          categoria: "TrafegoPago" as any,
-          subtipo: configFinal.subtipo ?? "Criar campanha",
-          descricao: configFinal.observacao ?? null,
-          prioridade: "Media" as any,
-          status: "Planejamento" as any,
-          responsaveis_ids: respFinalId ? [respFinalId] : [],
-          ...({
-            parent_process_id: cp.id,
-            process_step_order: 3,
-            process_step_type: "tarefa",
-            process_step_status: "bloqueada",
-            process_depends_on: etapaAprov?.id ?? null,
-            process_step_config: {
-              bloquear_ate_concluir: true,
-              modelo_origem: "meta_ads",
-              backfill: true,
-            },
-          } as any),
-        } as any);
+        const finalId =
+          escolherFinal?.id ??
+          (await createDemanda({
+            cliente_id: clienteId,
+            titulo: tituloFinal,
+            categoria: "TrafegoPago" as any,
+            subtipo: configFinal.subtipo ?? "Criar campanha",
+            descricao: configFinal.observacao ?? null,
+            prioridade: "Media" as any,
+            status: "Planejamento" as any,
+            responsaveis_ids: respFinalId ? [respFinalId] : [],
+            ...({
+              parent_process_id: cp.id,
+              process_step_order: 3,
+              process_step_type: "tarefa",
+              process_step_status: "bloqueada",
+              process_depends_on: etapaAprov?.id ?? null,
+              process_step_config: {
+                bloquear_ate_concluir: true,
+                modelo_origem: "meta_ads",
+                backfill: true,
+              },
+            } as any),
+          } as any));
 
         if (finalId) {
           await updateDemanda(finalId, {
