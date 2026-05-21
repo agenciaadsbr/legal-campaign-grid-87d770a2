@@ -1484,6 +1484,51 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_tasks: {
+        Row: {
+          assigned_to: string | null
+          client_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          meeting_id: string
+          project_id: string | null
+          status: string
+          task_id: string | null
+          title: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meeting_id: string
+          project_id?: string | null
+          status?: string
+          task_id?: string | null
+          title: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meeting_id?: string
+          project_id?: string | null
+          status?: string
+          task_id?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       modelos_colunas: {
         Row: {
           colunas: Json
@@ -1966,6 +2011,8 @@ export type Database = {
       }
       reunioes: {
         Row: {
+          analise_iniciada_em: string | null
+          analise_iniciada_por: string | null
           cliente_id: string
           created_at: string
           criado_por: string | null
@@ -1975,19 +2022,25 @@ export type Database = {
           ia_status: Json
           id: string
           link_tldv: string | null
+          motivo_nao_realizada: string | null
           observacoes: string | null
           observacoes_delegacao: string | null
+          post_status: string | null
           prazo_delegacao: string | null
+          project_id: string | null
           responsavel_delegacao_id: string | null
           responsavel_id: string | null
           resumo_cliente: string | null
           resumo_tarefas: string | null
+          status: string
           tipo: string | null
           titulo: string
           transcricao: string | null
           updated_at: string
         }
         Insert: {
+          analise_iniciada_em?: string | null
+          analise_iniciada_por?: string | null
           cliente_id: string
           created_at?: string
           criado_por?: string | null
@@ -1997,19 +2050,25 @@ export type Database = {
           ia_status?: Json
           id?: string
           link_tldv?: string | null
+          motivo_nao_realizada?: string | null
           observacoes?: string | null
           observacoes_delegacao?: string | null
+          post_status?: string | null
           prazo_delegacao?: string | null
+          project_id?: string | null
           responsavel_delegacao_id?: string | null
           responsavel_id?: string | null
           resumo_cliente?: string | null
           resumo_tarefas?: string | null
+          status?: string
           tipo?: string | null
           titulo: string
           transcricao?: string | null
           updated_at?: string
         }
         Update: {
+          analise_iniciada_em?: string | null
+          analise_iniciada_por?: string | null
           cliente_id?: string
           created_at?: string
           criado_por?: string | null
@@ -2019,13 +2078,17 @@ export type Database = {
           ia_status?: Json
           id?: string
           link_tldv?: string | null
+          motivo_nao_realizada?: string | null
           observacoes?: string | null
           observacoes_delegacao?: string | null
+          post_status?: string | null
           prazo_delegacao?: string | null
+          project_id?: string | null
           responsavel_delegacao_id?: string | null
           responsavel_id?: string | null
           resumo_cliente?: string | null
           resumo_tarefas?: string | null
+          status?: string
           tipo?: string | null
           titulo?: string
           transcricao?: string | null
