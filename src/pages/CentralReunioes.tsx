@@ -286,15 +286,15 @@ export default function CentralReunioes() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="text-left p-2 font-semibold">Cliente</th>
-                    <th className="text-left p-2 font-semibold">Tipo</th>
-                    <th className="text-left p-2 font-semibold">Data</th>
-                    <th className="text-left p-2 font-semibold">Status</th>
-                    <th className="text-left p-2 font-semibold">Pós-reunião</th>
-                    <th className="text-left p-2 font-semibold">Responsável</th>
-                    <th className="text-left p-2 font-semibold">Gravação</th>
-                    <th className="text-left p-2 font-semibold">Resumo</th>
-                    <th className="text-right p-2 font-semibold">Ações</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">Cliente</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">Tipo</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">Data</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">Status</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">Pós-reunião</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">Responsável</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">Gravação</th>
+                    <th className="text-left px-2 py-1.5 font-semibold">Resumo</th>
+                    <th className="text-right px-2 py-1.5 font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
