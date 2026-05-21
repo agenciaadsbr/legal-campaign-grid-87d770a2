@@ -172,98 +172,105 @@ export default function CentralReunioes() {
   const handleAbrir = (r: Reuniao) => { setEditReuniao(r); setEditOpen(true); };
   const handleNova = () => { setEditReuniao(null); setEditOpen(true); };
 
+  const widgets = [
+    { key: "pendentes", label: "Pendentes", n: counts.pendentes, tone: "amber" },
+    { key: "analise", label: "Em análise", n: counts.analise, tone: "sky" },
+    { key: "delegada", label: "Delegadas", n: counts.delegada, tone: "violet" },
+    { key: "semAcao", label: "Sem ação", n: counts.semAcao, tone: "muted" },
+    { key: "agendada", label: "Agendadas", n: counts.agendada, tone: "blue" },
+    { key: "naoRealizada", label: "Não realizadas", n: counts.naoRealizada, tone: "muted" },
+  ] as const;
+
+  const toneClasses: Record<string, string> = {
+    amber: "border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    sky: "border-sky-500/40 bg-sky-500/5 hover:bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    violet: "border-violet-500/40 bg-violet-500/5 hover:bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    blue: "border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-700 dark:text-blue-300",
+    muted: "border-border bg-card hover:bg-accent/40 text-muted-foreground",
+  };
+
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-start justify-between gap-3">
+    <div className="px-5 py-4 space-y-3 animate-fade-in">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Central de Reuniões</h1>
-          <p className="text-sm text-muted-foreground">Controle de reuniões, análises e ações pós-reunião.</p>
+          <h1 className="text-xl font-bold leading-tight">Central de Reuniões</h1>
+          <p className="text-xs text-muted-foreground">
+            {reunioes.length} reuniões{counts.pendentes > 0 ? ` · ${counts.pendentes} pendentes de análise` : ""}
+          </p>
         </div>
-        <Button onClick={handleNova}><Plus className="h-4 w-4 mr-1" /> Nova Reunião</Button>
+        <Button size="sm" className="h-8 gap-1.5" onClick={handleNova}>
+          <Plus className="h-3.5 w-3.5" /> Nova Reunião
+        </Button>
       </div>
 
-      {/* Widgets */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Card
-          onClick={() => aplicarFiltroWidget("pendentes")}
-          className="cursor-pointer border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
-        >
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase font-semibold text-amber-700 dark:text-amber-300 tracking-wider">Pendentes de análise</div>
-            <div className="text-2xl font-bold mt-1">{counts.pendentes}</div>
-            <div className="text-[10px] text-muted-foreground mt-1">Ver reuniões →</div>
-          </CardContent>
-        </Card>
-        {[
-          { key: "analise", label: "Em análise", n: counts.analise },
-          { key: "delegada", label: "Delegadas", n: counts.delegada },
-          { key: "semAcao", label: "Sem ação", n: counts.semAcao },
-          { key: "agendada", label: "Agendadas", n: counts.agendada },
-          { key: "naoRealizada", label: "Não realizadas", n: counts.naoRealizada },
-        ].map((w) => (
-          <Card key={w.key} onClick={() => aplicarFiltroWidget(w.key as any)} className="cursor-pointer hover:bg-accent/30 transition-colors">
-            <CardContent className="p-3">
-              <div className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">{w.label}</div>
-              <div className="text-2xl font-bold mt-1">{w.n}</div>
-            </CardContent>
-          </Card>
+      {/* Widgets compactos */}
+      <div className="flex flex-wrap gap-2">
+        {widgets.map((w) => (
+          <button
+            key={w.key}
+            onClick={() => aplicarFiltroWidget(w.key as any)}
+            className={cn(
+              "flex items-center gap-2 h-9 px-3 rounded-md border transition-colors",
+              toneClasses[w.tone],
+            )}
+          >
+            <span className="text-[10px] uppercase font-semibold tracking-wider">{w.label}</span>
+            <span className="text-sm font-bold text-foreground">{w.n}</span>
+          </button>
         ))}
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardContent className="p-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-2">
-            <div className="lg:col-span-2 relative">
-              <Search className="h-3.5 w-3.5 absolute left-2 top-2.5 text-muted-foreground" />
-              <Input className="pl-7 h-9" placeholder="Buscar..." value={busca} onChange={(e) => { setBusca(e.target.value); setPage(0); }} />
-            </div>
-            <Select value={clienteFiltro} onValueChange={(v) => { setClienteFiltro(v); setPage(0); }}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Cliente" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos os clientes</SelectItem>
-                {clientes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>))}
-              </SelectContent>
-            </Select>
-            <Select value={tipoFiltro || "__all__"} onValueChange={(v) => { setTipoFiltro(v === "__all__" ? "" : v); setPage(0); }}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Tipo" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos os tipos</SelectItem>
-                {tipos.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFiltro} onValueChange={(v) => { setStatusFiltro(v); setPage(0); }}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos status</SelectItem>
-                <SelectItem value="agendada">Agendada</SelectItem>
-                <SelectItem value="realizada">Realizada</SelectItem>
-                <SelectItem value="nao_realizada">Não realizada</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={postFiltro} onValueChange={(v) => { setPostFiltro(v); setPage(0); }}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Pós-reunião" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos pós</SelectItem>
-                <SelectItem value="__null__">Sem pós-status</SelectItem>
-                <SelectItem value="nao_analisada">Não analisada</SelectItem>
-                <SelectItem value="em_analise">Em análise</SelectItem>
-                <SelectItem value="delegada">Delegada</SelectItem>
-                <SelectItem value="sem_acao">Sem ação</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={respFiltro} onValueChange={(v) => { setRespFiltro(v); setPage(0); }}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Responsável" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todos responsáveis</SelectItem>
-                {responsaveis.map((r) => (<SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>))}
-              </SelectContent>
-            </Select>
-            <Input type="date" className="h-9" value={dataDe} onChange={(e) => { setDataDe(e.target.value); setPage(0); }} placeholder="De" />
-            <Input type="date" className="h-9" value={dataAte} onChange={(e) => { setDataAte(e.target.value); setPage(0); }} placeholder="Até" />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filtros inline */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative">
+          <Search className="h-3.5 w-3.5 absolute left-2 top-2.5 text-muted-foreground" />
+          <Input className="pl-7 h-8 text-xs w-[240px]" placeholder="Buscar..." value={busca} onChange={(e) => { setBusca(e.target.value); setPage(0); }} />
+        </div>
+        <Select value={clienteFiltro} onValueChange={(v) => { setClienteFiltro(v); setPage(0); }}>
+          <SelectTrigger className="h-8 text-xs w-[160px]"><SelectValue placeholder="Cliente" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todos os clientes</SelectItem>
+            {clientes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>))}
+          </SelectContent>
+        </Select>
+        <Select value={tipoFiltro || "__all__"} onValueChange={(v) => { setTipoFiltro(v === "__all__" ? "" : v); setPage(0); }}>
+          <SelectTrigger className="h-8 text-xs w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todos os tipos</SelectItem>
+            {tipos.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFiltro} onValueChange={(v) => { setStatusFiltro(v); setPage(0); }}>
+          <SelectTrigger className="h-8 text-xs w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todos status</SelectItem>
+            <SelectItem value="agendada">Agendada</SelectItem>
+            <SelectItem value="realizada">Realizada</SelectItem>
+            <SelectItem value="nao_realizada">Não realizada</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={postFiltro} onValueChange={(v) => { setPostFiltro(v); setPage(0); }}>
+          <SelectTrigger className="h-8 text-xs w-[150px]"><SelectValue placeholder="Pós-reunião" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todos pós</SelectItem>
+            <SelectItem value="__null__">Sem pós-status</SelectItem>
+            <SelectItem value="nao_analisada">Não analisada</SelectItem>
+            <SelectItem value="em_analise">Em análise</SelectItem>
+            <SelectItem value="delegada">Delegada</SelectItem>
+            <SelectItem value="sem_acao">Sem ação</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={respFiltro} onValueChange={(v) => { setRespFiltro(v); setPage(0); }}>
+          <SelectTrigger className="h-8 text-xs w-[160px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todos responsáveis</SelectItem>
+            {responsaveis.map((r) => (<SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>))}
+          </SelectContent>
+        </Select>
+        <Input type="date" className="h-8 text-xs w-[130px]" value={dataDe} onChange={(e) => { setDataDe(e.target.value); setPage(0); }} />
+        <Input type="date" className="h-8 text-xs w-[130px]" value={dataAte} onChange={(e) => { setDataAte(e.target.value); setPage(0); }} />
+      </div>
+
 
       {/* Tabela */}
       <Card>
