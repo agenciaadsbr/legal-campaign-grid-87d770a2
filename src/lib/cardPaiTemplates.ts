@@ -12,11 +12,14 @@ export interface CardPaiTemplateStep {
   responsavelNome?: string | null;
   /** Status inicial visível. */
   statusInicial?: "Criar" | "Planejamento" | "Aguardando etapa anterior";
-  /** Se true, esta etapa nasce bloqueada (depende da anterior). */
+  /** Se true, esta etapa nasce bloqueada (depende da anterior, ou da etapa indicada em dependsOnStepIndex). */
   bloqueada?: boolean;
+  /** Índice (0-based) da etapa da qual esta depende. Se omitido, usa a etapa imediatamente anterior. */
+  dependsOnStepIndex?: number;
   /** Observação curta (vai para descricao da etapa). */
   observacao?: string;
 }
+
 
 export interface CardPaiTemplate {
   id: CardPaiTemplateId;
@@ -79,9 +82,11 @@ export const CARD_PAI_TEMPLATES: CardPaiTemplate[] = [
         responsavelNome: "Gleice",
         statusInicial: "Aguardando etapa anterior",
         bloqueada: true,
+        dependsOnStepIndex: 2,
         observacao:
           "Confirmar se WhatsApp, criativos e acessos estão corretos antes da ativação.",
       },
+
     ],
   },
   {
