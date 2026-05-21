@@ -80,8 +80,7 @@ export default function CentralReunioes() {
   const [statusFiltro, setStatusFiltro] = useState<string>("__all__");
   const [postFiltro, setPostFiltro] = useState<string>("__all__");
   const [respFiltro, setRespFiltro] = useState<string>("__all__");
-  const [dataDe, setDataDe] = useState("");
-  const [dataAte, setDataAte] = useState("");
+  const [filtroPeriodo, setFiltroPeriodo] = useState<FiltroPeriodo>({ tipo: "todos" });
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
 
