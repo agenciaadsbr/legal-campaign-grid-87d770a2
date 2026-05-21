@@ -295,6 +295,7 @@ export default function ProjetoCliente() {
             demandas={filtrarPorArea(demandasCli, "videos")}
             categoria="EditorVideo"
             demandaInicial={abaDemandaDeepLink === "videos" ? demandaDeepLink : null}
+            allowBulkDelete
           />
         </TabsContent>
 
@@ -307,6 +308,7 @@ export default function ProjetoCliente() {
             demandas={filtrarPorArea(demandasCli, "trafego")}
             categoria="TrafegoPago"
             demandaInicial={abaDemandaDeepLink === "trafego" ? demandaDeepLink : null}
+            allowBulkDelete
           />
         </TabsContent>
 
@@ -319,6 +321,7 @@ export default function ProjetoCliente() {
             demandas={filtrarPorArea(demandasCli, "lp")}
             categoria="LandingPage"
             demandaInicial={abaDemandaDeepLink === "lp" ? demandaDeepLink : null}
+            allowBulkDelete
           />
         </TabsContent>
 
@@ -331,6 +334,7 @@ export default function ProjetoCliente() {
             demandas={filtrarPorArea(demandasCli, "ia")}
             categoria="IAAtendimento"
             demandaInicial={abaDemandaDeepLink === "ia" ? demandaDeepLink : null}
+            allowBulkDelete
           />
         </TabsContent>
 
@@ -353,8 +357,10 @@ export default function ProjetoCliente() {
             categoria="Personalizado"
             emptyHint="Nenhuma urgência registrada para este cliente."
             demandaInicial={abaDemandaDeepLink === "urgencias" ? demandaDeepLink : null}
+            allowBulkDelete
           />
         </TabsContent>
+
 
         {/* ============== DOCUMENTAÇÃO E ACESSOS ============== */}
         <TabsContent value="documentacao" className="mt-4">
