@@ -1,40 +1,32 @@
-# Adicionar "Excluir selecionados" nas demais abas do Projeto Completo
+## Causa raiz
 
-## Contexto
-O componente `AreaTab` (usado pelas abas Vídeos, Tráfego Pago, LP/Site, IA/Atendimento, Urgências e Operacional) já implementa todo o fluxo de "Excluir selecionados" — barra de seleção, contador, modal de confirmação e chamada a `deleteDemanda`. O botão só aparece quando a prop `allowBulkDelete` é passada como `true`.
+A etapa 4 do modelo Meta Ads (`statusInicial: "Aguardando etapa anterior"`) tenta inserir um valor que NÃO existe no enum `demanda_status` do banco (valores válidos: `Planejamento, Criar, Revisar, Entregue, Concluido, Atrasado`). Por isso a 4ª etapa falha silenciosamente tanto na criação inicial do Card Pai quanto no backfill — o card pai existente do cliente ficou com 3 etapas.
 
-Hoje apenas a aba **Operacional** ativa essa prop (`allowBulkDelete={isAdmin}`). As demais 5 abas não passam a prop, então o botão fica oculto. A aba **Posts** (componente próprio `PostsKanbanCliente`) já mostra o botão sem restrição de admin.
+O rótulo visual "Aguardando etapa anterior" deve vir do `process_step_status = 'bloqueada'` (já tratado no UI), não do enum `status`.
 
-## Mudança
-Adicionar `allowBulkDelete` em cada uma das 5 chamadas de `AreaTab` em `src/pages/ProjetoCliente.tsx`, seguindo o mesmo padrão da aba Posts (sem restrição de admin), para manter consistência com o pedido do usuário.
+## Correções
 
-### Arquivo: `src/pages/ProjetoCliente.tsx`
-Adicionar `allowBulkDelete` nas instâncias de `AreaTab`:
+### 1. `src/lib/cardPaiTemplates.ts`
+- Etapa 4 do modelo `meta_ads`: trocar `statusInicial: "Aguardando etapa anterior"` por `statusInicial: "Planejamento"`.
+- O bloqueio visual continua via `bloqueada: true` + `dependsOnStepIndex: 2` (já implementado), que gera `process_step_status: "bloqueada"` na demanda.
+- Não alterar o modelo `google_ads`.
 
-- Linha ~291 — Vídeos
-- Linha ~303 — Tráfego Pago
-- Linha ~315 — LP / Site
-- Linha ~327 — IA / Atendimento
-- Linha ~348 — Urgências
+### 2. `src/components/projeto/OperacionalTab.tsx` (backfill)
+- O backfill já existe e cobre Card Pai antigo sem etapa 4. Com a correção do enum acima, o `createDemanda` deixa de falhar e a etapa será inserida no próximo carregamento da aba Operacional do cliente.
+- Manter o `backfilledRef` por sessão; como ele zera a cada novo mount, o retry ocorre automaticamente após a correção.
 
-Exemplo:
-```tsx
-<AreaTab
-  titulo="Vídeos"
-  icone={Video}
-  clienteId={clienteId!}
-  demandas={filtrarPorArea(demandasCli, "videos")}
-  categoria="EditorVideo"
-  demandaInicial={abaDemandaDeepLink === "videos" ? demandaDeepLink : null}
-  allowBulkDelete
-/>
-```
+### 3. (Opcional, defensivo) Normalizar status inválido em `criarCardPaiDeModelo` e no backfill
+- Garantir que qualquer `statusInicial` que não seja um valor do enum caia para `"Planejamento"`. Evita reintroduzir o bug se um template futuro usar rótulo livre.
 
 ## O que NÃO muda
-- Nenhuma funcionalidade existente é removida.
-- Nenhum dado existente é alterado (a exclusão continua manual, sob confirmação no modal já existente).
-- `AreaTab.tsx`, `OperacionalTab.tsx` e o componente `PostsKanbanCliente` não são alterados.
-- Lógica de seleção, popovers de status/datas/responsáveis e Kanban permanecem intactos.
+- Estrutura do Card Pai, Workflow / Etapas do Processo, layout do Detalhes da Tarefa.
+- Modelo Google Ads.
+- Trigger `auto_liberar_proxima_etapa` (já libera quando a etapa de aprovação for concluída).
+- Dados existentes: o card pai atual e suas 3 etapas permanecem; apenas a 4ª passa a ser criada automaticamente.
 
-## Pergunta opcional
-A aba Operacional restringe a exclusão em massa a administradores (`isAdmin`). Quer manter as 5 novas abas **abertas** (igual Posts) ou também restringir a admin? Por padrão deste plano: aberto a todos, igual Posts.
+## Verificação
+1. Após a correção, abrir o cliente → aba Operacional → backfill cria a etapa "Ativar campanha Meta Ads" (TrafegoPago, Gleice, bloqueada, depende da aprovação).
+2. Abrir o Card Pai existente → "Etapas do Processo (4)".
+3. Concluir a etapa "Aguardando aprovação do cliente" → etapa 4 desbloqueia (process_step_status passa para `pendente`).
+4. Etapa 4 aparece na aba Tráfego Pago e na Central de Tarefas da Gleice.
+5. Criar um novo Card Pai Meta Ads → nasce já com as 4 etapas corretas.
