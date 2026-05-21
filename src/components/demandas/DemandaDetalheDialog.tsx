@@ -167,6 +167,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   const anexoFileRef = useRef<HTMLInputElement>(null);
   const [previewAnexo, setPreviewAnexo] = useState<{ url: string; nome: string } | null>(null);
   const [anexoParaRemover, setAnexoParaRemover] = useState<string | null>(null);
+  const [anexoDragOver, setAnexoDragOver] = useState(false);
   const [duplicarOpen, setDuplicarOpen] = useState(false);
   const [dupCopiarAnexos, setDupCopiarAnexos] = useState(true);
   const [dupCopiarWorkflow, setDupCopiarWorkflow] = useState(true);
@@ -889,7 +890,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar anexo
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div
+                  onDrop={handleAnexoDrop}
+                  onDragOver={handleAnexoDragOver}
+                  onDragEnter={handleAnexoDragOver}
+                  onDragLeave={handleAnexoDragLeave}
+                  className={cn(
+                    "flex flex-wrap gap-1.5 rounded-md p-1.5 -m-1.5 transition-colors",
+                    anexoDragOver && "bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                  )}
+                >
                   {meusAnexos.map((a) => {
                     const img = isImageUrl(a.url, a.nome);
                     const vid = !img && isVideoUrl(a.url, a.nome);
