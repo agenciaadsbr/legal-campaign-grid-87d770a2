@@ -112,6 +112,7 @@ export default function CentralReunioes() {
 
   const filtradas = useMemo(() => {
     const intervalo = resolveIntervaloPeriodo(filtroPeriodo);
+    const q = busca.trim().toLowerCase();
     return reunioes.filter((r) => {
       if (clienteFiltro !== "__all__" && r.cliente_id !== clienteFiltro) return false;
       if (tipoFiltro && (r.tipo ?? "").toLowerCase() !== tipoFiltro.toLowerCase()) return false;
