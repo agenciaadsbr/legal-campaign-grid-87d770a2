@@ -267,8 +267,14 @@ export default function CentralReunioes() {
             {responsaveis.map((r) => (<SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>))}
           </SelectContent>
         </Select>
-        <Input type="date" className="h-7 text-xs w-[125px]" value={dataDe} onChange={(e) => { setDataDe(e.target.value); setPage(0); }} />
-        <Input type="date" className="h-7 text-xs w-[125px]" value={dataAte} onChange={(e) => { setDataAte(e.target.value); setPage(0); }} />
+        <div className="flex items-center gap-1 h-7 px-2 rounded-md border border-input bg-background">
+          <span className="text-[10px] uppercase text-muted-foreground font-medium">De</span>
+          <Input type="date" className="h-5 text-xs w-[110px] border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent" value={dataDe} onChange={(e) => { setDataDe(e.target.value); setPage(0); }} />
+        </div>
+        <div className="flex items-center gap-1 h-7 px-2 rounded-md border border-input bg-background">
+          <span className="text-[10px] uppercase text-muted-foreground font-medium">Até</span>
+          <Input type="date" className="h-5 text-xs w-[110px] border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent" value={dataAte} onChange={(e) => { setDataAte(e.target.value); setPage(0); }} />
+        </div>
       </div>
 
 
