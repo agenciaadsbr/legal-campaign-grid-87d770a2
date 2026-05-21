@@ -82,9 +82,11 @@ export const CARD_PAI_TEMPLATES: CardPaiTemplate[] = [
         responsavelNome: "Gleice",
         statusInicial: "Aguardando etapa anterior",
         bloqueada: true,
+        dependsOnStepIndex: 2,
         observacao:
           "Confirmar se WhatsApp, criativos e acessos estão corretos antes da ativação.",
       },
+
     ],
   },
   {
