@@ -108,6 +108,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
   const [composerImg, setComposerImg] = useState<string | null>(null);
   const [previewAnexo, setPreviewAnexo] = useState<{ url: string; nome: string } | null>(null);
   const [anexoParaRemover, setAnexoParaRemover] = useState<string | null>(null);
+  const [anexoDragOver, setAnexoDragOver] = useState(false);
 
   const tituloTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const briefingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -192,8 +193,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
     e.target.value = "";
   };
 
-  const adicionarAnexo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
+  const processarAnexos = async (files: File[]) => {
     if (files.length === 0) return;
     const toastId = toast.loading(files.length === 1 ? "Enviando anexo..." : `Enviando ${files.length} anexos...`);
     try {
@@ -219,7 +219,35 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
       console.error(err);
       toast.error("Falha ao adicionar anexo", { id: toastId });
     }
+  };
+
+  const adicionarAnexo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    await processarAnexos(files);
     e.target.value = "";
+  };
+
+  const handleAnexoDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAnexoDragOver(false);
+    if (!canWrite) return;
+    const files = Array.from(e.dataTransfer.files ?? []);
+    await processarAnexos(files);
+  };
+
+  const handleAnexoDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!canWrite) return;
+    if (!Array.from(e.dataTransfer.types || []).includes("Files")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+    setAnexoDragOver(true);
+  };
+
+  const handleAnexoDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setAnexoDragOver(false);
   };
 
   const removerAnexo = async (anexoId: string) => {
@@ -584,7 +612,16 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                   <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar anexo
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div
+                onDrop={handleAnexoDrop}
+                onDragOver={handleAnexoDragOver}
+                onDragEnter={handleAnexoDragOver}
+                onDragLeave={handleAnexoDragLeave}
+                className={cn(
+                  "flex flex-wrap gap-1.5 rounded-md p-1.5 -m-1.5 transition-colors",
+                  anexoDragOver && "bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                )}
+              >
                 {meusAnexos.map((a) => {
                   const img = isImageUrl(a.url, a.nome);
                   const vid = !img && isVideoUrl(a.url, a.nome);
