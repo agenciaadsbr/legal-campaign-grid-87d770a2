@@ -169,69 +169,146 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     [demandas, novoCardPaiId],
   );
 
-  // Backfill: garante que todo Card Pai "Ativar campanha Meta Ads" tenha a etapa final tarefa.
+  // Normalização pontual Meta Ads: remove duplicidade do processo, reordena e corrige a etapa final.
   const backfilledRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const tpl = CARD_PAI_TEMPLATES.find((t) => t.id === "meta_ads");
     if (!tpl) return;
     const tituloFinal = "Ativar campanha Meta Ads";
     const tituloAprov = "Aguardando aprovação do cliente";
+    const tituloImagem = "Criar anúncio de imagem";
+    const tituloVideo = "Criar/editar anúncio em vídeo";
+    const configFinal = tpl.steps.find((s) => s.titulo === tituloFinal);
+    if (!configFinal) return;
+
     const cardsPai = demandas.filter(
       (d: any) => d.is_card_pai && (d.titulo ?? "").trim() === tituloFinal,
     );
-    cardsPai.forEach(async (cp: any) => {
+    cardsPai.forEach((cp: any) => {
       if (backfilledRef.current.has(cp.id)) return;
-      const filhos = demandas.filter((d: any) => d.parent_process_id === cp.id);
-      const jaTemEtapaFinal = filhos.some(
-        (d: any) =>
-          d.process_step_type === "tarefa" &&
-          (d.titulo ?? "").trim() === tituloFinal,
-      );
-      if (jaTemEtapaFinal) {
-        backfilledRef.current.add(cp.id);
-        return;
-      }
-      const etapaAprov = filhos.find(
-        (d: any) =>
-          d.process_step_type === "status" &&
-          (d.titulo ?? "").trim() === tituloAprov,
-      );
-      const dependsOn = etapaAprov?.id ?? null;
-      const maxOrder = filhos.reduce(
-        (m: number, d: any) =>
-          typeof d.process_step_order === "number" && d.process_step_order > m
-            ? d.process_step_order
-            : m,
-        -1,
-      );
-      const stepFinal = tpl.steps[tpl.steps.length - 1];
-      const respId = findResponsavelIdByNome(responsaveis, stepFinal.responsavelNome);
       backfilledRef.current.add(cp.id);
-      await createDemanda({
-        cliente_id: clienteId,
-        titulo: stepFinal.titulo,
-        categoria: stepFinal.categoria as any,
-        subtipo: stepFinal.subtipo ?? null,
-        descricao: stepFinal.observacao ?? null,
-        prioridade: "Media" as any,
-        status: "Planejamento" as any,
-        responsaveis_ids: respId ? [respId] : [],
-        ...({
-          parent_process_id: cp.id,
-          process_step_order: maxOrder + 1,
-          process_step_type: "tarefa",
-          process_step_status: dependsOn ? "bloqueada" : "pendente",
-          process_depends_on: dependsOn,
-          process_step_config: {
-            bloquear_ate_concluir: true,
-            modelo_origem: "meta_ads",
-            backfill: true,
-          },
-        } as any),
-      } as any);
-      await reload(true);
+      void (async () => {
+        const filhos = demandas
+          .filter((d: any) => d.parent_process_id === cp.id)
+          .sort(
+            (a: any, b: any) =>
+              (a.process_step_order ?? 999) - (b.process_step_order ?? 999) ||
+              a.created_at.localeCompare(b.created_at),
+          );
+
+        const etapaImagem = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloImagem);
+        const etapaVideo = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloVideo);
+        const etapaAprov = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloAprov);
+        const etapasAtivar = filhos.filter((d: any) => (d.titulo ?? "").trim() === tituloFinal);
+        const aprovOrder = etapaAprov?.process_step_order ?? 2;
+        const escolherFinal = [...etapasAtivar].sort((a: any, b: any) => {
+          const score = (d: any) =>
+            (d.process_depends_on === etapaAprov?.id ? 8 : 0) +
+            (d.process_step_status === "bloqueada" ? 4 : 0) +
+            ((d.process_step_order ?? -1) > aprovOrder ? 2 : 0) +
+            (d.process_step_type === "tarefa" ? 1 : 0);
+          return score(b) - score(a) || (b.process_step_order ?? -1) - (a.process_step_order ?? -1);
+        })[0];
+        const respFinalId = findResponsavelIdByNomes(responsaveis, ["Gleice", "Grace", "Greice", "GLEICE", "GREICE"]);
+
+        await Promise.all(
+          etapasAtivar
+            .filter((d: any) => d.id !== escolherFinal?.id)
+            .map((d: any) =>
+              updateDemanda(d.id, {
+                parent_process_id: null,
+                process_step_order: null,
+                process_step_type: null,
+                process_step_status: null,
+                process_depends_on: null,
+                process_step_config: {
+                  ...(d.process_step_config ?? {}),
+                  removido_do_processo_meta_ads_por_duplicidade: true,
+                },
+              } as any),
+            ),
+        );
+
+        if (etapaImagem) {
+          await updateDemanda(etapaImagem.id, {
+            categoria: "TrafegoPago" as any,
+            subtipo: "Subir criativo",
+            process_step_order: 0,
+            process_step_type: "tarefa",
+            process_step_status: etapaImagem.process_step_status === "concluida" ? "concluida" : "pendente",
+            process_depends_on: null,
+          } as any);
+        }
+        if (etapaVideo) {
+          await updateDemanda(etapaVideo.id, {
+            categoria: "EditorVideo" as any,
+            subtipo: "Vídeo para anúncio",
+            process_step_order: 1,
+            process_step_type: "tarefa",
+            process_step_status: etapaVideo.process_step_status === "concluida" ? "concluida" : "pendente",
+            process_depends_on: null,
+          } as any);
+        }
+        if (etapaAprov) {
+          await updateDemanda(etapaAprov.id, {
+            categoria: "Operacional" as any,
+            subtipo: null,
+            process_step_order: 2,
+            process_step_type: "status",
+            process_step_status: etapaAprov.process_step_status === "concluida" ? "concluida" : "pendente",
+            process_depends_on: null,
+            process_step_config: {
+              ...(etapaAprov.process_step_config ?? {}),
+              status_interno_label: tituloAprov,
+              modelo_origem: "meta_ads",
+            },
+          } as any);
+        }
+
+        const finalId = escolherFinal?.id ?? await createDemanda({
+          cliente_id: clienteId,
+          titulo: tituloFinal,
+          categoria: "TrafegoPago" as any,
+          subtipo: configFinal.subtipo ?? "Criar campanha",
+          descricao: configFinal.observacao ?? null,
+          prioridade: "Media" as any,
+          status: "Planejamento" as any,
+          responsaveis_ids: respFinalId ? [respFinalId] : [],
+          ...({
+            parent_process_id: cp.id,
+            process_step_order: 3,
+            process_step_type: "tarefa",
+            process_step_status: "bloqueada",
+            process_depends_on: etapaAprov?.id ?? null,
+            process_step_config: {
+              bloquear_ate_concluir: true,
+              modelo_origem: "meta_ads",
+              backfill: true,
+            },
+          } as any),
+        } as any);
+
+        if (finalId) {
+          await updateDemanda(finalId, {
+            categoria: "TrafegoPago" as any,
+            subtipo: "Criar campanha",
+            process_step_order: 3,
+            process_step_type: "tarefa",
+            process_step_status: "bloqueada",
+            process_depends_on: etapaAprov?.id ?? null,
+            process_step_config: {
+              ...(escolherFinal?.process_step_config ?? {}),
+              bloquear_ate_concluir: true,
+              modelo_origem: "meta_ads",
+            },
+            ...(respFinalId ? { responsaveis_ids: [respFinalId] } : { responsaveis_ids: [] }),
+          } as any);
+        }
+
+        await reload(true);
+      })();
     });
-  }, [demandas, clienteId, responsaveis, createDemanda, reload]);
+  }, [demandas, clienteId, responsaveis, createDemanda, updateDemanda, reload]);
 
 
 
