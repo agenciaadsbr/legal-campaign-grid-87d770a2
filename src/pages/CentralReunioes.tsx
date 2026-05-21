@@ -24,6 +24,7 @@ import {
 import { ReuniaoDialog } from "@/components/projeto/ReuniaoDialog";
 import { DelegarTarefasDialog } from "@/components/reunioes/DelegarTarefasDialog";
 import { cn } from "@/lib/utils";
+import { FiltroPeriodoButton, resolveIntervaloPeriodo, type FiltroPeriodo } from "@/components/shared/FiltroPeriodoButton";
 
 const STATUS_LABEL: Record<string, string> = {
   agendada: "Agendada",
