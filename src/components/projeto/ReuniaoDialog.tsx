@@ -136,6 +136,10 @@ export function ReuniaoDialog({
       toast.error("Informe o título");
       return;
     }
+    if (!clienteId) {
+      toast.error("Selecione o cliente");
+      return;
+    }
     const payload = {
       cliente_id: clienteId,
       titulo,
