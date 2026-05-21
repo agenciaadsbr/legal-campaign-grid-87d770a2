@@ -303,6 +303,18 @@ export function ReuniaoDialog({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {!clienteIdProp && (
+            <div className="md:col-span-2">
+              <Label className="text-xs">Cliente *</Label>
+              <Select value={selectedClienteId || "__none__"} onValueChange={(v) => setSelectedClienteId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Selecione —</SelectItem>
+                  {clientes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="md:col-span-2">
             <Label className="text-xs">Título</Label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Reunião semanal, alinhamento, kickoff..." />
