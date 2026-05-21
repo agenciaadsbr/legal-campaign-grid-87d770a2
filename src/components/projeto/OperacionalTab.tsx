@@ -209,7 +209,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
         subtipo: stepFinal.subtipo ?? null,
         descricao: stepFinal.observacao ?? null,
         prioridade: "Media" as any,
-        status: (stepFinal.statusInicial ?? "Planejamento") as any,
+        status: "Planejamento" as any,
         responsaveis_ids: respId ? [respId] : [],
         ...({
           parent_process_id: cp.id,
