@@ -164,6 +164,72 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     [demandas, novoCardPaiId],
   );
 
+  // Backfill: garante que todo Card Pai "Ativar campanha Meta Ads" tenha a etapa final tarefa.
+  const backfilledRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const tpl = CARD_PAI_TEMPLATES.find((t) => t.id === "meta_ads");
+    if (!tpl) return;
+    const tituloFinal = "Ativar campanha Meta Ads";
+    const tituloAprov = "Aguardando aprovação do cliente";
+    const cardsPai = demandas.filter(
+      (d: any) => d.is_card_pai && (d.titulo ?? "").trim() === tituloFinal,
+    );
+    cardsPai.forEach(async (cp: any) => {
+      if (backfilledRef.current.has(cp.id)) return;
+      const filhos = demandas.filter((d: any) => d.parent_process_id === cp.id);
+      const jaTemEtapaFinal = filhos.some(
+        (d: any) =>
+          d.process_step_type === "tarefa" &&
+          (d.titulo ?? "").trim() === tituloFinal,
+      );
+      if (jaTemEtapaFinal) {
+        backfilledRef.current.add(cp.id);
+        return;
+      }
+      const etapaAprov = filhos.find(
+        (d: any) =>
+          d.process_step_type === "status" &&
+          (d.titulo ?? "").trim() === tituloAprov,
+      );
+      const dependsOn = etapaAprov?.id ?? null;
+      const maxOrder = filhos.reduce(
+        (m: number, d: any) =>
+          typeof d.process_step_order === "number" && d.process_step_order > m
+            ? d.process_step_order
+            : m,
+        -1,
+      );
+      const stepFinal = tpl.steps[tpl.steps.length - 1];
+      const respId = findResponsavelIdByNome(responsaveis, stepFinal.responsavelNome);
+      backfilledRef.current.add(cp.id);
+      await createDemanda({
+        cliente_id: clienteId,
+        titulo: stepFinal.titulo,
+        categoria: stepFinal.categoria as any,
+        subtipo: stepFinal.subtipo ?? null,
+        descricao: stepFinal.observacao ?? null,
+        prioridade: "Media" as any,
+        status: (stepFinal.statusInicial ?? "Planejamento") as any,
+        responsaveis_ids: respId ? [respId] : [],
+        ...({
+          parent_process_id: cp.id,
+          process_step_order: maxOrder + 1,
+          process_step_type: "tarefa",
+          process_step_status: dependsOn ? "bloqueada" : "pendente",
+          process_depends_on: dependsOn,
+          process_step_config: {
+            bloquear_ate_concluir: true,
+            modelo_origem: "meta_ads",
+            backfill: true,
+          },
+        } as any),
+      } as any);
+      await reload(true);
+    });
+  }, [demandas, clienteId, responsaveis, createDemanda, reload]);
+
+
+
   return (
     <div className="space-y-3">
       {isAdmin && (
