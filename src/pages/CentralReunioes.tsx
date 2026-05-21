@@ -24,6 +24,7 @@ import {
 import { ReuniaoDialog } from "@/components/projeto/ReuniaoDialog";
 import { DelegarTarefasDialog } from "@/components/reunioes/DelegarTarefasDialog";
 import { cn } from "@/lib/utils";
+import { FiltroPeriodoButton, resolveIntervaloPeriodo, type FiltroPeriodo } from "@/components/shared/FiltroPeriodoButton";
 
 const STATUS_LABEL: Record<string, string> = {
   agendada: "Agendada",
@@ -79,8 +80,7 @@ export default function CentralReunioes() {
   const [statusFiltro, setStatusFiltro] = useState<string>("__all__");
   const [postFiltro, setPostFiltro] = useState<string>("__all__");
   const [respFiltro, setRespFiltro] = useState<string>("__all__");
-  const [dataDe, setDataDe] = useState("");
-  const [dataAte, setDataAte] = useState("");
+  const [filtroPeriodo, setFiltroPeriodo] = useState<FiltroPeriodo>({ tipo: "todos" });
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
 
@@ -111,6 +111,7 @@ export default function CentralReunioes() {
   }, [reunioes]);
 
   const filtradas = useMemo(() => {
+    const intervalo = resolveIntervaloPeriodo(filtroPeriodo);
     const q = busca.trim().toLowerCase();
     return reunioes.filter((r) => {
       if (clienteFiltro !== "__all__" && r.cliente_id !== clienteFiltro) return false;
@@ -121,8 +122,10 @@ export default function CentralReunioes() {
         if (postFiltro !== "__null__" && r.post_status !== postFiltro) return false;
       }
       if (respFiltro !== "__all__" && r.responsavel_id !== respFiltro) return false;
-      if (dataDe && new Date(r.data) < new Date(dataDe)) return false;
-      if (dataAte && new Date(r.data) > new Date(dataAte + "T23:59:59")) return false;
+      if (intervalo) {
+        const d = new Date(r.data);
+        if (d < intervalo.inicio || d > intervalo.fim) return false;
+      }
       if (q) {
         const cli = clientes.find((c) => c.id === r.cliente_id)?.nome_cliente ?? "";
         const resp = responsaveis.find((p) => p.id === r.responsavel_id)?.nome ?? "";
@@ -131,7 +134,7 @@ export default function CentralReunioes() {
       }
       return true;
     });
-  }, [reunioes, busca, clienteFiltro, tipoFiltro, statusFiltro, postFiltro, respFiltro, dataDe, dataAte, clientes, responsaveis]);
+  }, [reunioes, busca, clienteFiltro, tipoFiltro, statusFiltro, postFiltro, respFiltro, filtroPeriodo, clientes, responsaveis]);
 
   const pagina = filtradas.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
@@ -267,15 +270,13 @@ export default function CentralReunioes() {
             {responsaveis.map((r) => (<SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>))}
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-1 h-7 px-2 rounded-md border border-input bg-background">
-          <span className="text-[10px] uppercase text-muted-foreground font-medium">De</span>
-          <Input type="date" className="h-5 text-xs w-[110px] border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent" value={dataDe} onChange={(e) => { setDataDe(e.target.value); setPage(0); }} />
-        </div>
-        <div className="flex items-center gap-1 h-7 px-2 rounded-md border border-input bg-background">
-          <span className="text-[10px] uppercase text-muted-foreground font-medium">Até</span>
-          <Input type="date" className="h-5 text-xs w-[110px] border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent" value={dataAte} onChange={(e) => { setDataAte(e.target.value); setPage(0); }} />
-        </div>
+        <FiltroPeriodoButton
+          value={filtroPeriodo}
+          onChange={(v) => { setFiltroPeriodo(v); setPage(0); }}
+          size="xs"
+        />
       </div>
+
 
 
       {/* Tabela */}
