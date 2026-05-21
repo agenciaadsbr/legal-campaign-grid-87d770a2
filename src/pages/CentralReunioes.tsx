@@ -190,58 +190,58 @@ export default function CentralReunioes() {
   };
 
   return (
-    <div className="px-5 py-4 space-y-3 animate-fade-in">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold leading-tight">Central de Reuniões</h1>
-          <p className="text-xs text-muted-foreground">
+    <div className="px-4 py-3 space-y-2 animate-fade-in">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="leading-tight">
+          <h1 className="text-lg font-bold leading-tight">Central de Reuniões</h1>
+          <p className="text-[11px] text-muted-foreground">
             {reunioes.length} reuniões{counts.pendentes > 0 ? ` · ${counts.pendentes} pendentes de análise` : ""}
           </p>
         </div>
-        <Button size="sm" className="h-8 gap-1.5" onClick={handleNova}>
+        <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={handleNova}>
           <Plus className="h-3.5 w-3.5" /> Nova Reunião
         </Button>
       </div>
 
       {/* Widgets compactos */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {widgets.map((w) => (
           <button
             key={w.key}
             onClick={() => aplicarFiltroWidget(w.key as any)}
             className={cn(
-              "flex items-center gap-2 h-9 px-3 rounded-md border transition-colors",
+              "flex items-center gap-1.5 h-7 px-2.5 rounded-md border transition-colors",
               toneClasses[w.tone],
             )}
           >
             <span className="text-[10px] uppercase font-semibold tracking-wider">{w.label}</span>
-            <span className="text-sm font-bold text-foreground">{w.n}</span>
+            <span className="text-xs font-bold text-foreground">{w.n}</span>
           </button>
         ))}
       </div>
 
       {/* Filtros inline */}
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap gap-1.5 items-center">
         <div className="relative">
-          <Search className="h-3.5 w-3.5 absolute left-2 top-2.5 text-muted-foreground" />
-          <Input className="pl-7 h-8 text-xs w-[240px]" placeholder="Buscar..." value={busca} onChange={(e) => { setBusca(e.target.value); setPage(0); }} />
+          <Search className="h-3.5 w-3.5 absolute left-2 top-2 text-muted-foreground" />
+          <Input className="pl-7 h-7 text-xs w-[220px]" placeholder="Buscar..." value={busca} onChange={(e) => { setBusca(e.target.value); setPage(0); }} />
         </div>
         <Select value={clienteFiltro} onValueChange={(v) => { setClienteFiltro(v); setPage(0); }}>
-          <SelectTrigger className="h-8 text-xs w-[160px]"><SelectValue placeholder="Cliente" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs w-[150px]"><SelectValue placeholder="Cliente" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Todos os clientes</SelectItem>
             {clientes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>))}
           </SelectContent>
         </Select>
         <Select value={tipoFiltro || "__all__"} onValueChange={(v) => { setTipoFiltro(v === "__all__" ? "" : v); setPage(0); }}>
-          <SelectTrigger className="h-8 text-xs w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Todos os tipos</SelectItem>
             {tipos.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
           </SelectContent>
         </Select>
         <Select value={statusFiltro} onValueChange={(v) => { setStatusFiltro(v); setPage(0); }}>
-          <SelectTrigger className="h-8 text-xs w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Todos status</SelectItem>
             <SelectItem value="agendada">Agendada</SelectItem>
@@ -250,7 +250,7 @@ export default function CentralReunioes() {
           </SelectContent>
         </Select>
         <Select value={postFiltro} onValueChange={(v) => { setPostFiltro(v); setPage(0); }}>
-          <SelectTrigger className="h-8 text-xs w-[150px]"><SelectValue placeholder="Pós-reunião" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs w-[140px]"><SelectValue placeholder="Pós-reunião" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Todos pós</SelectItem>
             <SelectItem value="__null__">Sem pós-status</SelectItem>
@@ -261,14 +261,14 @@ export default function CentralReunioes() {
           </SelectContent>
         </Select>
         <Select value={respFiltro} onValueChange={(v) => { setRespFiltro(v); setPage(0); }}>
-          <SelectTrigger className="h-8 text-xs w-[160px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs w-[150px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Todos responsáveis</SelectItem>
             {responsaveis.map((r) => (<SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>))}
           </SelectContent>
         </Select>
-        <Input type="date" className="h-8 text-xs w-[130px]" value={dataDe} onChange={(e) => { setDataDe(e.target.value); setPage(0); }} />
-        <Input type="date" className="h-8 text-xs w-[130px]" value={dataAte} onChange={(e) => { setDataAte(e.target.value); setPage(0); }} />
+        <Input type="date" className="h-7 text-xs w-[125px]" value={dataDe} onChange={(e) => { setDataDe(e.target.value); setPage(0); }} />
+        <Input type="date" className="h-7 text-xs w-[125px]" value={dataAte} onChange={(e) => { setDataAte(e.target.value); setPage(0); }} />
       </div>
 
 
@@ -286,15 +286,15 @@ export default function CentralReunioes() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="text-left px-2 py-1.5 font-semibold">Cliente</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Tipo</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Data</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Status</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Pós-reunião</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Responsável</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Gravação</th>
-                    <th className="text-left px-2 py-1.5 font-semibold">Resumo</th>
-                    <th className="text-right px-2 py-1.5 font-semibold">Ações</th>
+                    <th className="text-left px-2 py-1 font-semibold">Cliente</th>
+                    <th className="text-left px-2 py-1 font-semibold">Tipo</th>
+                    <th className="text-left px-2 py-1 font-semibold">Data</th>
+                    <th className="text-left px-2 py-1 font-semibold">Status</th>
+                    <th className="text-left px-2 py-1 font-semibold">Pós-reunião</th>
+                    <th className="text-left px-2 py-1 font-semibold">Responsável</th>
+                    <th className="text-left px-2 py-1 font-semibold">Gravação</th>
+                    <th className="text-left px-2 py-1 font-semibold">Resumo</th>
+                    <th className="text-right px-2 py-1 font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -306,34 +306,34 @@ export default function CentralReunioes() {
                     const alerta = isAlerta(r);
                     return (
                       <tr key={r.id} className="border-t border-border hover:bg-accent/20 transition-colors">
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1 leading-tight">
                           <button onClick={() => handleAbrir(r)} className="text-left hover:underline">
-                            <div className="font-medium">{cli?.nome_cliente ?? "—"}</div>
-                            <div className="text-[11px] text-muted-foreground line-clamp-1">{r.titulo}</div>
+                            <div className="font-medium text-xs leading-tight">{cli?.nome_cliente ?? "—"}</div>
+                            <div className="text-[10px] text-muted-foreground line-clamp-1 leading-tight">{r.titulo}</div>
                           </button>
                         </td>
-                        <td className="px-2 py-1.5 text-xs">{r.tipo ?? "—"}</td>
-                        <td className="px-2 py-1.5 text-xs whitespace-nowrap">
+                        <td className="px-2 py-1 text-xs">{r.tipo ?? "—"}</td>
+                        <td className="px-2 py-1 text-xs whitespace-nowrap">
                           <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(r.data).toLocaleString("pt-BR")}</span>
                         </td>
-                        <td className="px-2 py-1.5"><StatusBadge status={r.status} /></td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1"><StatusBadge status={r.status} /></td>
+                        <td className="px-2 py-1">
                           <div className="flex items-center gap-1">
                             <PostStatusBadge post={r.post_status} />
                             {critica && <AlertTriangle className="h-3.5 w-3.5 text-destructive" aria-label="Pendência crítica" />}
                             {alerta && <Clock className="h-3.5 w-3.5 text-amber-500" aria-label="Em análise há mais de 24h sem tarefa" />}
                           </div>
                         </td>
-                        <td className="px-2 py-1.5 text-xs">{resp?.nome ?? "—"}</td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1 text-xs">{resp?.nome ?? "—"}</td>
+                        <td className="px-2 py-1">
                           {r.link_tldv ? (
                             <a href={r.link_tldv} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5 text-xs"><ExternalLink className="h-3 w-3" /> TLDV</a>
                           ) : <span className="text-[10px] text-muted-foreground">—</span>}
                         </td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-2 py-1">
                           {temResumo ? <FileText className="h-3.5 w-3.5 text-emerald-600" /> : <span className="text-[10px] text-muted-foreground">—</span>}
                         </td>
-                        <td className="px-2 py-1.5 text-right">
+                        <td className="px-2 py-1 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="icon" variant="ghost" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
