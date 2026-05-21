@@ -96,7 +96,14 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
       const respId = findResponsavelIdByNome(responsaveis, step.responsavelNome);
       if (step.responsavelNome && !respId) faltouResp = true;
 
-      const dependsOn = i > 0 ? idsCriados[i - 1] : null;
+      const dependsOnIdx =
+        typeof step.dependsOnStepIndex === "number"
+          ? step.dependsOnStepIndex
+          : i > 0
+            ? i - 1
+            : -1;
+      const dependsOnRaw = dependsOnIdx >= 0 ? idsCriados[dependsOnIdx] : null;
+      const dependsOn = dependsOnRaw && dependsOnRaw.length > 0 ? dependsOnRaw : null;
       const bloqueada = !!step.bloqueada && !!dependsOn;
 
       const statusFinal: any =
@@ -128,6 +135,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
       } as any);
       idsCriados.push(novoId ?? "");
     }
+
 
     if (faltouResp) {
       toast.warning(
