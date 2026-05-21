@@ -21,14 +21,18 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 export function ReuniaoDialog({
   open,
   onOpenChange,
-  clienteId,
+  clienteId: clienteIdProp,
   reuniao,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
-  clienteId: string;
+  /** Quando omitido, o usuário deverá selecionar o cliente dentro do diálogo (uso na Central de Reuniões). */
+  clienteId?: string;
   reuniao: Reuniao | null;
 }) {
+  const clientes = useCRM((s) => s.clientes);
+  const [selectedClienteId, setSelectedClienteId] = useState<string>("");
+  const clienteId = clienteIdProp ?? selectedClienteId ?? reuniao?.cliente_id ?? "";
   const create = useReunioes((s) => s.create);
   const update = useReunioes((s) => s.update);
   const responsaveis = useCRM((s) => s.responsaveis);
