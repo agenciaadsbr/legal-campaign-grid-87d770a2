@@ -186,20 +186,24 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     );
     cardsPai.forEach((cp: any) => {
       if (backfilledRef.current.has(cp.id)) return;
-      backfilledRef.current.add(cp.id);
-      void (async () => {
-        const filhos = demandas
-          .filter((d: any) => d.parent_process_id === cp.id)
-          .sort(
-            (a: any, b: any) =>
-              (a.process_step_order ?? 999) - (b.process_step_order ?? 999) ||
-              a.created_at.localeCompare(b.created_at),
-          );
 
-        const etapaImagem = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloImagem);
-        const etapaVideo = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloVideo);
-        const etapaAprov = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloAprov);
-        const etapasAtivar = filhos.filter((d: any) => (d.titulo ?? "").trim() === tituloFinal);
+      const filhos = demandas
+        .filter((d: any) => d.parent_process_id === cp.id)
+        .sort(
+          (a: any, b: any) =>
+            (a.process_step_order ?? 999) - (b.process_step_order ?? 999) ||
+            a.created_at.localeCompare(b.created_at),
+        );
+
+      const etapaImagem = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloImagem);
+      const etapaVideo = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloVideo);
+      const etapaAprov = filhos.find((d: any) => (d.titulo ?? "").trim() === tituloAprov);
+      const etapasAtivar = filhos.filter((d: any) => (d.titulo ?? "").trim() === tituloFinal);
+
+      // Guard de estabilidade: só normaliza quando as 3 etapas-base já existem (evita race com optimistic update do template).
+      if (!etapaImagem || !etapaVideo || !etapaAprov) return;
+
+      void (async () => {
         const aprovOrder = etapaAprov?.process_step_order ?? 2;
         const escolherFinal = [...etapasAtivar].sort((a: any, b: any) => {
           const score = (d: any) =>
@@ -211,6 +215,7 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
         })[0];
         const respFinalId = findResponsavelIdByNomes(responsaveis, ["Gleice", "Grace", "Greice", "GLEICE", "GREICE"]);
 
+        // Desvincula duplicatas extras (mantém apenas a melhor candidata).
         await Promise.all(
           etapasAtivar
             .filter((d: any) => d.id !== escolherFinal?.id)
@@ -229,45 +234,40 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
             ),
         );
 
-        if (etapaImagem) {
-          await updateDemanda(etapaImagem.id, {
-            categoria: "TrafegoPago" as any,
-            subtipo: "Subir criativo",
-            process_step_order: 0,
-            process_step_type: "tarefa",
-            process_step_status: etapaImagem.process_step_status === "concluida" ? "concluida" : "pendente",
-            process_depends_on: null,
-          } as any);
-        }
-        if (etapaVideo) {
-          await updateDemanda(etapaVideo.id, {
-            categoria: "EditorVideo" as any,
-            subtipo: "Vídeo para anúncio",
-            process_step_order: 1,
-            process_step_type: "tarefa",
-            process_step_status: etapaVideo.process_step_status === "concluida" ? "concluida" : "pendente",
-            process_depends_on: null,
-          } as any);
-        }
-        if (etapaAprov) {
-          await updateDemanda(etapaAprov.id, {
-            categoria: "Operacional" as any,
-            subtipo: null,
-            process_step_order: 2,
-            process_step_type: "status",
-            process_step_status: etapaAprov.process_step_status === "concluida" ? "concluida" : "pendente",
-            process_depends_on: null,
-            process_step_config: {
-              ...(etapaAprov.process_step_config ?? {}),
-              status_interno_label: tituloAprov,
-              modelo_origem: "meta_ads",
-            },
-          } as any);
-        }
+        await updateDemanda(etapaImagem.id, {
+          categoria: "TrafegoPago" as any,
+          subtipo: "Subir criativo",
+          process_step_order: 0,
+          process_step_type: "tarefa",
+          process_step_status: etapaImagem.process_step_status === "concluida" ? "concluida" : "pendente",
+          process_depends_on: null,
+        } as any);
+        await updateDemanda(etapaVideo.id, {
+          categoria: "EditorVideo" as any,
+          subtipo: "Vídeo para anúncio",
+          process_step_order: 1,
+          process_step_type: "tarefa",
+          process_step_status: etapaVideo.process_step_status === "concluida" ? "concluida" : "pendente",
+          process_depends_on: null,
+        } as any);
+        await updateDemanda(etapaAprov.id, {
+          categoria: "Operacional" as any,
+          subtipo: null,
+          process_step_order: 2,
+          process_step_type: "status",
+          process_step_status: etapaAprov.process_step_status === "concluida" ? "concluida" : "pendente",
+          process_depends_on: null,
+          process_step_config: {
+            ...(etapaAprov.process_step_config ?? {}),
+            status_interno_label: tituloAprov,
+            modelo_origem: "meta_ads",
+          },
+        } as any);
 
-        const finalId =
-          escolherFinal?.id ??
-          (await createDemanda({
+        // Só cria etapa final NOVA se não existir nenhuma vinculada ao cp.
+        let finalId = escolherFinal?.id ?? null;
+        if (!finalId) {
+          finalId = await createDemanda({
             cliente_id: clienteId,
             titulo: tituloFinal,
             categoria: "TrafegoPago" as any,
@@ -288,7 +288,8 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
                 backfill: true,
               },
             } as any),
-          } as any));
+          } as any);
+        }
 
         if (finalId) {
           await updateDemanda(finalId, {
@@ -307,6 +308,8 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
           } as any);
         }
 
+        // Só marca como processado após sucesso, para permitir retry corretivo em sessões futuras.
+        backfilledRef.current.add(cp.id);
         await reload(true);
       })();
     });
