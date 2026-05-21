@@ -107,8 +107,9 @@ export function ReuniaoDialog({
       setResponsavelDelegacaoId(reuniao?.responsavel_delegacao_id ?? "");
       setPrazoDelegacao(reuniao?.prazo_delegacao ?? "");
       setObsDelegacao(reuniao?.observacoes_delegacao ?? "");
+      setSelectedClienteId(reuniao?.cliente_id ?? clienteIdProp ?? "");
     }
-  }, [open, reuniao]);
+  }, [open, reuniao, clienteIdProp]);
 
   // Auto-suggest delegation for specific types
   useEffect(() => {
