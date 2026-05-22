@@ -396,11 +396,32 @@ function NovaCadenciaDialog({ open, onOpenChange }: { open: boolean; onOpenChang
 function ConfigMensagensDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { mensagens, upsertMensagem, removeMensagem } = useCadenciasStore();
   const [tab, setTab] = useState<CadenciaTipo>("aprovacao");
+  const [setor, setSetor] = useState<CadenciaSetor>("videos");
   const [editing, setEditing] = useState<Record<string, { titulo: string; mensagem: string }>>({});
 
-  const lista = mensagens
-    .filter((m) => m.tipo === tab)
-    .sort((a, b) => a.etapa - b.etapa || a.ordem - b.ordem);
+  const lista = useMemo(() => {
+    if (tab === "recarga") {
+      return mensagens
+        .filter((m) => m.tipo === "recarga")
+        .sort((a, b) => a.etapa - b.etapa || a.ordem - b.ordem);
+    }
+    // Aprovação: filtra por setor; se nada cadastrado para o setor, cai no "Geral" (setor null) como fallback visual
+    const porSetor = mensagens
+      .filter((m) => m.tipo === "aprovacao" && m.setor === setor)
+      .sort((a, b) => a.etapa - b.etapa || a.ordem - b.ordem);
+    if (porSetor.length > 0) return porSetor;
+    return mensagens
+      .filter((m) => m.tipo === "aprovacao" && (m.setor == null || m.setor === ""))
+      .sort((a, b) => a.etapa - b.etapa || a.ordem - b.ordem);
+  }, [mensagens, tab, setor]);
+
+  const usandoFallbackGeral = useMemo(
+    () =>
+      tab === "aprovacao" &&
+      lista.length > 0 &&
+      lista.every((m) => m.setor == null || m.setor === ""),
+    [tab, lista],
+  );
 
   const getVal = (id: string, field: "titulo" | "mensagem", fallback: string) =>
     editing[id]?.[field] ?? fallback;
@@ -408,87 +429,166 @@ function ConfigMensagensDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   const setVal = (id: string, field: "titulo" | "mensagem", value: string, base: { titulo: string; mensagem: string }) =>
     setEditing((s) => ({ ...s, [id]: { ...base, ...(s[id] ?? {}), [field]: value } }));
 
+  const setorAtualParaSalvar = (): CadenciaSetor | null =>
+    tab === "aprovacao" ? setor : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Mensagens padrão das cadências</DialogTitle></DialogHeader>
         <Tabs value={tab} onValueChange={(v) => setTab(v as CadenciaTipo)}>
           <TabsList>
             <TabsTrigger value="aprovacao">Aprovação</TabsTrigger>
             <TabsTrigger value="recarga">Recarga</TabsTrigger>
           </TabsList>
-          {(["aprovacao", "recarga"] as const).map((t) => (
-            <TabsContent key={t} value={t} className="space-y-3 mt-3">
-              {lista.map((m) => {
-                const base = { titulo: m.titulo, mensagem: m.mensagem };
-                return (
-                  <div key={m.id} className="rounded-md border border-border p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{ETAPAS_LABEL[m.etapa]}</Badge>
-                      <Input
-                        className="h-7 text-xs"
-                        value={getVal(m.id, "titulo", m.titulo)}
-                        onChange={(e) => setVal(m.id, "titulo", e.target.value, base)}
-                      />
-                    </div>
-                    <Textarea
-                      rows={3}
-                      value={getVal(m.id, "mensagem", m.mensagem)}
-                      onChange={(e) => setVal(m.id, "mensagem", e.target.value, base)}
-                    />
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        size="sm" variant="ghost" className="h-7 text-xs"
-                        onClick={() => { navigator.clipboard.writeText(getVal(m.id, "mensagem", m.mensagem)); toast.success("Copiado"); }}
-                      >
-                        <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
-                      </Button>
-                      <Button
-                        size="sm" variant="outline" className="h-7 text-xs"
-                        onClick={async () => {
-                          try {
-                            await upsertMensagem({
-                              id: m.id, tipo: m.tipo, etapa: m.etapa,
-                              titulo: getVal(m.id, "titulo", m.titulo),
-                              mensagem: getVal(m.id, "mensagem", m.mensagem),
-                            });
-                            toast.success("Salvo");
-                            setEditing((s) => { const n = { ...s }; delete n[m.id]; return n; });
-                          } catch (e: any) { toast.error(e.message ?? "Erro"); }
-                        }}
-                      >
-                        <Check className="h-3.5 w-3.5 mr-1" /> Salvar
-                      </Button>
-                      <Button
-                        size="sm" variant="ghost" className="h-7 text-xs text-destructive"
-                        onClick={async () => {
-                          if (!confirm("Remover esta mensagem?")) return;
-                          await removeMensagem(m.id);
-                          toast.success("Removida");
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-              <Button
-                size="sm" variant="outline" className="text-xs"
-                onClick={async () => {
-                  const proxEtapa = ((lista[lista.length - 1]?.etapa ?? 0) % 4) + 1;
-                  await upsertMensagem({ tipo: t, etapa: proxEtapa, titulo: "Nova mensagem", mensagem: "" });
-                }}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar mensagem
-              </Button>
-            </TabsContent>
-          ))}
+
+          <TabsContent value="aprovacao" className="space-y-3 mt-3">
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">Setor / Responsável</div>
+              <div className="flex flex-wrap gap-1.5">
+                {SETORES_APROVACAO.map((s) => (
+                  <Button
+                    key={s}
+                    size="sm"
+                    variant={setor === s ? "default" : "outline"}
+                    className="h-7 text-xs"
+                    onClick={() => setSetor(s)}
+                  >
+                    {SETOR_LABEL[s]}
+                    <span className="ml-1.5 text-[10px] opacity-70">· {SETOR_RESPONSAVEL[s]}</span>
+                  </Button>
+                ))}
+              </div>
+              {usandoFallbackGeral && (
+                <div className="text-[11px] text-muted-foreground">
+                  Exibindo mensagens gerais antigas (sem setor). Edite ou salve para criar a versão de <strong>{SETOR_LABEL[setor]}</strong>.
+                </div>
+              )}
+            </div>
+            <MensagensList
+              key={`aprovacao-${setor}`}
+              lista={lista}
+              setor={setorAtualParaSalvar()}
+              tipo="aprovacao"
+              editing={editing}
+              setEditing={setEditing}
+              getVal={getVal}
+              setVal={setVal}
+              upsertMensagem={upsertMensagem}
+              removeMensagem={removeMensagem}
+            />
+          </TabsContent>
+
+          <TabsContent value="recarga" className="space-y-3 mt-3">
+            <MensagensList
+              key="recarga"
+              lista={lista}
+              setor={null}
+              tipo="recarga"
+              editing={editing}
+              setEditing={setEditing}
+              getVal={getVal}
+              setVal={setVal}
+              upsertMensagem={upsertMensagem}
+              removeMensagem={removeMensagem}
+            />
+          </TabsContent>
         </Tabs>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MensagensList({
+  lista, setor, tipo, editing, setEditing, getVal, setVal, upsertMensagem, removeMensagem,
+}: {
+  lista: Array<{ id: string; tipo: CadenciaTipo; etapa: number; titulo: string; mensagem: string; setor: CadenciaSetor | null }>;
+  setor: CadenciaSetor | null;
+  tipo: CadenciaTipo;
+  editing: Record<string, { titulo: string; mensagem: string }>;
+  setEditing: React.Dispatch<React.SetStateAction<Record<string, { titulo: string; mensagem: string }>>>;
+  getVal: (id: string, field: "titulo" | "mensagem", fallback: string) => string;
+  setVal: (id: string, field: "titulo" | "mensagem", value: string, base: { titulo: string; mensagem: string }) => void;
+  upsertMensagem: ReturnType<typeof useCadenciasStore>["upsertMensagem"];
+  removeMensagem: ReturnType<typeof useCadenciasStore>["removeMensagem"];
+}) {
+  // Se está em aprovação e exibindo fallback geral, ao salvar criamos uma nova mensagem para o setor (não sobrescreve a geral)
+  const ehFallbackGeral = tipo === "aprovacao" && setor != null && lista.length > 0 && lista.every((m) => m.setor == null);
+
+  return (
+    <>
+      {lista.map((m) => {
+        const base = { titulo: m.titulo, mensagem: m.mensagem };
+        return (
+          <div key={m.id} className="rounded-md border border-border p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{ETAPAS_LABEL[m.etapa]}</Badge>
+              <Input
+                className="h-7 text-xs"
+                value={getVal(m.id, "titulo", m.titulo)}
+                onChange={(e) => setVal(m.id, "titulo", e.target.value, base)}
+              />
+            </div>
+            <Textarea
+              rows={4}
+              value={getVal(m.id, "mensagem", m.mensagem)}
+              onChange={(e) => setVal(m.id, "mensagem", e.target.value, base)}
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                size="sm" variant="ghost" className="h-7 text-xs"
+                onClick={() => { navigator.clipboard.writeText(getVal(m.id, "mensagem", m.mensagem)); toast.success("Copiado"); }}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+              </Button>
+              <Button
+                size="sm" variant="outline" className="h-7 text-xs"
+                onClick={async () => {
+                  try {
+                    await upsertMensagem({
+                      // Se for fallback geral, cria nova para o setor (sem id)
+                      id: ehFallbackGeral ? undefined : m.id,
+                      tipo: m.tipo,
+                      etapa: m.etapa,
+                      setor: ehFallbackGeral ? setor : (m.setor ?? setor),
+                      titulo: getVal(m.id, "titulo", m.titulo),
+                      mensagem: getVal(m.id, "mensagem", m.mensagem),
+                    });
+                    toast.success("Salvo");
+                    setEditing((s) => { const n = { ...s }; delete n[m.id]; return n; });
+                  } catch (e: any) { toast.error(e.message ?? "Erro"); }
+                }}
+              >
+                <Check className="h-3.5 w-3.5 mr-1" /> Salvar
+              </Button>
+              {!ehFallbackGeral && (
+                <Button
+                  size="sm" variant="ghost" className="h-7 text-xs text-destructive"
+                  onClick={async () => {
+                    if (!confirm("Remover esta mensagem?")) return;
+                    await removeMensagem(m.id);
+                    toast.success("Removida");
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <Button
+        size="sm" variant="outline" className="text-xs"
+        onClick={async () => {
+          const proxEtapa = ((lista[lista.length - 1]?.etapa ?? 0) % 4) + 1;
+          await upsertMensagem({ tipo, setor, etapa: proxEtapa, titulo: "Nova mensagem", mensagem: "" });
+        }}
+      >
+        <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar mensagem
+      </Button>
+    </>
   );
 }
