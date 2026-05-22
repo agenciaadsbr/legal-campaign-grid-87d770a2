@@ -230,6 +230,7 @@ export type Database = {
           id: string
           mensagem: string
           ordem: number
+          setor: string | null
           tipo: string
           titulo: string
           updated_at: string
@@ -241,6 +242,7 @@ export type Database = {
           id?: string
           mensagem?: string
           ordem?: number
+          setor?: string | null
           tipo: string
           titulo: string
           updated_at?: string
@@ -252,6 +254,7 @@ export type Database = {
           id?: string
           mensagem?: string
           ordem?: number
+          setor?: string | null
           tipo?: string
           titulo?: string
           updated_at?: string
