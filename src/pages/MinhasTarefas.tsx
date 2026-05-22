@@ -28,6 +28,10 @@ import { AlertCircle, CheckCircle2, ListChecks, Lock, Users, Zap } from "lucide-
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TarefasSugeridasTab } from "@/components/tarefas/TarefasSugeridasTab";
 import { MeetingDelegationTab } from "@/components/tarefas/MeetingDelegationTab";
+import { lazy, Suspense } from "react";
+const CadenciasOperacionaisTab = lazy(() =>
+  import("@/components/tarefas/CadenciasOperacionaisTab").then((m) => ({ default: m.CadenciasOperacionaisTab })),
+);
 
 const FILTROS_INICIAIS: FiltrosState = {
   cliente: "all",
