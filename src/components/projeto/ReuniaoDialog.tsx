@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useReunioes, type Reuniao } from "@/store/reunioes";
+import { useReunioes, type Reuniao, type TemperaturaCliente, TEMPERATURA_LABEL } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
 import { useTarefasSugeridas } from "@/store/tarefasSugeridas";
 import { useIAConfig, useIAConfigBootstrap } from "@/store/iaConfig";
