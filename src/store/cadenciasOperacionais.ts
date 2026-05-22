@@ -293,6 +293,29 @@ export function diasSemResposta(c: Cadencia): number {
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
 
+/** Alias semântico: dias parados na etapa atual (desde a última ação registrada). */
+export function diasNaEtapa(c: Cadencia): number {
+  return diasSemResposta(c);
+}
+
+/** Label do contador: "—" se sem ação, "0 dias" (<24h), "1 dia", "X dias". */
+export function diasNaEtapaLabel(c: Cadencia): string {
+  if (!c.ultima_acao_em) return "—";
+  const d = diasNaEtapa(c);
+  if (d <= 0) return "0 dias";
+  if (d === 1) return "1 dia";
+  return `${d} dias`;
+}
+
+/** Tom de cor por faixa de dias na etapa (cinza/amarelo/vermelho). */
+export function diasNaEtapaTone(c: Cadencia): "muted" | "warning" | "danger" {
+  if (!c.ultima_acao_em) return "muted";
+  const d = diasNaEtapa(c);
+  if (d <= 1) return "muted";
+  if (d === 2) return "warning";
+  return "danger";
+}
+
 export function proximaAcao(c: Cadencia): string {
   if (c.status === "resolvida" || c.status === "sem_retorno") return "—";
   const prox = (c.etapa_atual || 0) + 1;
