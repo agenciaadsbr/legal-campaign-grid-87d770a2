@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useReunioes, useReunioesBootstrap, type Reuniao, type ReuniaoPostStatus } from "@/store/reunioes";
+import { useReunioes, useReunioesBootstrap, type Reuniao, type ReuniaoPostStatus, type TemperaturaCliente, TEMPERATURA_LABEL } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
 import { useMeetingTasks, useMeetingTasksBootstrap } from "@/store/meetingTasks";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,6 +59,17 @@ function PostStatusBadge({ post }: { post?: string | null }) {
   return <Badge variant="outline" className={cn("text-[10px]", styles[post])}>{POST_LABEL[post] ?? post}</Badge>;
 }
 
+function TemperaturaBadge({ temp }: { temp?: string | null }) {
+  if (!temp) return <span className="text-[10px] text-muted-foreground">—</span>;
+  const styles: Record<string, string> = {
+    excelente: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+    normal: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
+    atencao_acompanhamento: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    critico_risco_churn: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30",
+  };
+  return <Badge variant="outline" className={cn("text-[10px]", styles[temp])}>{TEMPERATURA_LABEL[temp as TemperaturaCliente] ?? temp}</Badge>;
+}
+
 export default function CentralReunioes() {
   useReunioesBootstrap();
   useMeetingTasksBootstrap();
@@ -80,6 +91,7 @@ export default function CentralReunioes() {
   const [statusFiltro, setStatusFiltro] = useState<string>("__all__");
   const [postFiltro, setPostFiltro] = useState<string>("__all__");
   const [respFiltro, setRespFiltro] = useState<string>("__all__");
+  const [tempFiltro, setTempFiltro] = useState<string>("__all__");
   const [filtroPeriodo, setFiltroPeriodo] = useState<FiltroPeriodo>({ tipo: "todos" });
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
@@ -98,7 +110,7 @@ export default function CentralReunioes() {
   const [semAcaoReuniao, setSemAcaoReuniao] = useState<Reuniao | null>(null);
 
   const counts = useMemo(() => {
-    const c = { pendentes: 0, analise: 0, delegada: 0, semAcao: 0, agendada: 0, naoRealizada: 0 };
+    const c = { pendentes: 0, analise: 0, delegada: 0, semAcao: 0, agendada: 0, naoRealizada: 0, atencao: 0, critico: 0 };
     for (const r of reunioes) {
       if (r.status === "realizada" && r.post_status === "nao_analisada") c.pendentes++;
       if (r.post_status === "em_analise") c.analise++;
@@ -106,6 +118,8 @@ export default function CentralReunioes() {
       if (r.post_status === "sem_acao") c.semAcao++;
       if (r.status === "agendada") c.agendada++;
       if (r.status === "nao_realizada") c.naoRealizada++;
+      if (r.temperatura_cliente === "atencao_acompanhamento") c.atencao++;
+      if (r.temperatura_cliente === "critico_risco_churn") c.critico++;
     }
     return c;
   }, [reunioes]);
@@ -122,6 +136,10 @@ export default function CentralReunioes() {
         if (postFiltro !== "__null__" && r.post_status !== postFiltro) return false;
       }
       if (respFiltro !== "__all__" && r.responsavel_id !== respFiltro) return false;
+      if (tempFiltro !== "__all__") {
+        if (tempFiltro === "__null__" && r.temperatura_cliente) return false;
+        if (tempFiltro !== "__null__" && r.temperatura_cliente !== tempFiltro) return false;
+      }
       if (intervalo) {
         const d = new Date(r.data);
         if (d < intervalo.inicio || d > intervalo.fim) return false;
@@ -134,28 +152,32 @@ export default function CentralReunioes() {
       }
       return true;
     });
-  }, [reunioes, busca, clienteFiltro, tipoFiltro, statusFiltro, postFiltro, respFiltro, filtroPeriodo, clientes, responsaveis]);
+  }, [reunioes, busca, clienteFiltro, tipoFiltro, statusFiltro, postFiltro, respFiltro, tempFiltro, filtroPeriodo, clientes, responsaveis]);
 
   const pagina = filtradas.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
 
   const tipos = useMemo(() => Array.from(new Set(reunioes.map((r) => r.tipo).filter(Boolean))) as string[], [reunioes]);
 
-  const aplicarFiltroWidget = (key: "pendentes" | "analise" | "delegada" | "semAcao" | "agendada" | "naoRealizada") => {
+  const aplicarFiltroWidget = (key: "pendentes" | "analise" | "delegada" | "semAcao" | "agendada" | "naoRealizada" | "atencao" | "critico") => {
     setPage(0);
     switch (key) {
       case "pendentes":
-        setStatusFiltro("realizada"); setPostFiltro("nao_analisada"); break;
+        setStatusFiltro("realizada"); setPostFiltro("nao_analisada"); setTempFiltro("__all__"); break;
       case "analise":
-        setStatusFiltro("__all__"); setPostFiltro("em_analise"); break;
+        setStatusFiltro("__all__"); setPostFiltro("em_analise"); setTempFiltro("__all__"); break;
       case "delegada":
-        setStatusFiltro("__all__"); setPostFiltro("delegada"); break;
+        setStatusFiltro("__all__"); setPostFiltro("delegada"); setTempFiltro("__all__"); break;
       case "semAcao":
-        setStatusFiltro("__all__"); setPostFiltro("sem_acao"); break;
+        setStatusFiltro("__all__"); setPostFiltro("sem_acao"); setTempFiltro("__all__"); break;
       case "agendada":
-        setStatusFiltro("agendada"); setPostFiltro("__all__"); break;
+        setStatusFiltro("agendada"); setPostFiltro("__all__"); setTempFiltro("__all__"); break;
       case "naoRealizada":
-        setStatusFiltro("nao_realizada"); setPostFiltro("__all__"); break;
+        setStatusFiltro("nao_realizada"); setPostFiltro("__all__"); setTempFiltro("__all__"); break;
+      case "atencao":
+        setStatusFiltro("__all__"); setPostFiltro("__all__"); setTempFiltro("atencao_acompanhamento"); break;
+      case "critico":
+        setStatusFiltro("__all__"); setPostFiltro("__all__"); setTempFiltro("critico_risco_churn"); break;
     }
   };
 
@@ -182,6 +204,8 @@ export default function CentralReunioes() {
     { key: "semAcao", label: "Sem ação", n: counts.semAcao, tone: "muted" },
     { key: "agendada", label: "Agendadas", n: counts.agendada, tone: "blue" },
     { key: "naoRealizada", label: "Não realizadas", n: counts.naoRealizada, tone: "muted" },
+    { key: "atencao", label: "Em atenção", n: counts.atencao, tone: "amber" },
+    { key: "critico", label: "Críticos", n: counts.critico, tone: "red" },
   ] as const;
 
   const toneClasses: Record<string, string> = {
@@ -190,6 +214,7 @@ export default function CentralReunioes() {
     violet: "border-violet-500/40 bg-violet-500/5 hover:bg-violet-500/10 text-violet-700 dark:text-violet-300",
     blue: "border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-700 dark:text-blue-300",
     muted: "border-border bg-card hover:bg-accent/40 text-muted-foreground",
+    red: "border-red-500/40 bg-red-500/5 hover:bg-red-500/10 text-red-700 dark:text-red-300",
   };
 
   return (
@@ -270,6 +295,17 @@ export default function CentralReunioes() {
             {responsaveis.map((r) => (<SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>))}
           </SelectContent>
         </Select>
+        <Select value={tempFiltro} onValueChange={(v) => { setTempFiltro(v); setPage(0); }}>
+          <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue placeholder="Temperatura" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todas temperaturas</SelectItem>
+            <SelectItem value="__null__">Sem temperatura</SelectItem>
+            <SelectItem value="excelente">Excelente</SelectItem>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="atencao_acompanhamento">Atenção / Acompanhamento</SelectItem>
+            <SelectItem value="critico_risco_churn">Crítico / Risco de churn</SelectItem>
+          </SelectContent>
+        </Select>
         <FiltroPeriodoButton
           value={filtroPeriodo}
           onChange={(v) => { setFiltroPeriodo(v); setPage(0); }}
@@ -297,6 +333,7 @@ export default function CentralReunioes() {
                     <th className="text-left px-2 py-1 font-semibold">Tipo</th>
                     <th className="text-left px-2 py-1 font-semibold">Data</th>
                     <th className="text-left px-2 py-1 font-semibold">Status</th>
+                    <th className="text-left px-2 py-1 font-semibold">Temperatura</th>
                     <th className="text-left px-2 py-1 font-semibold">Pós-reunião</th>
                     <th className="text-left px-2 py-1 font-semibold">Responsável</th>
                     <th className="text-left px-2 py-1 font-semibold">Gravação</th>
@@ -324,6 +361,7 @@ export default function CentralReunioes() {
                           <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(r.data).toLocaleString("pt-BR")}</span>
                         </td>
                         <td className="px-2 py-1"><StatusBadge status={r.status} /></td>
+                        <td className="px-2 py-1"><TemperaturaBadge temp={r.temperatura_cliente} /></td>
                         <td className="px-2 py-1">
                           <div className="flex items-center gap-1">
                             <PostStatusBadge post={r.post_status} />

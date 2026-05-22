@@ -1,0 +1,1 @@
+ALTER TABLE public.reunioes ADD COLUMN IF NOT EXISTS temperatura_cliente text;

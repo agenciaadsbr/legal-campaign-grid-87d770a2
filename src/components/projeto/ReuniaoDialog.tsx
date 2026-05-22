@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useReunioes, type Reuniao } from "@/store/reunioes";
+import { useReunioes, type Reuniao, type TemperaturaCliente, TEMPERATURA_LABEL } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
 import { useTarefasSugeridas } from "@/store/tarefasSugeridas";
 import { useIAConfig, useIAConfigBootstrap } from "@/store/iaConfig";
@@ -89,6 +89,7 @@ export function ReuniaoDialog({
   const [responsavelDelegacaoId, setResponsavelDelegacaoId] = useState("");
   const [prazoDelegacao, setPrazoDelegacao] = useState("");
   const [obsDelegacao, setObsDelegacao] = useState("");
+  const [temperatura, setTemperatura] = useState<TemperaturaCliente>("normal");
 
   useEffect(() => {
     if (open) {
@@ -107,6 +108,7 @@ export function ReuniaoDialog({
       setResponsavelDelegacaoId(reuniao?.responsavel_delegacao_id ?? "");
       setPrazoDelegacao(reuniao?.prazo_delegacao ?? "");
       setObsDelegacao(reuniao?.observacoes_delegacao ?? "");
+      setTemperatura((reuniao?.temperatura_cliente as TemperaturaCliente) ?? "normal");
       setSelectedClienteId(reuniao?.cliente_id ?? clienteIdProp ?? "");
     }
   }, [open, reuniao, clienteIdProp]);
@@ -155,9 +157,23 @@ export function ReuniaoDialog({
       responsavel_delegacao_id: responsavelDelegacaoId || null,
       prazo_delegacao: prazoDelegacao || null,
       observacoes_delegacao: obsDelegacao || null,
+      temperatura_cliente: temperatura || null,
     };
     if (reuniao) {
+      const tempAnterior = reuniao.temperatura_cliente ?? null;
       await update(reuniao.id, payload as any);
+      if (tempAnterior !== temperatura && clienteId) {
+        try {
+          await (supabase as any).from("atividade_cliente").insert({
+            cliente_id: clienteId,
+            tipo: "reuniao",
+            acao: "temperatura",
+            referencia_id: reuniao.id,
+            descricao: `Temperatura do cliente alterada para ${TEMPERATURA_LABEL[temperatura]}.`,
+            payload: { de: tempAnterior, para: temperatura },
+          });
+        } catch {}
+      }
       toast.success("Reunião atualizada");
     } else {
       const newReuniao = await create(payload as any);
@@ -340,6 +356,18 @@ export function ReuniaoDialog({
                 {responsaveis.map((r) => (
                   <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2">
+            <Label className="text-xs">Temperatura do Cliente</Label>
+            <Select value={temperatura} onValueChange={(v) => setTemperatura(v as TemperaturaCliente)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excelente">Excelente — cliente satisfeito, projeto fluindo bem</SelectItem>
+                <SelectItem value="normal">Normal — operação seguindo normalmente</SelectItem>
+                <SelectItem value="atencao_acompanhamento">Atenção / Acompanhamento — precisa de acompanhamento mais próximo</SelectItem>
+                <SelectItem value="critico_risco_churn">Crítico / Risco de churn — risco de cancelamento</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -5,6 +5,14 @@ import { toast } from "sonner";
 
 export type ReuniaoStatus = "agendada" | "realizada" | "nao_realizada";
 export type ReuniaoPostStatus = "nao_analisada" | "em_analise" | "delegada" | "sem_acao" | null;
+export type TemperaturaCliente = "excelente" | "normal" | "atencao_acompanhamento" | "critico_risco_churn";
+
+export const TEMPERATURA_LABEL: Record<TemperaturaCliente, string> = {
+  excelente: "Excelente",
+  normal: "Normal",
+  atencao_acompanhamento: "Atenção / Acompanhamento",
+  critico_risco_churn: "Crítico / Risco de churn",
+};
 
 export interface Reuniao {
   id: string;
@@ -31,6 +39,7 @@ export interface Reuniao {
   motivo_nao_realizada?: string | null;
   analise_iniciada_em?: string | null;
   analise_iniciada_por?: string | null;
+  temperatura_cliente?: TemperaturaCliente | null;
 }
 
 const nullIfEmpty = (v?: string | null) => (v && v.trim() ? v : null);
