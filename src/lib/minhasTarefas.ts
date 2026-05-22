@@ -254,19 +254,27 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       const pendentes = cardsGrupo.filter((c) => c.status_card !== "Postado");
       const todosConcluidos = pendentes.length === 0;
 
+      const emRevisar = pendentes.filter((c) => c.status_card === "Revisar");
+      const ativos = pendentes.filter((c) => c.status_card !== "Revisar");
+
+      const prazosAtivos = ativos
+        .map((c) => c.data_limite_tarefa)
+        .filter((p): p is string => !!p)
+        .sort();
       const prazosPendentes = pendentes
         .map((c) => c.data_limite_tarefa)
         .filter((p): p is string => !!p)
         .sort();
-      
+
       const iniciosPendentes = pendentes
         .map((c) => c.data_inicio_tarefa)
         .filter((p): p is string => !!p)
         .sort();
 
-      let prazo: string | null = prazosPendentes[0] ?? null;
+      // Prazo prioriza cards ativos (fora de aprovação); fallback para qualquer pendente
+      let prazo: string | null = prazosAtivos[0] ?? prazosPendentes[0] ?? null;
       let data_inicio: string | null = iniciosPendentes[0] ?? null;
-      let data_limite: string | null = prazosPendentes[0] ?? null;
+      let data_limite: string | null = prazo;
 
       if (!prazo && grupo.contrato_id !== "all") {
         const ct = contratos.find((x) => x.id === grupo.contrato_id);
@@ -275,14 +283,15 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       }
 
       const algumUrgente = cardsGrupo.some((c) => !!c.is_urgent);
-      const algumEmAndamento = pendentes.some(
-        (c) => c.status_card === "Criar" || c.status_card === "Revisar" || c.status_card === "Agendar",
+      const algumAtivoEmAndamento = ativos.some(
+        (c) => c.status_card === "Criar" || c.status_card === "Agendar",
       );
 
       let status: TaskStatus;
       if (todosConcluidos) status = "concluido";
-      else if (isAtrasado(prazo, "pendente")) status = "atrasado";
-      else if (algumEmAndamento) status = "em_andamento";
+      else if (ativos.length === 0 && emRevisar.length > 0) status = "aprovacao";
+      else if (isAtrasado(prazosAtivos[0] ?? null, "pendente")) status = "atrasado";
+      else if (algumAtivoEmAndamento) status = "em_andamento";
       else status = "pendente";
 
       const titulo = todosConcluidos
