@@ -159,21 +159,25 @@ export default function CentralReunioes() {
 
   const tipos = useMemo(() => Array.from(new Set(reunioes.map((r) => r.tipo).filter(Boolean))) as string[], [reunioes]);
 
-  const aplicarFiltroWidget = (key: "pendentes" | "analise" | "delegada" | "semAcao" | "agendada" | "naoRealizada") => {
+  const aplicarFiltroWidget = (key: "pendentes" | "analise" | "delegada" | "semAcao" | "agendada" | "naoRealizada" | "atencao" | "critico") => {
     setPage(0);
     switch (key) {
       case "pendentes":
-        setStatusFiltro("realizada"); setPostFiltro("nao_analisada"); break;
+        setStatusFiltro("realizada"); setPostFiltro("nao_analisada"); setTempFiltro("__all__"); break;
       case "analise":
-        setStatusFiltro("__all__"); setPostFiltro("em_analise"); break;
+        setStatusFiltro("__all__"); setPostFiltro("em_analise"); setTempFiltro("__all__"); break;
       case "delegada":
-        setStatusFiltro("__all__"); setPostFiltro("delegada"); break;
+        setStatusFiltro("__all__"); setPostFiltro("delegada"); setTempFiltro("__all__"); break;
       case "semAcao":
-        setStatusFiltro("__all__"); setPostFiltro("sem_acao"); break;
+        setStatusFiltro("__all__"); setPostFiltro("sem_acao"); setTempFiltro("__all__"); break;
       case "agendada":
-        setStatusFiltro("agendada"); setPostFiltro("__all__"); break;
+        setStatusFiltro("agendada"); setPostFiltro("__all__"); setTempFiltro("__all__"); break;
       case "naoRealizada":
-        setStatusFiltro("nao_realizada"); setPostFiltro("__all__"); break;
+        setStatusFiltro("nao_realizada"); setPostFiltro("__all__"); setTempFiltro("__all__"); break;
+      case "atencao":
+        setStatusFiltro("__all__"); setPostFiltro("__all__"); setTempFiltro("atencao_acompanhamento"); break;
+      case "critico":
+        setStatusFiltro("__all__"); setPostFiltro("__all__"); setTempFiltro("critico_risco_churn"); break;
     }
   };
 
