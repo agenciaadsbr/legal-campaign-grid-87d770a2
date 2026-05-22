@@ -103,6 +103,7 @@ export interface Card {
     is_urgent?: boolean;
     formato?: string | null;
   qtd_slides?: number | null;
+  approval_waiting_since?: string | null;
   created_at: string;
 }
 
