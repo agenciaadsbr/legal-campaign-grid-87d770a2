@@ -359,6 +359,18 @@ export function ReuniaoDialog({
               </SelectContent>
             </Select>
           </div>
+          <div className="md:col-span-2">
+            <Label className="text-xs">Temperatura do Cliente</Label>
+            <Select value={temperatura} onValueChange={(v) => setTemperatura(v as TemperaturaCliente)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excelente">Excelente — cliente satisfeito, projeto fluindo bem</SelectItem>
+                <SelectItem value="normal">Normal — operação seguindo normalmente</SelectItem>
+                <SelectItem value="atencao_acompanhamento">Atenção / Acompanhamento — precisa de acompanhamento mais próximo</SelectItem>
+                <SelectItem value="critico_risco_churn">Crítico / Risco de churn — risco de cancelamento</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Processamento IA — orquestrador dos 2 agentes */}
