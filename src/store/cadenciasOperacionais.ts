@@ -2,17 +2,21 @@ import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 
 export type CadenciaTipo = "aprovacao" | "recarga";
+// Apenas 3 status válidos. Mantemos os legados no tipo apenas para tolerância de leitura.
 export type CadenciaStatus =
-  | "em_andamento"
   | "aguardando_resposta"
-  | "finalizada"
   | "sem_retorno"
-  | "resolvida";
+  | "resolvida"
+  // legados (migrados, ainda podem aparecer em caches)
+  | "em_andamento"
+  | "finalizada";
 
 export interface Cadencia {
   id: string;
   cliente_id: string;
+  task_id: string | null;
   tipo: CadenciaTipo;
+  /** Etapa executada mais recente (1..4). 0 = nenhuma executada. */
   etapa_atual: number;
   status: CadenciaStatus;
   responsavel_id: string | null;
@@ -45,24 +49,43 @@ export interface CadenciaMensagem {
 }
 
 export const ETAPAS_LABEL: Record<number, string> = {
-  1: "Dia 1 — Grupo",
-  2: "Dia 2 — Privado",
-  3: "Dia 3 — Áudio",
-  4: "Dia 4 — Ligação",
+  1: "Dia 1 — Enviou mensagem no grupo",
+  2: "Dia 2 — Enviou mensagem no privado",
+  3: "Dia 3 — Enviou áudio",
+  4: "Dia 4 — Fez ligação",
 };
 
 export const STATUS_LABEL: Record<CadenciaStatus, string> = {
-  em_andamento: "Em andamento",
   aguardando_resposta: "Aguardando resposta",
-  finalizada: "Finalizada",
   sem_retorno: "Sem retorno",
   resolvida: "Resolvida",
+  // labels para legados não devem aparecer, mas evita "undefined"
+  em_andamento: "Aguardando resposta",
+  finalizada: "Resolvida",
 };
+
+export const STATUS_OPTIONS: CadenciaStatus[] = [
+  "aguardando_resposta",
+  "sem_retorno",
+  "resolvida",
+];
 
 export const TIPO_LABEL: Record<CadenciaTipo, string> = {
   aprovacao: "Aprovação",
   recarga: "Recarga",
 };
+
+/** Normaliza status legados para a nova escala. */
+function normalizeStatus(s: string | null | undefined): CadenciaStatus {
+  if (s === "em_andamento") return "aguardando_resposta";
+  if (s === "finalizada") return "resolvida";
+  if (s === "aguardando_resposta" || s === "sem_retorno" || s === "resolvida") return s;
+  return "aguardando_resposta";
+}
+
+function normalizeCadencia(c: any): Cadencia {
+  return { ...c, status: normalizeStatus(c?.status) } as Cadencia;
+}
 
 interface State {
   cadencias: Cadencia[];
@@ -71,12 +94,26 @@ interface State {
   loaded: boolean;
   loading: boolean;
   load: () => Promise<void>;
-  create: (input: { cliente_id: string; tipo: CadenciaTipo; responsavel_id?: string | null; observacao?: string | null }) => Promise<void>;
+  create: (input: { cliente_id: string; tipo: CadenciaTipo; responsavel_id?: string | null; observacao?: string | null; task_id?: string | null }) => Promise<void>;
   update: (id: string, patch: Partial<Cadencia>) => Promise<void>;
   remove: (id: string) => Promise<void>;
   executarEtapa: (cadenciaId: string, observacao?: string) => Promise<void>;
+  /**
+   * Registra uma etapa executada pela coluna "Cadência" da Central de Tarefas.
+   * Cria a cadência se não existir para a task; caso contrário, atualiza.
+   */
+  registrarEtapa: (input: {
+    task_id: string;
+    cliente_id: string;
+    tipo: CadenciaTipo;
+    etapa: number;
+    status: CadenciaStatus;
+    responsavel_id?: string | null;
+    observacao?: string | null;
+  }) => Promise<Cadencia>;
   upsertMensagem: (m: Partial<CadenciaMensagem> & { tipo: CadenciaTipo; etapa: number; titulo: string; mensagem: string }) => Promise<void>;
   removeMensagem: (id: string) => Promise<void>;
+  getByTaskId: (taskId: string) => Cadencia | undefined;
 }
 
 export const useCadenciasStore = create<State>((set, get) => ({
@@ -95,7 +132,7 @@ export const useCadenciasStore = create<State>((set, get) => ({
       supabase.from("cadencia_mensagens" as any).select("*").order("tipo").order("etapa"),
     ]);
     set({
-      cadencias: (c as any) ?? [],
+      cadencias: ((c as any[]) ?? []).map(normalizeCadencia),
       execucoes: (e as any) ?? [],
       mensagens: (m as any) ?? [],
       loaded: true,
@@ -110,14 +147,16 @@ export const useCadenciasStore = create<State>((set, get) => ({
       .insert({
         cliente_id: input.cliente_id,
         tipo: input.tipo,
+        task_id: input.task_id ?? null,
         responsavel_id: input.responsavel_id ?? null,
         observacao: input.observacao ?? null,
         criado_por: userData.user?.id ?? null,
+        status: "aguardando_resposta",
       })
       .select()
       .single();
     if (error) throw error;
-    set((s) => ({ cadencias: [data as any, ...s.cadencias] }));
+    set((s) => ({ cadencias: [normalizeCadencia(data), ...s.cadencias] }));
   },
 
   async update(id, patch) {
@@ -128,7 +167,7 @@ export const useCadenciasStore = create<State>((set, get) => ({
       .select()
       .single();
     if (error) throw error;
-    set((s) => ({ cadencias: s.cadencias.map((c) => (c.id === id ? (data as any) : c)) }));
+    set((s) => ({ cadencias: s.cadencias.map((c) => (c.id === id ? normalizeCadencia(data) : c)) }));
   },
 
   async remove(id) {
@@ -140,44 +179,80 @@ export const useCadenciasStore = create<State>((set, get) => ({
   async executarEtapa(cadenciaId, observacao) {
     const cad = get().cadencias.find((c) => c.id === cadenciaId);
     if (!cad) return;
+    const proxEtapa = Math.min(4, Math.max(1, (cad.etapa_atual || 0) + 1));
+    await get().registrarEtapa({
+      task_id: cad.task_id ?? `cadencia:${cad.id}`,
+      cliente_id: cad.cliente_id,
+      tipo: cad.tipo,
+      etapa: proxEtapa,
+      status: "aguardando_resposta",
+      responsavel_id: cad.responsavel_id,
+      observacao: observacao ?? null,
+    });
+  },
+
+  async registrarEtapa(input) {
     const { data: userData } = await supabase.auth.getUser();
-    const acao = ETAPAS_LABEL[cad.etapa_atual] ?? `Etapa ${cad.etapa_atual}`;
+    const uid = userData.user?.id ?? null;
     const now = new Date().toISOString();
 
+    // Busca cadência existente pela task
+    let cad = get().cadencias.find((c) => c.task_id === input.task_id);
+
+    if (!cad) {
+      const { data, error } = await supabase
+        .from("cadencias_operacionais" as any)
+        .insert({
+          cliente_id: input.cliente_id,
+          tipo: input.tipo,
+          task_id: input.task_id,
+          responsavel_id: input.responsavel_id ?? null,
+          criado_por: uid,
+          etapa_atual: input.etapa,
+          status: input.status,
+          ultima_acao_em: now,
+          observacao: input.observacao ?? null,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      cad = normalizeCadencia(data);
+      set((s) => ({ cadencias: [cad as Cadencia, ...s.cadencias] }));
+    } else {
+      const patch: Partial<Cadencia> = {
+        tipo: input.tipo,
+        etapa_atual: input.etapa,
+        status: input.status,
+        ultima_acao_em: now,
+      };
+      if (input.responsavel_id && !cad.responsavel_id) patch.responsavel_id = input.responsavel_id;
+      const { data, error } = await supabase
+        .from("cadencias_operacionais" as any)
+        .update(patch as any)
+        .eq("id", cad.id)
+        .select()
+        .single();
+      if (error) throw error;
+      cad = normalizeCadencia(data);
+      set((s) => ({ cadencias: s.cadencias.map((c) => (c.id === cad!.id ? (cad as Cadencia) : c)) }));
+    }
+
+    const acao = ETAPAS_LABEL[input.etapa] ?? `Etapa ${input.etapa}`;
     const { data: ex, error: exErr } = await supabase
       .from("cadencia_execucoes" as any)
       .insert({
-        cadencia_id: cadenciaId,
-        etapa: cad.etapa_atual,
+        cadencia_id: cad.id,
+        etapa: input.etapa,
         acao,
-        executado_por: userData.user?.id ?? null,
+        executado_por: uid,
         executado_em: now,
-        observacao: observacao ?? null,
+        observacao: input.observacao ?? null,
       })
       .select()
       .single();
     if (exErr) throw exErr;
-
-    const proxima = cad.etapa_atual >= 4 ? 4 : cad.etapa_atual + 1;
-    const finalizou = cad.etapa_atual >= 4;
-
-    const patch: Partial<Cadencia> = {
-      etapa_atual: proxima,
-      ultima_acao_em: now,
-      status: finalizou ? "aguardando_resposta" : "em_andamento",
-    };
-    const { data: upd, error: updErr } = await supabase
-      .from("cadencias_operacionais" as any)
-      .update(patch as any)
-      .eq("id", cadenciaId)
-      .select()
-      .single();
-    if (updErr) throw updErr;
-
-    set((s) => ({
-      execucoes: [...s.execucoes, ex as any],
-      cadencias: s.cadencias.map((c) => (c.id === cadenciaId ? (upd as any) : c)),
-    }));
+    set((s) => ({ execucoes: [...s.execucoes, ex as any] }));
+    return cad;
   },
 
   async upsertMensagem(m) {
@@ -206,6 +281,10 @@ export const useCadenciasStore = create<State>((set, get) => ({
     if (error) throw error;
     set((s) => ({ mensagens: s.mensagens.filter((m) => m.id !== id) }));
   },
+
+  getByTaskId(taskId) {
+    return get().cadencias.find((c) => c.task_id === taskId);
+  },
 }));
 
 export function diasSemResposta(c: Cadencia): number {
@@ -215,6 +294,15 @@ export function diasSemResposta(c: Cadencia): number {
 }
 
 export function proximaAcao(c: Cadencia): string {
-  if (c.status === "finalizada" || c.status === "resolvida" || c.status === "sem_retorno") return "—";
-  return ETAPAS_LABEL[c.etapa_atual] ?? "—";
+  if (c.status === "resolvida" || c.status === "sem_retorno") return "—";
+  const prox = (c.etapa_atual || 0) + 1;
+  if (prox > 4) return "—";
+  return ETAPAS_LABEL[prox] ?? "—";
+}
+
+/** Heurística para inferir o tipo de cadência a partir do título/área da tarefa. */
+export function inferirTipoCadencia(titulo: string, area?: string | null): CadenciaTipo {
+  const txt = `${titulo} ${area ?? ""}`.toLowerCase();
+  if (/(recarga|saldo|meta ads|google ads|tráfego|trafego)/.test(txt)) return "recarga";
+  return "aprovacao";
 }

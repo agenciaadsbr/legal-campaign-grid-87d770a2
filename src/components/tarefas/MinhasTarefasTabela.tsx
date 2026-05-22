@@ -14,6 +14,7 @@ import type { UnifiedTask, TaskStatus } from "@/lib/minhasTarefas";
 import { STATUS_LABEL } from "@/lib/minhasTarefas";
 import { PRIORIDADE_COR, PRIORIDADE_LABEL } from "@/lib/demandas-categorias";
 import { useCRM } from "@/store/crm";
+import { CadenciaCell } from "./CadenciaCell";
 
 interface Props {
   tasks: UnifiedTask[];
@@ -116,7 +117,7 @@ export function MinhasTarefasTabela({
       .filter((g) => g.items.length > 0);
   }, [tasks]);
 
-  const colSpan = mostrarResponsavel ? 11 : 10;
+  const colSpan = mostrarResponsavel ? 12 : 11;
 
   if (tasks.length === 0) {
     return (
@@ -154,6 +155,7 @@ export function MinhasTarefasTabela({
                 <TableHead className="w-[160px]">Status</TableHead>
                 <TableHead className="w-[110px]">Entrada em aprovação</TableHead>
                 <TableHead className="w-[120px]">Dias em aprovação</TableHead>
+                <TableHead className="w-[200px]">Cadência</TableHead>
                 <TableHead className="w-[120px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -251,6 +253,9 @@ export function MinhasTarefasTabela({
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <CadenciaCell task={t} />
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="inline-flex items-center gap-1">

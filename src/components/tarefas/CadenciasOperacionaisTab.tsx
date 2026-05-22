@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: CadenciaStatus[] = [
-  "em_andamento", "aguardando_resposta", "finalizada", "sem_retorno", "resolvida",
+  "aguardando_resposta", "sem_retorno", "resolvida",
 ];
 
 function corDias(d: number): string {
@@ -42,7 +42,7 @@ function corDias(d: number): string {
 }
 
 function statusVariant(s: CadenciaStatus): "default" | "secondary" | "destructive" | "outline" {
-  if (s === "resolvida" || s === "finalizada") return "secondary";
+  if (s === "resolvida") return "secondary";
   if (s === "sem_retorno") return "destructive";
   return "default";
 }
@@ -84,9 +84,9 @@ export function CadenciasOperacionaisTab() {
   }, [cadencias, busca, fTipo, fStatus, fCliente, clientesMap]);
 
   const kpis = useMemo(() => {
-    const ativas = cadencias.filter((c) => c.status !== "resolvida" && c.status !== "finalizada");
-    const pendentes = ativas.filter((c) => c.status === "em_andamento").length;
-    const sem = ativas.filter((c) => diasSemResposta(c) >= 3).length;
+    const ativas = cadencias.filter((c) => c.status !== "resolvida");
+    const pendentes = ativas.filter((c) => c.status === "aguardando_resposta").length;
+    const sem = ativas.filter((c) => c.status === "sem_retorno" || diasSemResposta(c) >= 3).length;
     const hojeRef = new Date(); hojeRef.setHours(0, 0, 0, 0);
     const hoje = ativas.filter((c) => {
       if (!c.proxima_acao_em) return false;
@@ -213,7 +213,7 @@ export function CadenciasOperacionaisTab() {
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs"
-                            disabled={c.status === "resolvida" || c.status === "finalizada" || c.status === "sem_retorno"}
+                            disabled={c.status === "resolvida" || c.status === "sem_retorno" || c.etapa_atual >= 4}
                             onClick={async () => {
                               try { await executarEtapa(c.id); toast.success("Etapa executada"); }
                               catch (e: any) { toast.error(e.message ?? "Erro"); }
