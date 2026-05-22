@@ -103,6 +103,7 @@ export interface Card {
     is_urgent?: boolean;
     formato?: string | null;
   qtd_slides?: number | null;
+  approval_waiting_since?: string | null;
   created_at: string;
 }
 
@@ -406,6 +407,7 @@ function mapCard(row: any): Card {
     is_urgent: row.is_urgent ?? false,
     formato: row.formato ?? null,
     qtd_slides: row.qtd_slides ?? null,
+    approval_waiting_since: row.approval_waiting_since ?? null,
     created_at: row.created_at,
   };
 }

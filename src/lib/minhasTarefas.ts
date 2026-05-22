@@ -298,6 +298,13 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         ? `${cardsGrupo.length} posts concluídos`
         : `Criar ${pendentes.length} post${pendentes.length === 1 ? "" : "s"}`;
 
+      // Aprovação: usa o card em Revisar com aprovação mais antiga
+      const approvalDates = emRevisar
+        .map((c) => c.approval_waiting_since)
+        .filter((p): p is string => !!p)
+        .sort();
+      const approval_waiting_since = status === "aprovacao" ? (approvalDates[0] ?? null) : null;
+
       out.push({
         id: `posts:${cliente_id}:${grupo.responsavel_id}:${grupo.contrato_id}`,
         fonte: "post",
@@ -314,6 +321,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         urgente: algumUrgente,
         responsaveis_ids: [grupo.responsavel_id],
         link: `/clientes/${cliente_id}/projeto?tab=posts`,
+        approval_waiting_since,
+        approval_dias: diasDesde(approval_waiting_since),
       });
     });
   }
