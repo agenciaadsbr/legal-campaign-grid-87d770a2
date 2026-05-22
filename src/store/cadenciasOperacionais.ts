@@ -277,10 +277,11 @@ export const useCadenciasStore = create<State>((set, get) => ({
   },
 
   async upsertMensagem(m) {
+    const setor = m.setor ?? null;
     if (m.id) {
       const { data, error } = await supabase
         .from("cadencia_mensagens" as any)
-        .update({ titulo: m.titulo, mensagem: m.mensagem, tipo: m.tipo, etapa: m.etapa, ativo: m.ativo ?? true })
+        .update({ titulo: m.titulo, mensagem: m.mensagem, tipo: m.tipo, etapa: m.etapa, setor, ativo: m.ativo ?? true })
         .eq("id", m.id)
         .select()
         .single();
@@ -289,7 +290,7 @@ export const useCadenciasStore = create<State>((set, get) => ({
     } else {
       const { data, error } = await supabase
         .from("cadencia_mensagens" as any)
-        .insert({ tipo: m.tipo, etapa: m.etapa, titulo: m.titulo, mensagem: m.mensagem, ativo: m.ativo ?? true })
+        .insert({ tipo: m.tipo, etapa: m.etapa, setor, titulo: m.titulo, mensagem: m.mensagem, ativo: m.ativo ?? true })
         .select()
         .single();
       if (error) throw error;
