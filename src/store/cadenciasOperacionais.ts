@@ -38,15 +38,36 @@ export interface CadenciaExecucao {
   observacao: string | null;
 }
 
+export type CadenciaSetor = "videos" | "imagens_anuncios" | "landing_page" | "trafego_pago";
+
 export interface CadenciaMensagem {
   id: string;
   tipo: CadenciaTipo;
+  setor: CadenciaSetor | null;
   etapa: number;
   titulo: string;
   mensagem: string;
   ativo: boolean;
   ordem: number;
 }
+
+export const SETOR_LABEL: Record<CadenciaSetor, string> = {
+  videos: "Vídeos",
+  imagens_anuncios: "Imagens / Anúncios",
+  landing_page: "Landing Page",
+  trafego_pago: "Tráfego Pago",
+};
+
+export const SETOR_RESPONSAVEL: Record<CadenciaSetor, string> = {
+  videos: "Bianca",
+  imagens_anuncios: "Lorenzo",
+  landing_page: "Bruno",
+  trafego_pago: "Grace/Gleice",
+};
+
+export const SETORES_APROVACAO: CadenciaSetor[] = [
+  "videos", "imagens_anuncios", "landing_page", "trafego_pago",
+];
 
 export const ETAPAS_LABEL: Record<number, string> = {
   1: "Dia 1 — Enviou mensagem no grupo",
