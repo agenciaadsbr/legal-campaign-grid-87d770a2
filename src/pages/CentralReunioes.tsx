@@ -200,6 +200,8 @@ export default function CentralReunioes() {
     { key: "semAcao", label: "Sem ação", n: counts.semAcao, tone: "muted" },
     { key: "agendada", label: "Agendadas", n: counts.agendada, tone: "blue" },
     { key: "naoRealizada", label: "Não realizadas", n: counts.naoRealizada, tone: "muted" },
+    { key: "atencao", label: "Em atenção", n: counts.atencao, tone: "amber" },
+    { key: "critico", label: "Críticos", n: counts.critico, tone: "red" },
   ] as const;
 
   const toneClasses: Record<string, string> = {
