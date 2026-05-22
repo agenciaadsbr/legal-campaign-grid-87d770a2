@@ -39,6 +39,7 @@ export interface Reuniao {
   motivo_nao_realizada?: string | null;
   analise_iniciada_em?: string | null;
   analise_iniciada_por?: string | null;
+  temperatura_cliente?: TemperaturaCliente | null;
 }
 
 const nullIfEmpty = (v?: string | null) => (v && v.trim() ? v : null);
