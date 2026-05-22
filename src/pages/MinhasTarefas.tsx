@@ -28,6 +28,10 @@ import { AlertCircle, CheckCircle2, ListChecks, Lock, Users, Zap } from "lucide-
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TarefasSugeridasTab } from "@/components/tarefas/TarefasSugeridasTab";
 import { MeetingDelegationTab } from "@/components/tarefas/MeetingDelegationTab";
+import { lazy, Suspense } from "react";
+const CadenciasOperacionaisTab = lazy(() =>
+  import("@/components/tarefas/CadenciasOperacionaisTab").then((m) => ({ default: m.CadenciasOperacionaisTab })),
+);
 
 const FILTROS_INICIAIS: FiltrosState = {
   cliente: "all",
@@ -338,9 +342,16 @@ export default function MinhasTarefas() {
       <Tabs defaultValue="tarefas">
         <TabsList className="h-8">
           <TabsTrigger value="tarefas" className="text-xs h-7">Tarefas</TabsTrigger>
+          <TabsTrigger value="cadencias" className="text-xs h-7">Cadências Operacionais</TabsTrigger>
           <TabsTrigger value="sugeridas" className="text-xs h-7">Tarefas Sugeridas</TabsTrigger>
           <TabsTrigger value="delegacoes" className="text-xs h-7">Delegação de Reunião</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="cadencias" className="mt-3">
+          <Suspense fallback={<div className="text-xs text-muted-foreground p-4">Carregando…</div>}>
+            <CadenciasOperacionaisTab />
+          </Suspense>
+        </TabsContent>
 
         <TabsContent value="sugeridas" className="mt-3">
           <TarefasSugeridasTab />
@@ -351,6 +362,7 @@ export default function MinhasTarefas() {
         </TabsContent>
 
         <TabsContent value="tarefas" className="mt-3 space-y-3">
+
 
       {loadingResp && !responsavelId && (!isAdmin || visualizacao === "minhas") && (
         <div className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">

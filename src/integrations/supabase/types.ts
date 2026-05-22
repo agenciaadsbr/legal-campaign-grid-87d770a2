@@ -181,6 +181,128 @@ export type Database = {
         }
         Relationships: []
       }
+      cadencia_execucoes: {
+        Row: {
+          acao: string
+          cadencia_id: string
+          created_at: string
+          etapa: number
+          executado_em: string
+          executado_por: string | null
+          id: string
+          observacao: string | null
+        }
+        Insert: {
+          acao: string
+          cadencia_id: string
+          created_at?: string
+          etapa: number
+          executado_em?: string
+          executado_por?: string | null
+          id?: string
+          observacao?: string | null
+        }
+        Update: {
+          acao?: string
+          cadencia_id?: string
+          created_at?: string
+          etapa?: number
+          executado_em?: string
+          executado_por?: string | null
+          id?: string
+          observacao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cadencia_execucoes_cadencia_id_fkey"
+            columns: ["cadencia_id"]
+            isOneToOne: false
+            referencedRelation: "cadencias_operacionais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cadencia_mensagens: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          etapa: number
+          id: string
+          mensagem: string
+          ordem: number
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          etapa: number
+          id?: string
+          mensagem?: string
+          ordem?: number
+          tipo: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          etapa?: number
+          id?: string
+          mensagem?: string
+          ordem?: number
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cadencias_operacionais: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          criado_por: string | null
+          etapa_atual: number
+          id: string
+          observacao: string | null
+          proxima_acao_em: string | null
+          responsavel_id: string | null
+          status: string
+          tipo: string
+          ultima_acao_em: string | null
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          criado_por?: string | null
+          etapa_atual?: number
+          id?: string
+          observacao?: string | null
+          proxima_acao_em?: string | null
+          responsavel_id?: string | null
+          status?: string
+          tipo: string
+          ultima_acao_em?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          criado_por?: string | null
+          etapa_atual?: number
+          id?: string
+          observacao?: string | null
+          proxima_acao_em?: string | null
+          responsavel_id?: string | null
+          status?: string
+          tipo?: string
+          ultima_acao_em?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       card_pai: {
         Row: {
           cliente_id: string
