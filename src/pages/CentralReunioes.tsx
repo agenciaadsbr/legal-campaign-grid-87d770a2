@@ -214,6 +214,7 @@ export default function CentralReunioes() {
     violet: "border-violet-500/40 bg-violet-500/5 hover:bg-violet-500/10 text-violet-700 dark:text-violet-300",
     blue: "border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-700 dark:text-blue-300",
     muted: "border-border bg-card hover:bg-accent/40 text-muted-foreground",
+    red: "border-red-500/40 bg-red-500/5 hover:bg-red-500/10 text-red-700 dark:text-red-300",
   };
 
   return (
