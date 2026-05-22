@@ -21,9 +21,6 @@ import {
   type CadenciaStatus,
   type CadenciaTipo,
 } from "@/store/cadenciasOperacionais";
-  type CadenciaStatus,
-  type CadenciaTipo,
-} from "@/store/cadenciasOperacionais";
 
 interface Props {
   task: UnifiedTask;
