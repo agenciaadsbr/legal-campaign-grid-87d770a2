@@ -2161,6 +2161,7 @@ export type Database = {
           resumo_cliente: string | null
           resumo_tarefas: string | null
           status: string
+          temperatura_cliente: string | null
           tipo: string | null
           titulo: string
           transcricao: string | null
@@ -2189,6 +2190,7 @@ export type Database = {
           resumo_cliente?: string | null
           resumo_tarefas?: string | null
           status?: string
+          temperatura_cliente?: string | null
           tipo?: string | null
           titulo: string
           transcricao?: string | null
@@ -2217,6 +2219,7 @@ export type Database = {
           resumo_cliente?: string | null
           resumo_tarefas?: string | null
           status?: string
+          temperatura_cliente?: string | null
           tipo?: string | null
           titulo?: string
           transcricao?: string | null
