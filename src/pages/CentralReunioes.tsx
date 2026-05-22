@@ -361,6 +361,7 @@ export default function CentralReunioes() {
                           <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(r.data).toLocaleString("pt-BR")}</span>
                         </td>
                         <td className="px-2 py-1"><StatusBadge status={r.status} /></td>
+                        <td className="px-2 py-1"><TemperaturaBadge temp={r.temperatura_cliente} /></td>
                         <td className="px-2 py-1">
                           <div className="flex items-center gap-1">
                             <PostStatusBadge post={r.post_status} />
