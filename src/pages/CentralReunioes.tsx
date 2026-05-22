@@ -59,6 +59,17 @@ function PostStatusBadge({ post }: { post?: string | null }) {
   return <Badge variant="outline" className={cn("text-[10px]", styles[post])}>{POST_LABEL[post] ?? post}</Badge>;
 }
 
+function TemperaturaBadge({ temp }: { temp?: string | null }) {
+  if (!temp) return <span className="text-[10px] text-muted-foreground">—</span>;
+  const styles: Record<string, string> = {
+    excelente: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+    normal: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
+    atencao_acompanhamento: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    critico_risco_churn: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30",
+  };
+  return <Badge variant="outline" className={cn("text-[10px]", styles[temp])}>{TEMPERATURA_LABEL[temp as TemperaturaCliente] ?? temp}</Badge>;
+}
+
 export default function CentralReunioes() {
   useReunioesBootstrap();
   useMeetingTasksBootstrap();
