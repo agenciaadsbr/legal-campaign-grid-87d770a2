@@ -5,12 +5,16 @@ import {
   ETAPAS_LABEL,
   STATUS_LABEL,
   TIPO_LABEL,
+  SETOR_LABEL,
+  SETOR_RESPONSAVEL,
+  SETORES_APROVACAO,
   diasSemResposta,
   diasNaEtapaLabel,
   proximaAcao,
   type Cadencia,
   type CadenciaTipo,
   type CadenciaStatus,
+  type CadenciaSetor,
 } from "@/store/cadenciasOperacionais";
 import { Card, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/relatorios/KpiCard";
