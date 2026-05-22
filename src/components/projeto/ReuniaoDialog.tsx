@@ -473,15 +473,15 @@ export function ReuniaoDialog({
                   </Button>
                 </div>
               </div>
-              <Textarea rows={7} value={resumoTarefas} onChange={(e) => setResumoTarefas(e.target.value)} placeholder="- Atualizar landing page&#10;- Criar 4 vídeos para Instagram..." className="border-red-200 focus-visible:ring-red-300 bg-red-50/10" />
+              <Textarea rows={5} value={resumoTarefas} onChange={(e) => setResumoTarefas(e.target.value)} placeholder="- Atualizar landing page&#10;- Criar 4 vídeos para Instagram..." className="border-red-200 focus-visible:ring-red-300 bg-red-50/10" />
               {!reuniao && (
                 <p className="text-[10px] text-muted-foreground mt-1">Salve a reunião primeiro para poder gerar tarefas sugeridas.</p>
               )}
             </div>
           </TabsContent>
 
-          <TabsContent value="observacoes" className="mt-3">
-            <Textarea rows={8} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações internas, contexto, riscos..." />
+          <TabsContent value="observacoes" className="mt-2">
+            <Textarea rows={6} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações internas, contexto, riscos..." />
           </TabsContent>
 
           <TabsContent value="delegacao" className="mt-3 space-y-3">
