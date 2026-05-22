@@ -6,6 +6,7 @@ import {
   STATUS_LABEL,
   TIPO_LABEL,
   diasSemResposta,
+  diasNaEtapaLabel,
   proximaAcao,
   type Cadencia,
   type CadenciaTipo,
