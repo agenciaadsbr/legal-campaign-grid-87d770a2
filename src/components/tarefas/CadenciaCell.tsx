@@ -16,6 +16,11 @@ import {
   STATUS_OPTIONS,
   TIPO_LABEL,
   inferirTipoCadencia,
+  diasNaEtapaLabel,
+  diasNaEtapaTone,
+  type CadenciaStatus,
+  type CadenciaTipo,
+} from "@/store/cadenciasOperacionais";
   type CadenciaStatus,
   type CadenciaTipo,
 } from "@/store/cadenciasOperacionais";
