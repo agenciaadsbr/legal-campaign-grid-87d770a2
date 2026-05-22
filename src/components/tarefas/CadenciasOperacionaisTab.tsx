@@ -512,8 +512,8 @@ function MensagensList({
   setEditing: React.Dispatch<React.SetStateAction<Record<string, { titulo: string; mensagem: string }>>>;
   getVal: (id: string, field: "titulo" | "mensagem", fallback: string) => string;
   setVal: (id: string, field: "titulo" | "mensagem", value: string, base: { titulo: string; mensagem: string }) => void;
-  upsertMensagem: ReturnType<typeof useCadenciasStore>["upsertMensagem"];
-  removeMensagem: ReturnType<typeof useCadenciasStore>["removeMensagem"];
+  upsertMensagem: (m: any) => Promise<void>;
+  removeMensagem: (id: string) => Promise<void>;
 }) {
   // Se está em aprovação e exibindo fallback geral, ao salvar criamos uma nova mensagem para o setor (não sobrescreve a geral)
   const ehFallbackGeral = tipo === "aprovacao" && setor != null && lista.length > 0 && lista.every((m) => m.setor == null);
