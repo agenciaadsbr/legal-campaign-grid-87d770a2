@@ -419,7 +419,7 @@ function ConfigMensagensDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     () =>
       tab === "aprovacao" &&
       lista.length > 0 &&
-      lista.every((m) => m.setor == null || m.setor === ""),
+      lista.every((m) => m.setor == null || (m.setor as string) === ""),
     [tab, lista],
   );
 
