@@ -117,7 +117,7 @@ export function MinhasTarefasTabela({
       .filter((g) => g.items.length > 0);
   }, [tasks]);
 
-  const colSpan = mostrarResponsavel ? 11 : 10;
+  const colSpan = mostrarResponsavel ? 12 : 11;
 
   if (tasks.length === 0) {
     return (
