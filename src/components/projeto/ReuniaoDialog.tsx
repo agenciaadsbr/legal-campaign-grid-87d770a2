@@ -157,9 +157,23 @@ export function ReuniaoDialog({
       responsavel_delegacao_id: responsavelDelegacaoId || null,
       prazo_delegacao: prazoDelegacao || null,
       observacoes_delegacao: obsDelegacao || null,
+      temperatura_cliente: temperatura || null,
     };
     if (reuniao) {
+      const tempAnterior = reuniao.temperatura_cliente ?? null;
       await update(reuniao.id, payload as any);
+      if (tempAnterior !== temperatura && clienteId) {
+        try {
+          await (supabase as any).from("atividade_cliente").insert({
+            cliente_id: clienteId,
+            tipo: "reuniao",
+            acao: "temperatura",
+            referencia_id: reuniao.id,
+            descricao: `Temperatura do cliente alterada para ${TEMPERATURA_LABEL[temperatura]}.`,
+            payload: { de: tempAnterior, para: temperatura },
+          });
+        } catch {}
+      }
       toast.success("Reunião atualizada");
     } else {
       const newReuniao = await create(payload as any);
