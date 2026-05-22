@@ -6,6 +6,7 @@ import {
   STATUS_LABEL,
   TIPO_LABEL,
   diasSemResposta,
+  diasNaEtapaLabel,
   proximaAcao,
   type Cadencia,
   type CadenciaTipo,
@@ -167,7 +168,7 @@ export function CadenciasOperacionaisTab() {
                   <TableHead className="text-xs">Responsável</TableHead>
                   <TableHead className="text-xs">Última ação</TableHead>
                   <TableHead className="text-xs">Próxima ação</TableHead>
-                  <TableHead className="text-xs">Dias sem resposta</TableHead>
+                  <TableHead className="text-xs">Dias na etapa</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs text-right">Ações</TableHead>
                 </TableRow>
@@ -197,7 +198,7 @@ export function CadenciasOperacionaisTab() {
                       <TableCell>{c.ultima_acao_em ? new Date(c.ultima_acao_em).toLocaleString("pt-BR") : "—"}</TableCell>
                       <TableCell>{proximaAcao(c)}</TableCell>
                       <TableCell className={cn("font-semibold tabular-nums", corDias(dias))}>
-                        {dias} {dias === 1 ? "dia" : "dias"}
+                        {diasNaEtapaLabel(c)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(c.status)} className="text-[10px]">
