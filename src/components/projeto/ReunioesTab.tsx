@@ -93,6 +93,20 @@ export function ReunioesTab({ clienteId }: { clienteId: string }) {
                              r.post_status === "delegada" ? "Delegada" : "Sem ação"}
                           </Badge>
                         )}
+                        {r.temperatura_cliente && (
+                          <Badge variant="outline" className={
+                            "text-[9px] h-4 px-1.5 " + (
+                              r.temperatura_cliente === "excelente" ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" :
+                              r.temperatura_cliente === "atencao_acompanhamento" ? "border-amber-500/40 text-amber-700 dark:text-amber-300" :
+                              r.temperatura_cliente === "critico_risco_churn" ? "border-red-500/40 text-red-700 dark:text-red-300" :
+                              "border-slate-500/40 text-slate-700 dark:text-slate-300"
+                            )
+                          }>
+                            {r.temperatura_cliente === "excelente" ? "Excelente" :
+                             r.temperatura_cliente === "normal" ? "Normal" :
+                             r.temperatura_cliente === "atencao_acompanhamento" ? "Atenção" : "Crítico"}
+                          </Badge>
+                        )}
                         {delegations.find(d => d.reuniao_id === r.id) && (
                           <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-primary/30 text-primary">
                             <Users className="h-2.5 w-2.5 mr-1" />
