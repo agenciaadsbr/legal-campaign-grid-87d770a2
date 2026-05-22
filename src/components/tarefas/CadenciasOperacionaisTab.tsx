@@ -213,7 +213,7 @@ export function CadenciasOperacionaisTab() {
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs"
-                            disabled={c.status === "resolvida" || c.status === "finalizada" || c.status === "sem_retorno"}
+                            disabled={c.status === "resolvida" || c.status === "sem_retorno" || c.etapa_atual >= 4}
                             onClick={async () => {
                               try { await executarEtapa(c.id); toast.success("Etapa executada"); }
                               catch (e: any) { toast.error(e.message ?? "Erro"); }
