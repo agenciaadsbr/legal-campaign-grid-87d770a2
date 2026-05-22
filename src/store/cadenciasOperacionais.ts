@@ -73,7 +73,7 @@ export const ETAPAS_LABEL: Record<number, string> = {
   1: "Dia 1 — Enviou mensagem no grupo",
   2: "Dia 2 — Enviou mensagem no privado",
   3: "Dia 3 — Enviou áudio",
-  4: "Dia 4 — Fez ligação",
+  4: "Dia 4 — Enviou para reunião",
 };
 
 export const STATUS_LABEL: Record<CadenciaStatus, string> = {
