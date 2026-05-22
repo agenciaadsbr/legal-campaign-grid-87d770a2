@@ -132,7 +132,7 @@ interface State {
     responsavel_id?: string | null;
     observacao?: string | null;
   }) => Promise<Cadencia>;
-  upsertMensagem: (m: Partial<CadenciaMensagem> & { tipo: CadenciaTipo; etapa: number; titulo: string; mensagem: string }) => Promise<void>;
+  upsertMensagem: (m: Partial<CadenciaMensagem> & { tipo: CadenciaTipo; etapa: number; titulo: string; mensagem: string; setor?: CadenciaSetor | null }) => Promise<void>;
   removeMensagem: (id: string) => Promise<void>;
   getByTaskId: (taskId: string) => Cadencia | undefined;
 }
