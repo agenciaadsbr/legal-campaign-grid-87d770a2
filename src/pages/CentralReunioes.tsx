@@ -110,7 +110,7 @@ export default function CentralReunioes() {
   const [semAcaoReuniao, setSemAcaoReuniao] = useState<Reuniao | null>(null);
 
   const counts = useMemo(() => {
-    const c = { pendentes: 0, analise: 0, delegada: 0, semAcao: 0, agendada: 0, naoRealizada: 0 };
+    const c = { pendentes: 0, analise: 0, delegada: 0, semAcao: 0, agendada: 0, naoRealizada: 0, atencao: 0, critico: 0 };
     for (const r of reunioes) {
       if (r.status === "realizada" && r.post_status === "nao_analisada") c.pendentes++;
       if (r.post_status === "em_analise") c.analise++;
@@ -118,6 +118,8 @@ export default function CentralReunioes() {
       if (r.post_status === "sem_acao") c.semAcao++;
       if (r.status === "agendada") c.agendada++;
       if (r.status === "nao_realizada") c.naoRealizada++;
+      if (r.temperatura_cliente === "atencao_acompanhamento") c.atencao++;
+      if (r.temperatura_cliente === "critico_risco_churn") c.critico++;
     }
     return c;
   }, [reunioes]);
