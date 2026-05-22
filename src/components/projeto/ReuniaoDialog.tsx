@@ -108,6 +108,7 @@ export function ReuniaoDialog({
       setResponsavelDelegacaoId(reuniao?.responsavel_delegacao_id ?? "");
       setPrazoDelegacao(reuniao?.prazo_delegacao ?? "");
       setObsDelegacao(reuniao?.observacoes_delegacao ?? "");
+      setTemperatura((reuniao?.temperatura_cliente as TemperaturaCliente) ?? "normal");
       setSelectedClienteId(reuniao?.cliente_id ?? clienteIdProp ?? "");
     }
   }, [open, reuniao, clienteIdProp]);
