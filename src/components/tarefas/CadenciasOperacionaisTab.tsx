@@ -76,7 +76,7 @@ export function CadenciasOperacionaisTab() {
       if (fStatus !== "all" && c.status !== fStatus) return false;
       if (fCliente !== "all" && c.cliente_id !== fCliente) return false;
       if (q) {
-        const nome = clientesMap.get(c.cliente_id)?.nome ?? "";
+        const nome = clientesMap.get(c.cliente_id)?.nome_cliente ?? "";
         if (!nome.toLowerCase().includes(q)) return false;
       }
       return true;
@@ -142,7 +142,7 @@ export function CadenciasOperacionaisTab() {
               <SelectContent>
                 <SelectItem value="all">Todos os clientes</SelectItem>
                 {clientes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -186,7 +186,7 @@ export function CadenciasOperacionaisTab() {
                   const resp = c.responsavel_id ? respMap.get(c.responsavel_id) : null;
                   return (
                     <TableRow key={c.id} className="text-xs">
-                      <TableCell className="font-medium">{cli?.nome ?? "—"}</TableCell>
+                      <TableCell className="font-medium">{cli?.nome_cliente ?? "—"}</TableCell>
                       <TableCell>
                         <Badge variant={c.tipo === "aprovacao" ? "default" : "secondary"} className="text-[10px]">
                           {TIPO_LABEL[c.tipo]}
@@ -241,7 +241,7 @@ export function CadenciasOperacionaisTab() {
             <>
               <DialogHeader>
                 <DialogTitle>
-                  Cadência — {clientesMap.get(detalhe.cliente_id)?.nome} · {TIPO_LABEL[detalhe.tipo]}
+                  Cadência — {clientesMap.get(detalhe.cliente_id)?.nome_cliente} · {TIPO_LABEL[detalhe.tipo]}
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-3 text-sm">
@@ -351,7 +351,7 @@ function NovaCadenciaDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             <Select value={cliente} onValueChange={setCliente}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                {clientes.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                {clientes.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
