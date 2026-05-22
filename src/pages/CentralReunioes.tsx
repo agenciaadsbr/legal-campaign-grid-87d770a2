@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useReunioes, useReunioesBootstrap, type Reuniao, type ReuniaoPostStatus } from "@/store/reunioes";
+import { useReunioes, useReunioesBootstrap, type Reuniao, type ReuniaoPostStatus, type TemperaturaCliente, TEMPERATURA_LABEL } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
 import { useMeetingTasks, useMeetingTasksBootstrap } from "@/store/meetingTasks";
 import { Card, CardContent } from "@/components/ui/card";
