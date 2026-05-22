@@ -96,6 +96,25 @@ export function CadenciaCell({ task }: Props) {
               {STATUS_LABEL[cad.status]}
               {cad.ultima_acao_em ? <span className="text-muted-foreground"> · {fmtHora(cad.ultima_acao_em)}</span> : null}
             </div>
+            {(() => {
+              const tone = diasNaEtapaTone(cad);
+              const cls =
+                tone === "danger"
+                  ? "bg-destructive/15 text-destructive border-destructive/30"
+                  : tone === "warning"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                  : "bg-muted text-muted-foreground border-border";
+              return (
+                <span
+                  className={cn(
+                    "mt-1 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                    cls,
+                  )}
+                >
+                  {diasNaEtapaLabel(cad)} na etapa
+                </span>
+              );
+            })()}
           </button>
         ) : (
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
