@@ -152,7 +152,7 @@ export default function CentralReunioes() {
       }
       return true;
     });
-  }, [reunioes, busca, clienteFiltro, tipoFiltro, statusFiltro, postFiltro, respFiltro, filtroPeriodo, clientes, responsaveis]);
+  }, [reunioes, busca, clienteFiltro, tipoFiltro, statusFiltro, postFiltro, respFiltro, tempFiltro, filtroPeriodo, clientes, responsaveis]);
 
   const pagina = filtradas.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
