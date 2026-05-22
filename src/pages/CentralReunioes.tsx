@@ -295,6 +295,17 @@ export default function CentralReunioes() {
             {responsaveis.map((r) => (<SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>))}
           </SelectContent>
         </Select>
+        <Select value={tempFiltro} onValueChange={(v) => { setTempFiltro(v); setPage(0); }}>
+          <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue placeholder="Temperatura" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todas temperaturas</SelectItem>
+            <SelectItem value="__null__">Sem temperatura</SelectItem>
+            <SelectItem value="excelente">Excelente</SelectItem>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="atencao_acompanhamento">Atenção / Acompanhamento</SelectItem>
+            <SelectItem value="critico_risco_churn">Crítico / Risco de churn</SelectItem>
+          </SelectContent>
+        </Select>
         <FiltroPeriodoButton
           value={filtroPeriodo}
           onChange={(v) => { setFiltroPeriodo(v); setPage(0); }}
