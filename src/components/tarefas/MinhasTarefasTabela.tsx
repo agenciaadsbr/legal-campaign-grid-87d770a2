@@ -254,6 +254,9 @@ export function MinhasTarefasTabela({
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
+                          <TableCell>
+                            <CadenciaCell task={t} />
+                          </TableCell>
                           <TableCell className="text-right">
                             <div className="inline-flex items-center gap-1">
                               <Button
