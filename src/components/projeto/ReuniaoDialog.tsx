@@ -89,6 +89,7 @@ export function ReuniaoDialog({
   const [responsavelDelegacaoId, setResponsavelDelegacaoId] = useState("");
   const [prazoDelegacao, setPrazoDelegacao] = useState("");
   const [obsDelegacao, setObsDelegacao] = useState("");
+  const [temperatura, setTemperatura] = useState<TemperaturaCliente>("normal");
 
   useEffect(() => {
     if (open) {
