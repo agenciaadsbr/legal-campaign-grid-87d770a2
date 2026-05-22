@@ -333,6 +333,7 @@ export default function CentralReunioes() {
                     <th className="text-left px-2 py-1 font-semibold">Tipo</th>
                     <th className="text-left px-2 py-1 font-semibold">Data</th>
                     <th className="text-left px-2 py-1 font-semibold">Status</th>
+                    <th className="text-left px-2 py-1 font-semibold">Temperatura</th>
                     <th className="text-left px-2 py-1 font-semibold">Pós-reunião</th>
                     <th className="text-left px-2 py-1 font-semibold">Responsável</th>
                     <th className="text-left px-2 py-1 font-semibold">Gravação</th>
