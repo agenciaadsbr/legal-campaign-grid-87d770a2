@@ -84,9 +84,9 @@ export function CadenciasOperacionaisTab() {
   }, [cadencias, busca, fTipo, fStatus, fCliente, clientesMap]);
 
   const kpis = useMemo(() => {
-    const ativas = cadencias.filter((c) => c.status !== "resolvida" && c.status !== "finalizada");
-    const pendentes = ativas.filter((c) => c.status === "em_andamento").length;
-    const sem = ativas.filter((c) => diasSemResposta(c) >= 3).length;
+    const ativas = cadencias.filter((c) => c.status !== "resolvida");
+    const pendentes = ativas.filter((c) => c.status === "aguardando_resposta").length;
+    const sem = ativas.filter((c) => c.status === "sem_retorno" || diasSemResposta(c) >= 3).length;
     const hojeRef = new Date(); hojeRef.setHours(0, 0, 0, 0);
     const hoje = ativas.filter((c) => {
       if (!c.proxima_acao_em) return false;
