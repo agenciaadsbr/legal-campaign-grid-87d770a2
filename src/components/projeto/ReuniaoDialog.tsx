@@ -313,17 +313,17 @@ export function ReuniaoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{reuniao ? "Editar reunião" : "Nova reunião"}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto p-4 gap-2">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="text-base">{reuniao ? "Editar reunião" : "Nova reunião"}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-x-3 gap-y-2">
           {!clienteIdProp && (
-            <div className="md:col-span-2">
+            <div className="md:col-span-4">
               <Label className="text-xs">Cliente *</Label>
               <Select value={selectedClienteId || "__none__"} onValueChange={(v) => setSelectedClienteId(v === "__none__" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">— Selecione —</SelectItem>
                   {clientes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome_cliente}</SelectItem>))}
@@ -331,26 +331,26 @@ export function ReuniaoDialog({
               </Select>
             </div>
           )}
-          <div className="md:col-span-2">
+          <div className="md:col-span-4">
             <Label className="text-xs">Título</Label>
-            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Reunião semanal, alinhamento, kickoff..." />
+            <Input className="h-9" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Reunião semanal, alinhamento, kickoff..." />
           </div>
-          <div>
+          <div className="md:col-span-1">
             <Label className="text-xs">Data e hora</Label>
-            <Input type="datetime-local" value={data} onChange={(e) => setData(e.target.value)} />
+            <Input className="h-9" type="datetime-local" value={data} onChange={(e) => setData(e.target.value)} />
           </div>
-          <div>
+          <div className="md:col-span-1">
             <Label className="text-xs">Tipo / contexto</Label>
-            <Input value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Semanal, Estratégia, Onboarding..." />
+            <Input className="h-9" value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Semanal, Estratégia..." />
           </div>
           <div className="md:col-span-2">
             <Label className="text-xs">Link TLDV</Label>
-            <Input value={linkTldv} onChange={(e) => setLinkTldv(e.target.value)} placeholder="https://tldv.io/..." />
+            <Input className="h-9" value={linkTldv} onChange={(e) => setLinkTldv(e.target.value)} placeholder="https://tldv.io/..." />
           </div>
           <div className="md:col-span-2">
             <Label className="text-xs">Responsável</Label>
             <Select value={responsavelId || "__none__"} onValueChange={(v) => setResponsavelId(v === "__none__" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">— Nenhum —</SelectItem>
                 {responsaveis.map((r) => (
@@ -362,19 +362,19 @@ export function ReuniaoDialog({
           <div className="md:col-span-2">
             <Label className="text-xs">Temperatura do Cliente</Label>
             <Select value={temperatura} onValueChange={(v) => setTemperatura(v as TemperaturaCliente)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="excelente">Excelente — cliente satisfeito, projeto fluindo bem</SelectItem>
-                <SelectItem value="normal">Normal — operação seguindo normalmente</SelectItem>
-                <SelectItem value="atencao_acompanhamento">Atenção / Acompanhamento — precisa de acompanhamento mais próximo</SelectItem>
-                <SelectItem value="critico_risco_churn">Crítico / Risco de churn — risco de cancelamento</SelectItem>
+                <SelectItem value="excelente">Excelente</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="atencao_acompanhamento">Atenção / Acompanhamento</SelectItem>
+                <SelectItem value="critico_risco_churn">Crítico / Risco de churn</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         {/* Processamento IA — orquestrador dos 2 agentes */}
-        <div className="mt-3 border border-border rounded-md bg-muted/30 p-3">
+        <div className="mt-2 border border-border rounded-md bg-muted/30 px-3 py-2">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3 text-xs">
               <span className="font-medium flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> Processamento IA</span>
@@ -395,7 +395,7 @@ export function ReuniaoDialog({
             </div>
           </div>
           {iaBusy && (
-            <div className="mt-3 space-y-1.5">
+            <div className="mt-2 space-y-1">
               <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-medium">
                 <span>Analisando reunião com I.A...</span>
                 <span>{progress}%</span>
@@ -403,10 +403,10 @@ export function ReuniaoDialog({
               <Progress value={progress} className="h-1.5" />
             </div>
           )}
-          {!reuniao && <p className="text-[11px] text-muted-foreground mt-2">Salve a reunião primeiro para processar com IA.</p>}
+          {!reuniao && <p className="text-[11px] text-muted-foreground mt-1">Salve a reunião primeiro para processar com IA.</p>}
         </div>
 
-        <Tabs defaultValue="transcricao" className="mt-2">
+        <Tabs defaultValue="transcricao" className="mt-1">
           <TabsList className="h-8">
             <TabsTrigger value="transcricao" className="text-xs h-7">Transcrição</TabsTrigger>
             <TabsTrigger value="resumos" className="text-xs h-7">Resumos</TabsTrigger>
@@ -414,7 +414,7 @@ export function ReuniaoDialog({
             <TabsTrigger value="delegacao" className="text-xs h-7">Delegação interna</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="transcricao" className="mt-3">
+          <TabsContent value="transcricao" className="mt-2">
             <div className="flex items-center justify-between mb-1">
               <Label className="text-xs">Transcrição <span className="text-muted-foreground">(cole aqui o texto do TLDV, Zoom, Otter...)</span></Label>
               <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copiar(transcricao, "Transcrição")}>
@@ -422,7 +422,7 @@ export function ReuniaoDialog({
               </Button>
             </div>
             <Textarea 
-              rows={12} 
+              rows={7} 
               value={transcricao} 
               onChange={(e) => setTranscricao(e.target.value)} 
               placeholder="Cole a transcrição completa aqui para que a IA possa extrair resumos e tarefas..." 
