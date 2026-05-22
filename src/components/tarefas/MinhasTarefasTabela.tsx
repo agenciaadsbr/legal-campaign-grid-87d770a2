@@ -14,6 +14,7 @@ import type { UnifiedTask, TaskStatus } from "@/lib/minhasTarefas";
 import { STATUS_LABEL } from "@/lib/minhasTarefas";
 import { PRIORIDADE_COR, PRIORIDADE_LABEL } from "@/lib/demandas-categorias";
 import { useCRM } from "@/store/crm";
+import { CadenciaCell } from "./CadenciaCell";
 
 interface Props {
   tasks: UnifiedTask[];
