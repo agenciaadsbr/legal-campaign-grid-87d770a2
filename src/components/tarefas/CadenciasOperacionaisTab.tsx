@@ -168,7 +168,7 @@ export function CadenciasOperacionaisTab() {
                   <TableHead className="text-xs">Responsável</TableHead>
                   <TableHead className="text-xs">Última ação</TableHead>
                   <TableHead className="text-xs">Próxima ação</TableHead>
-                  <TableHead className="text-xs">Dias sem resposta</TableHead>
+                  <TableHead className="text-xs">Dias na etapa</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs text-right">Ações</TableHead>
                 </TableRow>
