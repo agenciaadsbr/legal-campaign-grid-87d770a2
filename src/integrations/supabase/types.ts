@@ -269,6 +269,7 @@ export type Database = {
           proxima_acao_em: string | null
           responsavel_id: string | null
           status: string
+          task_id: string | null
           tipo: string
           ultima_acao_em: string | null
           updated_at: string
@@ -283,6 +284,7 @@ export type Database = {
           proxima_acao_em?: string | null
           responsavel_id?: string | null
           status?: string
+          task_id?: string | null
           tipo: string
           ultima_acao_em?: string | null
           updated_at?: string
@@ -297,6 +299,7 @@ export type Database = {
           proxima_acao_em?: string | null
           responsavel_id?: string | null
           status?: string
+          task_id?: string | null
           tipo?: string
           ultima_acao_em?: string | null
           updated_at?: string
