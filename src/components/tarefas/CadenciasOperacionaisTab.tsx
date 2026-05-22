@@ -198,7 +198,7 @@ export function CadenciasOperacionaisTab() {
                       <TableCell>{c.ultima_acao_em ? new Date(c.ultima_acao_em).toLocaleString("pt-BR") : "—"}</TableCell>
                       <TableCell>{proximaAcao(c)}</TableCell>
                       <TableCell className={cn("font-semibold tabular-nums", corDias(dias))}>
-                        {dias} {dias === 1 ? "dia" : "dias"}
+                        {diasNaEtapaLabel(c)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(c.status)} className="text-[10px]">
