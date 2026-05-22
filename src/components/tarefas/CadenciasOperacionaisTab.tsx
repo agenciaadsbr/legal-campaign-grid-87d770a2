@@ -411,7 +411,7 @@ function ConfigMensagensDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       .sort((a, b) => a.etapa - b.etapa || a.ordem - b.ordem);
     if (porSetor.length > 0) return porSetor;
     return mensagens
-      .filter((m) => m.tipo === "aprovacao" && (m.setor == null || m.setor === ""))
+      .filter((m) => m.tipo === "aprovacao" && (m.setor == null || (m.setor as string) === ""))
       .sort((a, b) => a.etapa - b.etapa || a.ordem - b.ordem);
   }, [mensagens, tab, setor]);
 
