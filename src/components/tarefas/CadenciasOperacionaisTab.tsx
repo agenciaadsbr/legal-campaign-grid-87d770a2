@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: CadenciaStatus[] = [
-  "em_andamento", "aguardando_resposta", "finalizada", "sem_retorno", "resolvida",
+  "aguardando_resposta", "sem_retorno", "resolvida",
 ];
 
 function corDias(d: number): string {
@@ -42,7 +42,7 @@ function corDias(d: number): string {
 }
 
 function statusVariant(s: CadenciaStatus): "default" | "secondary" | "destructive" | "outline" {
-  if (s === "resolvida" || s === "finalizada") return "secondary";
+  if (s === "resolvida") return "secondary";
   if (s === "sem_retorno") return "destructive";
   return "default";
 }
