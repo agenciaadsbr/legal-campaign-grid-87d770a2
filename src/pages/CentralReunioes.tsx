@@ -136,6 +136,10 @@ export default function CentralReunioes() {
         if (postFiltro !== "__null__" && r.post_status !== postFiltro) return false;
       }
       if (respFiltro !== "__all__" && r.responsavel_id !== respFiltro) return false;
+      if (tempFiltro !== "__all__") {
+        if (tempFiltro === "__null__" && r.temperatura_cliente) return false;
+        if (tempFiltro !== "__null__" && r.temperatura_cliente !== tempFiltro) return false;
+      }
       if (intervalo) {
         const d = new Date(r.data);
         if (d < intervalo.inicio || d > intervalo.fim) return false;
