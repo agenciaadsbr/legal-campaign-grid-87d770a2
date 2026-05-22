@@ -533,7 +533,8 @@ function MensagensList({
               />
             </div>
             <Textarea
-              rows={4}
+              rows={8}
+              className="h-48 min-h-[12rem] max-h-[12rem] resize-none overflow-y-auto"
               value={getVal(m.id, "mensagem", m.mensagem)}
               onChange={(e) => setVal(m.id, "mensagem", e.target.value, base)}
             />
