@@ -10,6 +10,8 @@ export interface CardPaiTemplateStep {
   subtipo?: string | null;
   /** Nome do responsável padrão (será procurado em CRM responsaveis por nome). */
   responsavelNome?: string | null;
+  /** Variações aceitas do nome do responsável (case-insensitive). Quando informado, tem prioridade. */
+  responsavelVariants?: string[];
   /** Status inicial visível. */
   statusInicial?: "Criar" | "Planejamento" | "Aguardando etapa anterior";
   /** Se true, esta etapa nasce bloqueada (depende da anterior, ou da etapa indicada em dependsOnStepIndex). */
