@@ -41,12 +41,42 @@ export function RelatoriosPosts({ cards, posts }: Props) {
     return { total: cards.length, ...byStatus } as Record<string, number> & { total: number };
   }, [cards]);
 
+  // Mapeia card_id -> melhor data (postagem > agendamento > inicio > limite > agendada)
+  const cardDateMap = useMemo(() => {
+    const m = new Map<string, Date>();
+    const postsByCard = new Map<string, Post[]>();
+    posts.forEach((p) => {
+      const arr = postsByCard.get(p.card_id) ?? [];
+      arr.push(p);
+      postsByCard.set(p.card_id, arr);
+    });
+    cards.forEach((c) => {
+      const ps = postsByCard.get(c.id) ?? [];
+      const candidates = [
+        ...ps.map((p) => p.data_postagem),
+        ...ps.map((p) => p.data_agendamento),
+        c.data_inicio_tarefa,
+        c.data_agendada,
+        c.data_limite_tarefa,
+      ];
+      for (const v of candidates) {
+        if (v) { m.set(c.id, new Date(v)); break; }
+      }
+    });
+    return m;
+  }, [cards, posts]);
+
   const porMes = useMemo(() => {
     const m = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const year = new Date().getFullYear();
     const arr = new Array(12).fill(0);
-    posts.forEach((p) => arr[new Date(p.created_at).getMonth()]++);
+    cards.forEach((c) => {
+      const dt = cardDateMap.get(c.id);
+      if (!dt || dt.getFullYear() !== year) return;
+      arr[dt.getMonth()]++;
+    });
     return m.map((name, i) => ({ name, posts: arr[i] }));
-  }, [posts]);
+  }, [cards, cardDateMap]);
 
   const funil = useMemo(
     () => STATUS_ORDER.map((s) => ({ name: s, value: counts[s] || 0, cor: STATUS_COLOR[s] })),
@@ -68,21 +98,23 @@ export function RelatoriosPosts({ cards, posts }: Props) {
   const stacked = useMemo(() => {
     const m = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const now = new Date();
-    const months: { idx: number; name: string }[] = [];
+    const months: { y: number; idx: number; name: string }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push({ idx: d.getMonth(), name: m[d.getMonth()] });
+      months.push({ y: d.getFullYear(), idx: d.getMonth(), name: m[d.getMonth()] });
     }
-    return months.map(({ idx, name }) => {
+    return months.map(({ y, idx, name }) => {
       const row: any = { name };
       STATUS_ORDER.forEach((s) => {
-        row[s] = cards.filter(
-          (c) => c.status_card === s && new Date(c.created_at).getMonth() === idx
-        ).length;
+        row[s] = cards.filter((c) => {
+          if (c.status_card !== s) return false;
+          const dt = cardDateMap.get(c.id);
+          return !!dt && dt.getFullYear() === y && dt.getMonth() === idx;
+        }).length;
       });
       return row;
     });
-  }, [cards]);
+  }, [cards, cardDateMap]);
 
   const totalFunil = funil.reduce((s, x) => s + x.value, 0) || 1;
 
