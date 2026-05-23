@@ -1,0 +1,1 @@
+UPDATE public.operational_templates SET ativo = false WHERE nome ILIKE 'Configurar Lovable%';
