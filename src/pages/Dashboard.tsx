@@ -26,11 +26,24 @@ const tooltipStyle = {
   fontSize: 12,
 };
 
+// ---- Helpers: critério "ativo" exige pelo menos uma data ----
+const cardTemData = (c: any): boolean =>
+  !!(c?.data_agendada || c?.data_inicio_tarefa || c?.data_limite_tarefa);
+const demandaTemData = (d: any): boolean =>
+  !!(d?.data_inicio || d?.data_limite);
+
 export default function Dashboard() {
   useDemandasBootstrap();
-  const { clientes: clientesAll, posts, alertas, cards, responsaveis } = useCRM();
-  const clientes = useMemo(() => clientesAll.filter((c) => !c.oculto), [clientesAll]);
-  const demandas = useDemandas((s) => s.demandas);
+  const { clientes: clientesAll, posts, alertas, cards: cardsAll, responsaveis } = useCRM();
+  const clientes = useMemo(
+    () => clientesAll.filter((c) => !c.oculto && (c.status_global ?? "Onboarding") !== "Encerrado"),
+    [clientesAll]
+  );
+  const demandasAll = useDemandas((s) => s.demandas);
+
+  // Aplica a regra de "ativo": só conta o que tem alguma data definida
+  const cards = useMemo(() => cardsAll.filter(cardTemData), [cardsAll]);
+  const demandas = useMemo(() => demandasAll.filter(demandaTemData), [demandasAll]);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -49,31 +62,44 @@ export default function Dashboard() {
     return { total, onboarding, ativos, pausados, renovacao, pctAtivos };
   }, [clientes]);
 
-  // ---------- Posts ----------
+  // ---------- Posts (somente cards ativos) ----------
   const postsKpis = useMemo(() => {
     const totalCards = cards.length;
     const criar = cards.filter((c) => c.status_card === "Criar").length;
     const revisar = cards.filter((c) => c.status_card === "Revisar").length;
-    const agendar = cards.filter((c) => c.status_card === "Agendar").length;
+    const agendar = cards.filter(
+      (c) => c.status_card === "Agendar" || !!c.data_agendada
+    ).length;
     const postados = cards.filter((c) => c.status_card === "Postado").length;
     const postsHoje = posts.filter((p) => p.created_at.slice(0, 10) === today).length;
     return { totalCards, criar, revisar, agendar, postados, postsHoje };
   }, [cards, posts, today]);
 
-  // ---------- Demandas ----------
+  // ---------- Demandas (somente ativas) ----------
   const demandasKpis = useMemo(() => {
     const hojeIni = new Date(); hojeIni.setHours(0, 0, 0, 0);
-    const abertas = demandas.filter((d) => d.status !== "Concluido").length;
-    const urgentes = demandas.filter((d) => d.prioridade === "Urgente" && d.status !== "Concluido").length;
-    const atrasadas = demandas.filter((d) => d.status === "Atrasado").length;
-    const emRevisao = demandas.filter((d) => d.status === "Revisar").length;
-    const concluidasHoje = demandas.filter(
-      (d) => d.status === "Concluido" && d.data_conclusao && new Date(d.data_conclusao) >= hojeIni
+    const hojeFim = new Date(); hojeFim.setHours(23, 59, 59, 999);
+    const ativas = demandas.filter((d) => d.status !== "Concluido");
+    const abertas = ativas.length;
+    const urgentes = ativas.filter((d) => d.prioridade === "Urgente").length;
+    const atrasadas = demandas.filter(
+      (d) =>
+        d.status !== "Concluido" &&
+        d.data_limite &&
+        new Date(d.data_limite) < hojeIni
     ).length;
+    const emRevisao = ativas.filter((d) => d.status === "Revisar").length;
+    const concluidasHoje = demandas.filter((d) => {
+      if (d.status !== "Concluido") return false;
+      const ref = d.data_conclusao ?? d.updated_at;
+      if (!ref) return false;
+      const t = new Date(ref).getTime();
+      return t >= hojeIni.getTime() && t <= hojeFim.getTime();
+    }).length;
     return { abertas, urgentes, atrasadas, emRevisao, concluidasHoje };
   }, [demandas]);
 
-  // ---------- Posts por mês (últimos 12) ----------
+  // ---------- Posts por mês (últimos 12) — usa data real do card ----------
   const postsPorMes = useMemo(() => {
     const m = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const now = new Date();
@@ -83,16 +109,20 @@ export default function Dashboard() {
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       buckets.push({ name: m[d.getMonth()], posts: 0, key });
     }
-    posts.forEach((p) => {
-      const d = new Date(p.created_at);
+    cards.forEach((c) => {
+      const ref =
+        c.data_agendada ?? c.data_inicio_tarefa ?? c.data_limite_tarefa ?? null;
+      if (!ref) return;
+      const d = new Date(ref);
+      if (isNaN(d.getTime())) return;
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       const b = buckets.find((x) => x.key === key);
       if (b) b.posts++;
     });
     return buckets;
-  }, [posts]);
+  }, [cards]);
 
-  // ---------- Carga por responsável ----------
+  // ---------- Carga por responsável (somente ativos) ----------
   const cargaPosts = useMemo(
     () =>
       responsaveis
