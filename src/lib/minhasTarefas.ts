@@ -165,9 +165,23 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
   const out: UnifiedTask[] = [];
 
   // --- Demandas ---
+  // Demandas em status "Planejamento" são apenas rascunho/modelo da estrutura operacional
+  // (geradas pelos templates) e NÃO devem aparecer na Central de Tarefas.
+  // Também ignoramos demandas ativas sem nenhuma data operacional, que representam
+  // apenas estrutura e não tarefas reais a executar.
   if (respScope) {
     demandas
       .filter((d) => matchResp(getResponsaveisIds(d)))
+      .filter((d) => (d.status as string) !== "Planejamento")
+      .filter(
+        (d) =>
+          !!d.data_inicio ||
+          !!d.data_limite ||
+          d.status === "Concluido" ||
+          d.status === "Entregue" ||
+          d.status === "Atrasado" ||
+          d.status === "Revisar",
+      )
       .forEach((d) => {
         let status: TaskStatus = "pendente";
         if (d.status === "Concluido") status = "concluido";
