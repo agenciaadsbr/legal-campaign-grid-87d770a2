@@ -971,16 +971,28 @@ export const useCRM = create<State>()((set, get) => ({
       await supabase.from("comentarios").delete().in("post_id", postIds);
     }
     await supabase.from("posts").delete().eq("card_id", cardId);
-    const { error } = await supabase.from("cards").delete().eq("id", cardId);
+    const { data: deleted, error } = await supabase
+      .from("cards")
+      .delete()
+      .eq("id", cardId)
+      .select("id");
     if (error) {
       toast.error(`Falha ao excluir tarefa: ${error.message}`);
       return;
     }
+    if (!deleted || deleted.length === 0) {
+      toast.error("Não foi possível excluir", {
+        description: "Você não tem permissão para excluir esta tarefa.",
+      });
+      get()._scheduleReload();
+      return;
+    }
     toast.success("Tarefa excluída");
-    // Patch otimista local
+    // Patch otimista local — remove o card e qualquer post/comentário vinculado
+    // para sumir imediatamente da Central de Tarefas, Dashboard e Relatórios.
     set({
       cards: get().cards.filter(c => c.id !== cardId),
-      posts: get().posts.filter(p => !postIds.includes(p.id)),
+      posts: get().posts.filter(p => !postIds.includes(p.id) && p.card_id !== cardId),
       comentarios: get().comentarios.filter(co => !co.post_id || !postIds.includes(co.post_id)),
     });
     get()._scheduleReload();
