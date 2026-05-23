@@ -13,14 +13,18 @@ interface Props {
 
 export function ProximosPrazosCard({ demandas, clientes, limit = 6 }: Props) {
   const items = useMemo(() => {
-    const now = Date.now();
     return demandas
-      .filter((d) => d.status !== "Concluido" && d.data_limite)
+      .filter((d) => d.status !== "Concluido" && !!d.data_limite)
       .map((d) => ({
         d,
         ts: new Date(d.data_limite as string).getTime(),
       }))
-      .sort((a, b) => a.ts - b.ts)
+      .sort((a, b) => {
+        if (a.ts !== b.ts) return a.ts - b.ts;
+        const au = a.d.prioridade === "Urgente" ? 0 : 1;
+        const bu = b.d.prioridade === "Urgente" ? 0 : 1;
+        return au - bu;
+      })
       .slice(0, limit);
   }, [demandas, limit]);
 

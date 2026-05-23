@@ -13,7 +13,7 @@ export function RenovacoesCard({ clientes, limit = 5 }: Props) {
   const items = useMemo(() => {
     const now = Date.now();
     return clientes
-      .filter((c) => !!c.prazo_onboarding)
+      .filter((c) => !c.oculto && (c.status_global ?? "Onboarding") !== "Encerrado" && !!c.prazo_onboarding)
       .map((c) => ({
         c,
         dias: Math.ceil((new Date(c.prazo_onboarding as string).getTime() - now) / 86400000),

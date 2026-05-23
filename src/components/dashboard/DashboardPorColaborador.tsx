@@ -47,10 +47,12 @@ export function DashboardPorColaborador() {
       authUserId: idEfetivo === meuRespId ? user?.id ?? null : null,
       demandas, cards, planejamento, documentacao, clientes,
     });
+    // Regra "ativa": exige alguma data (início, limite ou prazo)
+    const ativas = all.filter((t) => !!(t.data_inicio || t.data_limite || t.prazo));
     const ini = periodo.inicio?.getTime() ?? null;
     const fim = periodo.fim?.getTime() ?? null;
-    if (ini === null && fim === null) return all;
-    return all.filter((t) => {
+    if (ini === null && fim === null) return ativas;
+    return ativas.filter((t) => {
       if (!t.prazo) return false;
       const p = new Date(t.prazo).getTime();
       if (ini !== null && p < ini) return false;
