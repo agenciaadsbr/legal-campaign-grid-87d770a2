@@ -546,15 +546,42 @@ export const useDemandasStore = create<State>((set, get) => ({
         demandas: get().demandas.filter((d) => d.id !== id),
         comentarios: get().comentarios.filter((c) => c.demanda_id !== id),
         anexos: get().anexos.filter((a) => a.demanda_id !== id),
+        historico: get().historico.filter((h) => h.demanda_id !== id),
+        dependencies: get().dependencies.filter(
+          (dep) => dep.task_id !== id && dep.depends_on_task_id !== id,
+        ),
       });
       return;
     }
-    const { error } = await supabase.from("demandas").delete().eq("id", id);
+    const { data: deleted, error } = await supabase
+      .from("demandas")
+      .delete()
+      .eq("id", id)
+      .select("id");
     if (error) {
       toast.error("Erro ao excluir", { description: error.message });
       return;
     }
-    set({ demandas: get().demandas.filter((d) => d.id !== id) });
+    if (!deleted || deleted.length === 0) {
+      toast.error("Não foi possível excluir", {
+        description: "Você não tem permissão para excluir esta tarefa.",
+      });
+      await get().load(true);
+      return;
+    }
+    // Limpa estado local desta demanda e tudo que dependia dela
+    set({
+      demandas: get().demandas.filter((d) => d.id !== id),
+      comentarios: get().comentarios.filter((c) => c.demanda_id !== id),
+      anexos: get().anexos.filter((a) => a.demanda_id !== id),
+      historico: get().historico.filter((h) => h.demanda_id !== id),
+      dependencies: get().dependencies.filter(
+        (dep) => dep.task_id !== id && dep.depends_on_task_id !== id,
+      ),
+    });
+    // Recarrega para garantir consistência em Central de Tarefas, Dashboard,
+    // Relatórios e demais views (cascade no banco pode remover subtarefas).
+    get().load(true);
     toast.success("Demanda excluída");
   },
 
