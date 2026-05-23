@@ -81,7 +81,8 @@ export const CARD_PAI_TEMPLATES: CardPaiTemplate[] = [
         tipo: "tarefa",
         categoria: "TrafegoPago",
         subtipo: "Criar campanha",
-        responsavelNome: "Gleice",
+        responsavelNome: "Greice",
+        responsavelVariants: ["Greice", "Gleice", "Grace", "GREICE", "GLEICE"],
         statusInicial: "Planejamento",
 
         bloqueada: true,
