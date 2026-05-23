@@ -95,10 +95,9 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     let faltouResp = false;
     for (let i = 0; i < tpl.steps.length; i++) {
       const step = tpl.steps[i];
-      const respId =
-        tpl.id === "meta_ads" && step.titulo === "Ativar campanha Meta Ads"
-          ? findResponsavelIdByNomes(responsaveis, ["Gleice", "Grace", "Greice", "GLEICE", "GREICE"])
-          : findResponsavelIdByNome(responsaveis, step.responsavelNome);
+      const respId = step.responsavelVariants && step.responsavelVariants.length > 0
+        ? findResponsavelIdByNomes(responsaveis, step.responsavelVariants)
+        : findResponsavelIdByNome(responsaveis, step.responsavelNome);
       if (step.responsavelNome && !respId) faltouResp = true;
 
       const dependsOnIdx =
