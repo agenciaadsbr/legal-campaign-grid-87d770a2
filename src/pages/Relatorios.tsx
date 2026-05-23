@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useCRM } from "@/store/crm";
-import { useDemandas, getResponsaveisIds } from "@/store/demandas";
+import { useCRM, type Card as CardType, type Post } from "@/store/crm";
+import { useDemandas, getResponsaveisIds, type Demanda } from "@/store/demandas";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
 import { KpiCard } from "@/components/relatorios/KpiCard";
 import { RelatoriosPosts } from "@/components/relatorios/RelatoriosPosts";
 import { RelatoriosDemandas } from "@/components/demandas/RelatoriosDemandas";
+import { toast } from "sonner";
 
 type RangeKey = "7d" | "30d" | "90d" | "year" | "all";
 const RANGE_LABEL: Record<RangeKey, string> = {
@@ -52,6 +53,49 @@ const STATUS_GLOBAL_COLOR: Record<string, string> = {
   Encerrado: "hsl(var(--muted-foreground))",
 };
 
+// ---------- Helpers de "ativos" (com data) ----------
+function postsByCardMap(posts: Post[]): Map<string, Post[]> {
+  const m = new Map<string, Post[]>();
+  for (const p of posts) {
+    if (!p.card_id) continue;
+    const arr = m.get(p.card_id) ?? [];
+    arr.push(p);
+    m.set(p.card_id, arr);
+  }
+  return m;
+}
+
+function cardHasDate(c: CardType, byCard: Map<string, Post[]>): boolean {
+  if (c.data_inicio_tarefa || c.data_limite_tarefa || c.data_agendada) return true;
+  const ps = byCard.get(c.id);
+  if (ps && ps.some((p) => p.data_agendamento || p.data_postagem)) return true;
+  return false;
+}
+
+function cardRelevantDate(c: CardType, byCard: Map<string, Post[]>): Date | null {
+  const ps = byCard.get(c.id) ?? [];
+  const candidates: (string | null | undefined)[] = [
+    c.data_inicio_tarefa,
+    c.data_agendada,
+    c.data_limite_tarefa,
+    ...ps.map((p) => p.data_postagem ?? null),
+    ...ps.map((p) => p.data_agendamento ?? null),
+  ];
+  for (const v of candidates) {
+    if (v) return new Date(v);
+  }
+  return null;
+}
+
+function demandaTemData(d: Demanda): boolean {
+  return !!(d.data_inicio || d.data_limite);
+}
+
+function demandaRelevantDate(d: Demanda): Date | null {
+  const v = d.data_inicio || d.data_limite || d.data_conclusao;
+  return v ? new Date(v) : null;
+}
+
 export default function Relatorios() {
   const { posts, cards, clientes: clientesAll, responsaveis } = useCRM();
   const clientes = useMemo(() => clientesAll.filter((c) => !c.oculto), [clientesAll]);
@@ -61,67 +105,98 @@ export default function Relatorios() {
   const [respFilter, setRespFilter] = useState<string>("all");
 
   const start = useMemo(() => rangeStart(range), [range]);
+  const byCard = useMemo(() => postsByCardMap(posts), [posts]);
 
-  // ---------- Datasets filtrados ----------
+  // ---------- Datasets: apenas itens ATIVOS (com data) ----------
+  // Filtro de responsável aplicado a todos.
+  // Filtro de período aplicado pela data relevante do item.
   const fCards = useMemo(() => {
     return cards.filter((c) => {
-      const d = new Date(c.created_at);
-      if (start && d < start) return false;
       if (respFilter !== "all" && !c.responsaveis.includes(respFilter)) return false;
+      if (!cardHasDate(c, byCard)) return false;
+      if (start) {
+        const d = cardRelevantDate(c, byCard);
+        if (!d || d < start) return false;
+      }
       return true;
     });
-  }, [cards, start, respFilter]);
+  }, [cards, byCard, start, respFilter]);
 
+  // Posts ativos: link a card ativo (preserva mesma regra)
   const fPosts = useMemo(() => {
-    if (!start) return posts;
-    return posts.filter((p) => new Date(p.created_at) >= start);
-  }, [posts, start]);
+    if (!start && respFilter === "all") {
+      return posts.filter((p) => !!(p.data_agendamento || p.data_postagem));
+    }
+    const allowedCardIds = new Set(fCards.map((c) => c.id));
+    return posts.filter((p) => allowedCardIds.has(p.card_id) && (p.data_agendamento || p.data_postagem));
+  }, [posts, fCards, start, respFilter]);
 
   const fDemandas = useMemo(() => {
     return demandas.filter((d) => {
-      const dt = new Date(d.created_at);
-      if (start && dt < start) return false;
       if (respFilter !== "all" && !getResponsaveisIds(d).includes(respFilter)) return false;
+      if (!demandaTemData(d)) return false;
+      if (start) {
+        const dt = demandaRelevantDate(d);
+        if (!dt || dt < start) return false;
+      }
       return true;
     });
   }, [demandas, start, respFilter]);
 
   // ---------- KPIs Visão Geral ----------
   const kpiTotalPosts = fCards.length;
-  const kpiPostados = fCards.filter((c) => c.status_card === "Postado").length;
-  const kpiPendentes = fCards.filter((c) =>
-    ["Criar", "Revisar", "Agendar"].includes(String(c.status_card))
+  const kpiPostados = fCards.filter((c) => {
+    if (c.status_card === "Postado") return true;
+    const ps = byCard.get(c.id) ?? [];
+    return ps.some((p) => p.data_postagem);
+  }).length;
+  const kpiPendentes = fCards.filter(
+    (c) => c.status_card !== "Postado" && c.status_card !== "Renovação"
   ).length;
   const kpiDemandas = fDemandas.length;
-  const kpiConcluidas = fDemandas.filter((d) => d.status === "Concluido").length;
-  const kpiAtrasadas = fDemandas.filter((d) => d.status === "Atrasado").length;
+  const kpiConcluidas = fDemandas.filter(
+    (d) => d.status === "Concluido" && d.data_conclusao
+  ).length;
+  const kpiAtrasadas = fDemandas.filter((d) => {
+    if (d.status === "Concluido" || d.status === "Entregue") return false;
+    if (d.status === "Atrasado") return true;
+    if (!d.data_limite) return false;
+    return new Date(d.data_limite) < new Date();
+  }).length;
 
   // ---------- Charts Visão Geral ----------
   const atividade30 = useMemo(() => {
     const dias = 30;
     const base = new Date();
     base.setHours(0, 0, 0, 0);
+    const startWin = new Date(base);
+    startWin.setDate(startWin.getDate() - (dias - 1));
+
+    // Indexa cards ativos por dia
+    const cardsAtivos = cards.filter((c) => cardHasDate(c, byCard));
     const out: { name: string; posts: number; demandas: number }[] = [];
     for (let i = dias - 1; i >= 0; i--) {
       const d = new Date(base);
       d.setDate(d.getDate() - i);
       const next = new Date(d);
       next.setDate(next.getDate() + 1);
+      const postsDia = cardsAtivos.filter((c) => {
+        const dr = cardRelevantDate(c, byCard);
+        return dr && dr >= d && dr < next;
+      }).length;
+      const demDia = demandas.filter((dem) => {
+        if (dem.status !== "Concluido" || !dem.data_conclusao) return false;
+        const dd = new Date(dem.data_conclusao);
+        return dd >= d && dd < next;
+      }).length;
       out.push({
         name: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`,
-        posts: posts.filter((p) => {
-          const pd = new Date(p.created_at);
-          return pd >= d && pd < next;
-        }).length,
-        demandas: demandas.filter((dem) => {
-          if (dem.status !== "Concluido" || !dem.data_conclusao) return false;
-          const dd = new Date(dem.data_conclusao);
-          return dd >= d && dd < next;
-        }).length,
+        posts: postsDia,
+        demandas: demDia,
       });
     }
     return out;
-  }, [posts, demandas]);
+  }, [cards, byCard, demandas]);
 
   const statusClientes = useMemo(() => {
     const order = ["Onboarding", "Ativo", "Pausado", "Encerrado"] as const;
@@ -133,24 +208,32 @@ export default function Relatorios() {
   }, [clientes]);
 
   const topResp = useMemo(() => {
+    const cardsAtivos = cards.filter((c) => cardHasDate(c, byCard));
+    const demAtivas = demandas.filter(demandaTemData);
     return responsaveis
       .map((r) => ({
         name: r.nome.split(" ")[0],
-        cards: cards.filter((c) => c.responsaveis.includes(r.id)).length,
-        demandas: demandas.filter((d) => getResponsaveisIds(d).includes(r.id)).length,
+        cards: cardsAtivos.filter((c) => c.responsaveis.includes(r.id)).length,
+        demandas: demAtivas.filter((d) => getResponsaveisIds(d).includes(r.id)).length,
         cor: r.cor || "hsl(var(--primary))",
       }))
       .map((r) => ({ ...r, total: r.cards + r.demandas }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
-  }, [responsaveis, cards, demandas]);
+  }, [responsaveis, cards, byCard, demandas]);
 
   const postsAno = useMemo(() => {
     const m = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const year = new Date().getFullYear();
     const arr = new Array(12).fill(0);
-    posts.forEach((p) => arr[new Date(p.created_at).getMonth()]++);
+    cards.forEach((c) => {
+      if (!cardHasDate(c, byCard)) return;
+      const dt = cardRelevantDate(c, byCard);
+      if (!dt || dt.getFullYear() !== year) return;
+      arr[dt.getMonth()]++;
+    });
     return m.map((name, i) => ({ name, posts: arr[i] }));
-  }, [posts]);
+  }, [cards, byCard]);
 
   // ---------- Charts Clientes ----------
   const porNicho = useMemo(() => {
@@ -204,20 +287,27 @@ export default function Relatorios() {
   }
 
   function handleExport() {
-    exportCsv(
-      [
-        { metrica: "Período", valor: RANGE_LABEL[range] },
-        { metrica: "Posts (cards)", valor: kpiTotalPosts },
-        { metrica: "Postados", valor: kpiPostados },
-        { metrica: "Pendentes", valor: kpiPendentes },
-        { metrica: "Demandas", valor: kpiDemandas },
-        { metrica: "Concluídas", valor: kpiConcluidas },
-        { metrica: "Atrasadas", valor: kpiAtrasadas },
-        { metrica: "Clientes ativos", valor: kpiAtivos },
-        { metrica: "Clientes em onboarding", valor: kpiOnboarding },
-      ],
-      `relatorio-dash-tasks-${new Date().toISOString().slice(0, 10)}.csv`
-    );
+    try {
+      exportCsv(
+        [
+          { metrica: "Período", valor: RANGE_LABEL[range] },
+          { metrica: "Posts ativos (período)", valor: kpiTotalPosts },
+          { metrica: "Postados", valor: kpiPostados },
+          { metrica: "Pendentes", valor: kpiPendentes },
+          { metrica: "Demandas ativas", valor: kpiDemandas },
+          { metrica: "Concluídas", valor: kpiConcluidas },
+          { metrica: "Atrasadas", valor: kpiAtrasadas },
+          { metrica: "Clientes total", valor: kpiClientes },
+          { metrica: "Clientes ativos", valor: kpiAtivos },
+          { metrica: "Clientes em onboarding", valor: kpiOnboarding },
+          { metrica: "Clientes pausados", valor: kpiPausados },
+        ],
+        `relatorio-dash-tasks-${new Date().toISOString().slice(0, 10)}.csv`
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error("Falha ao exportar CSV");
+    }
   }
 
   return (
@@ -230,7 +320,7 @@ export default function Relatorios() {
             <h1 className="text-2xl font-bold tracking-tight">Relatórios</h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Visão analítica do Dash Tasks · {RANGE_LABEL[range]}
+            Visão analítica do Dash Tasks · {RANGE_LABEL[range]} · apenas itens ativos (com data)
           </p>
         </div>
 
@@ -293,7 +383,7 @@ export default function Relatorios() {
                   <Activity className="h-4 w-4 text-primary" />
                   <CardTitle className="text-base">Atividade — últimos 30 dias</CardTitle>
                 </div>
-                <CardDescription>Posts criados vs demandas concluídas</CardDescription>
+                <CardDescription>Posts ativos no dia vs demandas concluídas</CardDescription>
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer>
@@ -313,7 +403,7 @@ export default function Relatorios() {
                     <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
                     <Tooltip contentStyle={tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Area type="monotone" dataKey="posts" name="Posts criados" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#gPosts)" />
+                    <Area type="monotone" dataKey="posts" name="Posts ativos" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#gPosts)" />
                     <Area type="monotone" dataKey="demandas" name="Demandas concluídas" stroke="hsl(var(--status-postado))" strokeWidth={2} fill="url(#gDem)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -341,7 +431,7 @@ export default function Relatorios() {
             <Card className="lg:col-span-6">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Top 5 responsáveis</CardTitle>
-                <CardDescription>Carga combinada (posts + demandas)</CardDescription>
+                <CardDescription>Carga combinada (posts ativos + demandas ativas)</CardDescription>
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer>
@@ -361,7 +451,7 @@ export default function Relatorios() {
             <Card className="lg:col-span-6">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Posts por mês — ano corrente</CardTitle>
-                <CardDescription>Volume mensal acumulado</CardDescription>
+                <CardDescription>Apenas posts ativos (com data de início, agendamento ou postagem)</CardDescription>
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer>
