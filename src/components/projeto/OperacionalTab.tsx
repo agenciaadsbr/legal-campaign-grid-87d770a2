@@ -314,6 +314,41 @@ export function OperacionalTab({ clienteId, demandas, demandaInicial }: Props) {
     });
   }, [demandas, clienteId, responsaveis, createDemanda, updateDemanda, reload]);
 
+  // Normalização Google Ads: garante responsável GREICE na etapa final + dependências corretas.
+  const backfilledGoogleRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const tplG = CARD_PAI_TEMPLATES.find((t) => t.id === "google_ads");
+    if (!tplG) return;
+    const tituloPai = "Ativar campanha Google Ads";
+    const tituloFinal = "Ativar campanha Google Ads";
+
+    const cardsPai = demandas.filter(
+      (d: any) => d.is_card_pai && (d.titulo ?? "").trim() === tituloPai,
+    );
+    cardsPai.forEach((cp: any) => {
+      if (backfilledGoogleRef.current.has(cp.id)) return;
+      const filhos = demandas.filter((d: any) => d.parent_process_id === cp.id);
+      if (filhos.length === 0) return;
+      const finais = filhos.filter((d: any) => (d.titulo ?? "").trim() === tituloFinal);
+      if (finais.length === 0) return;
+
+      void (async () => {
+        const respFinalId = findResponsavelIdByNomes(
+          responsaveis,
+          ["Greice", "Gleice", "Grace", "GREICE", "GLEICE"],
+        );
+        // Aplica GREICE somente se a etapa final ainda não tem responsável.
+        for (const f of finais) {
+          const atuais = Array.isArray((f as any).responsaveis_ids) ? (f as any).responsaveis_ids : [];
+          if (respFinalId && atuais.length === 0) {
+            await updateDemanda(f.id, { responsaveis_ids: [respFinalId] } as any);
+          }
+        }
+        backfilledGoogleRef.current.add(cp.id);
+      })();
+    });
+  }, [demandas, responsaveis, updateDemanda]);
+
 
 
   return (
