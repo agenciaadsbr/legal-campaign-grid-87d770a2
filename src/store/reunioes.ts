@@ -40,6 +40,19 @@ export interface Reuniao {
   analise_iniciada_em?: string | null;
   analise_iniciada_por?: string | null;
   temperatura_cliente?: TemperaturaCliente | null;
+  delegada_em?: string | null;
+  delegada_por?: string | null;
+  qtd_tarefas_delegadas?: number | null;
+}
+
+export interface ConfirmarDelegacaoInput {
+  status: "delegada" | "nao_delegada";
+  acao_nao_delegada?: "manter" | "sem_acao";
+  responsavel_delegacao_id?: string | null;
+  delegada_em?: string | null;
+  prazo_delegacao?: string | null;
+  qtd_tarefas_delegadas?: number | null;
+  observacoes_delegacao?: string | null;
 }
 
 const nullIfEmpty = (v?: string | null) => (v && v.trim() ? v : null);
@@ -57,6 +70,7 @@ interface State {
   iniciarAnalise: (id: string) => Promise<void>;
   marcarSemAcao: (id: string) => Promise<void>;
   setPostStatus: (id: string, post_status: ReuniaoPostStatus) => Promise<void>;
+  confirmarDelegacao: (id: string, input: ConfirmarDelegacaoInput) => Promise<void>;
 }
 
 export const useReunioes = create<State>((set, get) => ({
@@ -154,6 +168,58 @@ export const useReunioes = create<State>((set, get) => ({
   },
   setPostStatus: async (id, post_status) => {
     await get().update(id, { post_status });
+  },
+  confirmarDelegacao: async (id, input) => {
+    const { data: user } = await supabase.auth.getUser();
+    const userId = user.user?.id ?? null;
+    const patch: Partial<Reuniao> = {
+      responsavel_delegacao_id: nullIfEmpty(input.responsavel_delegacao_id ?? null),
+      prazo_delegacao: input.prazo_delegacao || null,
+      observacoes_delegacao: input.observacoes_delegacao ?? null,
+      qtd_tarefas_delegadas:
+        typeof input.qtd_tarefas_delegadas === "number" && !isNaN(input.qtd_tarefas_delegadas)
+          ? input.qtd_tarefas_delegadas
+          : null,
+    };
+    if (input.status === "delegada") {
+      patch.post_status = "delegada";
+      patch.delegada_em = input.delegada_em || new Date().toISOString();
+      patch.delegada_por = userId;
+    } else {
+      patch.delegada_em = null;
+      patch.delegada_por = null;
+      if (input.acao_nao_delegada === "sem_acao") {
+        patch.post_status = "sem_acao";
+      }
+    }
+    await get().update(id, patch);
+
+    try {
+      const r = get().reunioes.find((x) => x.id === id);
+      if (r) {
+        await (supabase as any).from("atividade_cliente").insert({
+          cliente_id: r.cliente_id,
+          tipo: "reuniao",
+          acao: input.status === "delegada" ? "delegacao_confirmada" : "delegacao_nao_realizada",
+          referencia_id: id,
+          usuario_id: userId,
+          descricao:
+            input.status === "delegada"
+              ? `Delegação confirmada${input.qtd_tarefas_delegadas ? ` (${input.qtd_tarefas_delegadas} tarefas)` : ""}`
+              : "Reunião marcada como não delegada",
+          payload: {
+            responsavel_delegacao_id: patch.responsavel_delegacao_id,
+            prazo_delegacao: patch.prazo_delegacao,
+            qtd_tarefas_delegadas: patch.qtd_tarefas_delegadas,
+            observacoes_delegacao: patch.observacoes_delegacao,
+            delegada_em: patch.delegada_em,
+          },
+        });
+      }
+    } catch {
+      /* histórico best-effort */
+    }
+    toast.success(input.status === "delegada" ? "Delegação confirmada" : "Registro salvo");
   },
 }));
 

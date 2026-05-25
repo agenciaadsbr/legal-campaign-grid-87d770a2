@@ -2145,6 +2145,8 @@ export type Database = {
           created_at: string
           criado_por: string | null
           data: string
+          delegada_em: string | null
+          delegada_por: string | null
           gerar_alerta_delegacao: boolean | null
           ia_processed_at: string | null
           ia_status: Json
@@ -2156,6 +2158,7 @@ export type Database = {
           post_status: string | null
           prazo_delegacao: string | null
           project_id: string | null
+          qtd_tarefas_delegadas: number | null
           responsavel_delegacao_id: string | null
           responsavel_id: string | null
           resumo_cliente: string | null
@@ -2174,6 +2177,8 @@ export type Database = {
           created_at?: string
           criado_por?: string | null
           data?: string
+          delegada_em?: string | null
+          delegada_por?: string | null
           gerar_alerta_delegacao?: boolean | null
           ia_processed_at?: string | null
           ia_status?: Json
@@ -2185,6 +2190,7 @@ export type Database = {
           post_status?: string | null
           prazo_delegacao?: string | null
           project_id?: string | null
+          qtd_tarefas_delegadas?: number | null
           responsavel_delegacao_id?: string | null
           responsavel_id?: string | null
           resumo_cliente?: string | null
@@ -2203,6 +2209,8 @@ export type Database = {
           created_at?: string
           criado_por?: string | null
           data?: string
+          delegada_em?: string | null
+          delegada_por?: string | null
           gerar_alerta_delegacao?: boolean | null
           ia_processed_at?: string | null
           ia_status?: Json
@@ -2214,6 +2222,7 @@ export type Database = {
           post_status?: string | null
           prazo_delegacao?: string | null
           project_id?: string | null
+          qtd_tarefas_delegadas?: number | null
           responsavel_delegacao_id?: string | null
           responsavel_id?: string | null
           resumo_cliente?: string | null
