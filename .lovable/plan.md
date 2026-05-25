@@ -1,33 +1,34 @@
-## Problema
+## Diagnóstico
 
-Na Central de Tarefas, as tarefas do tipo "Criar N posts" são agregações de vários cards do mesmo cliente/responsável. Em `src/lib/minhasTarefas.ts` (linhas 277–286), o status do grupo é calculado assim:
+A foto enviada em **Configurações → Meu Perfil** é gravada apenas em `profiles.avatar_url`. Já os ícones de avatar exibidos em cards, kanban (Posts/Vídeos/etc.), listas de responsáveis e popovers vêm da tabela `responsaveis` (campo `responsaveis.avatar_url`), via `useCRM().responsaveis` e `AvatarStack`.
 
-1. Todos concluídos → `concluido`
-2. Prazo vencido → `atrasado`
-3. Algum em andamento → `em_andamento`
-4. Caso contrário → `pendente`
+Como o upload nunca propaga para `responsaveis`, usuários como o Robson ficam com foto no perfil mas com inicial colorida nos cards.
 
-O cálculo **não considera o status "Revisar" (Aguardando aprovação do cliente)**. Por isso, quando a Bianca move um card para "Aguardando aprovação do cliente" no detalhe da tarefa, o card individual atualiza corretamente, mas o grupo na Central de Tarefas continua marcado como **Atrasado** (porque a regra do prazo vence primeiro).
+## Plano
 
-Para demandas individuais (linhas 174–179) já existe a lógica correta: `Revisar` → status `aprovacao`, e a checagem de atrasado é ignorada nesse caso. Falta replicar isso para grupos de posts.
+### 1. Propagar upload/remoção em `MeuPerfil.tsx`
+Após atualizar `profiles.avatar_url`:
+- Buscar `profiles.responsavel_id` do usuário logado.
+- Se existir, fazer `update` em `responsaveis.avatar_url` com a mesma URL (ou `null` ao remover).
+- Disparar `loadAll()` do store `useCRM` para refletir imediatamente em toda a UI.
 
-## Correção
+### 2. Backfill dos usuários que já têm foto no perfil
+Criar migração SQL que copia `profiles.avatar_url` → `responsaveis.avatar_url` quando:
+- `profiles.responsavel_id IS NOT NULL`
+- `profiles.avatar_url IS NOT NULL`
+- e o `responsaveis.avatar_url` correspondente está vazio.
 
-Em `src/lib/minhasTarefas.ts`, dentro do `grupos.forEach` (bloco que monta a tarefa "Criar N posts"):
+Isso resolve o caso do Robson sem precisar pedir novo upload.
 
-1. Separar `pendentes` em dois subconjuntos:
-   - `emRevisar` = cards com `status_card === "Revisar"`
-   - `ativos` = pendentes que **não** estão em "Revisar"
-2. Ajustar a regra de status do grupo:
-   - Se `todosConcluidos` → `concluido`
-   - Senão, se `ativos.length === 0` (ou seja, todos os pendentes estão em "Revisar") → `aprovacao`
-   - Senão, se `isAtrasado(prazoDosAtivos)` → `atrasado` (usando o prazo dos cards ativos, não dos que estão em Revisar)
-   - Senão, se algum ativo está "Criar/Agendar" → `em_andamento`
-   - Senão → `pendente`
-3. Calcular `prazo`/`data_limite`/`data_inicio` priorizando os cards `ativos`; só usar prazos de cards em Revisar como fallback. Isso evita que um card em aprovação puxe o grupo para "atrasado".
+### 3. Fallback defensivo no carregamento (`src/store/crm.ts`)
+Em `loadAll`, ao montar o array `responsaveis`, se `responsavel.avatar_url` estiver vazio e existir um `profile` vinculado com `avatar_url`, usar o do profile como fallback. Garante consistência mesmo se algum upload futuro falhar em propagar.
 
-Nenhuma estrutura de dados, coluna de banco ou outra funcionalidade é alterada. As demandas individuais e o restante do fluxo continuam idênticos.
+### 4. Realtime (opcional, recomendado)
+Assinar mudanças na tabela `responsaveis` no `useCRM` para invalidar/recarregar quando outro usuário atualizar a foto, evitando precisar de refresh manual em outras sessões abertas.
 
-## Resultado esperado
+## Componentes envolvidos (sem mudança de lógica visual)
+- `src/components/MeuPerfil.tsx` — propagação no upload/remoção.
+- `src/store/crm.ts` — fallback profile→responsavel e (opcional) realtime.
+- Nova migração Supabase para o backfill.
 
-Quando todos os posts pendentes de um cliente estiverem em "Aguardando aprovação do cliente", a linha na Central de Tarefas passará a exibir o status **Aguardando aprovação** (e sairá do filtro "Atrasadas"), refletindo o que já aparece no detalhe da tarefa.
+Nenhuma alteração nos componentes que renderizam o avatar (`AvatarStack`, `CelulaResponsaveis`, `AtribuirResponsaveisPopover`, AppSidebar) — eles já leem corretamente de `avatar_url`.
