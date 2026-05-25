@@ -40,6 +40,19 @@ export interface Reuniao {
   analise_iniciada_em?: string | null;
   analise_iniciada_por?: string | null;
   temperatura_cliente?: TemperaturaCliente | null;
+  delegada_em?: string | null;
+  delegada_por?: string | null;
+  qtd_tarefas_delegadas?: number | null;
+}
+
+export interface ConfirmarDelegacaoInput {
+  status: "delegada" | "nao_delegada";
+  acao_nao_delegada?: "manter" | "sem_acao";
+  responsavel_delegacao_id?: string | null;
+  delegada_em?: string | null;
+  prazo_delegacao?: string | null;
+  qtd_tarefas_delegadas?: number | null;
+  observacoes_delegacao?: string | null;
 }
 
 const nullIfEmpty = (v?: string | null) => (v && v.trim() ? v : null);
