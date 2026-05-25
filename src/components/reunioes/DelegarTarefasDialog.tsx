@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,9 +31,7 @@ export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
   const [acaoNaoDelegada, setAcaoNaoDelegada] = useState<"manter" | "sem_acao">("manter");
   const [responsavel, setResponsavel] = useState<string>("");
   const [dataDelegacao, setDataDelegacao] = useState<string>(toLocalDateTimeInput());
-  const [prazo, setPrazo] = useState<string>("");
   const [qtd, setQtd] = useState<string>("");
-  const [observacao, setObservacao] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -43,11 +40,9 @@ export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
       setAcaoNaoDelegada("manter");
       setResponsavel(reuniao?.responsavel_delegacao_id ?? "");
       setDataDelegacao(toLocalDateTimeInput(reuniao?.delegada_em ?? null));
-      setPrazo(reuniao?.prazo_delegacao ?? "");
       setQtd(
         reuniao?.qtd_tarefas_delegadas != null ? String(reuniao.qtd_tarefas_delegadas) : ""
       );
-      setObservacao(reuniao?.observacoes_delegacao ?? "");
     }
   }, [open, meetingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -59,9 +54,9 @@ export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
         acao_nao_delegada: acaoNaoDelegada,
         responsavel_delegacao_id: responsavel || null,
         delegada_em: dataDelegacao ? new Date(dataDelegacao).toISOString() : null,
-        prazo_delegacao: prazo || null,
+        prazo_delegacao: null,
         qtd_tarefas_delegadas: qtd.trim() ? Number(qtd) : null,
-        observacoes_delegacao: observacao.trim() || null,
+        observacoes_delegacao: null,
       });
       onOpenChange(false);
     } finally {
@@ -105,7 +100,7 @@ export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs">Delegado para</Label>
+              <Label className="text-xs">Responsável pela delegação</Label>
               <Select
                 value={responsavel || "__none__"}
                 onValueChange={(v) => setResponsavel(v === "__none__" ? "" : v)}
@@ -127,11 +122,7 @@ export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
                 onChange={(e) => setDataDelegacao(e.target.value)}
               />
             </div>
-            <div>
-              <Label className="text-xs">Prazo (opcional)</Label>
-              <Input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
-            </div>
-            <div>
+            <div className="md:col-span-2">
               <Label className="text-xs">Quantidade de tarefas delegadas (opcional)</Label>
               <Input
                 type="number"
@@ -141,16 +132,6 @@ export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
                 placeholder="Ex: 4"
               />
             </div>
-          </div>
-
-          <div>
-            <Label className="text-xs">Observação</Label>
-            <Textarea
-              rows={3}
-              value={observacao}
-              onChange={(e) => setObservacao(e.target.value)}
-              placeholder="Descreva rapidamente o que foi delegado ou por que não foi delegado"
-            />
           </div>
         </div>
 
