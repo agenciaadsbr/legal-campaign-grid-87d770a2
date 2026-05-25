@@ -85,6 +85,8 @@ export function MeuPerfil() {
       }
 
       setForm((f) => ({ ...f, avatar_url: publicUrl }));
+      // Recarrega o store global para refletir a nova foto em toda a UI
+      try { await reloadCRM(); } catch {}
       toast.success("Foto de perfil atualizada!");
     } catch (error: any) {
       toast.error(error.message || "Erro ao fazer upload da imagem");
