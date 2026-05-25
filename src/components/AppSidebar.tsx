@@ -2,6 +2,7 @@ import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -35,11 +36,11 @@ export function AppSidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, roles, signOut } = useAuth();
-  const [profile, setProfile] = useState<{ nome: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ nome: string | null; avatar_url: string | null } | null>(null);
 
   useEffect(() => {
     if (user) {
-      supabase.from("profiles").select("nome").eq("id", user.id).maybeSingle().then(({ data }) => {
+      supabase.from("profiles").select("nome, avatar_url").eq("id", user.id).maybeSingle().then(({ data }) => {
         setProfile(data);
       });
     }
@@ -103,9 +104,12 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border px-3 py-3">
         {!collapsed ? (
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary shrink-0">
-              {initial}
-            </div>
+            <Avatar className="h-7 w-7 border border-sidebar-border">
+              <AvatarImage src={profile?.avatar_url || ""} />
+              <AvatarFallback className="bg-primary/20 text-[10px] font-semibold text-primary">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
             <div className="leading-tight overflow-hidden flex-1">
               <div className="text-xs font-medium text-sidebar-foreground truncate">
                 {displayName}
@@ -126,9 +130,14 @@ export function AppSidebar() {
           <button
             onClick={handleSignOut}
             title="Sair"
-            className="h-7 w-7 mx-auto rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary hover:bg-primary/30 transition-colors"
+            className="h-7 w-7 mx-auto rounded-full overflow-hidden border border-sidebar-border hover:opacity-80 transition-opacity"
           >
-            {initial}
+            <Avatar className="h-full w-full">
+              <AvatarImage src={profile?.avatar_url || ""} />
+              <AvatarFallback className="bg-primary/20 text-[10px] font-semibold text-primary">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
           </button>
         )}
       </SidebarFooter>
