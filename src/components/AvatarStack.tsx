@@ -23,12 +23,21 @@ export function AvatarStack({ responsaveis, size = "sm", max = 3 }: Props) {
           key={r.id}
           title={r.nome}
           className={cn(
-            "rounded-full ring-2 ring-background flex items-center justify-center font-semibold text-white",
+            "rounded-full ring-2 ring-background flex items-center justify-center font-semibold text-white overflow-hidden",
             sizeMap[size]
           )}
-          style={{ backgroundColor: r.cor }}
+          style={{ backgroundColor: r.avatar_url ? undefined : r.cor }}
         >
-          {r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+          {r.avatar_url ? (
+            <img
+              src={r.avatar_url}
+              alt={r.nome}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")
+          )}
         </div>
       ))}
       {overflow > 0 && (
