@@ -446,7 +446,7 @@ export function ReuniaoDialog({
                   </Button>
                 </div>
               </div>
-              <Textarea rows={4} value={resumoCliente} onChange={(e) => setResumoCliente(e.target.value)} placeholder="O que foi alinhado, próximos passos pelo cliente..." className="border-red-200 focus-visible:ring-red-300 bg-red-50/10" />
+              <Textarea value={resumoCliente} onChange={(e) => setResumoCliente(e.target.value)} placeholder="O que foi alinhado, próximos passos pelo cliente..." className="border-red-200 focus-visible:ring-red-300 bg-red-50/10 min-h-[320px] h-[320px] max-h-[60vh] overflow-y-auto resize-y" />
             </div>
 
             <div>
