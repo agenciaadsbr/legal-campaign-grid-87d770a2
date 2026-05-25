@@ -120,6 +120,7 @@ export function MeuPerfil() {
       }
 
       setForm((f) => ({ ...f, avatar_url: "" }));
+      try { await reloadCRM(); } catch {}
       toast.success("Foto de perfil removida");
     } catch (error: any) {
       toast.error(error.message || "Erro ao remover imagem");
