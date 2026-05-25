@@ -114,14 +114,18 @@ export function AtribuirResponsaveisPopover({
                   >
                     <Checkbox checked={checked} />
                     <div
-                      className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: r.cor }}
+                      className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0 overflow-hidden"
+                      style={{ backgroundColor: r.avatar_url ? undefined : r.cor }}
                     >
-                      {r.nome
-                        .split(" ")
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join("")}
+                      {r.avatar_url ? (
+                        <img src={r.avatar_url} alt={r.nome} className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        r.nome
+                          .split(" ")
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join("")
+                      )}
                     </div>
                     <span className="truncate">{r.nome}</span>
                   </button>
