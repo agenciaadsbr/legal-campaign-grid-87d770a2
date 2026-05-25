@@ -76,7 +76,7 @@ function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string
 
   return (
     <div className="group flex gap-3 p-3 rounded-md hover:bg-muted/40 transition-colors">
-      <Avatar nome={autor?.nome ?? "U"} cor={autor?.cor ?? "hsl(var(--muted-foreground))"} />
+      <Avatar nome={autor?.nome ?? "U"} cor={autor?.cor ?? "hsl(var(--muted-foreground))"} avatarUrl={(autor as any)?.avatar_url} />
       <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium">{autor?.nome ?? "Usuário"}</span>
