@@ -70,6 +70,7 @@ interface State {
   iniciarAnalise: (id: string) => Promise<void>;
   marcarSemAcao: (id: string) => Promise<void>;
   setPostStatus: (id: string, post_status: ReuniaoPostStatus) => Promise<void>;
+  confirmarDelegacao: (id: string, input: ConfirmarDelegacaoInput) => Promise<void>;
 }
 
 export const useReunioes = create<State>((set, get) => ({
