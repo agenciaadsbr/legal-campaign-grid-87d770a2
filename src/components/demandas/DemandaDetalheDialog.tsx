@@ -136,7 +136,7 @@ const extractAnexoStoragePath = (url: string): string | null => {
 };
 
 export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRascunho, headerExtras, showSaveButton, onSave, onCancel, disableAutoDiscard, saveLabel }: Props) {
-  const { clientes, responsaveis } = useCRM();
+  const { clientes, responsaveis, authoresPorAuthId } = useCRM();
   const { user, isAdmin, canWrite } = useAuth();
   const {
     updateDemanda,
@@ -1119,19 +1119,21 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               )}
               {meusComentarios.map((c) => {
                 const autor = responsaveis.find((r) => r.id === c.usuario_id);
-                const cor = autor?.cor ?? "hsl(var(--muted))";
-                const nome = autor?.nome ?? "Usuário";
+                const autorAuth = authoresPorAuthId?.[c.usuario_id];
+                const cor = autor?.cor ?? autorAuth?.cor ?? "hsl(var(--muted))";
+                const nome = autor?.nome ?? autorAuth?.nome ?? "Usuário";
+                const avatarUrl = autor?.avatar_url ?? autorAuth?.avatar_url;
                 return (
                   <div key={c.id} className="flex gap-2">
                     <div
-                      className="h-8 w-8 rounded-full text-white text-[11px] font-semibold flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: cor }}
+                      className="h-8 w-8 rounded-full text-white text-[11px] font-semibold flex items-center justify-center shrink-0 overflow-hidden"
+                      style={{ backgroundColor: avatarUrl ? undefined : cor }}
                     >
-                      {nome
-                        .split(" ")
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join("")}
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={nome} className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        nome.split(" ").map((n) => n[0]).slice(0, 2).join("")
+                      )}
                     </div>
                     <div className="flex-1 rounded-lg border bg-muted/30 px-3 py-2">
                       <div className="flex items-center justify-between mb-1">

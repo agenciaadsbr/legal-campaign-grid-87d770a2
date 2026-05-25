@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCRM } from "@/store/crm";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ interface Cargo { id: string; label: string }
 
 export function MeuPerfil() {
   const { user } = useAuth();
+  const reloadCRM = useCRM((s) => s._loadAll);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -83,6 +85,8 @@ export function MeuPerfil() {
       }
 
       setForm((f) => ({ ...f, avatar_url: publicUrl }));
+      // Recarrega o store global para refletir a nova foto em toda a UI
+      try { await reloadCRM(); } catch {}
       toast.success("Foto de perfil atualizada!");
     } catch (error: any) {
       toast.error(error.message || "Erro ao fazer upload da imagem");
@@ -116,6 +120,7 @@ export function MeuPerfil() {
       }
 
       setForm((f) => ({ ...f, avatar_url: "" }));
+      try { await reloadCRM(); } catch {}
       toast.success("Foto de perfil removida");
     } catch (error: any) {
       toast.error(error.message || "Erro ao remover imagem");

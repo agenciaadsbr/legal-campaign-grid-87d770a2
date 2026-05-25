@@ -33,13 +33,17 @@ const fileToDataUrl = (f: File) =>
 const isHtmlEmpty = (html: string) =>
   !html || html === "<p></p>" || !html.replace(/<[^>]+>/g, "").trim();
 
-function Avatar({ nome, cor }: { nome: string; cor: string }) {
+function Avatar({ nome, cor, avatarUrl }: { nome: string; cor: string; avatarUrl?: string }) {
   return (
     <div
-      className="h-8 w-8 rounded-full text-white text-xs font-semibold flex items-center justify-center shrink-0"
-      style={{ backgroundColor: cor }}
+      className="h-8 w-8 rounded-full text-white text-xs font-semibold flex items-center justify-center shrink-0 overflow-hidden"
+      style={{ backgroundColor: avatarUrl ? undefined : cor }}
     >
-      {nome.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+      {avatarUrl ? (
+        <img src={avatarUrl} alt={nome} className="h-full w-full object-cover" loading="lazy" />
+      ) : (
+        nome.split(" ").map((n) => n[0]).slice(0, 2).join("")
+      )}
     </div>
   );
 }
@@ -72,7 +76,7 @@ function ComentarioItem({ com, clienteId }: { com: Comentario; clienteId: string
 
   return (
     <div className="group flex gap-3 p-3 rounded-md hover:bg-muted/40 transition-colors">
-      <Avatar nome={autor?.nome ?? "U"} cor={autor?.cor ?? "hsl(var(--muted-foreground))"} />
+      <Avatar nome={autor?.nome ?? "U"} cor={autor?.cor ?? "hsl(var(--muted-foreground))"} avatarUrl={(autor as any)?.avatar_url} />
       <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium">{autor?.nome ?? "Usuário"}</span>
