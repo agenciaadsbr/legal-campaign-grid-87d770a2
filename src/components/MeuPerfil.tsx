@@ -15,6 +15,7 @@ interface Cargo { id: string; label: string }
 
 export function MeuPerfil() {
   const { user } = useAuth();
+  const reloadCRM = useCRM((s) => s._loadAll);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
