@@ -518,8 +518,19 @@ export const useCRM = create<State>()((set, get) => ({
         supabase.from("custom_fields").select("*").order("ordem"),
       ]);
 
-      const responsaveis = (responsaveisRes.data ?? []).map(mapResponsavel);
+      const responsaveisRaw = (responsaveisRes.data ?? []).map(mapResponsavel);
       const contratos = (contratosRes.data ?? []).map(mapContrato);
+
+      // Mapa responsavel_id → avatar_url do profile vinculado (fallback se responsavel não tiver)
+      const avatarPorRespId: Record<string, string> = {};
+      for (const p of profilesRes.data ?? []) {
+        if (p.responsavel_id && p.avatar_url) {
+          avatarPorRespId[p.responsavel_id] = p.avatar_url;
+        }
+      }
+      const responsaveis = responsaveisRaw.map((r) =>
+        r.avatar_url ? r : { ...r, avatar_url: avatarPorRespId[r.id] ?? r.avatar_url },
+      );
 
       const authoresPorAuthId: Record<string, { nome: string; cor: string; avatar_url?: string }> = {};
       for (const p of profilesRes.data ?? []) {

@@ -69,6 +69,19 @@ export function MeuPerfil() {
 
       if (updateError) throw updateError;
 
+      // Propaga foto para o responsável vinculado (aparece em cards/ícones do sistema)
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("responsavel_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (prof?.responsavel_id) {
+        await supabase
+          .from("responsaveis")
+          .update({ avatar_url: publicUrl })
+          .eq("id", prof.responsavel_id);
+      }
+
       setForm((f) => ({ ...f, avatar_url: publicUrl }));
       toast.success("Foto de perfil atualizada!");
     } catch (error: any) {
@@ -89,6 +102,18 @@ export function MeuPerfil() {
         .eq("id", user.id);
 
       if (updateError) throw updateError;
+
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("responsavel_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (prof?.responsavel_id) {
+        await supabase
+          .from("responsaveis")
+          .update({ avatar_url: null })
+          .eq("id", prof.responsavel_id);
+      }
 
       setForm((f) => ({ ...f, avatar_url: "" }));
       toast.success("Foto de perfil removida");
