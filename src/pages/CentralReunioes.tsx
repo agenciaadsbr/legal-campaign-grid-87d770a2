@@ -48,7 +48,7 @@ function StatusBadge({ status }: { status?: string | null }) {
   return <Badge variant="outline" className={cn("text-[10px]", styles[status])}>{STATUS_LABEL[status] ?? status}</Badge>;
 }
 
-function PostStatusBadge({ post }: { post?: string | null }) {
+function PostStatusBadge({ post, qtd }: { post?: string | null; qtd?: number | null }) {
   if (!post) return <span className="text-[10px] text-muted-foreground">—</span>;
   const styles: Record<string, string> = {
     nao_analisada: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
@@ -56,7 +56,9 @@ function PostStatusBadge({ post }: { post?: string | null }) {
     delegada: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
     sem_acao: "bg-muted text-muted-foreground border-border",
   };
-  return <Badge variant="outline" className={cn("text-[10px]", styles[post])}>{POST_LABEL[post] ?? post}</Badge>;
+  const baseLabel = POST_LABEL[post] ?? post;
+  const label = post === "delegada" && typeof qtd === "number" && qtd > 0 ? `${baseLabel} (${qtd})` : baseLabel;
+  return <Badge variant="outline" className={cn("text-[10px]", styles[post])}>{label}</Badge>;
 }
 
 function TemperaturaBadge({ temp }: { temp?: string | null }) {
