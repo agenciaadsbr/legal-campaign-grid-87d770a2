@@ -366,7 +366,7 @@ export default function CentralReunioes() {
                         <td className="px-2 py-1"><TemperaturaBadge temp={r.temperatura_cliente} /></td>
                         <td className="px-2 py-1">
                           <div className="flex items-center gap-1">
-                            <PostStatusBadge post={r.post_status} />
+                            <PostStatusBadge post={r.post_status} qtd={r.qtd_tarefas_delegadas} />
                             {critica && <AlertTriangle className="h-3.5 w-3.5 text-destructive" aria-label="Pendência crítica" />}
                             {alerta && <Clock className="h-3.5 w-3.5 text-amber-500" aria-label="Em análise há mais de 24h sem tarefa" />}
                           </div>
