@@ -27,6 +27,7 @@ import { useCRM } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import {
   STATUS_DEMANDA,
+  canonicalStatus,
   STATUS_DEMANDA_LABEL,
   STATUS_DEMANDA_COR,
   CATEGORIA_LABEL,
