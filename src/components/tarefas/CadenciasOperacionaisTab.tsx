@@ -197,14 +197,45 @@ function CadenciasOperacionaisTabInner({ scopeResponsavelId = null }: { scopeRes
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtradas.length === 0 && (
+                {loading && !loaded && (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center text-xs text-muted-foreground py-8">
-                      Nenhuma cadência encontrada.
+                      Carregando cadências operacionais...
                     </TableCell>
                   </TableRow>
                 )}
-                {filtradas.map((c) => {
+                {!loading && error && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-xs text-destructive py-8">
+                      <div>Não foi possível carregar as cadências operacionais. Tente novamente.</div>
+                      <Button
+                        size="sm" variant="outline" className="h-7 text-xs mt-2"
+                        onClick={() => { void load(); }}
+                      >
+                        Tentar novamente
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!loading && !error && filtradas.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-xs text-muted-foreground py-8">
+                      {hasFiltros ? (
+                        <div className="space-y-2">
+                          <div>Nenhum resultado para os filtros aplicados.</div>
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={limparFiltros}>
+                            Limpar filtros
+                          </Button>
+                        </div>
+                      ) : cadenciasRaw.length === 0 ? (
+                        "Nenhuma cadência operacional encontrada."
+                      ) : (
+                        "Não há cadências operacionais disponíveis para este usuário."
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!error && filtradas.map((c) => {
                   const dias = diasSemResposta(c);
                   const cli = clientesMap.get(c.cliente_id);
                   const resp = c.responsavel_id ? respMap.get(c.responsavel_id) : null;
