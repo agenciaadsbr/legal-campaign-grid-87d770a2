@@ -168,7 +168,7 @@ export function DemandCard({
         )}
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <span
           className="inline-block h-1.5 w-1.5 rounded-full"
           style={{ background: STATUS_DEMANDA_COR[demanda.status] }}
@@ -176,6 +176,14 @@ export function DemandCard({
         <span className="text-[10px] text-muted-foreground">
           {STATUS_DEMANDA_LABEL[demanda.status]} · {PRIORIDADE_LABEL[demanda.prioridade]}
         </span>
+        {(demanda as any).status_motivo && (
+          <span
+            className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border truncate max-w-[140px]"
+            title={(demanda as any).status_motivo}
+          >
+            {(demanda as any).status_motivo}
+          </span>
+        )}
       </div>
 
       {extraAction && (
