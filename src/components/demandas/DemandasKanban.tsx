@@ -4,6 +4,7 @@ import {
   STATUS_DEMANDA_LABEL,
   STATUS_DEMANDA_COR,
   DemandaStatus,
+  statusMatchesColuna,
 } from "@/lib/demandas-categorias";
 import { DemandCard } from "./DemandCard";
 import { useMemo, useState } from "react";
