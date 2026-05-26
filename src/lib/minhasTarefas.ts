@@ -7,7 +7,15 @@ import { CATEGORIA_LABEL } from "@/lib/demandas-categorias";
 import { isAguardandoDependencia, type TaskDependency } from "@/lib/workflow";
 
 export type TaskFonte = "demanda" | "post" | "planejamento" | "documentacao";
-export type TaskStatus = "pendente" | "em_andamento" | "atrasado" | "concluido" | "aprovacao";
+export type TaskStatus =
+  | "pendente"
+  | "em_andamento"
+  | "atrasado"
+  | "concluido"
+  | "aprovacao"
+  | "aguardando_acao_cliente"
+  | "aguardando_etapa_interna"
+  | "aguardando_etapa_anterior";
 export type TaskPrioridade = "Baixa" | "Media" | "Alta" | "Urgente";
 
 export interface UnifiedTask {
@@ -23,6 +31,10 @@ export interface UnifiedTask {
   data_inicio: string | null;
   data_limite: string | null;
   status: TaskStatus;
+  /** Status bruto do banco (para exibir labels específicos como "Aguardando ação do cliente"). */
+  status_raw?: string | null;
+  /** Badge complementar do status (motivo). */
+  status_motivo?: string | null;
   urgente: boolean;
   responsaveis_ids: string[];
   link: string;
@@ -30,9 +42,9 @@ export interface UnifiedTask {
   origem_categoria?: string | null;
   /** True se a demanda tem dependência ainda não liberada. */
   aguardando_liberacao?: boolean;
-  /** Data em que entrou em "Aguardando aprovação do cliente". */
+  /** Data em que entrou no status monitorado atual. */
   approval_waiting_since?: string | null;
-  /** Dias inteiros aguardando aprovação (null se não aplicável). */
+  /** Dias inteiros no status monitorado (null se não aplicável). */
   approval_dias?: number | null;
 }
 
