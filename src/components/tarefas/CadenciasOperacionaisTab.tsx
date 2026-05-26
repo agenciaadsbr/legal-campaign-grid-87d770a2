@@ -643,3 +643,31 @@ function MensagensList({
     </>
   );
 }
+
+class CadenciasErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: unknown) {
+    console.error("[CadenciasOperacionaisTab] crash", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <Card>
+          <CardContent className="p-6 text-center space-y-2">
+            <div className="text-sm text-destructive font-medium">
+              Não foi possível carregar as cadências operacionais.
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {this.state.error.message || "Ocorreu um erro inesperado."}
+            </div>
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => this.setState({ error: null })}>
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    return this.props.children;
+  }
+}
