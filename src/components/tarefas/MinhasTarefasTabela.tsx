@@ -199,8 +199,8 @@ export function MinhasTarefasTabela({
                 <TableHead className="w-[90px]">Prioridade</TableHead>
                 <TableHead className="w-[90px]">Prazo</TableHead>
                 <TableHead className="w-[160px]">Status</TableHead>
-                <TableHead className="w-[110px]">Entrada em aprovação</TableHead>
-                <TableHead className="w-[120px]">Dias em aprovação</TableHead>
+                <TableHead className="w-[110px]">Entrada no status</TableHead>
+                <TableHead className="w-[120px]">Dias no status</TableHead>
                 <TableHead className="w-[200px]">Cadência</TableHead>
                 <TableHead className="w-[120px] text-right">Ações</TableHead>
               </TableRow>
