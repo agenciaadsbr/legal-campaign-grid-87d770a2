@@ -289,12 +289,35 @@ export function ReuniaoDialog({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      if (data?.resumo_cliente && (sobrescreverResumos || !resumoCliente)) setResumoCliente(data.resumo_cliente);
-      if (data?.resumo_operacional && (sobrescreverResumos || !resumoTarefas)) setResumoTarefas(data.resumo_operacional);
-      setIaStatus(data.status);
-      setIaProcessedAt(new Date().toISOString());
+
+      toast.info("Processando reunião em segundo plano. Isso pode levar alguns minutos...");
+
+      // Polling no registro da reunião até ia_processed_at estar preenchido (até 8 min)
+      const deadline = Date.now() + 8 * 60 * 1000;
+      let finalRow: any = null;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const { data: row } = await supabase
+          .from("reunioes")
+          .select("ia_processed_at, ia_status, resumo_cliente, resumo_tarefas")
+          .eq("id", reuniao.id)
+          .maybeSingle();
+        if (row?.ia_processed_at) { finalRow = row; break; }
+      }
+
+      if (!finalRow) {
+        toast.error("Tempo esgotado aguardando IA. Recarregue em instantes.");
+        return;
+      }
+
+      if (finalRow.resumo_cliente && (sobrescreverResumos || !resumoCliente)) setResumoCliente(finalRow.resumo_cliente);
+      if (finalRow.resumo_tarefas && (sobrescreverResumos || !resumoTarefas)) setResumoTarefas(finalRow.resumo_tarefas);
+      setIaStatus(finalRow.ia_status);
+      setIaProcessedAt(finalRow.ia_processed_at);
       await reloadSugeridas();
-      toast.success(`Processado · ${data.tarefas_inseridas} tarefa(s) sugerida(s)${data.tarefas_substituidas ? `, ${data.tarefas_substituidas} substituída(s)` : ""}`);
+      const count = finalRow.ia_status?.tarefas?.count ?? 0;
+      const subs = finalRow.ia_status?.tarefas?.substituidas ?? 0;
+      toast.success(`Processado · ${count} tarefa(s) sugerida(s)${subs ? `, ${subs} substituída(s)` : ""}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao processar reunião");
     } finally {
