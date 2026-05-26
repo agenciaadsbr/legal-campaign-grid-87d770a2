@@ -137,18 +137,27 @@ export function MinhasTarefasTabela({
 
   const grupos = useMemo(() => {
     const buckets: Record<GroupKey, UnifiedTask[]> = {
-      urgente: [], atrasado: [], aprovacao: [], em_andamento: [], pendente: [], concluido: [],
+      urgente: [],
+      atrasado: [],
+      aprovacao: [],
+      aguardando_acao_cliente: [],
+      aguardando_etapa_interna: [],
+      aguardando_etapa_anterior: [],
+      em_andamento: [],
+      pendente: [],
+      concluido: [],
     };
     for (const t of tasks) buckets[groupOf(t)].push(t);
-    // Ordena grupo de aprovação por dias desc, prazo asc
-    buckets.aprovacao.sort((a, b) => {
-      const da = a.approval_dias ?? -1;
-      const db = b.approval_dias ?? -1;
-      if (da !== db) return db - da;
-      const pa = a.prazo ? new Date(a.prazo).getTime() : Infinity;
-      const pb = b.prazo ? new Date(b.prazo).getTime() : Infinity;
-      return pa - pb;
-    });
+    const sortMonitorado = (arr: UnifiedTask[]) =>
+      arr.sort((a, b) => {
+        const da = a.approval_dias ?? -1;
+        const db = b.approval_dias ?? -1;
+        if (da !== db) return db - da;
+        const pa = a.prazo ? new Date(a.prazo).getTime() : Infinity;
+        const pb = b.prazo ? new Date(b.prazo).getTime() : Infinity;
+        return pa - pb;
+      });
+    MONITORADO_KEYS.forEach((k) => sortMonitorado(buckets[k]));
     return GROUP_ORDER
       .map((k) => ({ key: k, items: buckets[k] }))
       .filter((g) => g.items.length > 0);
