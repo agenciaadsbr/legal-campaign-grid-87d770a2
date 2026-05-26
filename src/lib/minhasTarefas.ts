@@ -192,7 +192,11 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           d.status === "Concluido" ||
           d.status === "Entregue" ||
           d.status === "Atrasado" ||
-          d.status === "Revisar",
+          d.status === "Revisar" ||
+          (d.status as string) === "Aguardando aprovação do cliente" ||
+          (d.status as string) === "Aguardando ação do cliente" ||
+          (d.status as string) === "Aguardando etapa interna" ||
+          (d.status as string) === "Aguardando etapa anterior",
       )
       .forEach((d) => {
         const raw = d.status as string;
