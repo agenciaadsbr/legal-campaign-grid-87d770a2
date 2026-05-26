@@ -46,18 +46,38 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
   const [ready, setReady] = useState(false);
   const [expandido, setExpandido] = useState<Record<string, boolean>>({});
 
-  const { 
-    consultarIA, 
-    loading, 
-    tarefaConsultas, 
+  const [isOpen, setIsOpen] = useState(false);
+  const [pergunta, setPergunta] = useState("");
+  const [resposta, setResposta] = useState<any>(null);
+  const [ready, setReady] = useState(false);
+  const [expandido, setExpandido] = useState<Record<string, boolean>>({});
+  const [verResumoOpen, setVerResumoOpen] = useState(false);
+  const [reunioesLoaded, setReunioesLoaded] = useState(false);
+
+  const {
+    consultarIA,
+    loading,
+    tarefaConsultas,
     loadConsultasByDemanda,
     setorPrompts,
     loadSetorPrompts
   } = useIAConsultas();
-  
+
   const { reunioes, load: loadReunioes } = useReunioes();
   const { clientes, authoresPorAuthId } = useCRM();
   const { user } = useAuth();
+
+  const cliente = clientes.find((c) => c.id === demanda.cliente_id);
+  const clienteNome = (cliente as any)?.nome_cliente || (cliente as any)?.nome || "Cliente";
+
+  const reuniaoSelecionada = useMemo(() => {
+    const lista = reunioes.filter((r) => r.cliente_id === demanda.cliente_id);
+    const vinculada = (demanda as any).origem_reuniao_id
+      ? lista.find((r) => r.id === (demanda as any).origem_reuniao_id)
+      : null;
+    if (vinculada) return vinculada;
+    return [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0] || null;
+  }, [reunioes, demanda]);
 
   useEffect(() => {
     let cancelado = false;
