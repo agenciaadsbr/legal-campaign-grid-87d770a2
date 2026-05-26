@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Sparkles, 
-  Send, 
-  ChevronDown, 
-  ChevronUp, 
-  Copy, 
+import {
+  Sparkles,
+  Send,
+  ChevronDown,
+  ChevronUp,
+  Copy,
   MessageSquarePlus,
   Clock,
   Bot,
-  User as UserIcon
+  User as UserIcon,
+  FileText,
 } from "lucide-react";
 import { useIAConsultas } from "@/store/iaConsultas";
 import { useReunioes } from "@/store/reunioes";
@@ -21,6 +22,14 @@ import { Demanda } from "@/store/demandas";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Props {
   demanda: Demanda;
@@ -31,24 +40,39 @@ interface Props {
 const RESPOSTA_LIMITE = 280;
 
 export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: Props) {
+
   const [isOpen, setIsOpen] = useState(false);
   const [pergunta, setPergunta] = useState("");
   const [resposta, setResposta] = useState<any>(null);
   const [ready, setReady] = useState(false);
   const [expandido, setExpandido] = useState<Record<string, boolean>>({});
+  const [verResumoOpen, setVerResumoOpen] = useState(false);
+  const [reunioesLoaded, setReunioesLoaded] = useState(false);
 
-  const { 
-    consultarIA, 
-    loading, 
-    tarefaConsultas, 
+  const {
+    consultarIA,
+    loading,
+    tarefaConsultas,
     loadConsultasByDemanda,
     setorPrompts,
     loadSetorPrompts
   } = useIAConsultas();
-  
+
   const { reunioes, load: loadReunioes } = useReunioes();
   const { clientes, authoresPorAuthId } = useCRM();
   const { user } = useAuth();
+
+  const cliente = clientes.find((c) => c.id === demanda.cliente_id);
+  const clienteNome = (cliente as any)?.nome_cliente || (cliente as any)?.nome || "Cliente";
+
+  const reuniaoSelecionada = useMemo(() => {
+    const lista = reunioes.filter((r) => r.cliente_id === demanda.cliente_id);
+    const vinculada = (demanda as any).origem_reuniao_id
+      ? lista.find((r) => r.id === (demanda as any).origem_reuniao_id)
+      : null;
+    if (vinculada) return vinculada;
+    return [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0] || null;
+  }, [reunioes, demanda]);
 
   useEffect(() => {
     let cancelado = false;
@@ -176,24 +200,43 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[10px] text-muted-foreground">
                   {!ready ? "Carregando reuniões do cliente…" : ""}
                 </span>
-                <Button 
-                  size="sm" 
-                  onClick={handleConsultar} 
-                  disabled={loading || !ready || !pergunta.trim()}
-                  className="h-8 gap-2"
-                >
-                  {loading ? (
-                    <Clock className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
-                  {loading ? "Consultando..." : "Consultar IA"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      if (!reunioesLoaded) {
+                        await loadReunioes();
+                        setReunioesLoaded(true);
+                      }
+                      setVerResumoOpen(true);
+                    }}
+                    className="h-8 gap-2"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Ver resumo da reunião
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleConsultar}
+                    disabled={loading || !ready || !pergunta.trim()}
+                    className="h-8 gap-2"
+                  >
+                    {loading ? (
+                      <Clock className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    {loading ? "Consultando..." : "Consultar IA"}
+                  </Button>
+                </div>
               </div>
+
 
               {resposta && (
                 <div className="mt-3 p-3 rounded-lg bg-background border space-y-2 animate-in zoom-in-95 duration-200">
@@ -303,6 +346,69 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
           )}
         </div>
       )}
+
+      <Dialog open={verResumoOpen} onOpenChange={setVerResumoOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Resumo da reunião do cliente</DialogTitle>
+          </DialogHeader>
+          {!reuniaoSelecionada ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma reunião encontrada para este cliente.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Cliente</div>
+                  <div className="font-medium">{clienteNome}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Título</div>
+                  <div className="font-medium">{reuniaoSelecionada.titulo}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Data</div>
+                  <div className="font-medium">
+                    {reuniaoSelecionada.data ? new Date(reuniaoSelecionada.data).toLocaleString("pt-BR") : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Responsável</div>
+                  <div className="font-medium">{nomeUsuario(reuniaoSelecionada.responsavel_id)}</div>
+                </div>
+              </div>
+
+              <Tabs defaultValue="resumo_cliente" className="w-full">
+                <TabsList className="grid grid-cols-4 w-full">
+                  <TabsTrigger value="resumo_cliente">Resumo</TabsTrigger>
+                  <TabsTrigger value="resumo_tarefas">Operacional</TabsTrigger>
+                  <TabsTrigger value="observacoes">Observações</TabsTrigger>
+                  <TabsTrigger value="transcricao">Transcrição</TabsTrigger>
+                </TabsList>
+                {(["resumo_cliente", "resumo_tarefas", "observacoes", "transcricao"] as const).map((k) => {
+                  const val = (reuniaoSelecionada as any)[k] as string | null;
+                  return (
+                    <TabsContent key={k} value={k}>
+                      <div className="mt-2 p-3 rounded border bg-muted/30 text-xs whitespace-pre-wrap min-h-[120px] max-h-[45vh] overflow-y-auto">
+                        {val && val.trim()
+                          ? val
+                          : k === "resumo_cliente" || k === "resumo_tarefas"
+                          ? "Esta reunião ainda não possui resumo gerado."
+                          : "Sem conteúdo."}
+                      </div>
+                    </TabsContent>
+                  );
+                })}
+              </Tabs>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerResumoOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
