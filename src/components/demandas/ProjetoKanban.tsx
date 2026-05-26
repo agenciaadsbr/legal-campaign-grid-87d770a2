@@ -5,6 +5,7 @@ import {
   STATUS_DEMANDA_LABEL,
   STATUS_DEMANDA_COR,
   DemandaStatus,
+  statusMatchesColuna,
 } from "@/lib/demandas-categorias";
 import { DemandCard } from "./DemandCard";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
   return (
     <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-3">
       {STATUS_DEMANDA.map((status) => {
-        const items = demandas.filter((d) => d.status === status);
+        const items = demandas.filter((d) => statusMatchesColuna(d.status as string, status));
         return (
           <div
             key={status}

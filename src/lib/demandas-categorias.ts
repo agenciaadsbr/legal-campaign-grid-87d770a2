@@ -121,6 +121,10 @@ export type DemandaStatus =
   | "Agendado"
   | "Postado";
 
+// "Revisar" é o valor legado equivalente a "Aguardando aprovação do cliente".
+// Não exibimos como opção separada para evitar duplicação. A canonicalização
+// abaixo garante que dados existentes com status "Revisar" sejam tratados
+// como "Aguardando aprovação do cliente" em filtros, kanbans e dropdowns.
 export const STATUS_DEMANDA: DemandaStatus[] = [
   "Planejamento",
   "Criar",
@@ -128,13 +132,25 @@ export const STATUS_DEMANDA: DemandaStatus[] = [
   "Aguardando etapa interna",
   "Aguardando ação do cliente",
   "Aguardando aprovação do cliente",
-  "Revisar",
   "Agendado",
   "Entregue",
   "Postado",
   "Concluido",
   "Atrasado",
 ];
+
+/** Retorna o status canônico, mapeando aliases legados ("Revisar"). */
+export function canonicalStatus(s: string | null | undefined): string {
+  if (!s) return "";
+  const trimmed = String(s).trim();
+  if (trimmed === "Revisar") return "Aguardando aprovação do cliente";
+  return trimmed;
+}
+
+/** True quando a demanda pertence à coluna/filtro do status informado. */
+export function statusMatchesColuna(itemStatus: string | null | undefined, coluna: string): boolean {
+  return canonicalStatus(itemStatus) === canonicalStatus(coluna);
+}
 
 export const STATUS_DEMANDA_LABEL: Record<DemandaStatus, string> = {
   Planejamento: "Planejamento",

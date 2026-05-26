@@ -27,6 +27,7 @@ import { useCRM } from "@/store/crm";
 import { useAuth } from "@/hooks/useAuth";
 import {
   STATUS_DEMANDA,
+  canonicalStatus,
   STATUS_DEMANDA_LABEL,
   STATUS_DEMANDA_COR,
   CATEGORIA_LABEL,
@@ -566,7 +567,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     Urgente
                   </Button>
                   <Select
-                    value={demanda.status}
+                    value={canonicalStatus(demanda.status as string)}
                     disabled={aguardando}
                     onValueChange={(v) => {
                       if (aguardando) {
