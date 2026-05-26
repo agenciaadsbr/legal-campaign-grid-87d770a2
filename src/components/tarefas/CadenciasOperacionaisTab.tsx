@@ -52,12 +52,17 @@ function statusVariant(s: CadenciaStatus): "default" | "secondary" | "destructiv
   return "default";
 }
 
-export function CadenciasOperacionaisTab() {
+export function CadenciasOperacionaisTab({ scopeResponsavelId = null }: { scopeResponsavelId?: string | null } = {}) {
   const { clientes, responsaveis } = useCRM();
   const {
-    cadencias, execucoes, mensagens, loaded, load,
+    cadencias: cadenciasRaw, execucoes, mensagens, loaded, load,
     create, update, executarEtapa,
   } = useCadenciasStore();
+
+  const cadencias = useMemo(
+    () => (scopeResponsavelId ? cadenciasRaw.filter((c) => c.responsavel_id === scopeResponsavelId) : cadenciasRaw),
+    [cadenciasRaw, scopeResponsavelId],
+  );
 
   const [busca, setBusca] = useState("");
   const [fTipo, setFTipo] = useState<string>("all");
