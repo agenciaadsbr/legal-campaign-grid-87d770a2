@@ -346,6 +346,69 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
           )}
         </div>
       )}
+
+      <Dialog open={verResumoOpen} onOpenChange={setVerResumoOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Resumo da reunião do cliente</DialogTitle>
+          </DialogHeader>
+          {!reuniaoSelecionada ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma reunião encontrada para este cliente.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Cliente</div>
+                  <div className="font-medium">{clienteNome}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Título</div>
+                  <div className="font-medium">{reuniaoSelecionada.titulo}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Data</div>
+                  <div className="font-medium">
+                    {reuniaoSelecionada.data ? new Date(reuniaoSelecionada.data).toLocaleString("pt-BR") : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Responsável</div>
+                  <div className="font-medium">{nomeUsuario(reuniaoSelecionada.responsavel_id)}</div>
+                </div>
+              </div>
+
+              <Tabs defaultValue="resumo_cliente" className="w-full">
+                <TabsList className="grid grid-cols-4 w-full">
+                  <TabsTrigger value="resumo_cliente">Resumo</TabsTrigger>
+                  <TabsTrigger value="resumo_tarefas">Operacional</TabsTrigger>
+                  <TabsTrigger value="observacoes">Observações</TabsTrigger>
+                  <TabsTrigger value="transcricao">Transcrição</TabsTrigger>
+                </TabsList>
+                {(["resumo_cliente", "resumo_tarefas", "observacoes", "transcricao"] as const).map((k) => {
+                  const val = (reuniaoSelecionada as any)[k] as string | null;
+                  return (
+                    <TabsContent key={k} value={k}>
+                      <div className="mt-2 p-3 rounded border bg-muted/30 text-xs whitespace-pre-wrap min-h-[120px] max-h-[45vh] overflow-y-auto">
+                        {val && val.trim()
+                          ? val
+                          : k === "resumo_cliente" || k === "resumo_tarefas"
+                          ? "Esta reunião ainda não possui resumo gerado."
+                          : "Sem conteúdo."}
+                      </div>
+                    </TabsContent>
+                  );
+                })}
+              </Tabs>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerResumoOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
