@@ -265,7 +265,11 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
     grupos.forEach((grupo) => {
       const cardsGrupo = grupo.cards;
       const cliente_id = cardsGrupo[0].cliente_id;
-      const pendentes = cardsGrupo.filter((c) => c.status_card !== "Postado");
+      // Da perspectiva da Central de Tarefas: card já "Agendado"/"Agendar"/"Postado"
+      // não é mais uma tarefa pendente do criador — não deve puxar o grupo para "Atrasado".
+      const isConcluidoParaCentral = (s: string) =>
+        s === "Postado" || s === "Agendado" || s === "Agendar";
+      const pendentes = cardsGrupo.filter((c) => !isConcluidoParaCentral(c.status_card));
       const todosConcluidos = pendentes.length === 0;
 
       const emRevisar = pendentes.filter((c) => c.status_card === "Revisar");
@@ -298,7 +302,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
 
       const algumUrgente = cardsGrupo.some((c) => !!c.is_urgent);
       const algumAtivoEmAndamento = ativos.some(
-        (c) => c.status_card === "Criar" || c.status_card === "Agendar",
+        (c) => c.status_card === "Criar",
       );
 
       let status: TaskStatus;
