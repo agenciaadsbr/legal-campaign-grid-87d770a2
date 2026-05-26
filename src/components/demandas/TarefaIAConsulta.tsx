@@ -200,24 +200,43 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[10px] text-muted-foreground">
                   {!ready ? "Carregando reuniões do cliente…" : ""}
                 </span>
-                <Button 
-                  size="sm" 
-                  onClick={handleConsultar} 
-                  disabled={loading || !ready || !pergunta.trim()}
-                  className="h-8 gap-2"
-                >
-                  {loading ? (
-                    <Clock className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
-                  {loading ? "Consultando..." : "Consultar IA"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      if (!reunioesLoaded) {
+                        await loadReunioes();
+                        setReunioesLoaded(true);
+                      }
+                      setVerResumoOpen(true);
+                    }}
+                    className="h-8 gap-2"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Ver resumo da reunião
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleConsultar}
+                    disabled={loading || !ready || !pergunta.trim()}
+                    className="h-8 gap-2"
+                  >
+                    {loading ? (
+                      <Clock className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    {loading ? "Consultando..." : "Consultar IA"}
+                  </Button>
+                </div>
               </div>
+
 
               {resposta && (
                 <div className="mt-3 p-3 rounded-lg bg-background border space-y-2 animate-in zoom-in-95 duration-200">
