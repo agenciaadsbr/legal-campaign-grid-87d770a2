@@ -42,7 +42,7 @@ export function RelatoriosDemandas({ demandas }: Props) {
     () =>
       STATUS_DEMANDA.map((s) => ({
         name: STATUS_DEMANDA_LABEL[s],
-        value: demandas.filter((d) => d.status === s).length,
+        value: demandas.filter((d) => statusMatchesColuna(d.status as string, s)).length,
         cor: STATUS_DEMANDA_COR[s],
       })),
     [demandas]
