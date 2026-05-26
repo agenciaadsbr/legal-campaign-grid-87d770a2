@@ -195,14 +195,27 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           d.status === "Revisar",
       )
       .forEach((d) => {
+        const raw = d.status as string;
         let status: TaskStatus = "pendente";
-        if (d.status === "Concluido") status = "concluido";
-        else if (d.status === "Atrasado") status = "atrasado";
-        else if (d.status === "Revisar") status = "aprovacao";
-        else if (d.status === "Criar" || d.status === "Entregue") status = "em_andamento";
-        if (status !== "concluido" && status !== "aprovacao" && isAtrasado(d.data_limite, status)) status = "atrasado";
+        if (raw === "Concluido") status = "concluido";
+        else if (raw === "Atrasado") status = "atrasado";
+        else if (raw === "Revisar" || raw === "Aguardando aprovação do cliente") status = "aprovacao";
+        else if (raw === "Aguardando ação do cliente") status = "aguardando_acao_cliente";
+        else if (raw === "Aguardando etapa interna") status = "aguardando_etapa_interna";
+        else if (raw === "Aguardando etapa anterior") status = "aguardando_etapa_anterior";
+        else if (raw === "Criar" || raw === "Entregue") status = "em_andamento";
 
-        const approval_waiting_since = d.status === "Revisar" ? (d.approval_waiting_since ?? null) : null;
+        const isMonitorado =
+          status === "aprovacao" ||
+          status === "aguardando_acao_cliente" ||
+          status === "aguardando_etapa_interna" ||
+          status === "aguardando_etapa_anterior";
+
+        if (status !== "concluido" && !isMonitorado && isAtrasado(d.data_limite, status)) {
+          status = "atrasado";
+        }
+
+        const approval_waiting_since = isMonitorado ? (d.approval_waiting_since ?? null) : null;
         out.push({
           id: `demanda:${d.id}`,
           fonte: "demanda",
@@ -216,6 +229,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           data_inicio: d.data_inicio,
           data_limite: d.data_limite,
           status,
+          status_raw: raw,
+          status_motivo: (d as any).status_motivo ?? null,
           urgente: d.prioridade === "Urgente",
           responsaveis_ids: getResponsaveisIds(d),
           link: `/clientes/${d.cliente_id}/projeto?tab=${categoriaParaAba(d.categoria)}&demanda=${d.id}`,
