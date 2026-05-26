@@ -40,11 +40,6 @@ interface Props {
 const RESPOSTA_LIMITE = 280;
 
 export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [pergunta, setPergunta] = useState("");
-  const [resposta, setResposta] = useState<any>(null);
-  const [ready, setReady] = useState(false);
-  const [expandido, setExpandido] = useState<Record<string, boolean>>({});
 
   const [isOpen, setIsOpen] = useState(false);
   const [pergunta, setPergunta] = useState("");
