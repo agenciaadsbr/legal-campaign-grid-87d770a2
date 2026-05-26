@@ -226,6 +226,7 @@ function normalizeDemanda(row: any): Demanda {
     process_step_status: (row.process_step_status ?? null) as ProcessStepStatus | null,
     process_depends_on: row.process_depends_on ?? null,
     process_step_config: (row.process_step_config ?? {}) as ProcessStepConfig,
+    status_motivo: row.status_motivo ?? null,
   } as Demanda;
 }
 
