@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Demanda } from "@/store/demandas";
-import { STATUS_DEMANDA, STATUS_DEMANDA_COR, STATUS_DEMANDA_LABEL } from "@/lib/demandas-categorias";
+import { STATUS_DEMANDA, STATUS_DEMANDA_COR, STATUS_DEMANDA_LABEL, statusMatchesColuna } from "@/lib/demandas-categorias";
 
 const tooltipStyle = {
   background: "hsl(var(--popover))",
