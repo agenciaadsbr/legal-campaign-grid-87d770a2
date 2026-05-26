@@ -566,7 +566,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     Urgente
                   </Button>
                   <Select
-                    value={demanda.status}
+                    value={canonicalStatus(demanda.status as string)}
                     disabled={aguardando}
                     onValueChange={(v) => {
                       if (aguardando) {
