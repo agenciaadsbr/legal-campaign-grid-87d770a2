@@ -602,17 +602,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   </Select>
                   {(() => {
                     const tipo = (demanda.status as string) === "Aguardando ação do cliente"
-                      ? "cliente"
+                      ? "cliente" as const
                       : (demanda.status as string) === "Aguardando etapa interna"
-                        ? "interno"
+                        ? "interno" as const
                         : null;
                     if (!tipo) return null;
-                    const StatusMotivoSelector = require("@/components/demandas/StatusMotivoSelector").StatusMotivoSelector;
                     return (
                       <StatusMotivoSelector
                         tipo={tipo}
                         value={(demanda as any).status_motivo}
-                        onChange={(v: string | null) => updateDemanda(demanda.id, { status_motivo: v } as any)}
+                        onChange={(v) => updateDemanda(demanda.id, { status_motivo: v } as any)}
                       />
                     );
                   })()}
