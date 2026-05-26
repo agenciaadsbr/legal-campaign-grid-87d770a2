@@ -460,6 +460,9 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   atrasado: "Atrasado",
   concluido: "Concluído",
   aprovacao: "Aguardando aprovação do cliente",
+  aguardando_acao_cliente: "Aguardando ação do cliente",
+  aguardando_etapa_interna: "Aguardando etapa interna",
+  aguardando_etapa_anterior: "Aguardando etapa anterior",
 };
 
 /** Calcula dias inteiros desde uma data ISO (>=0). */
