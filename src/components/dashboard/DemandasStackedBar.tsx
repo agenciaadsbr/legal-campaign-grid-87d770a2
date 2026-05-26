@@ -19,7 +19,7 @@ export function DemandasStackedBar({ demandas }: { demandas: Demanda[] }) {
     return PRIORIDADES.map((p) => {
       const row: any = { name: p === "Media" ? "Média" : p };
       STATUS_DEMANDA.forEach((s) => {
-        row[s] = demandas.filter((d) => d.prioridade === p && d.status === s).length;
+        row[s] = demandas.filter((d) => d.prioridade === p && statusMatchesColuna(d.status as string, s)).length;
       });
       return row;
     });
