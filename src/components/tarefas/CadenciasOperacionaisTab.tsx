@@ -52,15 +52,26 @@ function statusVariant(s: CadenciaStatus): "default" | "secondary" | "destructiv
   return "default";
 }
 
-export function CadenciasOperacionaisTab({ scopeResponsavelId = null }: { scopeResponsavelId?: string | null } = {}) {
+export function CadenciasOperacionaisTab(props: { scopeResponsavelId?: string | null } = {}) {
+  return (
+    <CadenciasErrorBoundary>
+      <CadenciasOperacionaisTabInner {...props} />
+    </CadenciasErrorBoundary>
+  );
+}
+
+function CadenciasOperacionaisTabInner({ scopeResponsavelId = null }: { scopeResponsavelId?: string | null }) {
   const { clientes, responsaveis } = useCRM();
   const {
-    cadencias: cadenciasRaw, execucoes, mensagens, loaded, load,
+    cadencias: cadenciasRaw, execucoes, mensagens, loaded, loading, error, load,
     create, update, executarEtapa,
   } = useCadenciasStore();
 
   const cadencias = useMemo(
-    () => (scopeResponsavelId ? cadenciasRaw.filter((c) => c.responsavel_id === scopeResponsavelId) : cadenciasRaw),
+    () => {
+      const safe = Array.isArray(cadenciasRaw) ? cadenciasRaw : [];
+      return scopeResponsavelId ? safe.filter((c) => c?.responsavel_id === scopeResponsavelId) : safe;
+    },
     [cadenciasRaw, scopeResponsavelId],
   );
 
@@ -73,8 +84,11 @@ export function CadenciasOperacionaisTab({ scopeResponsavelId = null }: { scopeR
   const [configOpen, setConfigOpen] = useState(false);
 
   useEffect(() => {
-    if (!loaded) void load();
-  }, [loaded, load]);
+    if (!loaded && !loading) void load();
+  }, [loaded, loading, load]);
+
+  const hasFiltros = busca.trim() !== "" || fTipo !== "all" || fStatus !== "all" || fCliente !== "all";
+  const limparFiltros = () => { setBusca(""); setFTipo("all"); setFStatus("all"); setFCliente("all"); };
 
   const clientesMap = useMemo(() => new Map(clientes.map((c) => [c.id, c])), [clientes]);
   const respMap = useMemo(() => new Map(responsaveis.map((r) => [r.id, r])), [responsaveis]);
