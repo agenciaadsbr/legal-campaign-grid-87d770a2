@@ -349,7 +349,15 @@ export default function MinhasTarefas() {
 
         <TabsContent value="cadencias" className="mt-3">
           <Suspense fallback={<div className="text-xs text-muted-foreground p-4">Carregando…</div>}>
-            <CadenciasOperacionaisTab />
+            <CadenciasOperacionaisTab
+              scopeResponsavelId={
+                visualizacao === "todos"
+                  ? null
+                  : visualizacao === "minhas"
+                    ? responsavelId
+                    : visualizacao
+              }
+            />
           </Suspense>
         </TabsContent>
 
