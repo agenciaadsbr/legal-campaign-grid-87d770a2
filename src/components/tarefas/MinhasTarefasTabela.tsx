@@ -30,24 +30,61 @@ const STATUS_COR: Record<string, string> = {
   atrasado: "hsl(var(--destructive))",
   concluido: "hsl(var(--status-postado))",
   aprovacao: "hsl(var(--status-revisar))",
+  aguardando_acao_cliente: "hsl(var(--status-revisar))",
+  aguardando_etapa_interna: "hsl(var(--warning))",
+  aguardando_etapa_anterior: "hsl(var(--warning))",
 };
 
-type GroupKey = "urgente" | "atrasado" | "aprovacao" | "em_andamento" | "pendente" | "concluido";
+type GroupKey =
+  | "urgente"
+  | "atrasado"
+  | "aprovacao"
+  | "aguardando_acao_cliente"
+  | "aguardando_etapa_interna"
+  | "aguardando_etapa_anterior"
+  | "em_andamento"
+  | "pendente"
+  | "concluido";
 
-const GROUP_ORDER: GroupKey[] = ["urgente", "atrasado", "aprovacao", "em_andamento", "pendente", "concluido"];
+const GROUP_ORDER: GroupKey[] = [
+  "urgente",
+  "atrasado",
+  "aprovacao",
+  "aguardando_acao_cliente",
+  "aguardando_etapa_interna",
+  "aguardando_etapa_anterior",
+  "em_andamento",
+  "pendente",
+  "concluido",
+];
 
 const GROUP_META: Record<GroupKey, { label: string; icon: typeof Zap; className: string }> = {
-  urgente:      { label: "Urgentes",                              icon: Zap,          className: "text-destructive" },
-  atrasado:     { label: "Atrasadas",                             icon: AlertCircle,  className: "text-destructive" },
-  aprovacao:    { label: "Aguardando aprovação do cliente",       icon: Hourglass,    className: "text-amber-500" },
-  em_andamento: { label: "Em andamento",                          icon: Clock,        className: "text-info" },
-  pendente:     { label: "Pendentes",                             icon: Circle,       className: "text-muted-foreground" },
-  concluido:    { label: "Concluídas",                            icon: CheckCircle2, className: "text-emerald-500" },
+  urgente:                    { label: "Urgentes",                              icon: Zap,          className: "text-destructive" },
+  atrasado:                   { label: "Atrasadas",                             icon: AlertCircle,  className: "text-destructive" },
+  aprovacao:                  { label: "Aguardando aprovação do cliente",       icon: Hourglass,    className: "text-amber-500" },
+  aguardando_acao_cliente:    { label: "Aguardando ação do cliente",            icon: Hourglass,    className: "text-amber-500" },
+  aguardando_etapa_interna:   { label: "Aguardando etapa interna",              icon: Hourglass,    className: "text-amber-500" },
+  aguardando_etapa_anterior:  { label: "Aguardando etapa anterior",             icon: Hourglass,    className: "text-amber-500" },
+  em_andamento:               { label: "Em andamento",                          icon: Clock,        className: "text-info" },
+  pendente:                   { label: "Pendentes",                             icon: Circle,       className: "text-muted-foreground" },
+  concluido:                  { label: "Concluídas",                            icon: CheckCircle2, className: "text-emerald-500" },
 };
+
+const MONITORADO_KEYS: GroupKey[] = [
+  "aprovacao",
+  "aguardando_acao_cliente",
+  "aguardando_etapa_interna",
+  "aguardando_etapa_anterior",
+];
 
 function groupOf(t: UnifiedTask): GroupKey {
   if (t.status === "concluido") return "concluido";
-  if (t.urgente && t.status !== "aprovacao") return "urgente";
+  const isMon =
+    t.status === "aprovacao" ||
+    t.status === "aguardando_acao_cliente" ||
+    t.status === "aguardando_etapa_interna" ||
+    t.status === "aguardando_etapa_anterior";
+  if (t.urgente && !isMon) return "urgente";
   return t.status as GroupKey;
 }
 
