@@ -7,7 +7,15 @@ import { CATEGORIA_LABEL } from "@/lib/demandas-categorias";
 import { isAguardandoDependencia, type TaskDependency } from "@/lib/workflow";
 
 export type TaskFonte = "demanda" | "post" | "planejamento" | "documentacao";
-export type TaskStatus = "pendente" | "em_andamento" | "atrasado" | "concluido" | "aprovacao";
+export type TaskStatus =
+  | "pendente"
+  | "em_andamento"
+  | "atrasado"
+  | "concluido"
+  | "aprovacao"
+  | "aguardando_acao_cliente"
+  | "aguardando_etapa_interna"
+  | "aguardando_etapa_anterior";
 export type TaskPrioridade = "Baixa" | "Media" | "Alta" | "Urgente";
 
 export interface UnifiedTask {
@@ -23,6 +31,10 @@ export interface UnifiedTask {
   data_inicio: string | null;
   data_limite: string | null;
   status: TaskStatus;
+  /** Status bruto do banco (para exibir labels específicos como "Aguardando ação do cliente"). */
+  status_raw?: string | null;
+  /** Badge complementar do status (motivo). */
+  status_motivo?: string | null;
   urgente: boolean;
   responsaveis_ids: string[];
   link: string;
@@ -30,9 +42,9 @@ export interface UnifiedTask {
   origem_categoria?: string | null;
   /** True se a demanda tem dependência ainda não liberada. */
   aguardando_liberacao?: boolean;
-  /** Data em que entrou em "Aguardando aprovação do cliente". */
+  /** Data em que entrou no status monitorado atual. */
   approval_waiting_since?: string | null;
-  /** Dias inteiros aguardando aprovação (null se não aplicável). */
+  /** Dias inteiros no status monitorado (null se não aplicável). */
   approval_dias?: number | null;
 }
 
@@ -180,17 +192,34 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           d.status === "Concluido" ||
           d.status === "Entregue" ||
           d.status === "Atrasado" ||
-          d.status === "Revisar",
+          d.status === "Revisar" ||
+          (d.status as string) === "Aguardando aprovação do cliente" ||
+          (d.status as string) === "Aguardando ação do cliente" ||
+          (d.status as string) === "Aguardando etapa interna" ||
+          (d.status as string) === "Aguardando etapa anterior",
       )
       .forEach((d) => {
+        const raw = d.status as string;
         let status: TaskStatus = "pendente";
-        if (d.status === "Concluido") status = "concluido";
-        else if (d.status === "Atrasado") status = "atrasado";
-        else if (d.status === "Revisar") status = "aprovacao";
-        else if (d.status === "Criar" || d.status === "Entregue") status = "em_andamento";
-        if (status !== "concluido" && status !== "aprovacao" && isAtrasado(d.data_limite, status)) status = "atrasado";
+        if (raw === "Concluido") status = "concluido";
+        else if (raw === "Atrasado") status = "atrasado";
+        else if (raw === "Revisar" || raw === "Aguardando aprovação do cliente") status = "aprovacao";
+        else if (raw === "Aguardando ação do cliente") status = "aguardando_acao_cliente";
+        else if (raw === "Aguardando etapa interna") status = "aguardando_etapa_interna";
+        else if (raw === "Aguardando etapa anterior") status = "aguardando_etapa_anterior";
+        else if (raw === "Criar" || raw === "Entregue") status = "em_andamento";
 
-        const approval_waiting_since = d.status === "Revisar" ? (d.approval_waiting_since ?? null) : null;
+        const isMonitorado =
+          status === "aprovacao" ||
+          status === "aguardando_acao_cliente" ||
+          status === "aguardando_etapa_interna" ||
+          status === "aguardando_etapa_anterior";
+
+        if (status !== "concluido" && !isMonitorado && isAtrasado(d.data_limite, status)) {
+          status = "atrasado";
+        }
+
+        const approval_waiting_since = isMonitorado ? (d.approval_waiting_since ?? null) : null;
         out.push({
           id: `demanda:${d.id}`,
           fonte: "demanda",
@@ -204,6 +233,8 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           data_inicio: d.data_inicio,
           data_limite: d.data_limite,
           status,
+          status_raw: raw,
+          status_motivo: (d as any).status_motivo ?? null,
           urgente: d.prioridade === "Urgente",
           responsaveis_ids: getResponsaveisIds(d),
           link: `/clientes/${d.cliente_id}/projeto?tab=${categoriaParaAba(d.categoria)}&demanda=${d.id}`,
@@ -448,6 +479,9 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   atrasado: "Atrasado",
   concluido: "Concluído",
   aprovacao: "Aguardando aprovação do cliente",
+  aguardando_acao_cliente: "Aguardando ação do cliente",
+  aguardando_etapa_interna: "Aguardando etapa interna",
+  aguardando_etapa_anterior: "Aguardando etapa anterior",
 };
 
 /** Calcula dias inteiros desde uma data ISO (>=0). */

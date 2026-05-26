@@ -2247,6 +2247,54 @@ export type Database = {
           },
         ]
       }
+      status_motivo_cliente_custom: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          label: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          ordem?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          ordem?: number
+        }
+        Relationships: []
+      }
+      status_motivo_interno_custom: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          label: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          ordem?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          ordem?: number
+        }
+        Relationships: []
+      }
       status_options: {
         Row: {
           cor: string

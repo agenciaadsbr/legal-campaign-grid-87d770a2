@@ -30,24 +30,61 @@ const STATUS_COR: Record<string, string> = {
   atrasado: "hsl(var(--destructive))",
   concluido: "hsl(var(--status-postado))",
   aprovacao: "hsl(var(--status-revisar))",
+  aguardando_acao_cliente: "hsl(var(--status-revisar))",
+  aguardando_etapa_interna: "hsl(var(--warning))",
+  aguardando_etapa_anterior: "hsl(var(--warning))",
 };
 
-type GroupKey = "urgente" | "atrasado" | "aprovacao" | "em_andamento" | "pendente" | "concluido";
+type GroupKey =
+  | "urgente"
+  | "atrasado"
+  | "aprovacao"
+  | "aguardando_acao_cliente"
+  | "aguardando_etapa_interna"
+  | "aguardando_etapa_anterior"
+  | "em_andamento"
+  | "pendente"
+  | "concluido";
 
-const GROUP_ORDER: GroupKey[] = ["urgente", "atrasado", "aprovacao", "em_andamento", "pendente", "concluido"];
+const GROUP_ORDER: GroupKey[] = [
+  "urgente",
+  "atrasado",
+  "aprovacao",
+  "aguardando_acao_cliente",
+  "aguardando_etapa_interna",
+  "aguardando_etapa_anterior",
+  "em_andamento",
+  "pendente",
+  "concluido",
+];
 
 const GROUP_META: Record<GroupKey, { label: string; icon: typeof Zap; className: string }> = {
-  urgente:      { label: "Urgentes",                              icon: Zap,          className: "text-destructive" },
-  atrasado:     { label: "Atrasadas",                             icon: AlertCircle,  className: "text-destructive" },
-  aprovacao:    { label: "Aguardando aprovação do cliente",       icon: Hourglass,    className: "text-amber-500" },
-  em_andamento: { label: "Em andamento",                          icon: Clock,        className: "text-info" },
-  pendente:     { label: "Pendentes",                             icon: Circle,       className: "text-muted-foreground" },
-  concluido:    { label: "Concluídas",                            icon: CheckCircle2, className: "text-emerald-500" },
+  urgente:                    { label: "Urgentes",                              icon: Zap,          className: "text-destructive" },
+  atrasado:                   { label: "Atrasadas",                             icon: AlertCircle,  className: "text-destructive" },
+  aprovacao:                  { label: "Aguardando aprovação do cliente",       icon: Hourglass,    className: "text-amber-500" },
+  aguardando_acao_cliente:    { label: "Aguardando ação do cliente",            icon: Hourglass,    className: "text-amber-500" },
+  aguardando_etapa_interna:   { label: "Aguardando etapa interna",              icon: Hourglass,    className: "text-amber-500" },
+  aguardando_etapa_anterior:  { label: "Aguardando etapa anterior",             icon: Hourglass,    className: "text-amber-500" },
+  em_andamento:               { label: "Em andamento",                          icon: Clock,        className: "text-info" },
+  pendente:                   { label: "Pendentes",                             icon: Circle,       className: "text-muted-foreground" },
+  concluido:                  { label: "Concluídas",                            icon: CheckCircle2, className: "text-emerald-500" },
 };
+
+const MONITORADO_KEYS: GroupKey[] = [
+  "aprovacao",
+  "aguardando_acao_cliente",
+  "aguardando_etapa_interna",
+  "aguardando_etapa_anterior",
+];
 
 function groupOf(t: UnifiedTask): GroupKey {
   if (t.status === "concluido") return "concluido";
-  if (t.urgente && t.status !== "aprovacao") return "urgente";
+  const isMon =
+    t.status === "aprovacao" ||
+    t.status === "aguardando_acao_cliente" ||
+    t.status === "aguardando_etapa_interna" ||
+    t.status === "aguardando_etapa_anterior";
+  if (t.urgente && !isMon) return "urgente";
   return t.status as GroupKey;
 }
 
@@ -100,18 +137,27 @@ export function MinhasTarefasTabela({
 
   const grupos = useMemo(() => {
     const buckets: Record<GroupKey, UnifiedTask[]> = {
-      urgente: [], atrasado: [], aprovacao: [], em_andamento: [], pendente: [], concluido: [],
+      urgente: [],
+      atrasado: [],
+      aprovacao: [],
+      aguardando_acao_cliente: [],
+      aguardando_etapa_interna: [],
+      aguardando_etapa_anterior: [],
+      em_andamento: [],
+      pendente: [],
+      concluido: [],
     };
     for (const t of tasks) buckets[groupOf(t)].push(t);
-    // Ordena grupo de aprovação por dias desc, prazo asc
-    buckets.aprovacao.sort((a, b) => {
-      const da = a.approval_dias ?? -1;
-      const db = b.approval_dias ?? -1;
-      if (da !== db) return db - da;
-      const pa = a.prazo ? new Date(a.prazo).getTime() : Infinity;
-      const pb = b.prazo ? new Date(b.prazo).getTime() : Infinity;
-      return pa - pb;
-    });
+    const sortMonitorado = (arr: UnifiedTask[]) =>
+      arr.sort((a, b) => {
+        const da = a.approval_dias ?? -1;
+        const db = b.approval_dias ?? -1;
+        if (da !== db) return db - da;
+        const pa = a.prazo ? new Date(a.prazo).getTime() : Infinity;
+        const pb = b.prazo ? new Date(b.prazo).getTime() : Infinity;
+        return pa - pb;
+      });
+    MONITORADO_KEYS.forEach((k) => sortMonitorado(buckets[k]));
     return GROUP_ORDER
       .map((k) => ({ key: k, items: buckets[k] }))
       .filter((g) => g.items.length > 0);
@@ -153,8 +199,8 @@ export function MinhasTarefasTabela({
                 <TableHead className="w-[90px]">Prioridade</TableHead>
                 <TableHead className="w-[90px]">Prazo</TableHead>
                 <TableHead className="w-[160px]">Status</TableHead>
-                <TableHead className="w-[110px]">Entrada em aprovação</TableHead>
-                <TableHead className="w-[120px]">Dias em aprovação</TableHead>
+                <TableHead className="w-[110px]">Entrada no status</TableHead>
+                <TableHead className="w-[120px]">Dias no status</TableHead>
                 <TableHead className="w-[200px]">Cadência</TableHead>
                 <TableHead className="w-[120px] text-right">Ações</TableHead>
               </TableRow>
@@ -230,8 +276,16 @@ export function MinhasTarefasTabela({
                             </span>
                           </TableCell>
                           <TableCell>
-                            <div className="inline-flex min-w-[140px]">
+                            <div className="flex flex-col gap-1 min-w-[140px]">
                               <ColorBadge label={STATUS_LABEL[t.status as TaskStatus]} color={STATUS_COR[t.status]} />
+                              {t.status_motivo && (
+                                <span
+                                  className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted/40 text-muted-foreground truncate max-w-[160px]"
+                                  title={t.status_motivo}
+                                >
+                                  {t.status_motivo}
+                                </span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -240,7 +294,7 @@ export function MinhasTarefasTabela({
                             </span>
                           </TableCell>
                           <TableCell>
-                            {t.status === "aprovacao" && t.approval_dias != null ? (
+                            {t.approval_dias != null ? (
                               (() => {
                                 const tone = aprovacaoBadgeTone(t.approval_dias);
                                 const cor =
@@ -254,6 +308,7 @@ export function MinhasTarefasTabela({
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
+
                           <TableCell>
                             <CadenciaCell task={t} />
                           </TableCell>

@@ -67,6 +67,7 @@ import {
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichTextView } from "@/components/RichTextView";
 import { TarefaIAConsulta } from "./TarefaIAConsulta";
+import { StatusMotivoSelector } from "./StatusMotivoSelector";
 import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralButton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -599,6 +600,21 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       ))}
                     </SelectContent>
                   </Select>
+                  {(() => {
+                    const tipo = (demanda.status as string) === "Aguardando ação do cliente"
+                      ? "cliente" as const
+                      : (demanda.status as string) === "Aguardando etapa interna"
+                        ? "interno" as const
+                        : null;
+                    if (!tipo) return null;
+                    return (
+                      <StatusMotivoSelector
+                        tipo={tipo}
+                        value={(demanda as any).status_motivo}
+                        onChange={(v) => updateDemanda(demanda.id, { status_motivo: v } as any)}
+                      />
+                    );
+                  })()}
                   <Button
                     type="button"
                     size="icon"
