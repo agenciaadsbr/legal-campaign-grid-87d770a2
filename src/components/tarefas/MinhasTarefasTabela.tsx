@@ -276,8 +276,16 @@ export function MinhasTarefasTabela({
                             </span>
                           </TableCell>
                           <TableCell>
-                            <div className="inline-flex min-w-[140px]">
+                            <div className="flex flex-col gap-1 min-w-[140px]">
                               <ColorBadge label={STATUS_LABEL[t.status as TaskStatus]} color={STATUS_COR[t.status]} />
+                              {t.status_motivo && (
+                                <span
+                                  className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted/40 text-muted-foreground truncate max-w-[160px]"
+                                  title={t.status_motivo}
+                                >
+                                  {t.status_motivo}
+                                </span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -286,7 +294,7 @@ export function MinhasTarefasTabela({
                             </span>
                           </TableCell>
                           <TableCell>
-                            {t.status === "aprovacao" && t.approval_dias != null ? (
+                            {t.approval_dias != null ? (
                               (() => {
                                 const tone = aprovacaoBadgeTone(t.approval_dias);
                                 const cor =
@@ -300,6 +308,7 @@ export function MinhasTarefasTabela({
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
+
                           <TableCell>
                             <CadenciaCell task={t} />
                           </TableCell>
