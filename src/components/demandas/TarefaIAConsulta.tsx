@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Sparkles, 
-  Send, 
-  ChevronDown, 
-  ChevronUp, 
-  Copy, 
+import {
+  Sparkles,
+  Send,
+  ChevronDown,
+  ChevronUp,
+  Copy,
   MessageSquarePlus,
   Clock,
   Bot,
-  User as UserIcon
+  User as UserIcon,
+  FileText,
 } from "lucide-react";
 import { useIAConsultas } from "@/store/iaConsultas";
 import { useReunioes } from "@/store/reunioes";
@@ -21,6 +22,14 @@ import { Demanda } from "@/store/demandas";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Props {
   demanda: Demanda;
