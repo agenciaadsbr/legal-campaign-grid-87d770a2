@@ -114,6 +114,7 @@ interface State {
   mensagens: CadenciaMensagem[];
   loaded: boolean;
   loading: boolean;
+  error: string | null;
   load: () => Promise<void>;
   create: (input: { cliente_id: string; tipo: CadenciaTipo; responsavel_id?: string | null; observacao?: string | null; task_id?: string | null }) => Promise<void>;
   update: (id: string, patch: Partial<Cadencia>) => Promise<void>;
@@ -143,22 +144,35 @@ export const useCadenciasStore = create<State>((set, get) => ({
   mensagens: [],
   loaded: false,
   loading: false,
+  error: null,
 
   async load() {
     if (get().loading) return;
-    set({ loading: true });
-    const [{ data: c }, { data: e }, { data: m }] = await Promise.all([
-      supabase.from("cadencias_operacionais" as any).select("*").order("created_at", { ascending: false }),
-      supabase.from("cadencia_execucoes" as any).select("*").order("executado_em", { ascending: true }),
-      supabase.from("cadencia_mensagens" as any).select("*").order("tipo").order("etapa"),
-    ]);
-    set({
-      cadencias: ((c as any[]) ?? []).map(normalizeCadencia),
-      execucoes: (e as any) ?? [],
-      mensagens: (m as any) ?? [],
-      loaded: true,
-      loading: false,
-    });
+    set({ loading: true, error: null });
+    try {
+      const [cRes, eRes, mRes] = await Promise.all([
+        supabase.from("cadencias_operacionais" as any).select("*").order("created_at", { ascending: false }),
+        supabase.from("cadencia_execucoes" as any).select("*").order("executado_em", { ascending: true }),
+        supabase.from("cadencia_mensagens" as any).select("*").order("tipo").order("etapa"),
+      ]);
+      const firstErr = cRes.error ?? eRes.error ?? mRes.error;
+      if (firstErr) throw firstErr;
+      set({
+        cadencias: ((cRes.data as any[]) ?? []).map(normalizeCadencia),
+        execucoes: (eRes.data as any) ?? [],
+        mensagens: (mRes.data as any) ?? [],
+        loaded: true,
+        loading: false,
+        error: null,
+      });
+    } catch (err: any) {
+      console.error("[cadencias] load failed", err);
+      set({
+        loading: false,
+        loaded: true,
+        error: err?.message ?? "Falha ao carregar cadências operacionais.",
+      });
+    }
   },
 
   async create(input) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useCRM } from "@/store/crm";
 import {
   useCadenciasStore,
@@ -52,15 +52,26 @@ function statusVariant(s: CadenciaStatus): "default" | "secondary" | "destructiv
   return "default";
 }
 
-export function CadenciasOperacionaisTab({ scopeResponsavelId = null }: { scopeResponsavelId?: string | null } = {}) {
+export function CadenciasOperacionaisTab(props: { scopeResponsavelId?: string | null } = {}) {
+  return (
+    <CadenciasErrorBoundary>
+      <CadenciasOperacionaisTabInner {...props} />
+    </CadenciasErrorBoundary>
+  );
+}
+
+function CadenciasOperacionaisTabInner({ scopeResponsavelId = null }: { scopeResponsavelId?: string | null }) {
   const { clientes, responsaveis } = useCRM();
   const {
-    cadencias: cadenciasRaw, execucoes, mensagens, loaded, load,
+    cadencias: cadenciasRaw, execucoes, mensagens, loaded, loading, error, load,
     create, update, executarEtapa,
   } = useCadenciasStore();
 
   const cadencias = useMemo(
-    () => (scopeResponsavelId ? cadenciasRaw.filter((c) => c.responsavel_id === scopeResponsavelId) : cadenciasRaw),
+    () => {
+      const safe = Array.isArray(cadenciasRaw) ? cadenciasRaw : [];
+      return scopeResponsavelId ? safe.filter((c) => c?.responsavel_id === scopeResponsavelId) : safe;
+    },
     [cadenciasRaw, scopeResponsavelId],
   );
 
@@ -73,8 +84,11 @@ export function CadenciasOperacionaisTab({ scopeResponsavelId = null }: { scopeR
   const [configOpen, setConfigOpen] = useState(false);
 
   useEffect(() => {
-    if (!loaded) void load();
-  }, [loaded, load]);
+    if (!loaded && !loading) void load();
+  }, [loaded, loading, load]);
+
+  const hasFiltros = busca.trim() !== "" || fTipo !== "all" || fStatus !== "all" || fCliente !== "all";
+  const limparFiltros = () => { setBusca(""); setFTipo("all"); setFStatus("all"); setFCliente("all"); };
 
   const clientesMap = useMemo(() => new Map(clientes.map((c) => [c.id, c])), [clientes]);
   const respMap = useMemo(() => new Map(responsaveis.map((r) => [r.id, r])), [responsaveis]);
@@ -183,14 +197,45 @@ export function CadenciasOperacionaisTab({ scopeResponsavelId = null }: { scopeR
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtradas.length === 0 && (
+                {loading && !loaded && (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center text-xs text-muted-foreground py-8">
-                      Nenhuma cadência encontrada.
+                      Carregando cadências operacionais...
                     </TableCell>
                   </TableRow>
                 )}
-                {filtradas.map((c) => {
+                {!loading && error && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-xs text-destructive py-8">
+                      <div>Não foi possível carregar as cadências operacionais. Tente novamente.</div>
+                      <Button
+                        size="sm" variant="outline" className="h-7 text-xs mt-2"
+                        onClick={() => { void load(); }}
+                      >
+                        Tentar novamente
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!loading && !error && filtradas.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-xs text-muted-foreground py-8">
+                      {hasFiltros ? (
+                        <div className="space-y-2">
+                          <div>Nenhum resultado para os filtros aplicados.</div>
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={limparFiltros}>
+                            Limpar filtros
+                          </Button>
+                        </div>
+                      ) : cadenciasRaw.length === 0 ? (
+                        "Nenhuma cadência operacional encontrada."
+                      ) : (
+                        "Não há cadências operacionais disponíveis para este usuário."
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!error && filtradas.map((c) => {
                   const dias = diasSemResposta(c);
                   const cli = clientesMap.get(c.cliente_id);
                   const resp = c.responsavel_id ? respMap.get(c.responsavel_id) : null;
@@ -597,4 +642,32 @@ function MensagensList({
       </Button>
     </>
   );
+}
+
+class CadenciasErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: unknown) {
+    console.error("[CadenciasOperacionaisTab] crash", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <Card>
+          <CardContent className="p-6 text-center space-y-2">
+            <div className="text-sm text-destructive font-medium">
+              Não foi possível carregar as cadências operacionais.
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {this.state.error.message || "Ocorreu um erro inesperado."}
+            </div>
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => this.setState({ error: null })}>
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    return this.props.children;
+  }
 }
