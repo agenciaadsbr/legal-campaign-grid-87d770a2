@@ -364,7 +364,27 @@ export function ReuniaoDialog({
           </div>
           <div className="md:col-span-1">
             <Label className="text-xs">Tipo / contexto</Label>
-            <Input className="h-9" value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Semanal, Estratégia..." />
+            <Select value={tipo || undefined} onValueChange={(v) => setTipo(v)}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {[
+                  "Start",
+                  "Apresentação",
+                  "Performance",
+                  "Estratégica",
+                  "Apresentação Agente IA",
+                  "CRM + Performance",
+                  "Análise Meta Ads",
+                  "Analise Google Ads",
+                  "Analise Meta e Google",
+                  "Configuração Agente IA",
+                ].map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-2">
             <Label className="text-xs">Link TLDV</Label>
