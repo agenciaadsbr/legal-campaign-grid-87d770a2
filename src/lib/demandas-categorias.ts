@@ -114,16 +114,26 @@ export type DemandaStatus =
   | "Entregue"
   | "Concluido"
   | "Atrasado"
-  | "Aguardando etapa anterior";
+  | "Aguardando etapa anterior"
+  | "Aguardando etapa interna"
+  | "Aguardando ação do cliente"
+  | "Aguardando aprovação do cliente"
+  | "Agendado"
+  | "Postado";
 
 export const STATUS_DEMANDA: DemandaStatus[] = [
   "Planejamento",
   "Criar",
+  "Aguardando etapa anterior",
+  "Aguardando etapa interna",
+  "Aguardando ação do cliente",
+  "Aguardando aprovação do cliente",
   "Revisar",
+  "Agendado",
   "Entregue",
+  "Postado",
   "Concluido",
   "Atrasado",
-  "Aguardando etapa anterior",
 ];
 
 export const STATUS_DEMANDA_LABEL: Record<DemandaStatus, string> = {
@@ -134,6 +144,11 @@ export const STATUS_DEMANDA_LABEL: Record<DemandaStatus, string> = {
   Concluido: "Concluído",
   Atrasado: "Atrasado",
   "Aguardando etapa anterior": "Aguardando etapa anterior",
+  "Aguardando etapa interna": "Aguardando etapa interna",
+  "Aguardando ação do cliente": "Aguardando ação do cliente",
+  "Aguardando aprovação do cliente": "Aguardando aprovação do cliente",
+  Agendado: "Agendado",
+  Postado: "Postado",
 };
 
 export const STATUS_DEMANDA_COR: Record<DemandaStatus, string> = {
@@ -144,7 +159,34 @@ export const STATUS_DEMANDA_COR: Record<DemandaStatus, string> = {
   Concluido: "hsl(var(--status-postado))",
   Atrasado: "hsl(var(--destructive))",
   "Aguardando etapa anterior": "hsl(var(--warning))",
+  "Aguardando etapa interna": "hsl(var(--warning))",
+  "Aguardando ação do cliente": "hsl(var(--status-revisar))",
+  "Aguardando aprovação do cliente": "hsl(var(--status-revisar))",
+  Agendado: "hsl(var(--status-agendar))",
+  Postado: "hsl(var(--status-postado))",
 };
+
+/** Status em que o sistema registra "Entrada no status" e "Dias no status". */
+export const STATUS_MONITORADOS: DemandaStatus[] = [
+  "Revisar",
+  "Aguardando aprovação do cliente",
+  "Aguardando ação do cliente",
+  "Aguardando etapa interna",
+  "Aguardando etapa anterior",
+];
+
+export function isStatusMonitorado(s: string | null | undefined): boolean {
+  if (!s) return false;
+  return (STATUS_MONITORADOS as string[]).includes(s);
+}
+
+/** Status que exigem badge de motivo (Aguardando ação do cliente / etapa interna). */
+export function statusRequerMotivo(s: string | null | undefined): "cliente" | "interno" | null {
+  if (s === "Aguardando ação do cliente") return "cliente";
+  if (s === "Aguardando etapa interna") return "interno";
+  return null;
+}
+
 
 export type DemandaPrioridade = "Baixa" | "Media" | "Alta" | "Urgente";
 
