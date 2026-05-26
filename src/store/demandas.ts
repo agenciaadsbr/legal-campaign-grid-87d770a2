@@ -53,6 +53,8 @@ export interface Demanda {
   approval_waiting_since?: string | null;
   approval_waiting_by?: string | null;
   approval_previous_status?: string | null;
+  /** Badge complementar do status (Aguardando ação do cliente / etapa interna). */
+  status_motivo?: string | null;
   // ---- Card Pai multietapa (Fase 1) ----
   is_card_pai?: boolean;
   parent_process_id?: string | null;
