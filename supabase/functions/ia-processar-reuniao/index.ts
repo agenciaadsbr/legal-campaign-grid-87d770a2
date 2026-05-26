@@ -91,178 +91,183 @@ Deno.serve(async (req) => {
       ].join("\n");
     }).join("\n\n");
 
-    const startTime = Date.now();
-    const status: any = { cliente: null, operacional: null, tarefas: null };
-    let resumoClienteOut: string | null = null;
-    let resumoOperOut: string | null = null;
-    let tarefasInseridas = 0;
-    let tarefasSubstituidas = 0;
+    // Marca reunião como "processando" antes de devolver imediatamente
+    await supa.from("reunioes").update({
+      ia_status: { cliente: { ok: null, processing: true }, operacional: { ok: null, processing: true }, tarefas: { ok: null, processing: true } },
+      ia_processed_at: null,
+    }).eq("id", reuniao_id);
 
-    // Agente 1 — Resumo Cliente
-    const runCliente = (async () => {
-      try {
-        const client = getProviderClient(agCliente.provider);
-        const modelId = agCliente.model || defaultModelFor(agCliente.provider);
-        const realModel = resolveRealModelId(agCliente.provider, modelId);
-        const sys = [promptClienteFinal, agCliente.contexto_adicional].filter(Boolean).join("\n\n");
-        const t0 = Date.now();
-        const result = await generateText({
-          model: client(realModel),
-          system: sys,
-          temperature: Number(agCliente.temperatura ?? 0.4),
-          maxTokens: 1000,
-          prompt: `Título da Reunião: ${reuniao.titulo}\n\nTranscrição para processar:\n${transcricao}`,
-        });
-        const tIn = result.usage?.inputTokens ?? 0;
-        const tOut = result.usage?.outputTokens ?? 0;
-        resumoClienteOut = result.text;
-        await supa.from("ia_logs").insert({
-          tipo: "agente_cliente", modelo: modelId, tokens_input: tIn, tokens_output: tOut,
-          custo: estimateCost(agCliente.provider, modelId, tIn, tOut),
-          input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
-        });
-        status.cliente = { ok: true, latency_ms: Date.now() - t0 };
-      } catch (e) {
-        status.cliente = { ok: false, error: (e as Error).message };
-      }
-    })();
+    const work = (async () => {
+      const startTime = Date.now();
+      const status: any = { cliente: null, operacional: null, tarefas: null };
+      let resumoClienteOut: string | null = null;
+      let resumoOperOut: string | null = null;
+      let tarefasInseridas = 0;
+      let tarefasSubstituidas = 0;
 
-    // Agentes 2 e 3 — Operacional e Tarefas
-    const runOperAndTasks = (async () => {
-      try {
-        const client = getProviderClient(agOper.provider);
-        const modelId = agOper.model || defaultModelFor(agOper.provider);
-        const realModel = resolveRealModelId(agOper.provider, modelId);
-        
-        const contextBase = [
-          agOper.contexto_adicional,
-          agOper.regras_categorizacao ? `Regras de categorização:\n${agOper.regras_categorizacao}` : null,
-          agOper.regras_responsaveis ? `Regras de responsáveis:\n${agOper.regras_responsaveis}` : null,
-          equipeContext ? `BASE DE RESPONSABILIDADES (FONTE PRINCIPAL - USE OS IDs EXATOS):\n${equipeContext}` : null,
-        ].filter(Boolean).join("\n\n");
-
-        const sysOper = [promptOperFinal, contextBase].filter(Boolean).join("\n\n");
-        const sysTarefas = [promptTarefasFinal, contextBase].filter(Boolean).join("\n\n");
-
-        // Executa resumo operacional e extração de tarefas em paralelo
-        const [resumoResult, tarefasResult] = await Promise.allSettled([
-          generateText({
+      // Agente 1 — Resumo Cliente
+      const runCliente = (async () => {
+        try {
+          const client = getProviderClient(agCliente.provider);
+          const modelId = agCliente.model || defaultModelFor(agCliente.provider);
+          const realModel = resolveRealModelId(agCliente.provider, modelId);
+          const sys = [promptClienteFinal, agCliente.contexto_adicional].filter(Boolean).join("\n\n");
+          const t0 = Date.now();
+          const result = await generateText({
             model: client(realModel),
-            system: sysOper,
-            temperature: Number(agOper.temperatura ?? 0.3),
-            maxTokens: 8000,
-            prompt: `Transcrição completa da reunião "${reuniao.titulo}":\n\n${transcricao}\n\nLembre-se: gere o briefing operacional completo e detalhado conforme as instruções do prompt de sistema.`,
-          }),
-          generateText({
-            model: client(realModel),
-            system: sysTarefas,
-            temperature: Number(agOper.temperatura ?? 0.2),
-            maxTokens: 8000,
-            prompt: `Extraia as tarefas operacionais detalhadas da reunião "${reuniao.titulo}".\n\nTranscrição:\n${transcricao}`,
-            experimental_output: Output.object({ schema: TarefasSchema }),
-          })
-        ]);
-
-        const tFinal = Date.now();
-
-        // Processa resultado do Resumo
-        if (resumoResult.status === "fulfilled") {
-          const r1 = resumoResult.value;
-          resumoOperOut = r1.text;
-          const tIn1 = r1.usage?.inputTokens ?? 0;
-          const tOut1 = r1.usage?.outputTokens ?? 0;
+            system: sys,
+            temperature: Number(agCliente.temperatura ?? 0.4),
+            maxTokens: 1000,
+            prompt: `Título da Reunião: ${reuniao.titulo}\n\nTranscrição para processar:\n${transcricao}`,
+          });
+          const tIn = result.usage?.inputTokens ?? 0;
+          const tOut = result.usage?.outputTokens ?? 0;
+          resumoClienteOut = result.text;
           await supa.from("ia_logs").insert({
-            tipo: "agente_operacional", modelo: modelId, tokens_input: tIn1, tokens_output: tOut1,
-            custo: estimateCost(agOper.provider, modelId, tIn1, tOut1),
+            tipo: "agente_cliente", modelo: modelId, tokens_input: tIn, tokens_output: tOut,
+            custo: estimateCost(agCliente.provider, modelId, tIn, tOut),
             input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
           });
-          status.operacional = { ok: true, latency_ms: tFinal - startTime };
-        } else {
-          status.operacional = { ok: false, error: resumoResult.reason?.message };
+          status.cliente = { ok: true, latency_ms: Date.now() - t0 };
+        } catch (e) {
+          status.cliente = { ok: false, error: (e as Error).message };
         }
+      })();
 
-        // Processa resultado das Tarefas
-        if (tarefasResult.status === "fulfilled") {
-          const r2 = tarefasResult.value;
-          const parsed = (r2 as any).experimental_output as z.infer<typeof TarefasSchema> | undefined;
-          const tarefas = parsed?.tarefas ?? [];
-          const tIn2 = r2.usage?.inputTokens ?? 0;
-          const tOut2 = r2.usage?.outputTokens ?? 0;
-          await supa.from("ia_logs").insert({
-            tipo: "agente_operacional_tarefas", modelo: modelId, tokens_input: tIn2, tokens_output: tOut2,
-            custo: estimateCost(agOper.provider, modelId, tIn2, tOut2),
-            input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
-          });
+      // Agentes 2 e 3 — Operacional e Tarefas
+      const runOperAndTasks = (async () => {
+        try {
+          const client = getProviderClient(agOper.provider);
+          const modelId = agOper.model || defaultModelFor(agOper.provider);
+          const realModel = resolveRealModelId(agOper.provider, modelId);
 
-          // Política de duplicidade e inserção
-          const { data: existentes } = await supa.from("tarefas_sugeridas")
-            .select("id, status")
-            .eq("reuniao_id", reuniao_id)
-            .eq("status", "aguardando_aprovacao");
-          const temPendentes = (existentes ?? []).length > 0;
+          const contextBase = [
+            agOper.contexto_adicional,
+            agOper.regras_categorizacao ? `Regras de categorização:\n${agOper.regras_categorizacao}` : null,
+            agOper.regras_responsaveis ? `Regras de responsáveis:\n${agOper.regras_responsaveis}` : null,
+            equipeContext ? `BASE DE RESPONSABILIDADES (FONTE PRINCIPAL - USE OS IDs EXATOS):\n${equipeContext}` : null,
+          ].filter(Boolean).join("\n\n");
 
-          if (!(temPendentes && modo === "manter")) {
-            if (temPendentes && modo === "substituir") {
-              const ids = (existentes ?? []).map((x: any) => x.id);
-              const { error } = await supa.from("tarefas_sugeridas").delete().in("id", ids);
-              if (!error) tarefasSubstituidas = ids.length;
-            }
+          const sysOper = [promptOperFinal, contextBase].filter(Boolean).join("\n\n");
+          const sysTarefas = [promptTarefasFinal, contextBase].filter(Boolean).join("\n\n");
 
-            const validProfileIds = new Set((profiles ?? []).map((p: any) => p.id));
-            const inserts = tarefas.map(t => ({
-              cliente_id: reuniao.cliente_id,
-              reuniao_id,
-              titulo: t.titulo,
-              descricao: t.descricao ?? null,
-              categoria: t.categoria ?? null,
-              prioridade: t.prioridade ?? null,
-              prazo_sugerido: t.prazo_sugerido ?? null,
-              responsavel_sugerido_id: t.responsavel_sugerido_id && validProfileIds.has(t.responsavel_sugerido_id) ? t.responsavel_sugerido_id : null,
-              supervisor_sugerido_id: t.supervisor_sugerido_id && validProfileIds.has(t.supervisor_sugerido_id) ? t.supervisor_sugerido_id : null,
-              apoio: t.apoio ?? null,
-              checklist: t.checklist ?? null,
-              entregavel_esperado: t.entregavel_esperado ?? null,
-              justificativa_atribuicao: t.justificativa_atribuicao ?? null,
-              origem: "ia_reuniao",
-              status: "aguardando_aprovacao",
-              criado_por: userData.user.id,
-            }));
+          const [resumoResult, tarefasResult] = await Promise.allSettled([
+            generateText({
+              model: client(realModel),
+              system: sysOper,
+              temperature: Number(agOper.temperatura ?? 0.3),
+              maxTokens: 8000,
+              prompt: `Transcrição completa da reunião "${reuniao.titulo}":\n\n${transcricao}\n\nLembre-se: gere o briefing operacional completo e detalhado conforme as instruções do prompt de sistema.`,
+            }),
+            generateText({
+              model: client(realModel),
+              system: sysTarefas,
+              temperature: Number(agOper.temperatura ?? 0.2),
+              maxTokens: 8000,
+              prompt: `Extraia as tarefas operacionais detalhadas da reunião "${reuniao.titulo}".\n\nTranscrição:\n${transcricao}`,
+              experimental_output: Output.object({ schema: TarefasSchema }),
+            })
+          ]);
 
-            if (inserts.length > 0) {
-              const { error } = await supa.from("tarefas_sugeridas").insert(inserts);
-              if (!error) tarefasInseridas = inserts.length;
-            }
+          const tFinal = Date.now();
+
+          if (resumoResult.status === "fulfilled") {
+            const r1 = resumoResult.value;
+            resumoOperOut = r1.text;
+            const tIn1 = r1.usage?.inputTokens ?? 0;
+            const tOut1 = r1.usage?.outputTokens ?? 0;
+            await supa.from("ia_logs").insert({
+              tipo: "agente_operacional", modelo: modelId, tokens_input: tIn1, tokens_output: tOut1,
+              custo: estimateCost(agOper.provider, modelId, tIn1, tOut1),
+              input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+            });
+            status.operacional = { ok: true, latency_ms: tFinal - startTime };
+          } else {
+            status.operacional = { ok: false, error: resumoResult.reason?.message };
           }
-          status.tarefas = { ok: true, latency_ms: tFinal - startTime, count: tarefasInseridas, substituidas: tarefasSubstituidas };
-        } else {
-          status.tarefas = { ok: false, error: tarefasResult.reason?.message };
+
+          if (tarefasResult.status === "fulfilled") {
+            const r2 = tarefasResult.value;
+            const parsed = (r2 as any).experimental_output as z.infer<typeof TarefasSchema> | undefined;
+            const tarefas = parsed?.tarefas ?? [];
+            const tIn2 = r2.usage?.inputTokens ?? 0;
+            const tOut2 = r2.usage?.outputTokens ?? 0;
+            await supa.from("ia_logs").insert({
+              tipo: "agente_operacional_tarefas", modelo: modelId, tokens_input: tIn2, tokens_output: tOut2,
+              custo: estimateCost(agOper.provider, modelId, tIn2, tOut2),
+              input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+            });
+
+            const { data: existentes } = await supa.from("tarefas_sugeridas")
+              .select("id, status")
+              .eq("reuniao_id", reuniao_id)
+              .eq("status", "aguardando_aprovacao");
+            const temPendentes = (existentes ?? []).length > 0;
+
+            if (!(temPendentes && modo === "manter")) {
+              if (temPendentes && modo === "substituir") {
+                const ids = (existentes ?? []).map((x: any) => x.id);
+                const { error } = await supa.from("tarefas_sugeridas").delete().in("id", ids);
+                if (!error) tarefasSubstituidas = ids.length;
+              }
+
+              const validProfileIds = new Set((profiles ?? []).map((p: any) => p.id));
+              const inserts = tarefas.map(t => ({
+                cliente_id: reuniao.cliente_id,
+                reuniao_id,
+                titulo: t.titulo,
+                descricao: t.descricao ?? null,
+                categoria: t.categoria ?? null,
+                prioridade: t.prioridade ?? null,
+                prazo_sugerido: t.prazo_sugerido ?? null,
+                responsavel_sugerido_id: t.responsavel_sugerido_id && validProfileIds.has(t.responsavel_sugerido_id) ? t.responsavel_sugerido_id : null,
+                supervisor_sugerido_id: t.supervisor_sugerido_id && validProfileIds.has(t.supervisor_sugerido_id) ? t.supervisor_sugerido_id : null,
+                apoio: t.apoio ?? null,
+                checklist: t.checklist ?? null,
+                entregavel_esperado: t.entregavel_esperado ?? null,
+                justificativa_atribuicao: t.justificativa_atribuicao ?? null,
+                origem: "ia_reuniao",
+                status: "aguardando_aprovacao",
+                criado_por: userData.user.id,
+              }));
+
+              if (inserts.length > 0) {
+                const { error } = await supa.from("tarefas_sugeridas").insert(inserts);
+                if (!error) tarefasInseridas = inserts.length;
+              }
+            }
+            status.tarefas = { ok: true, latency_ms: tFinal - startTime, count: tarefasInseridas, substituidas: tarefasSubstituidas };
+          } else {
+            status.tarefas = { ok: false, error: tarefasResult.reason?.message };
+          }
+        } catch (e) {
+          status.operacional = status.operacional ?? { ok: false, error: (e as Error).message };
+          status.tarefas = status.tarefas ?? { ok: false, error: (e as Error).message };
         }
-      } catch (e) {
-        status.operacional = status.operacional ?? { ok: false, error: (e as Error).message };
-        status.tarefas = status.tarefas ?? { ok: false, error: (e as Error).message };
+      })();
+
+      await Promise.allSettled([runCliente, runOperAndTasks]);
+
+      const updates: any = { ia_processed_at: new Date().toISOString(), ia_status: status };
+      if (resumoClienteOut !== null && (sobrescrever_resumos || !reuniao.resumo_cliente)) {
+        updates.resumo_cliente = resumoClienteOut;
       }
+      if (resumoOperOut !== null && (sobrescrever_resumos || !reuniao.resumo_tarefas)) {
+        updates.resumo_tarefas = resumoOperOut;
+      }
+      await supa.from("reunioes").update(updates).eq("id", reuniao_id);
     })();
 
-    await Promise.allSettled([runCliente, runOperAndTasks]);
-
-    // Atualiza reunião (resumos só sobrescrevem se autorizado ou se estavam vazios)
-    const updates: any = { ia_processed_at: new Date().toISOString(), ia_status: status };
-    if (resumoClienteOut !== null && (sobrescrever_resumos || !reuniao.resumo_cliente)) {
-      updates.resumo_cliente = resumoClienteOut;
+    // Executa em background — não bloqueia a resposta HTTP (evita timeout de 150s)
+    // @ts-ignore EdgeRuntime é injetado em runtime
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(work);
+    } else {
+      work.catch((e) => console.error("background work failed:", e));
     }
-    if (resumoOperOut !== null && (sobrescrever_resumos || !reuniao.resumo_tarefas)) {
-      updates.resumo_tarefas = resumoOperOut;
-    }
-    await supa.from("reunioes").update(updates).eq("id", reuniao_id);
 
-    return jsonResponse({
-      ok: true,
-      status,
-      resumo_cliente: resumoClienteOut,
-      resumo_operacional: resumoOperOut,
-      tarefas_inseridas: tarefasInseridas,
-      tarefas_substituidas: tarefasSubstituidas,
-    });
+    return jsonResponse({ ok: true, queued: true, reuniao_id });
   } catch (e) {
     return jsonResponse({ error: (e as Error).message }, 500);
   }
