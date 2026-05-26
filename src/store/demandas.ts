@@ -414,6 +414,18 @@ export const useDemandasStore = create<State>((set, get) => ({
     const { data: userRes } = await supabase.auth.getUser();
     const uid = userRes.user?.id ?? null;
     const responsaveis_ids = merged.responsaveis_ids ?? [];
+    // Prazo mínimo de 24h
+    const nowMs = Date.now();
+    let data_limite = merged.data_limite ?? null;
+    if (!data_limite) {
+      data_limite = new Date(nowMs + 24 * 60 * 60 * 1000).toISOString();
+    } else {
+      const dlMs = new Date(data_limite).getTime();
+      if (!isNaN(dlMs) && dlMs < nowMs) {
+        data_limite = new Date(nowMs + 24 * 60 * 60 * 1000).toISOString();
+        toast.info("Data limite ajustada para respeitar o prazo mínimo de 24 horas.");
+      }
+    }
     const payload: any = {
       cliente_id: merged.cliente_id,
       titulo: merged.titulo?.trim() || "Sem título",
@@ -425,7 +437,7 @@ export const useDemandasStore = create<State>((set, get) => ({
       responsaveis_ids,
       responsavel_id: responsaveis_ids[0] ?? null,
       criado_por: uid,
-      data_limite: merged.data_limite ?? null,
+      data_limite,
       data_inicio: merged.data_inicio ?? null,
       data_conclusao: merged.data_conclusao ?? null,
       precisa_aprovacao: merged.precisa_aprovacao ?? false,
