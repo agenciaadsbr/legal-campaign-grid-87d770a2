@@ -1174,6 +1174,7 @@ export type Database = {
           responsaveis_ids: string[]
           responsavel_id: string | null
           status: Database["public"]["Enums"]["demanda_status"]
+          status_motivo: string | null
           subtipo: string | null
           supervisor_id: string | null
           template_id: string | null
@@ -1220,6 +1221,7 @@ export type Database = {
           responsaveis_ids?: string[]
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
+          status_motivo?: string | null
           subtipo?: string | null
           supervisor_id?: string | null
           template_id?: string | null
@@ -1266,6 +1268,7 @@ export type Database = {
           responsaveis_ids?: string[]
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["demanda_status"]
+          status_motivo?: string | null
           subtipo?: string | null
           supervisor_id?: string | null
           template_id?: string | null
@@ -2522,6 +2525,12 @@ export type Database = {
         | "Entregue"
         | "Concluido"
         | "Atrasado"
+        | "Aguardando etapa anterior"
+        | "Aguardando etapa interna"
+        | "Aguardando ação do cliente"
+        | "Aguardando aprovação do cliente"
+        | "Agendado"
+        | "Postado"
       escopo_custom_field: "cliente" | "post"
       status_alerta: "Pendente" | "Resolvido"
       status_card:
@@ -2699,6 +2708,12 @@ export const Constants = {
         "Entregue",
         "Concluido",
         "Atrasado",
+        "Aguardando etapa anterior",
+        "Aguardando etapa interna",
+        "Aguardando ação do cliente",
+        "Aguardando aprovação do cliente",
+        "Agendado",
+        "Postado",
       ],
       escopo_custom_field: ["cliente", "post"],
       status_alerta: ["Pendente", "Resolvido"],
