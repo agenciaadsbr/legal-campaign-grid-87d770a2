@@ -7,7 +7,7 @@ import { useCRM } from "@/store/crm";
 import { getResponsaveisIds, type Demanda } from "@/store/demandas";
 import {
   CATEGORIAS, CATEGORIA_LABEL, PRIORIDADES, PRIORIDADE_COR, PRIORIDADE_LABEL,
-  STATUS_DEMANDA, STATUS_DEMANDA_COR, STATUS_DEMANDA_LABEL,
+  STATUS_DEMANDA, STATUS_DEMANDA_COR, STATUS_DEMANDA_LABEL, statusMatchesColuna,
 } from "@/lib/demandas-categorias";
 import { KpiCard } from "@/components/relatorios/KpiCard";
 import { AlertTriangle, CheckCircle2, ListTodo, Loader2, Percent, Zap } from "lucide-react";
