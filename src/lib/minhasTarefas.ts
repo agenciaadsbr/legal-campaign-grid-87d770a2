@@ -338,7 +338,6 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       if (todosConcluidos) status = "concluido";
       else if (ativos.length === 0 && emRevisar.length > 0) status = "aprovacao";
       else if (isAtrasado(prazosAtivos[0] ?? null, "pendente")) status = "atrasado";
-      else if (algumAtivoEmAndamento) status = "em_andamento";
       else status = "pendente";
 
       const titulo = todosConcluidos
@@ -351,6 +350,12 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         .filter((p): p is string => !!p)
         .sort();
       const approval_waiting_since = status === "aprovacao" ? (approvalDates[0] ?? null) : null;
+
+      // Status oficial para exibição na coluna Status
+      let status_raw: string | null = null;
+      if (todosConcluidos) status_raw = "Postado";
+      else if (status === "aprovacao") status_raw = "Revisar";
+      else if (algumAtivoEmAndamento) status_raw = "Criar";
 
       out.push({
         id: `posts:${cliente_id}:${grupo.responsavel_id}:${grupo.contrato_id}`,
@@ -365,6 +370,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         data_inicio,
         data_limite,
         status,
+        status_raw,
         urgente: algumUrgente,
         responsaveis_ids: [grupo.responsavel_id],
         link: `/clientes/${cliente_id}/projeto?tab=posts`,
