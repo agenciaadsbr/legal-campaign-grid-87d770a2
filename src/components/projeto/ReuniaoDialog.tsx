@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Copy, Sparkles, Plus, Wand2, Loader2, CheckCircle2, AlertTriangle, RefreshCw, Users } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { isoToSaoPauloInput, nowSaoPauloInputValue, saoPauloInputToISO } from "@/lib/saoPauloTime";
 
 export function ReuniaoDialog({
   open,
@@ -94,7 +95,7 @@ export function ReuniaoDialog({
   useEffect(() => {
     if (open) {
       setTitulo(reuniao?.titulo ?? "");
-      setData(reuniao?.data ? new Date(reuniao.data).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
+      setData(reuniao?.data ? isoToSaoPauloInput(reuniao.data) : nowSaoPauloInputValue());
       setTipo(reuniao?.tipo ?? "");
       setLinkTldv(reuniao?.link_tldv ?? "");
       setResponsavelId(reuniao?.responsavel_id ?? "");
@@ -145,7 +146,7 @@ export function ReuniaoDialog({
     const payload = {
       cliente_id: clienteId,
       titulo,
-      data: new Date(data).toISOString(),
+      data: saoPauloInputToISO(data),
       tipo: tipo || null,
       link_tldv: linkTldv || null,
       responsavel_id: responsavelId || null,
