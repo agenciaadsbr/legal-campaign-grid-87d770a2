@@ -274,14 +274,6 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     }
   }, [isRascunho, demanda?.id]);
 
-  // Auto-ajusta a altura do textarea do título conforme o conteúdo
-  useEffect(() => {
-    const el = tituloInputRef.current;
-    if (el) {
-      el.style.height = "auto";
-      el.style.height = el.scrollHeight + "px";
-    }
-  }, [tituloLocal, demanda?.id]);
 
   // Limpa timers ao desmontar
   useEffect(() => {
@@ -513,15 +505,10 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     )}
                     <span>Título da tarefa</span>
                   </div>
-                  <Textarea
+                  <Input
                     ref={tituloInputRef as any}
                     value={tituloLocal}
-                    rows={1}
-                    onInput={(e) => {
-                      const el = e.currentTarget;
-                      el.style.height = "auto";
-                      el.style.height = el.scrollHeight + "px";
-                    }}
+                    title={tituloLocal || demanda.titulo}
                     onChange={(e) => {
                       const v = e.target.value;
                       setTituloLocal(v);
@@ -541,8 +528,9 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       }
                     }}
                     placeholder="Ex: Criar landing page para campanha de inverno"
-                    className="text-sm font-bold border-0 px-0 py-0 focus-visible:ring-0 min-h-0 resize-none leading-snug whitespace-pre-wrap break-words shadow-none"
+                    className="text-sm font-bold border-0 px-0 py-0 h-auto focus-visible:ring-0 truncate shadow-none bg-transparent"
                   />
+
                   <div className="text-xs text-muted-foreground mt-1">
                     {cliente?.nome_cliente ?? "—"} ·{" "}
                     {CATEGORIA_LABEL[demanda.categoria]}
