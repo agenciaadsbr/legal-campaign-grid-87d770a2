@@ -623,12 +623,22 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                         ? "interno" as const
                         : null;
                     if (!tipo) return null;
+                    const microtext =
+                      tipo === "cliente"
+                        ? "Ação aguardada do cliente"
+                        : "Etapa interna aguardada";
                     return (
-                      <StatusMotivoSelector
-                        tipo={tipo}
-                        value={(demanda as any).status_motivo}
-                        onChange={(v) => updateDemanda(demanda.id, { status_motivo: v } as any)}
-                      />
+                      <div className="flex flex-col gap-0.5">
+                        <StatusMotivoSelector
+                          tipo={tipo}
+                          value={(demanda as any).status_motivo}
+                          onChange={(v) => updateDemanda(demanda.id, { status_motivo: v } as any)}
+                          highlight
+                        />
+                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 px-0.5">
+                          {microtext}
+                        </span>
+                      </div>
                     );
                   })()}
                   <Button
