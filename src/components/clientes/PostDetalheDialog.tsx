@@ -371,7 +371,14 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                 </Button>
                 <Select
                   value={post.status}
-                  onValueChange={(v) => updatePost(post.id, { status: v as any })}
+                  onValueChange={(v) => {
+                    updatePost(post.id, { status: v as any });
+                    // Mantém o Kanban sincronizado: o agrupamento por coluna
+                    // usa card.status_card, então também movemos o card.
+                    if (v !== card.status_card) {
+                      moveCard(card.id, v as any);
+                    }
+                  }}
                 >
                   <SelectTrigger className="w-40">
                     <SelectValue />
