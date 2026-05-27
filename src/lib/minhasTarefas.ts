@@ -54,27 +54,82 @@ const PRIO_RANK: Record<TaskPrioridade, number> = {
   Baixa: 1,
 };
 
+const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const STATUS_EXCLUIDOS_ATRASO = new Set([
+  "Concluido",
+  "Concluído",
+  "Entregue",
+  "Postado",
+  "Agendado",
+  "Agendar",
+  "Revisar",
+  "Aguardando aprovação do cliente",
+  "Aguardando ação do cliente",
+  "Aguardando etapa interna",
+  "Aguardando etapa anterior",
+  "concluido",
+]);
+
+function dateKeySaoPaulo(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function dateFromKey(key: string): Date {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function prazoDateKey(prazo: string | null | undefined): string | null {
+  if (!prazo) return null;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(prazo);
+  if (dateOnly) return prazo;
+  const d = new Date(prazo);
+  if (isNaN(d.getTime())) return null;
+  return dateKeySaoPaulo(d);
+}
+
+export function isTaskActuallyOverdue({
+  prazo,
+  createdAt,
+  statusRaw,
+  status,
+  now = new Date(),
+}: {
+  prazo: string | null | undefined;
+  createdAt?: string | null;
+  statusRaw?: string | null;
+  status?: TaskStatus;
+  now?: Date;
+}): boolean {
+  if (!prazo || status === "concluido") return false;
+  if (statusRaw && STATUS_EXCLUIDOS_ATRASO.has(statusRaw)) return false;
+
+  const prazoKey = prazoDateKey(prazo);
+  if (!prazoKey) return false;
+  if (prazoKey >= dateKeySaoPaulo(now)) return false;
+
+  if (!createdAt) return false;
+  const createdDate = new Date(createdAt);
+  if (isNaN(createdDate.getTime())) return false;
+  return now.getTime() - createdDate.getTime() >= MS_PER_DAY;
+}
+
 /**
  * Converte string de prazo em Date local (meia-noite local).
  * Aceita "YYYY-MM-DD" (sem deslocar fuso) e ISO completo.
  */
 export function parsePrazoLocal(s: string | null | undefined): Date | null {
-  if (!s) return null;
-  // Se for YYYY-MM-DD puro, parseia como local
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return null;
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function isAtrasado(prazo: string | null, status: TaskStatus): boolean {
-  if (!prazo || status === "concluido") return false;
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const d = parsePrazoLocal(prazo);
-  return d !== null && d < hoje;
+  const key = prazoDateKey(s);
+  return key ? dateFromKey(key) : null;
 }
 
 function mapCategoriaArea(cat: string): string {
@@ -201,7 +256,6 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         const raw = d.status as string;
         let status: TaskStatus = "pendente";
         if (raw === "Concluido") status = "concluido";
-        else if (raw === "Atrasado") status = "atrasado";
         else if (raw === "Revisar" || raw === "Aguardando aprovação do cliente") status = "aprovacao";
         else if (raw === "Aguardando ação do cliente") status = "aguardando_acao_cliente";
         else if (raw === "Aguardando etapa interna") status = "aguardando_etapa_interna";
@@ -213,7 +267,14 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           status === "aguardando_etapa_interna" ||
           status === "aguardando_etapa_anterior";
 
-        if (status !== "concluido" && !isMonitorado && isAtrasado(d.data_limite, status)) {
+        const isRealmenteAtrasado = !isMonitorado && isTaskActuallyOverdue({
+          prazo: d.data_limite,
+          createdAt: d.created_at,
+          statusRaw: raw === "Atrasado" ? "Criar" : raw,
+          status,
+        });
+
+        if (isRealmenteAtrasado) {
           status = "atrasado";
         }
 
@@ -231,7 +292,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           data_inicio: d.data_inicio,
           data_limite: d.data_limite,
           status,
-          status_raw: raw,
+          status_raw: raw === "Atrasado" && !isRealmenteAtrasado ? "Criar" : raw,
           status_motivo: (d as any).status_motivo ?? null,
           urgente: d.prioridade === "Urgente",
           responsaveis_ids: getResponsaveisIds(d),
@@ -337,7 +398,16 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       let status: TaskStatus;
       if (todosConcluidos) status = "concluido";
       else if (ativos.length === 0 && emRevisar.length > 0) status = "aprovacao";
-      else if (isAtrasado(prazosAtivos[0] ?? null, "pendente")) status = "atrasado";
+      else if (
+        ativos.some((c) =>
+          isTaskActuallyOverdue({
+            prazo: c.data_limite_tarefa,
+            createdAt: c.created_at,
+            statusRaw: c.status_card,
+            status: "pendente",
+          }),
+        )
+      ) status = "atrasado";
       else status = "pendente";
 
       const titulo = todosConcluidos
@@ -389,8 +459,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         let status: TaskStatus = "pendente";
         if (p.status === "concluido") status = "concluido";
         else if (p.status === "em_andamento") status = "pendente";
-        else if (p.status === "atrasado") status = "atrasado";
-        if (status !== "concluido" && isAtrasado(p.prazo, status)) status = "atrasado";
+        if (isTaskActuallyOverdue({ prazo: p.prazo, createdAt: p.created_at, status })) status = "atrasado";
 
         out.push({
           id: `planejamento:${p.id}`,
@@ -469,12 +538,11 @@ export function ordenarTarefas(tasks: UnifiedTask[]): UnifiedTask[] {
 
 /** Dias até o prazo (negativo = atrasado, null = sem prazo) */
 export function diasParaPrazo(prazo: string | null): number | null {
-  if (!prazo) return null;
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const p = new Date(prazo);
-  p.setHours(0, 0, 0, 0);
-  return Math.round((p.getTime() - hoje.getTime()) / 86400000);
+  const prazoKey = prazoDateKey(prazo);
+  if (!prazoKey) return null;
+  const hoje = dateFromKey(dateKeySaoPaulo(new Date()));
+  const p = dateFromKey(prazoKey);
+  return Math.round((p.getTime() - hoje.getTime()) / MS_PER_DAY);
 }
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
