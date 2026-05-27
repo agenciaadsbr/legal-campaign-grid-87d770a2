@@ -256,7 +256,6 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         const raw = d.status as string;
         let status: TaskStatus = "pendente";
         if (raw === "Concluido") status = "concluido";
-        else if (raw === "Atrasado") status = "atrasado";
         else if (raw === "Revisar" || raw === "Aguardando aprovação do cliente") status = "aprovacao";
         else if (raw === "Aguardando ação do cliente") status = "aguardando_acao_cliente";
         else if (raw === "Aguardando etapa interna") status = "aguardando_etapa_interna";
@@ -268,7 +267,14 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           status === "aguardando_etapa_interna" ||
           status === "aguardando_etapa_anterior";
 
-        if (status !== "concluido" && !isMonitorado && isAtrasado(d.data_limite, status)) {
+        const isRealmenteAtrasado = !isMonitorado && isTaskActuallyOverdue({
+          prazo: d.data_limite,
+          createdAt: d.created_at,
+          statusRaw: raw === "Atrasado" ? "Criar" : raw,
+          status,
+        });
+
+        if (isRealmenteAtrasado) {
           status = "atrasado";
         }
 
@@ -286,7 +292,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           data_inicio: d.data_inicio,
           data_limite: d.data_limite,
           status,
-          status_raw: raw,
+          status_raw: raw === "Atrasado" && !isRealmenteAtrasado ? "Criar" : raw,
           status_motivo: (d as any).status_motivo ?? null,
           urgente: d.prioridade === "Urgente",
           responsaveis_ids: getResponsaveisIds(d),
