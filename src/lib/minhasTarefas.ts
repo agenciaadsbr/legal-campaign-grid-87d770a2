@@ -538,12 +538,11 @@ export function ordenarTarefas(tasks: UnifiedTask[]): UnifiedTask[] {
 
 /** Dias até o prazo (negativo = atrasado, null = sem prazo) */
 export function diasParaPrazo(prazo: string | null): number | null {
-  if (!prazo) return null;
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const p = new Date(prazo);
-  p.setHours(0, 0, 0, 0);
-  return Math.round((p.getTime() - hoje.getTime()) / 86400000);
+  const prazoKey = prazoDateKey(prazo);
+  if (!prazoKey) return null;
+  const hoje = dateFromKey(dateKeySaoPaulo(new Date()));
+  const p = dateFromKey(prazoKey);
+  return Math.round((p.getTime() - hoje.getTime()) / MS_PER_DAY);
 }
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
