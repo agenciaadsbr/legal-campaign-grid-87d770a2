@@ -45,7 +45,11 @@ export function StatusMotivoSelector({ tipo, value, onChange, highlight }: Props
           type="button"
           variant="outline"
           size="sm"
-          className="h-7 text-xs justify-start font-normal"
+          className={
+            highlight
+              ? "h-7 text-xs justify-start font-semibold border-amber-500/70 bg-amber-50 text-amber-900 hover:bg-amber-100 hover:text-amber-900 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/50 dark:hover:bg-amber-500/25"
+              : "h-7 text-xs justify-start font-normal"
+          }
         >
           {value || placeholder}
         </Button>
