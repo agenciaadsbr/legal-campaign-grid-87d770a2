@@ -178,7 +178,7 @@ export function DemandCard({
         </span>
         {(demanda as any).status_motivo && (
           <span
-            className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border truncate max-w-[140px]"
+            className="text-[10px] font-semibold text-foreground truncate max-w-[160px]"
             title={(demanda as any).status_motivo}
           >
             {(demanda as any).status_motivo}
