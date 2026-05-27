@@ -1286,36 +1286,15 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
               </div>
             )}
 
-            {/* Histórico (colapsável discreto) */}
-            {meuHistorico.length > 0 && (
-              <details className="text-xs shrink-0">
-                <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-1">
-                  Ver histórico ({meuHistorico.length})
-                </summary>
-                <ul className="space-y-1.5 mt-2">
-                  {meuHistorico.map((h) => (
-                    <li
-                      key={h.id}
-                      className="flex items-center justify-between border rounded p-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase tracking-wide font-medium px-1.5 py-0.5 rounded bg-muted">
-                          {h.acao}
-                        </span>
-                        {h.de_status && h.para_status && (
-                          <span className="text-muted-foreground">
-                            {h.de_status} → {h.para_status}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-muted-foreground">
-                        {new Date(h.created_at).toLocaleString("pt-BR")}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
+            {/* Histórico rápido */}
+            <div className="border rounded-md p-3 bg-muted/20 shrink-0">
+              <HistoricoRapidoConteudo
+                tipo="demanda"
+                id={demanda.id}
+                createdAt={demanda.created_at}
+                statusAtual={demanda.status as string}
+              />
+            </div>
           </CardContent>
         </Card>
 
