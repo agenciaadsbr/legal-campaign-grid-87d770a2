@@ -504,9 +504,15 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     )}
                     <span>Título da tarefa</span>
                   </div>
-                  <Input
-                    ref={tituloInputRef}
+                  <Textarea
+                    ref={tituloInputRef as any}
                     value={tituloLocal}
+                    rows={1}
+                    onInput={(e) => {
+                      const el = e.currentTarget;
+                      el.style.height = "auto";
+                      el.style.height = el.scrollHeight + "px";
+                    }}
                     onChange={(e) => {
                       const v = e.target.value;
                       setTituloLocal(v);
@@ -526,7 +532,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       }
                     }}
                     placeholder="Ex: Criar landing page para campanha de inverno"
-                    className="text-sm font-bold border-0 px-0 focus-visible:ring-0 h-auto"
+                    className="text-sm font-bold border-0 px-0 py-0 focus-visible:ring-0 min-h-0 resize-none leading-snug whitespace-pre-wrap break-words shadow-none"
                   />
                   <div className="text-xs text-muted-foreground mt-1">
                     {cliente?.nome_cliente ?? "—"} ·{" "}
