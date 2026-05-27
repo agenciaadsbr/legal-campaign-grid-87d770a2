@@ -388,7 +388,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       .forEach((p) => {
         let status: TaskStatus = "pendente";
         if (p.status === "concluido") status = "concluido";
-        else if (p.status === "em_andamento") status = "em_andamento";
+        else if (p.status === "em_andamento") status = "pendente";
         else if (p.status === "atrasado") status = "atrasado";
         if (status !== "concluido" && isAtrasado(p.prazo, status)) status = "atrasado";
 
