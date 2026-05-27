@@ -12,6 +12,7 @@ import { ColorBadge } from "@/components/StatusBadge";
 import { PrioridadeIcons } from "./PrioridadeIcon";
 import type { UnifiedTask, TaskStatus } from "@/lib/minhasTarefas";
 import { STATUS_LABEL } from "@/lib/minhasTarefas";
+import { displayStatusPostLabel } from "@/lib/statusDisplay";
 import { PRIORIDADE_COR, PRIORIDADE_LABEL } from "@/lib/demandas-categorias";
 import { useCRM } from "@/store/crm";
 import { CadenciaCell } from "./CadenciaCell";
@@ -274,7 +275,7 @@ export function MinhasTarefasTabela({
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1 min-w-[140px]">
-                              <ColorBadge label={t.status_raw ?? STATUS_LABEL[t.status as TaskStatus]} color={STATUS_COR[t.status]} />
+                              <ColorBadge label={displayStatusPostLabel(t.status_raw ?? STATUS_LABEL[t.status as TaskStatus])} color={STATUS_COR[t.status]} />
                               {t.status_motivo && (
                                 <span
                                   className="text-[11px] font-semibold text-foreground truncate max-w-[160px]"
