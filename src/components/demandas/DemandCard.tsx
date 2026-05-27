@@ -13,6 +13,7 @@ import { Calendar, AlertTriangle, Lock, Link2 } from "lucide-react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { HistoricoRapidoHover } from "@/components/HistoricoRapido";
 
 interface Props {
   demanda: Demanda;
