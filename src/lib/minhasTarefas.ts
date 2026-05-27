@@ -9,7 +9,6 @@ import { isAguardandoDependencia, type TaskDependency } from "@/lib/workflow";
 export type TaskFonte = "demanda" | "post" | "planejamento" | "documentacao";
 export type TaskStatus =
   | "pendente"
-  | "em_andamento"
   | "atrasado"
   | "concluido"
   | "aprovacao"
