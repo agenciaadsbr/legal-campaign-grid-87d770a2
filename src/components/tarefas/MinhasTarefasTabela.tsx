@@ -26,7 +26,6 @@ interface Props {
 
 const STATUS_COR: Record<string, string> = {
   pendente: "hsl(var(--muted-foreground))",
-  em_andamento: "hsl(var(--info))",
   atrasado: "hsl(var(--destructive))",
   concluido: "hsl(var(--status-postado))",
   aprovacao: "hsl(var(--status-revisar))",
@@ -42,7 +41,6 @@ type GroupKey =
   | "aguardando_acao_cliente"
   | "aguardando_etapa_interna"
   | "aguardando_etapa_anterior"
-  | "em_andamento"
   | "pendente"
   | "concluido";
 
@@ -51,9 +49,9 @@ const GROUP_ORDER: GroupKey[] = [
   "atrasado",
   "aprovacao",
   "aguardando_acao_cliente",
-  "aguardando_etapa_interna",
+  "aguardando_etapa_interna"
+,
   "aguardando_etapa_anterior",
-  "em_andamento",
   "pendente",
   "concluido",
 ];
@@ -65,7 +63,6 @@ const GROUP_META: Record<GroupKey, { label: string; icon: typeof Zap; className:
   aguardando_acao_cliente:    { label: "Aguardando ação do cliente",            icon: Hourglass,    className: "text-amber-500" },
   aguardando_etapa_interna:   { label: "Aguardando etapa interna",              icon: Hourglass,    className: "text-amber-500" },
   aguardando_etapa_anterior:  { label: "Aguardando etapa anterior",             icon: Hourglass,    className: "text-amber-500" },
-  em_andamento:               { label: "Em andamento",                          icon: Clock,        className: "text-info" },
   pendente:                   { label: "Pendentes",                             icon: Circle,       className: "text-muted-foreground" },
   concluido:                  { label: "Concluídas",                            icon: CheckCircle2, className: "text-emerald-500" },
 };
