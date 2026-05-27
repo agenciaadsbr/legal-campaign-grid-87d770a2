@@ -479,7 +479,7 @@ export function diasParaPrazo(prazo: string | null): number | null {
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   pendente: "Pendente",
-  em_andamento: "Em andamento",
+  
   atrasado: "Atrasado",
   concluido: "Concluído",
   aprovacao: "Aguardando aprovação do cliente",
