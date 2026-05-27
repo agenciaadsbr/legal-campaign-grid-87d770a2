@@ -178,7 +178,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   const descricaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tituloLocal, setTituloLocal] = useState("");
   const tituloTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tituloInputRef = useRef<HTMLInputElement>(null);
+  const tituloInputRef = useRef<HTMLTextAreaElement>(null);
   const [linkMeisterLocal, setLinkMeisterLocal] = useState("");
   const [linkDriveLocal, setLinkDriveLocal] = useState("");
   const linkMeisterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
