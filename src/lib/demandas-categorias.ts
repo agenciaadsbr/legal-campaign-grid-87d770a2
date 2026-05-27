@@ -122,9 +122,10 @@ export type DemandaStatus =
   | "Postado";
 
 // "Revisar" é o valor legado equivalente a "Aguardando aprovação do cliente".
-// Não exibimos como opção separada para evitar duplicação. A canonicalização
-// abaixo garante que dados existentes com status "Revisar" sejam tratados
-// como "Aguardando aprovação do cliente" em filtros, kanbans e dropdowns.
+// "Agendado/Agendar" só faz sentido no fluxo de Posts (kanban próprio em
+// PostsKanbanCliente). Para Demandas (Vídeos, Tráfego Pago, LP/Site,
+// IA/Atendimento, Operacional, Urgências, etc.) é ocultado das colunas e
+// mapeado para "Criar" via canonicalStatus, evitando perder cards legados.
 export const STATUS_DEMANDA: DemandaStatus[] = [
   "Planejamento",
   "Criar",
@@ -132,18 +133,21 @@ export const STATUS_DEMANDA: DemandaStatus[] = [
   "Aguardando etapa interna",
   "Aguardando ação do cliente",
   "Aguardando aprovação do cliente",
-  "Agendado",
   "Entregue",
   "Postado",
   "Concluido",
   "Atrasado",
 ];
 
-/** Retorna o status canônico, mapeando aliases legados ("Revisar"). */
+/** Retorna o status canônico, mapeando aliases legados. */
 export function canonicalStatus(s: string | null | undefined): string {
   if (!s) return "";
   const trimmed = String(s).trim();
   if (trimmed === "Revisar") return "Aguardando aprovação do cliente";
+  // "Agendado"/"Agendar" não são status válidos em Demandas — recaem em
+  // "Criar" para não perder cards legados criados antes da restrição desse
+  // status à aba Posts.
+  if (trimmed === "Agendado" || trimmed === "Agendar") return "Criar";
   return trimmed;
 }
 
