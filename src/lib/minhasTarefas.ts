@@ -398,7 +398,16 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       let status: TaskStatus;
       if (todosConcluidos) status = "concluido";
       else if (ativos.length === 0 && emRevisar.length > 0) status = "aprovacao";
-      else if (isAtrasado(prazosAtivos[0] ?? null, "pendente")) status = "atrasado";
+      else if (
+        ativos.some((c) =>
+          isTaskActuallyOverdue({
+            prazo: c.data_limite_tarefa,
+            createdAt: c.created_at,
+            statusRaw: c.status_card,
+            status: "pendente",
+          }),
+        )
+      ) status = "atrasado";
       else status = "pendente";
 
       const titulo = todosConcluidos
@@ -450,8 +459,7 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         let status: TaskStatus = "pendente";
         if (p.status === "concluido") status = "concluido";
         else if (p.status === "em_andamento") status = "pendente";
-        else if (p.status === "atrasado") status = "atrasado";
-        if (status !== "concluido" && isAtrasado(p.prazo, status)) status = "atrasado";
+        if (isTaskActuallyOverdue({ prazo: p.prazo, createdAt: p.created_at, status })) status = "atrasado";
 
         out.push({
           id: `planejamento:${p.id}`,
