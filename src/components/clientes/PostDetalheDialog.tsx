@@ -85,6 +85,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
     responsaveis,
     statusPostOptions,
     updateCard,
+    moveCard,
     updatePost,
     deleteCard,
     addComentario,
