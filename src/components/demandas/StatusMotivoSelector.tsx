@@ -9,9 +9,10 @@ interface Props {
   tipo: MotivoTipo;
   value: string | null | undefined;
   onChange: (v: string | null) => void;
+  highlight?: boolean;
 }
 
-export function StatusMotivoSelector({ tipo, value, onChange }: Props) {
+export function StatusMotivoSelector({ tipo, value, onChange, highlight }: Props) {
   const { cliente, interno, loaded, load, add } = useStatusMotivosStore();
   const [open, setOpen] = useState(false);
   const [novo, setNovo] = useState("");
