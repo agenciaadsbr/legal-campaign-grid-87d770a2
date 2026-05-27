@@ -47,6 +47,7 @@ import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralBut
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HistoricoRapidoConteudo } from "@/components/HistoricoRapido";
 
 interface Props {
   postId: string;
@@ -804,6 +805,18 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Histórico rápido */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-3">
+            <HistoricoRapidoConteudo
+              tipo="card"
+              id={card.id}
+              createdAt={(card as any).created_at}
+              statusAtual={card.status_card}
+            />
           </CardContent>
         </Card>
 

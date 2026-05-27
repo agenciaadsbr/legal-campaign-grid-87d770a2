@@ -39,6 +39,7 @@ import { ptBR } from "date-fns/locale";
 import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
 import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
 import { CriarCicloModal } from "./CriarCicloModal";
+import { HistoricoRapidoHover } from "@/components/HistoricoRapido";
 
 function CardItem({
   card,
@@ -277,7 +278,13 @@ function CardItem({
           <Play className="h-3 w-3" /> Iniciar tarefa
         </Button>
       ) : (
-        <div className="mt-1.5 flex justify-end">
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <HistoricoRapidoHover
+            tipo="card"
+            id={card.id}
+            createdAt={(card as any).created_at}
+            statusAtual={card.status_card}
+          />
           <StatusBadge status={card.status_card} />
         </div>
       )}

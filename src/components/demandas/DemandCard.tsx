@@ -13,6 +13,7 @@ import { Calendar, AlertTriangle, Lock, Link2 } from "lucide-react";
 import { AvatarStack } from "@/components/AvatarStack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { HistoricoRapidoHover } from "@/components/HistoricoRapido";
 
 interface Props {
   demanda: Demanda;
@@ -184,6 +185,15 @@ export function DemandCard({
             {(demanda as any).status_motivo}
           </span>
         )}
+      </div>
+
+      <div className="flex items-center justify-end pt-0.5">
+        <HistoricoRapidoHover
+          tipo="demanda"
+          id={demanda.id}
+          createdAt={demanda.created_at}
+          statusAtual={STATUS_DEMANDA_LABEL[demanda.status]}
+        />
       </div>
 
       {extraAction && (
