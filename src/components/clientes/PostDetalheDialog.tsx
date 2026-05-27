@@ -807,6 +807,18 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
           </CardContent>
         </Card>
 
+        {/* Histórico rápido */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-3">
+            <HistoricoRapidoConteudo
+              tipo="card"
+              id={card.id}
+              createdAt={(card as any).created_at}
+              statusAtual={card.status_card}
+            />
+          </CardContent>
+        </Card>
+
         {/* CARD 2 — Atividade (comentários) */}
         <Card className="overflow-hidden">
           <CardHeader className="pb-1 pt-2 px-3">
