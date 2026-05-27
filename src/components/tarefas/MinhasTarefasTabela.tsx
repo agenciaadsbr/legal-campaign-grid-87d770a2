@@ -280,7 +280,7 @@ export function MinhasTarefasTabela({
                               <ColorBadge label={STATUS_LABEL[t.status as TaskStatus]} color={STATUS_COR[t.status]} />
                               {t.status_motivo && (
                                 <span
-                                  className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted/40 text-muted-foreground truncate max-w-[160px]"
+                                  className="text-[11px] font-semibold text-foreground truncate max-w-[160px]"
                                   title={t.status_motivo}
                                 >
                                   {t.status_motivo}
