@@ -140,7 +140,7 @@ export function MinhasTarefasTabela({
       aguardando_acao_cliente: [],
       aguardando_etapa_interna: [],
       aguardando_etapa_anterior: [],
-      em_andamento: [],
+      
       pendente: [],
       concluido: [],
     };
