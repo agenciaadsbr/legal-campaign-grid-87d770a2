@@ -39,6 +39,7 @@ import { ptBR } from "date-fns/locale";
 import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
 import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
 import { CriarCicloModal } from "./CriarCicloModal";
+import { HistoricoRapidoHover } from "@/components/HistoricoRapido";
 
 function CardItem({
   card,
