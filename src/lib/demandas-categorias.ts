@@ -163,7 +163,7 @@ export const STATUS_DEMANDA_LABEL: Record<DemandaStatus, string> = {
   "Aguardando etapa interna": "Aguardando etapa interna",
   "Aguardando ação do cliente": "Aguardando ação do cliente",
   "Aguardando aprovação do cliente": "Aguardando aprovação do cliente",
-  Agendado: "Agendado",
+  Agendado: "Agendar",
   Postado: "Postado",
 };
 
