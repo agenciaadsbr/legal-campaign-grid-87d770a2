@@ -4,5 +4,6 @@
  */
 export function displayStatusPostLabel(label: string): string {
   if (label === "Revisar") return "Aguardando aprovação do cliente";
+  if (label === "Agendado") return "Agendar";
   return label;
 }
