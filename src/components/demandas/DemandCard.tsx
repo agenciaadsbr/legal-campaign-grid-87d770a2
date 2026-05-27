@@ -187,6 +187,15 @@ export function DemandCard({
         )}
       </div>
 
+      <div className="flex items-center justify-end pt-0.5">
+        <HistoricoRapidoHover
+          tipo="demanda"
+          id={demanda.id}
+          createdAt={demanda.created_at}
+          statusAtual={STATUS_DEMANDA_LABEL[demanda.status]}
+        />
+      </div>
+
       {extraAction && (
         <div onClick={(e) => e.stopPropagation()} className="pt-1">
           {extraAction}
