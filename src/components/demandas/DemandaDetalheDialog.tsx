@@ -178,7 +178,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   const descricaoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tituloLocal, setTituloLocal] = useState("");
   const tituloTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tituloInputRef = useRef<HTMLInputElement>(null);
+  const tituloInputRef = useRef<HTMLTextAreaElement>(null);
   const [linkMeisterLocal, setLinkMeisterLocal] = useState("");
   const [linkDriveLocal, setLinkDriveLocal] = useState("");
   const linkMeisterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -273,6 +273,15 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
       return () => clearTimeout(t);
     }
   }, [isRascunho, demanda?.id]);
+
+  // Auto-ajusta a altura do textarea do título conforme o conteúdo
+  useEffect(() => {
+    const el = tituloInputRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, [tituloLocal, demanda?.id]);
 
   // Limpa timers ao desmontar
   useEffect(() => {
@@ -504,9 +513,15 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     )}
                     <span>Título da tarefa</span>
                   </div>
-                  <Input
-                    ref={tituloInputRef}
+                  <Textarea
+                    ref={tituloInputRef as any}
                     value={tituloLocal}
+                    rows={1}
+                    onInput={(e) => {
+                      const el = e.currentTarget;
+                      el.style.height = "auto";
+                      el.style.height = el.scrollHeight + "px";
+                    }}
                     onChange={(e) => {
                       const v = e.target.value;
                       setTituloLocal(v);
@@ -526,7 +541,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                       }
                     }}
                     placeholder="Ex: Criar landing page para campanha de inverno"
-                    className="text-sm font-bold border-0 px-0 focus-visible:ring-0 h-auto"
+                    className="text-sm font-bold border-0 px-0 py-0 focus-visible:ring-0 min-h-0 resize-none leading-snug whitespace-pre-wrap break-words shadow-none"
                   />
                   <div className="text-xs text-muted-foreground mt-1">
                     {cliente?.nome_cliente ?? "—"} ·{" "}
@@ -539,7 +554,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2 flex-wrap">
                   <Button
                     type="button"
                     variant={isUrgente ? "default" : "outline"}
@@ -608,12 +623,22 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                         ? "interno" as const
                         : null;
                     if (!tipo) return null;
+                    const microtext =
+                      tipo === "cliente"
+                        ? "Ação aguardada do cliente"
+                        : "Etapa interna aguardada";
                     return (
-                      <StatusMotivoSelector
-                        tipo={tipo}
-                        value={(demanda as any).status_motivo}
-                        onChange={(v) => updateDemanda(demanda.id, { status_motivo: v } as any)}
-                      />
+                      <div className="flex flex-col gap-0.5">
+                        <StatusMotivoSelector
+                          tipo={tipo}
+                          value={(demanda as any).status_motivo}
+                          onChange={(v) => updateDemanda(demanda.id, { status_motivo: v } as any)}
+                          highlight
+                        />
+                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 px-0.5">
+                          {microtext}
+                        </span>
+                      </div>
                     );
                   })()}
                   <Button
