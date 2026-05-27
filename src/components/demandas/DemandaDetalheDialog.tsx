@@ -554,7 +554,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2 flex-wrap">
                   <Button
                     type="button"
                     variant={isUrgente ? "default" : "outline"}
