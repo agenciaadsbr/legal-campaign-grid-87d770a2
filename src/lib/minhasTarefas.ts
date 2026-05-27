@@ -206,7 +206,6 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         else if (raw === "Aguardando ação do cliente") status = "aguardando_acao_cliente";
         else if (raw === "Aguardando etapa interna") status = "aguardando_etapa_interna";
         else if (raw === "Aguardando etapa anterior") status = "aguardando_etapa_anterior";
-        else if (raw === "Criar" || raw === "Entregue") status = "em_andamento";
 
         const isMonitorado =
           status === "aprovacao" ||
