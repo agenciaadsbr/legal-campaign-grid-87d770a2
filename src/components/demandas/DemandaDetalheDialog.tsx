@@ -73,6 +73,7 @@ import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralBut
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HistoricoRapidoConteudo } from "@/components/HistoricoRapido";
 
 interface Props {
   demanda: Demanda | null;
