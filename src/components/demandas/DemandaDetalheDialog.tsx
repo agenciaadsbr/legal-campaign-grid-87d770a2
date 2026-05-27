@@ -274,14 +274,6 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
     }
   }, [isRascunho, demanda?.id]);
 
-  // Auto-ajusta a altura do textarea do título conforme o conteúdo
-  useEffect(() => {
-    const el = tituloInputRef.current;
-    if (el) {
-      el.style.height = "auto";
-      el.style.height = el.scrollHeight + "px";
-    }
-  }, [tituloLocal, demanda?.id]);
 
   // Limpa timers ao desmontar
   useEffect(() => {
