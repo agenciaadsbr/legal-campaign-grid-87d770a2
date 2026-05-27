@@ -54,27 +54,82 @@ const PRIO_RANK: Record<TaskPrioridade, number> = {
   Baixa: 1,
 };
 
+const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const STATUS_EXCLUIDOS_ATRASO = new Set([
+  "Concluido",
+  "Concluído",
+  "Entregue",
+  "Postado",
+  "Agendado",
+  "Agendar",
+  "Revisar",
+  "Aguardando aprovação do cliente",
+  "Aguardando ação do cliente",
+  "Aguardando etapa interna",
+  "Aguardando etapa anterior",
+  "concluido",
+]);
+
+function dateKeySaoPaulo(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function dateFromKey(key: string): Date {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function prazoDateKey(prazo: string | null | undefined): string | null {
+  if (!prazo) return null;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(prazo);
+  if (dateOnly) return prazo;
+  const d = new Date(prazo);
+  if (isNaN(d.getTime())) return null;
+  return dateKeySaoPaulo(d);
+}
+
+export function isTaskActuallyOverdue({
+  prazo,
+  createdAt,
+  statusRaw,
+  status,
+  now = new Date(),
+}: {
+  prazo: string | null | undefined;
+  createdAt?: string | null;
+  statusRaw?: string | null;
+  status?: TaskStatus;
+  now?: Date;
+}): boolean {
+  if (!prazo || status === "concluido") return false;
+  if (statusRaw && STATUS_EXCLUIDOS_ATRASO.has(statusRaw)) return false;
+
+  const prazoKey = prazoDateKey(prazo);
+  if (!prazoKey) return false;
+  if (prazoKey >= dateKeySaoPaulo(now)) return false;
+
+  if (!createdAt) return false;
+  const createdDate = new Date(createdAt);
+  if (isNaN(createdDate.getTime())) return false;
+  return now.getTime() - createdDate.getTime() >= MS_PER_DAY;
+}
+
 /**
  * Converte string de prazo em Date local (meia-noite local).
  * Aceita "YYYY-MM-DD" (sem deslocar fuso) e ISO completo.
  */
 export function parsePrazoLocal(s: string | null | undefined): Date | null {
-  if (!s) return null;
-  // Se for YYYY-MM-DD puro, parseia como local
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return null;
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function isAtrasado(prazo: string | null, status: TaskStatus): boolean {
-  if (!prazo || status === "concluido") return false;
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const d = parsePrazoLocal(prazo);
-  return d !== null && d < hoje;
+  const key = prazoDateKey(s);
+  return key ? dateFromKey(key) : null;
 }
 
 function mapCategoriaArea(cat: string): string {
