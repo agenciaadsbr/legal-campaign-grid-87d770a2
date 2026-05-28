@@ -12,12 +12,15 @@ import type { Cliente } from "@/store/crm";
 import { AREAS_DISPONIVEIS, STATUS_LABEL, type TaskStatus } from "@/lib/minhasTarefas";
 import { PeriodoFiltro, type PeriodoValor } from "@/components/filters/PeriodoFiltro";
 
+export type ContextoFiltro = "todos" | "criacao" | "postagem";
+
 export interface FiltrosState {
   cliente: string; // "all" | id
   areas: string[];
   status: TaskStatus[];
   busca: string;
   periodo: PeriodoValor;
+  contexto: ContextoFiltro;
 }
 
 interface Props {
