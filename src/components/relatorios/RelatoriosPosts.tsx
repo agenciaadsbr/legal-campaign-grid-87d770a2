@@ -62,6 +62,7 @@ export function RelatoriosPosts({ cards, posts }: Props) {
     cards.forEach((c) => {
       const ps = postsByCard.get(c.id) ?? [];
       const candidates = [
+        (c as any).data_postagem,
         ...ps.map((p) => p.data_postagem),
         ...ps.map((p) => p.data_agendamento),
         c.data_inicio_tarefa,
