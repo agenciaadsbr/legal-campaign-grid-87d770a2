@@ -922,6 +922,7 @@ export const useCRM = create<State>()((set, get) => ({
         ...(patch.responsaveis !== undefined ? { responsaveis: patch.responsaveis } : {}),
         ...((patch as any).responsaveis_postagem !== undefined ? { responsaveis_postagem: (patch as any).responsaveis_postagem } : {}),
         ...((patch as any).data_agendada !== undefined ? { data_agendada: (patch as any).data_agendada } : {}),
+        ...((patch as any).data_postagem !== undefined ? { data_postagem: (patch as any).data_postagem || null } : {}),
         ...(patch.data_inicio_tarefa !== undefined ? { data_inicio_tarefa: patch.data_inicio_tarefa || null } : {}),
         ...(patch.data_limite_tarefa !== undefined ? { data_limite_tarefa: patch.data_limite_tarefa || null } : {}),
         ...((patch as any).is_urgent !== undefined ? { is_urgent: (patch as any).is_urgent } : {}),
