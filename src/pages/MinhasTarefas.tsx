@@ -250,24 +250,35 @@ export default function MinhasTarefas() {
     setSelectedTaskIds([]);
   };
 
-  const handleApplyDatas = async (datas: { data_inicio?: string, data_limite?: string }) => {
+  const handleApplyDatas = async (datas: {
+    data_inicio?: string;
+    data_limite?: string;
+    data_agendamento?: string;
+    data_postagem?: string;
+  }) => {
     const selectedTasks = todasTarefas.filter(t => selectedTaskIds.includes(t.id));
     let count = 0;
 
     await Promise.all(selectedTasks.map(async (t) => {
       if (t.fonte === 'demanda') {
-        await updateDemanda(t.origem_id, { 
-          data_inicio: datas.data_inicio || undefined, 
-          data_limite: datas.data_limite || undefined 
+        await updateDemanda(t.origem_id, {
+          data_inicio: datas.data_inicio || undefined,
+          data_limite: datas.data_limite || undefined,
         });
         count++;
       } else if (t.fonte === 'post') {
         const [_, cid, rid] = t.id.split(':');
-        const cardsNoGrupo = cards.filter(c => c.cliente_id === cid && c.responsaveis.includes(rid));
-        await Promise.all(cardsNoGrupo.map(c => updateCard(c.id, { 
-          data_inicio_tarefa: datas.data_inicio || undefined, 
-          data_limite_tarefa: datas.data_limite || undefined 
-        })));
+        const cardsNoGrupo = cards.filter(c => c.cliente_id === cid && (
+          c.responsaveis.includes(rid) || ((c as any).responsaveis_postagem ?? []).includes(rid)
+        ));
+        await Promise.all(cardsNoGrupo.map(c => {
+          const patch: any = {};
+          if (datas.data_inicio !== undefined) patch.data_inicio_tarefa = datas.data_inicio || undefined;
+          if (datas.data_limite !== undefined) patch.data_limite_tarefa = datas.data_limite || undefined;
+          if (datas.data_agendamento !== undefined) patch.data_agendada = datas.data_agendamento || null;
+          if (datas.data_postagem !== undefined) patch.data_postagem = datas.data_postagem || null;
+          return updateCard(c.id, patch);
+        }));
         count += cardsNoGrupo.length;
       } else if (t.fonte === 'planejamento') {
         await updatePlan(t.origem_id, { prazo: datas.data_limite || undefined });
@@ -278,6 +289,11 @@ export default function MinhasTarefas() {
     toast.success(`${count} itens atualizados`);
     setSelectedTaskIds([]);
   };
+
+  const selecaoTemPost = useMemo(
+    () => todasTarefas.some((t) => selectedTaskIds.includes(t.id) && t.fonte === "post"),
+    [todasTarefas, selectedTaskIds],
+  );
 
   const handleApplyStatus = async (novoStatus: string) => {
     const selectedTasks = todasTarefas.filter(t => selectedTaskIds.includes(t.id));
