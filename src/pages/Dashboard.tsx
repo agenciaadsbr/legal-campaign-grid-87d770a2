@@ -68,12 +68,21 @@ export default function Dashboard() {
     const criar = cards.filter((c) => c.status_card === "Criar").length;
     const revisar = cards.filter((c) => c.status_card === "Revisar").length;
     const agendar = cards.filter(
-      (c) => c.status_card === "Agendar" || !!c.data_agendada
+      (c) => c.status_card === "Agendar" || c.status_card === "Agendado"
     ).length;
-    const postados = cards.filter((c) => c.status_card === "Postado").length;
-    const postsHoje = posts.filter((p) => p.created_at.slice(0, 10) === today).length;
+    // "Postados" só conta publicações reais (data_postagem definida e <= hoje).
+    const postados = cards.filter((c) => {
+      if (c.status_card !== "Postado") return false;
+      const dp = (c as any).data_postagem as string | null | undefined;
+      if (!dp) return false;
+      return dp.slice(0, 10) <= today;
+    }).length;
+    const postsHoje = cards.filter((c) => {
+      const dp = (c as any).data_postagem as string | null | undefined;
+      return c.status_card === "Postado" && !!dp && dp.slice(0, 10) === today;
+    }).length;
     return { totalCards, criar, revisar, agendar, postados, postsHoje };
-  }, [cards, posts, today]);
+  }, [cards, today]);
 
   // ---------- Demandas (somente ativas) ----------
   const demandasKpis = useMemo(() => {
