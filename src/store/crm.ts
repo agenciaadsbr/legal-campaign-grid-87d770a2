@@ -97,7 +97,10 @@ export interface Card {
   status_card: StatusCard;
   responsaveis: string[];
   responsaveis_postagem?: string[];
+    /** Data em que o post foi/será agendado na ferramenta de publicação. */
     data_agendada?: string | null;
+    /** Data real ou prevista da publicação. */
+    data_postagem?: string | null;
     data_inicio_tarefa?: string | null;
     data_limite_tarefa?: string | null;
     is_urgent?: boolean;
@@ -402,6 +405,7 @@ function mapCard(row: any): Card {
     responsaveis: row.responsaveis_ids ?? [],
     responsaveis_postagem: row.responsaveis_postagem_ids ?? [],
     data_agendada: row.data_agendada ?? null,
+    data_postagem: row.data_postagem ?? null,
     data_inicio_tarefa: row.data_inicio_tarefa ?? null,
     data_limite_tarefa: row.data_limite_tarefa ?? null,
     is_urgent: row.is_urgent ?? false,
@@ -902,6 +906,7 @@ export const useCRM = create<State>()((set, get) => ({
     if (patch.responsaveis !== undefined) dbPatch.responsaveis_ids = patch.responsaveis;
     if ((patch as any).responsaveis_postagem !== undefined) dbPatch.responsaveis_postagem_ids = (patch as any).responsaveis_postagem;
     if ((patch as any).data_agendada !== undefined) dbPatch.data_agendada = (patch as any).data_agendada;
+    if ((patch as any).data_postagem !== undefined) dbPatch.data_postagem = (patch as any).data_postagem || null;
     if (patch.data_inicio_tarefa !== undefined) dbPatch.data_inicio_tarefa = patch.data_inicio_tarefa || null;
     if (patch.data_limite_tarefa !== undefined) dbPatch.data_limite_tarefa = patch.data_limite_tarefa || null;
     if ((patch as any).is_urgent !== undefined) dbPatch.is_urgent = (patch as any).is_urgent;
@@ -917,6 +922,7 @@ export const useCRM = create<State>()((set, get) => ({
         ...(patch.responsaveis !== undefined ? { responsaveis: patch.responsaveis } : {}),
         ...((patch as any).responsaveis_postagem !== undefined ? { responsaveis_postagem: (patch as any).responsaveis_postagem } : {}),
         ...((patch as any).data_agendada !== undefined ? { data_agendada: (patch as any).data_agendada } : {}),
+        ...((patch as any).data_postagem !== undefined ? { data_postagem: (patch as any).data_postagem || null } : {}),
         ...(patch.data_inicio_tarefa !== undefined ? { data_inicio_tarefa: patch.data_inicio_tarefa || null } : {}),
         ...(patch.data_limite_tarefa !== undefined ? { data_limite_tarefa: patch.data_limite_tarefa || null } : {}),
         ...((patch as any).is_urgent !== undefined ? { is_urgent: (patch as any).is_urgent } : {}),

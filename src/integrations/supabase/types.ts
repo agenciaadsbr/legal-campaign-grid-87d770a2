@@ -417,6 +417,7 @@ export type Database = {
           data_agendada: string | null
           data_inicio_tarefa: string | null
           data_limite_tarefa: string | null
+          data_postagem: string | null
           descricao: string | null
           formato: string | null
           id: string
@@ -438,6 +439,7 @@ export type Database = {
           data_agendada?: string | null
           data_inicio_tarefa?: string | null
           data_limite_tarefa?: string | null
+          data_postagem?: string | null
           descricao?: string | null
           formato?: string | null
           id?: string
@@ -459,6 +461,7 @@ export type Database = {
           data_agendada?: string | null
           data_inicio_tarefa?: string | null
           data_limite_tarefa?: string | null
+          data_postagem?: string | null
           descricao?: string | null
           formato?: string | null
           id?: string

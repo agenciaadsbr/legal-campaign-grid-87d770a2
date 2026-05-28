@@ -92,6 +92,12 @@ function formatPrazo(p: string | null): string {
   return d.toLocaleDateString("pt-BR");
 }
 
+function formatCurto(p: string | null): string {
+  if (!p) return "—";
+  const d = new Date(p);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
 function aprovacaoBadgeTone(dias: number): "secondary" | "warning" | "destructive" {
   if (dias >= 7) return "destructive";
   if (dias >= 3) return "warning";
@@ -269,10 +275,31 @@ export function MinhasTarefasTabela({
                             />
                           </TableCell>
                           <TableCell>
-                            <span className={cn("text-xs tabular-nums", isAtrasado && "text-destructive font-medium")}>
-                              {formatPrazo(t.prazo)}
-                            </span>
+                            {t.fonte === "post" && t.post_ciclo === "postagem" ? (
+                              <div className="flex flex-col gap-0.5 text-[11px] tabular-nums leading-tight">
+                                {t.data_agendamento && (
+                                  <span className="text-muted-foreground">Agend.: {formatCurto(t.data_agendamento)}</span>
+                                )}
+                                <span className={cn(t.data_postagem ? "" : "text-amber-500")}>
+                                  Postagem: {t.data_postagem ? formatCurto(t.data_postagem) : "não definida"}
+                                </span>
+                              </div>
+                            ) : t.fonte === "post" ? (
+                              <div className="flex flex-col gap-0.5 text-[11px] tabular-nums leading-tight">
+                                <span className={cn(isAtrasado && "text-destructive font-medium")}>
+                                  Criação: {formatCurto(t.data_limite ?? t.prazo)}
+                                </span>
+                                {t.data_postagem && (
+                                  <span className="text-muted-foreground">Postagem: {formatCurto(t.data_postagem)}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className={cn("text-xs tabular-nums", isAtrasado && "text-destructive font-medium")}>
+                                {formatPrazo(t.prazo)}
+                              </span>
+                            )}
                           </TableCell>
+
                           <TableCell>
                             <div className="flex flex-col gap-1 min-w-[140px]">
                               <ColorBadge label={displayStatusPostLabel(t.status_raw ?? STATUS_LABEL[t.status as TaskStatus])} color={STATUS_COR[t.status]} />

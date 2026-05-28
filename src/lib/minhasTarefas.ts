@@ -45,6 +45,12 @@ export interface UnifiedTask {
   approval_waiting_since?: string | null;
   /** Dias inteiros no status monitorado (null se não aplicável). */
   approval_dias?: number | null;
+  /** Para fonte=post: ciclo da tarefa ("criacao" ou "postagem"). */
+  post_ciclo?: "criacao" | "postagem";
+  /** Para fonte=post: data de agendamento real (quando o post foi programado). */
+  data_agendamento?: string | null;
+  /** Para fonte=post: data real ou prevista de publicação. */
+  data_postagem?: string | null;
 }
 
 const PRIO_RANK: Record<TaskPrioridade, number> = {
@@ -305,8 +311,20 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       });
   }
 
-  // --- Posts (cards) AGRUPADOS por cliente + responsável + contrato ---
+  // --- Posts (cards) AGRUPADOS por cliente + responsável + contrato + CICLO ---
+  //
+  // Cada card aparece em UM dos dois ciclos:
+  //   - "criacao": status em [Criar, Revisar, Aguardando aprovação do cliente, Atrasado]
+  //                → respeita responsaveis_ids (criadores)
+  //   - "postagem": status em [Agendar, Agendado, Postado]
+  //                → respeita responsaveis_postagem_ids (publicadores)
+  //
+  // Regras de conclusão (Central de Tarefas):
+  //   - Postado SÓ é concluído se data_postagem existe e data_postagem <= hoje.
+  //   - Agendar / Agendado / Postado-futuro → permanecem pendentes do ciclo de postagem.
   if (respScope) {
+    const hojeKey = dateKeySaoPaulo(new Date());
+
     const contratosPorCliente = new Map<string, Contrato[]>();
     for (const c of contratos) {
       const arr = contratosPorCliente.get(c.cliente_id) ?? [];
@@ -334,19 +352,41 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
       return escolhido?.id ?? "all";
     };
 
-    // Agrupa por cliente + cada responsável visível do card + contrato
-    const grupos = new Map<string, { cards: PostCard[]; contrato_id: string; responsavel_id: string }>();
+    const isPostadoConcluido = (c: PostCard): boolean => {
+      if (c.status_card !== "Postado") return false;
+      const dp = (c as any).data_postagem as string | null | undefined;
+      if (!dp) return false;
+      const k = prazoDateKey(dp);
+      return !!k && k <= hojeKey;
+    };
+
+    const cicloDoCard = (c: PostCard): "criacao" | "postagem" => {
+      const s = c.status_card;
+      if (s === "Agendar" || s === "Agendado" || s === "Postado") return "postagem";
+      return "criacao";
+    };
+
+    type Grupo = {
+      cards: PostCard[];
+      contrato_id: string;
+      responsavel_id: string;
+      ciclo: "criacao" | "postagem";
+    };
+    const grupos = new Map<string, Grupo>();
+
     cards.forEach((c) => {
-      const respsCard = c.responsaveis ?? [];
-      // responsáveis visíveis nesse card segundo o escopo
+      const ciclo = cicloDoCard(c);
+      const respsCard = ciclo === "postagem"
+        ? ((c as any).responsaveis_postagem as string[] | undefined) ?? []
+        : c.responsaveis ?? [];
       const respsVisiveis = respScope === "all"
         ? respsCard
         : respsCard.filter((r) => respScope.has(r));
       if (respsVisiveis.length === 0) return;
-      const contrato_id = resolverContratoId(c.cliente_id, c.data_agendada ?? c.created_at);
+      const contrato_id = resolverContratoId(c.cliente_id, (c as any).data_agendada ?? c.created_at);
       respsVisiveis.forEach((rid) => {
-        const key = `${c.cliente_id}::${rid}::${contrato_id}`;
-        const g = grupos.get(key) ?? { cards: [], contrato_id, responsavel_id: rid };
+        const key = `${c.cliente_id}::${rid}::${contrato_id}::${ciclo}`;
+        const g = grupos.get(key) ?? { cards: [], contrato_id, responsavel_id: rid, ciclo };
         g.cards.push(c);
         grupos.set(key, g);
       });
@@ -355,22 +395,35 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
     grupos.forEach((grupo) => {
       const cardsGrupo = grupo.cards;
       const cliente_id = cardsGrupo[0].cliente_id;
-      // Da perspectiva da Central de Tarefas: card já "Agendado"/"Agendar"/"Postado"
-      // não é mais uma tarefa pendente do criador — não deve puxar o grupo para "Atrasado".
-      const isConcluidoParaCentral = (s: string) =>
-        s === "Postado" || s === "Agendado" || s === "Agendar";
-      const pendentes = cardsGrupo.filter((c) => !isConcluidoParaCentral(c.status_card));
+      const ciclo = grupo.ciclo;
+
+      // Concluídos dentro deste ciclo
+      const concluidosCiclo = cardsGrupo.filter((c) =>
+        ciclo === "postagem" ? isPostadoConcluido(c) : false,
+      );
+      const pendentes = cardsGrupo.filter((c) => !concluidosCiclo.includes(c));
       const todosConcluidos = pendentes.length === 0;
 
       const emRevisar = pendentes.filter((c) => c.status_card === "Revisar");
       const ativos = pendentes.filter((c) => c.status_card !== "Revisar");
 
+      // Para CRIAÇÃO: prazo = data_limite_tarefa
+      // Para POSTAGEM: prazo = data_postagem (preferencial) ou data_agendada
+      const prazoDoCard = (c: PostCard): string | null => {
+        if (ciclo === "postagem") {
+          return ((c as any).data_postagem as string | null | undefined)
+            ?? ((c as any).data_agendada as string | null | undefined)
+            ?? null;
+        }
+        return c.data_limite_tarefa ?? null;
+      };
+
       const prazosAtivos = ativos
-        .map((c) => c.data_limite_tarefa)
+        .map(prazoDoCard)
         .filter((p): p is string => !!p)
         .sort();
       const prazosPendentes = pendentes
-        .map((c) => c.data_limite_tarefa)
+        .map(prazoDoCard)
         .filter((p): p is string => !!p)
         .sort();
 
@@ -379,27 +432,39 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         .filter((p): p is string => !!p)
         .sort();
 
-      // Prazo prioriza cards ativos (fora de aprovação); fallback para qualquer pendente
       let prazo: string | null = prazosAtivos[0] ?? prazosPendentes[0] ?? null;
       let data_inicio: string | null = iniciosPendentes[0] ?? null;
-      let data_limite: string | null = prazo;
+      let data_limite: string | null = ciclo === "criacao"
+        ? (ativos.map((c) => c.data_limite_tarefa).filter((p): p is string => !!p).sort()[0] ?? null)
+        : null;
 
       if (!prazo && grupo.contrato_id !== "all") {
         const ct = contratos.find((x) => x.id === grupo.contrato_id);
         prazo = ct?.data_fim ?? null;
-        if (!data_limite) data_limite = ct?.data_fim ?? null;
+        if (!data_limite && ciclo === "criacao") data_limite = ct?.data_fim ?? null;
       }
 
+      // Datas do ciclo de postagem para exibir na coluna Prazo
+      const data_agendamento_grp = ciclo === "postagem"
+        ? (pendentes.map((c) => (c as any).data_agendada as string | null | undefined)
+            .filter((p): p is string => !!p)
+            .sort()[0] ?? null)
+        : null;
+      const data_postagem_grp = ciclo === "postagem"
+        ? (pendentes.map((c) => (c as any).data_postagem as string | null | undefined)
+            .filter((p): p is string => !!p)
+            .sort()[0] ?? null)
+        : null;
+
       const algumUrgente = cardsGrupo.some((c) => !!c.is_urgent);
-      const algumAtivoEmAndamento = ativos.some(
-        (c) => c.status_card === "Criar",
-      );
+      const algumAtivoEmAndamento = ativos.some((c) => c.status_card === "Criar");
 
       let status: TaskStatus;
       if (todosConcluidos) status = "concluido";
-      else if (ativos.length === 0 && emRevisar.length > 0) status = "aprovacao";
+      else if (ciclo === "criacao" && ativos.length === 0 && emRevisar.length > 0) status = "aprovacao";
       else if (
-        ativos.some((c) =>
+        ciclo === "criacao"
+        && ativos.some((c) =>
           isTaskActuallyOverdue({
             prazo: c.data_limite_tarefa,
             createdAt: c.created_at,
@@ -408,27 +473,49 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
           }),
         )
       ) status = "atrasado";
+      else if (
+        ciclo === "postagem"
+        && ativos.some((c) => {
+          const dp = (c as any).data_postagem as string | null | undefined;
+          if (!dp) return false;
+          const k = prazoDateKey(dp);
+          return !!k && k < hojeKey && c.status_card !== "Postado";
+        })
+      ) status = "atrasado";
       else status = "pendente";
 
-      const titulo = todosConcluidos
-        ? `${cardsGrupo.length} posts concluídos`
-        : `Criar ${pendentes.length} post${pendentes.length === 1 ? "" : "s"}`;
+      // Título e status_raw conforme ciclo
+      let titulo: string;
+      let status_raw: string | null = null;
+      if (ciclo === "postagem") {
+        if (todosConcluidos) {
+          titulo = `${cardsGrupo.length} post${cardsGrupo.length === 1 ? "" : "s"} postado${cardsGrupo.length === 1 ? "" : "s"}`;
+          status_raw = "Postado";
+        } else {
+          const agendar = pendentes.filter((c) => c.status_card === "Agendar").length;
+          const agendado = pendentes.filter((c) => c.status_card === "Agendado").length;
+          const postadoFuturo = pendentes.filter((c) => c.status_card === "Postado").length;
+          titulo = `Postar ${pendentes.length} post${pendentes.length === 1 ? "" : "s"}`;
+          if (postadoFuturo > 0) status_raw = "Postado";
+          else if (agendado > 0) status_raw = "Agendado";
+          else if (agendar > 0) status_raw = "Agendar";
+        }
+      } else {
+        titulo = todosConcluidos
+          ? `${cardsGrupo.length} posts concluídos`
+          : `Criar ${pendentes.length} post${pendentes.length === 1 ? "" : "s"}`;
+        if (status === "aprovacao") status_raw = "Revisar";
+        else if (algumAtivoEmAndamento) status_raw = "Criar";
+      }
 
-      // Aprovação: usa o card em Revisar com aprovação mais antiga
       const approvalDates = emRevisar
         .map((c) => c.approval_waiting_since)
         .filter((p): p is string => !!p)
         .sort();
       const approval_waiting_since = status === "aprovacao" ? (approvalDates[0] ?? null) : null;
 
-      // Status oficial para exibição na coluna Status
-      let status_raw: string | null = null;
-      if (todosConcluidos) status_raw = "Postado";
-      else if (status === "aprovacao") status_raw = "Revisar";
-      else if (algumAtivoEmAndamento) status_raw = "Criar";
-
       out.push({
-        id: `posts:${cliente_id}:${grupo.responsavel_id}:${grupo.contrato_id}`,
+        id: `posts:${cliente_id}:${grupo.responsavel_id}:${grupo.contrato_id}:${ciclo}`,
         fonte: "post",
         origem_id: cardsGrupo[0].id,
         cliente_id,
@@ -446,6 +533,9 @@ export function buildUnifiedTasks(args: BuildArgs): UnifiedTask[] {
         link: `/clientes/${cliente_id}/projeto?tab=posts`,
         approval_waiting_since,
         approval_dias: diasDesde(approval_waiting_since),
+        post_ciclo: ciclo,
+        data_agendamento: data_agendamento_grp,
+        data_postagem: data_postagem_grp,
       });
     });
   }
