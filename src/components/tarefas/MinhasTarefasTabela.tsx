@@ -92,6 +92,12 @@ function formatPrazo(p: string | null): string {
   return d.toLocaleDateString("pt-BR");
 }
 
+function formatCurto(p: string | null): string {
+  if (!p) return "—";
+  const d = new Date(p);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
 function aprovacaoBadgeTone(dias: number): "secondary" | "warning" | "destructive" {
   if (dias >= 7) return "destructive";
   if (dias >= 3) return "warning";
