@@ -12,12 +12,15 @@ import type { Cliente } from "@/store/crm";
 import { AREAS_DISPONIVEIS, STATUS_LABEL, type TaskStatus } from "@/lib/minhasTarefas";
 import { PeriodoFiltro, type PeriodoValor } from "@/components/filters/PeriodoFiltro";
 
+export type ContextoFiltro = "todos" | "criacao" | "postagem";
+
 export interface FiltrosState {
   cliente: string; // "all" | id
   areas: string[];
   status: TaskStatus[];
   busca: string;
   periodo: PeriodoValor;
+  contexto: ContextoFiltro;
 }
 
 interface Props {
@@ -54,7 +57,8 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
     value.areas.length +
     value.status.length +
     (value.busca ? 1 : 0) +
-    (value.periodo.preset !== "todos" ? 1 : 0);
+    (value.periodo.preset !== "todos" ? 1 : 0) +
+    (value.contexto !== "todos" ? 1 : 0);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -141,6 +145,18 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
       {/* Período */}
       <PeriodoFiltro value={value.periodo} onChange={(p) => set({ periodo: p })} />
 
+      {/* Contexto (Posts: Criação vs Postagem) */}
+      <Select value={value.contexto} onValueChange={(v) => set({ contexto: v as ContextoFiltro })}>
+        <SelectTrigger className="h-8 w-[170px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todos">Contexto: Todos</SelectItem>
+          <SelectItem value="criacao">Contexto: Criação</SelectItem>
+          <SelectItem value="postagem">Contexto: Postagem</SelectItem>
+        </SelectContent>
+      </Select>
+
       {totalFiltros > 0 && (
         <Button
           variant="ghost"
@@ -153,6 +169,7 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
               status: [],
               busca: "",
               periodo: { preset: "todos", inicio: null, fim: null },
+              contexto: "todos",
             })
           }
         >
