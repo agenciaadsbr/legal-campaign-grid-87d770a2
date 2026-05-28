@@ -57,7 +57,8 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
     value.areas.length +
     value.status.length +
     (value.busca ? 1 : 0) +
-    (value.periodo.preset !== "todos" ? 1 : 0);
+    (value.periodo.preset !== "todos" ? 1 : 0) +
+    (value.contexto !== "todos" ? 1 : 0);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
