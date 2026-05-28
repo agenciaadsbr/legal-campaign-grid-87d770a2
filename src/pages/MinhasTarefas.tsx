@@ -39,6 +39,7 @@ const FILTROS_INICIAIS: FiltrosState = {
   status: [],
   busca: "",
   periodo: { preset: "todos", inicio: null, fim: null },
+  contexto: "todos",
 };
 
 type Visualizacao = "minhas" | "todos" | string; // string = responsavel_id
