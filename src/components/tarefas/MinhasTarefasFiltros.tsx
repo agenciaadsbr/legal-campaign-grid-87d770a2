@@ -145,6 +145,18 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
       {/* Período */}
       <PeriodoFiltro value={value.periodo} onChange={(p) => set({ periodo: p })} />
 
+      {/* Contexto (Posts: Criação vs Postagem) */}
+      <Select value={value.contexto} onValueChange={(v) => set({ contexto: v as ContextoFiltro })}>
+        <SelectTrigger className="h-8 w-[170px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todos">Contexto: Todos</SelectItem>
+          <SelectItem value="criacao">Contexto: Criação</SelectItem>
+          <SelectItem value="postagem">Contexto: Postagem</SelectItem>
+        </SelectContent>
+      </Select>
+
       {totalFiltros > 0 && (
         <Button
           variant="ghost"
@@ -157,6 +169,7 @@ export function MinhasTarefasFiltros({ value, onChange, clientes, areasDisponive
               status: [],
               busca: "",
               periodo: { preset: "todos", inicio: null, fim: null },
+              contexto: "todos",
             })
           }
         >
