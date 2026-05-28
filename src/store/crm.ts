@@ -97,7 +97,10 @@ export interface Card {
   status_card: StatusCard;
   responsaveis: string[];
   responsaveis_postagem?: string[];
+    /** Data em que o post foi/será agendado na ferramenta de publicação. */
     data_agendada?: string | null;
+    /** Data real ou prevista da publicação. */
+    data_postagem?: string | null;
     data_inicio_tarefa?: string | null;
     data_limite_tarefa?: string | null;
     is_urgent?: boolean;
