@@ -45,6 +45,12 @@ export interface UnifiedTask {
   approval_waiting_since?: string | null;
   /** Dias inteiros no status monitorado (null se não aplicável). */
   approval_dias?: number | null;
+  /** Para fonte=post: ciclo da tarefa ("criacao" ou "postagem"). */
+  post_ciclo?: "criacao" | "postagem";
+  /** Para fonte=post: data de agendamento real (quando o post foi programado). */
+  data_agendamento?: string | null;
+  /** Para fonte=post: data real ou prevista de publicação. */
+  data_postagem?: string | null;
 }
 
 const PRIO_RANK: Record<TaskPrioridade, number> = {
