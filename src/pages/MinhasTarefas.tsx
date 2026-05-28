@@ -135,7 +135,7 @@ export default function MinhasTarefas() {
   );
 
   const tarefasFiltradas = useMemo(() => {
-    const { cliente, areas, status, busca, periodo } = filtros;
+    const { cliente, areas, status, busca, periodo, contexto } = filtros;
     const buscaLower = busca.trim().toLowerCase();
     const ini = periodo.inicio;
     const fim = periodo.fim;
@@ -145,6 +145,8 @@ export default function MinhasTarefas() {
       if (cliente !== "all" && t.cliente_id !== cliente) return false;
       if (areas.length > 0 && !areas.includes(t.area)) return false;
       if (status.length > 0 && !status.includes(t.status)) return false;
+      // Filtro de contexto: aplica apenas a posts; demais fontes passam livres.
+      if (contexto !== "todos" && t.fonte === "post" && t.post_ciclo !== contexto) return false;
       if (buscaLower) {
         const hay = `${t.titulo} ${t.cliente_nome}`.toLowerCase();
         if (!hay.includes(buscaLower)) return false;
