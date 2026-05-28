@@ -437,6 +437,7 @@ export default function MinhasTarefas() {
             <DefinirDatasPopover
               count={selectedTaskIds.length}
               onApply={handleApplyDatas}
+              postsMode={selecaoTemPost}
             />
 
             <AlterarStatusPopover
