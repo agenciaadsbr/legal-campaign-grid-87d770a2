@@ -674,36 +674,37 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
 
             <DefinirDatasPopover
               count={selectedIds.size}
+              postsMode
               onApply={async (datas) => {
                 const ids = Array.from(selectedIds);
                 await Promise.all(
                   ids.map((id) => updateCard(id, {
-                    data_inicio_tarefa: datas.data_inicio,
-                    data_limite_tarefa: datas.data_limite,
+                    ...(datas.data_inicio !== undefined ? { data_inicio_tarefa: datas.data_inicio } : {}),
+                    ...(datas.data_limite !== undefined ? { data_limite_tarefa: datas.data_limite } : {}),
+                    ...(datas.data_agendamento !== undefined ? { data_agendada: datas.data_agendamento } as any : {}),
+                    ...(datas.data_postagem !== undefined ? { data_postagem: datas.data_postagem } as any : {}),
                   }))
                 );
 
                 if (clienteId) {
                   const s = ids.length === 1 ? "" : "s";
-                  if (datas.data_inicio) {
-                    const dataFmt = format(parseISO(datas.data_inicio), "dd/MM/yyyy");
+                  const fmt = (d: string) => format(parseISO(d), "dd/MM/yyyy");
+                  const lancar = async (acao: string, descricao: string) => {
                     await useCRM.getState().addAtividade({
-                      clienteId,
-                      acao: "Data em Massa",
-                      descricao: `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data de início definida para ${dataFmt}.`,
-                      area: "Posts",
-                      tipo: "post"
+                      clienteId, acao, descricao, area: "Posts", tipo: "post",
                     });
+                  };
+                  if (datas.data_inicio) {
+                    await lancar("Data em Massa", `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data de início definida para ${fmt(datas.data_inicio)}.`);
                   }
                   if (datas.data_limite) {
-                    const dataFmt = format(parseISO(datas.data_limite), "dd/MM/yyyy");
-                    await useCRM.getState().addAtividade({
-                      clienteId,
-                      acao: "Data em Massa",
-                      descricao: `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data limite definida para ${dataFmt}.`,
-                      area: "Posts",
-                      tipo: "post"
-                    });
+                    await lancar("Data em Massa", `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data limite definida para ${fmt(datas.data_limite)}.`);
+                  }
+                  if (datas.data_agendamento) {
+                    await lancar("Data em Massa", `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data de agendamento definida para ${fmt(datas.data_agendamento)}.`);
+                  }
+                  if (datas.data_postagem) {
+                    await lancar("Data em Massa", `${ids.length} post${s} tiv${ids.length === 1 ? "er" : "era"}m data de postagem definida para ${fmt(datas.data_postagem)}.`);
                   }
                 }
 
@@ -712,6 +713,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                 setSelectionMode(false);
               }}
             />
+
 
             <AlterarStatusPopover
               count={selectedIds.size}
