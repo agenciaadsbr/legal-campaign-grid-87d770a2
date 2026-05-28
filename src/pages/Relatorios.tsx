@@ -145,10 +145,14 @@ export default function Relatorios() {
 
   // ---------- KPIs Visão Geral ----------
   const kpiTotalPosts = fCards.length;
+  // Postados = só publicações reais (data_postagem definida e <= hoje).
+  const todayKey = new Date().toISOString().slice(0, 10);
   const kpiPostados = fCards.filter((c) => {
-    if (c.status_card === "Postado") return true;
+    if (c.status_card !== "Postado") return false;
+    const dp = (c as any).data_postagem as string | null | undefined;
+    if (dp) return dp.slice(0, 10) <= todayKey;
     const ps = byCard.get(c.id) ?? [];
-    return ps.some((p) => p.data_postagem);
+    return ps.some((p) => p.data_postagem && p.data_postagem.slice(0, 10) <= todayKey);
   }).length;
   const kpiPendentes = fCards.filter(
     (c) => c.status_card !== "Postado" && c.status_card !== "Renovação"
