@@ -405,6 +405,7 @@ function mapCard(row: any): Card {
     responsaveis: row.responsaveis_ids ?? [],
     responsaveis_postagem: row.responsaveis_postagem_ids ?? [],
     data_agendada: row.data_agendada ?? null,
+    data_postagem: row.data_postagem ?? null,
     data_inicio_tarefa: row.data_inicio_tarefa ?? null,
     data_limite_tarefa: row.data_limite_tarefa ?? null,
     is_urgent: row.is_urgent ?? false,
