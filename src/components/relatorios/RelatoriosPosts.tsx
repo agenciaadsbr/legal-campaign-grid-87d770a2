@@ -34,9 +34,18 @@ export function RelatoriosPosts({ cards, posts }: Props) {
   const { responsaveis } = useCRM();
 
   const counts = useMemo(() => {
+    const todayKey = new Date().toISOString().slice(0, 10);
     const byStatus: Record<string, number> = {};
     STATUS_ORDER.forEach((s) => {
-      byStatus[s] = cards.filter((c) => c.status_card === s).length;
+      byStatus[s] = cards.filter((c) => {
+        if (c.status_card !== s) return false;
+        if (s === "Postado") {
+          const dp = (c as any).data_postagem as string | null | undefined;
+          if (!dp) return false;
+          return dp.slice(0, 10) <= todayKey;
+        }
+        return true;
+      }).length;
     });
     return { total: cards.length, ...byStatus } as Record<string, number> & { total: number };
   }, [cards]);
