@@ -213,8 +213,8 @@ export function WorkflowSection({ pai }: Props) {
             is_urgent: prioridade === "Urgente",
             responsaveis: responsaveisIds,
             responsaveis_postagem: responsaveisPostagemIds,
-            data_inicio_tarefa: dataInicio ? new Date(dataInicio).toISOString() : null,
-            data_limite_tarefa: dataLimite ? new Date(dataLimite).toISOString() : null,
+            data_inicio_tarefa: dataInicio ? saoPauloInputToISO(dataInicio) : null,
+            data_limite_tarefa: dataLimite ? saoPauloInputToISO(dataLimite) : null,
           } as any);
           await updatePost(res.postId, {
             status: "Aguardando etapa anterior" as any,
@@ -251,8 +251,8 @@ export function WorkflowSection({ pai }: Props) {
             categoria,
             subtipo: subtipo.trim() || null,
             prioridade,
-            data_inicio: dataInicio ? new Date(dataInicio).toISOString() : null,
-            data_limite: dataLimite ? new Date(dataLimite).toISOString() : null,
+            data_inicio: dataInicio ? saoPauloInputToISO(dataInicio) : null,
+            data_limite: dataLimite ? saoPauloInputToISO(dataLimite) : null,
             descricao: descricao.trim() ? descricao : null,
             link_meister: mostrarLinks && linkMeister.trim() ? linkMeister.trim() : null,
             link_drive: mostrarLinks && linkDrive.trim() ? linkDrive.trim() : null,
