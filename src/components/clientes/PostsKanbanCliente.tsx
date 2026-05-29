@@ -285,7 +285,17 @@ function CardItem({
             <div className="text-[11px] text-muted-foreground">Definir prazo</div>
           )}
         </div>
-        <AvatarStack responsaveis={resps} size="xs" max={3} />
+        {semResponsavelCiclo ? (
+          <Badge
+            variant="outline"
+            className="h-5 px-1.5 text-[10px] gap-1 text-muted-foreground border-dashed"
+            title={labelSemResp}
+          >
+            {labelSemResp}
+          </Badge>
+        ) : (
+          <AvatarStack responsaveis={resps} size="xs" max={3} />
+        )}
       </div>
 
 
