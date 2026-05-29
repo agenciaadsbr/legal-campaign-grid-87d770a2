@@ -121,14 +121,19 @@ export function useHistoricoEventos({ tipo, id, createdAt, statusAtual }: HookOp
     const lista: HistoricoEvento[] = [];
 
     for (const e of raw) {
-      const autor = nome(e.usuario_id);
+      const temAutor = !!e.usuario_id;
+      const automatico = !temAutor || e.payload?.automatico === true || e.payload?.origem === "sistema" || e.payload?.origem === "template" || e.payload?.origem === "automacao";
+      const autor = temAutor ? (nomes.get(e.usuario_id!) || "Usuário não identificado") : "Sistema";
       let texto = "";
       let statusEntrada: string | null = null;
 
       if (e.acao === "criada" || e.acao === "criado") {
         const respIds: string[] = e.payload?.responsaveis_ids ?? [];
         const respNomes = respIds.map((i) => nomes.get(i)).filter(Boolean).join(", ");
-        texto = respNomes ? `Tarefa criada para ${respNomes}` : `Tarefa criada`;
+        const autorTxt = temAutor ? autor : "usuário não identificado";
+        texto = respNomes
+          ? `Tarefa criada por ${autorTxt} para ${respNomes}`
+          : `Tarefa criada por ${autorTxt}`;
         statusEntrada = e.para_status ?? "Criar";
       } else if (e.acao === "status_alterado" || e.acao === "status") {
         const de = e.de_status ?? "—";
@@ -140,9 +145,19 @@ export function useHistoricoEventos({ tipo, id, createdAt, statusAtual }: HookOp
         const de: string[] = e.payload?.de ?? [];
         const paraN = para.map((i) => nomes.get(i)).filter(Boolean).join(", ");
         const deN = de.map((i) => nomes.get(i)).filter(Boolean).join(", ");
-        if (deN && paraN) texto = `${autor} alterou responsável de ${deN} para ${paraN}`;
-        else if (paraN) texto = `${autor} atribuiu para ${paraN}`;
-        else texto = `${autor} removeu responsáveis`;
+        if (deN && paraN) {
+          texto = automatico
+            ? `Sistema alterou automaticamente responsável de ${deN} para ${paraN}`
+            : `${autor} alterou responsável de ${deN} para ${paraN}`;
+        } else if (paraN) {
+          texto = automatico
+            ? `Sistema atribuiu automaticamente para ${paraN}`
+            : `${autor} atribuiu para ${paraN}`;
+        } else {
+          texto = automatico
+            ? `Sistema removeu responsáveis automaticamente`
+            : `${autor} removeu responsáveis`;
+        }
       } else if (e.acao === "dependencia_liberada") {
         texto = `Dependência liberada`;
       } else if (e.acao === "comentario" || e.acao === "anexo" || e.acao === "iniciado" || e.acao === "concluido") {
