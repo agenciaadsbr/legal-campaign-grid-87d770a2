@@ -39,12 +39,12 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
 import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
+import { CriarCicloModal } from "./CriarCicloModal";
 import { HistoricoRapidoHover } from "@/components/HistoricoRapido";
 import { useReunioes } from "@/store/reunioes";
 import { useResumoViews } from "@/store/resumoViews";
 import { ReuniaoDialog } from "@/components/projeto/ReuniaoDialog";
 
-import { HistoricoRapidoHover } from "@/components/HistoricoRapido";
 
 function CardItem({
   card,
