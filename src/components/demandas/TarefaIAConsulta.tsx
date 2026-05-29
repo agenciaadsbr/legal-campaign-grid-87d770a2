@@ -39,7 +39,7 @@ const RESPOSTA_LIMITE = 280;
 
 export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: Props) {
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [pergunta, setPergunta] = useState("");
   const [resposta, setResposta] = useState<any>(null);
   const [ready, setReady] = useState(false);

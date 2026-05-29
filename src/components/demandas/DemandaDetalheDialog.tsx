@@ -1136,6 +1136,16 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
             </CardContent>
           </Card>
 
+        <TarefaIAConsulta 
+          demanda={demanda}
+          comentarios_texto={meusComentarios.map(c => c.texto).join("\n")}
+          onAddComment={(txt) => {
+            if (user) addComentario(demanda.id, user.id, txt);
+          }}
+        />
+
+
+
         {/* CARD 2 — Atividade (comentários) */}
         <Card className="shrink-0 overflow-hidden">
           <CardHeader className="pb-1 pt-2 px-3 shrink-0">
@@ -1299,13 +1309,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           </CardContent>
         </Card>
 
-        <TarefaIAConsulta 
-          demanda={demanda}
-          comentarios_texto={meusComentarios.map(c => c.texto).join("\n")}
-          onAddComment={(txt) => {
-            if (user) addComentario(demanda.id, user.id, txt);
-          }}
-        />
+
 
         {demanda.is_card_pai ? (
           <EtapasProcesso cardPai={demanda} />

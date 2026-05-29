@@ -795,19 +795,23 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
           </CardContent>
         </Card>
 
-        {/* Histórico rápido */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-3">
-            <HistoricoRapidoConteudo
-              tipo="card"
-              id={card.id}
-              createdAt={(card as any).created_at}
-              statusAtual={card.status_card}
-            />
-          </CardContent>
-        </Card>
+        {/* CARD — IA Consulta (Está com dúvidas?) */}
+        <TarefaIAConsulta
+          demanda={demandaStub}
+          comentarios_texto={meusComentarios.map((c) => c.comentario_texto).join("\n")}
+          onAddComment={(txt) => {
+            if (user) {
+              addComentario({
+                post_id: post.id,
+                cliente_id: card.cliente_id,
+                usuario_id: user.id,
+                comentario_texto: txt,
+              });
+            }
+          }}
+        />
 
-        {/* CARD 2 — Atividade (comentários) */}
+        {/* CARD — Atividade (comentários) */}
         <Card className="overflow-hidden">
           <CardHeader className="pb-1 pt-2 px-3">
             <CardTitle className="text-xs uppercase tracking-wide">Atividade</CardTitle>
@@ -898,21 +902,18 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
           </CardContent>
         </Card>
 
-        {/* CARD 3 — IA Consulta (Está com dúvidas?) */}
-        <TarefaIAConsulta
-          demanda={demandaStub}
-          comentarios_texto={meusComentarios.map((c) => c.comentario_texto).join("\n")}
-          onAddComment={(txt) => {
-            if (user) {
-              addComentario({
-                post_id: post.id,
-                cliente_id: card.cliente_id,
-                usuario_id: user.id,
-                comentario_texto: txt,
-              });
-            }
-          }}
-        />
+        {/* Histórico rápido */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-3">
+            <HistoricoRapidoConteudo
+              tipo="card"
+              id={card.id}
+              createdAt={(card as any).created_at}
+              statusAtual={card.status_card}
+            />
+          </CardContent>
+        </Card>
+
 
         {/* CARD 4 — Workflow / Continuidade */}
         <WorkflowSection pai={paiWorkflowStub} />
