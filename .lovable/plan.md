@@ -1,33 +1,62 @@
+## Objetivo
+Quando o usuário clicar em "Ver resumo da reunião" (na seção "Está com dúvidas na tarefa? Consulte aqui"), o sistema registra a visualização automaticamente — sem checkbox, sem botão extra de confirmação — e exibe estado visual com nome, data e hora.
 
-# Remover agrupamento sintético "Em andamento" da Central de Tarefas
+## Escopo
+- Componente único responsável pelo botão: `src/components/demandas/TarefaIAConsulta.tsx` (já é usado em todas as abas: Posts, Vídeos, Tráfego, LP/Site, IA/Atendimento, Operacional, Urgências, Card Pai, etapas filhas, Central de Tarefas via dialogs de demanda).
+- Nova tabela `task_meeting_summary_views` para persistência.
+- Novo store `useResumoViews` para consultar/registrar e expor mapa por demanda.
+- Indicador discreto no `TarefaIAConsulta` antes/depois do clique.
+- Propagação herdada Card Pai → etapas filhas (mesmo `meeting_id` ou `parent_process_id`).
+- Ação em massa em Posts (`PostsKanbanCliente`): novo botão "Ver resumo da reunião" para seleção múltipla.
+- Badge discreto na Central de Tarefas (`MinhasTarefasTabela`) por linha — "Visualizado" / "Não visualizado".
+- Evento no histórico rápido (`HistoricoRapido`) quando houver visualização.
 
-A Central passa a exibir sempre o status real/oficial (igual ao detalhe e ao Kanban). Sem mudanças no banco, no Kanban, nos enums ou no layout.
+## Etapas
 
-## Mudanças
+1. **Migração SQL** (`task_meeting_summary_views`):
+   - Campos: `id`, `demanda_id` (uuid, NOT NULL), `meeting_id` (uuid, nullable), `user_id` (uuid, NOT NULL), `first_viewed_at` (timestamptz, default now()), `last_viewed_at` (timestamptz, default now()), `view_count` (int default 1), `created_at`, `updated_at`.
+   - Unique `(demanda_id, user_id)` para upsert idempotente.
+   - GRANTs + RLS: usuários autenticados podem ler todas as visualizações (transparência operacional) e inserir/atualizar apenas as próprias.
+   - Índices em `demanda_id`, `meeting_id`.
 
-### 1. `src/lib/minhasTarefas.ts`
-- Remover `"em_andamento"` do tipo `TaskStatus`.
-- Remover `em_andamento` de `STATUS_LABEL`.
-- Demandas (linha ~210): remover `raw === "Criar" || raw === "Entregue" → "em_andamento"`. Default fica `"pendente"`. `status_raw` já é preenchido com o status oficial.
-- Posts (linha ~343): remover `algumAtivoEmAndamento → "em_andamento"`. Default vira `"pendente"` (ou `"atrasado"` se realmente vencido). Preencher `status_raw = "Criar"` quando houver cards ativos em "Criar", para a célula Status exibir "Criar".
-- Planejamento (linha ~387): converter `p.status === "em_andamento"` para `"pendente"` na Central. Store interno do planejamento continua usando seu próprio valor — sem impacto.
+2. **Store** `src/store/resumoViews.ts`:
+   - `views: Record<string, ResumoView[]>` indexado por `demanda_id`.
+   - `load(demandaIds: string[])` — busca em lote.
+   - `registrar(demandaIds: string[], meetingId?: string)` — upsert (insert + on conflict update `last_viewed_at`, `view_count = view_count + 1`).
+   - Helper `getMinhaVisualizacao(demandaId, userId)` e `temVisualizacao(demandaId)`.
 
-### 2. `src/components/tarefas/MinhasTarefasTabela.tsx`
-- Remover `em_andamento` de `STATUS_COR`, `GroupKey`, `GROUP_ORDER`, `GROUP_META` e do objeto `buckets`.
-- Célula "Status" (linha ~280): trocar `STATUS_LABEL[t.status]` por `t.status_raw ?? STATUS_LABEL[t.status]`. A cor continua via `STATUS_COR[t.status]` (pendente/atrasado/aprovacao/monitorados/concluido).
+3. **TarefaIAConsulta**:
+   - Carregar visualizações da demanda atual ao abrir a seção.
+   - Acima do botão exibir badge:
+     - ⚠️ "Resumo da reunião ainda não visualizado" (não visualizado pelo usuário logado)
+     - ✅ "Resumo visualizado — Nome • dd/mm/aaaa às hh:mm" (visualizado)
+   - Botão muda label: "Ver resumo da reunião" → "Ver novamente".
+   - No `onClick`, depois de abrir o `ReuniaoDialog`, chamar `registrar([demanda.id], reuniao.id)`. Para Card Pai (`is_card_pai`), buscar etapas filhas via `parent_process_id` e registrar para todas.
+   - Caso não haja reunião nem resumo: exibir "Esta tarefa não possui resumo de reunião vinculado." e desabilitar botão (não bloquear nada mais).
 
-### 3. Não tocar
-- `MinhasTarefasFiltros.tsx` — sem referência ao termo.
-- `MinhasTarefas.tsx` linha 300 (mapping interno de planejamento) — mantém.
-- `RelatoriosDemandas.tsx` KPI "Em andamento" — fora da Central, mantém.
-- Enums do banco, Kanban, detalhe da tarefa, filtros do board.
+4. **Card Pai → etapas filhas**:
+   - Ao registrar no pai, também registrar para todas as demandas com `parent_process_id = demanda.id`.
+   - Nas etapas filhas, se houver visualização vinda do pai (mesmo `meeting_id`), exibir "✅ Resumo visualizado no Card Pai — Nome • data".
 
-### 4. `public/version.json`
-Bump para `2026-05-27-remover-em-andamento`.
+5. **PostsKanbanCliente — ação em massa**:
+   - No modo seleção (já existente), adicionar botão "Ver resumo da reunião".
+   - Abre `ReuniaoDialog` da reunião do cliente e chama `registrar(idsSelecionados, reuniao.id)`. Posts sem reunião são ignorados com toast discreto.
+   - Confirmação: "✅ Resumo visualizado para X posts selecionados".
 
-## Resultado
+6. **Central de Tarefas (`MinhasTarefasTabela`)**:
+   - Badge pequeno por linha: "✅ Visualizado" ou "⚠️ Não visualizado" — apenas se a tarefa tiver reunião vinculada (`origem_reuniao_id`).
+   - Carregar `useResumoViews.load` para as demandas listadas.
 
-- Sem grupo, filtro ou label "Em andamento" / "Em execução" na Central.
-- Tarefas em "Criar", "Planejamento" e "Entregue" aparecem com esses nomes na coluna Status, agrupadas em "Pendentes".
-- Atrasadas / Aguardando / Concluídas continuam funcionando como antes.
-- Nenhum dado alterado no banco; nenhuma coluna nova; layout intacto.
+7. **Histórico**:
+   - O store de atividades (`useAtividades`) já registra eventos. Após `registrar`, inserir registro tipo `"visualizacao_resumo"` com texto "[Nome] visualizou o resumo da reunião em [data/hora]". Aparece no `HistoricoRapido` da demanda.
+
+8. **Versionamento**: atualizar `public/version.json` ao final.
+
+## Não-faz
+- Não bloqueia mover/concluir/editar tarefa.
+- Não altera IA de dúvidas.
+- Não cria coluna nova na tabela da Central — usa badge inline.
+- Não exige confirmação extra.
+
+## Confirmação
+Migração de BD + store + alterações em 4 componentes existentes (`TarefaIAConsulta`, `PostsKanbanCliente`, `MinhasTarefasTabela`) + uso do `useAtividades` para histórico. Aprovar para eu disparar a migração e implementar?
