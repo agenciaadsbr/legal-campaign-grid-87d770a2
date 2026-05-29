@@ -52,7 +52,7 @@ export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
         status,
         acao_nao_delegada: acaoNaoDelegada,
         responsavel_delegacao_id: responsavel || null,
-        delegada_em: dataDelegacao ? new Date(dataDelegacao).toISOString() : null,
+        delegada_em: dataDelegacao ? saoPauloInputToISO(dataDelegacao) : null,
         prazo_delegacao: null,
         qtd_tarefas_delegadas: qtd.trim() ? Number(qtd) : null,
         observacoes_delegacao: null,
