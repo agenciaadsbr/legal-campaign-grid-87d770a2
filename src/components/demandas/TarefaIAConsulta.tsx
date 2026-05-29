@@ -13,16 +13,21 @@ import {
   Bot,
   User as UserIcon,
   FileText,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { useIAConsultas } from "@/store/iaConsultas";
 import { useReunioes } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
+import { useDemandas } from "@/store/demandas";
+import { useResumoViews } from "@/store/resumoViews";
 import { useAuth } from "@/hooks/useAuth";
 import { Demanda } from "@/store/demandas";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ReuniaoDialog } from "@/components/projeto/ReuniaoDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   demanda: Demanda;
