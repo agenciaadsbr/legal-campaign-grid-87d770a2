@@ -402,7 +402,10 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
   const { clienteId } = useParams();
   const navigate = useNavigate();
   const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho, updateCard, deleteCard } = useCRM();
-  const { canWrite } = useAuth();
+  const { canWrite, user } = useAuth();
+  const { reunioes, load: loadReunioes } = useReunioes();
+  const { registrar: registrarResumoView } = useResumoViews();
+  const [verResumoMassa, setVerResumoMassa] = useState<{ open: boolean; reuniaoId: string | null }>({ open: false, reuniaoId: null });
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [criandoTarefa, setCriandoTarefa] = useState(false);
