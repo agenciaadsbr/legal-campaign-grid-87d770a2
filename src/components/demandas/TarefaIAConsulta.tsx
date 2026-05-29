@@ -52,6 +52,10 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
     loading,
     tarefaConsultas,
     loadConsultasByDemanda,
+    setorPrompts,
+    loadSetorPrompts,
+  } = useIAConsultas();
+
   const { reunioes, load: loadReunioes } = useReunioes();
   const { clientes, authoresPorAuthId, responsaveis } = useCRM();
   const { user } = useAuth();
@@ -91,11 +95,6 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
     }
   };
 
-      ? lista.find((r) => r.id === (demanda as any).origem_reuniao_id)
-      : null;
-    if (vinculada) return vinculada;
-    return [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0] || null;
-  }, [reunioes, demanda]);
 
   useEffect(() => {
     let cancelado = false;
