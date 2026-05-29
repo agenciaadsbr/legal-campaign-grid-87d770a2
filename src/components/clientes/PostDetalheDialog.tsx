@@ -488,7 +488,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
             </div>
 
             {/* Datas + Responsáveis */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <div>
                 <Label className="text-[11px]">Data início</Label>
                 <Input
@@ -507,7 +507,23 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                   onChange={(e) => updateCard(card.id, { data_limite_tarefa: e.target.value || null })}
                 />
               </div>
-              {/* Datas de agendamento/postagem ficam na seção "Campos de Post" abaixo (fonte oficial). */}
+              <div>
+                <Label className="text-[11px]">Data postagem</Label>
+                <Input
+                  type="date"
+                  className="h-8 text-xs"
+                  value={post.data_postagem ? post.data_postagem.slice(0, 10) : ""}
+                  onChange={(e) => {
+                    const v = e.target.value || undefined;
+                    updatePost(post.id, { data_postagem: v });
+                    updateCard(card.id, { data_postagem: v || null } as any);
+                  }}
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Só pode marcar como "Postado" se for hoje ou data passada.
+                </p>
+              </div>
+
 
 
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -759,44 +775,9 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
                 Campos de Post
               </div>
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                Data postagem é o campo principal e controla quando o post é considerado publicado.
-              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-
-                <div>
-                  <Label className="text-[11px]">Data postagem</Label>
-                  <Input
-                    type="date"
-                    className="h-8 text-xs"
-                    value={post.data_postagem ? post.data_postagem.slice(0, 10) : ""}
-                    onChange={(e) => {
-                      const v = e.target.value || undefined;
-                      updatePost(post.id, { data_postagem: v });
-                      // Sincroniza com o card (validador "Postado" usa card.data_postagem)
-                      updateCard(card.id, { data_postagem: v || null } as any);
-                    }}
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Só pode marcar como "Postado" se for hoje ou data passada.
-                  </p>
-                </div>
-
                 <div className="md:col-span-2">
-                  <Label className="text-[11px]">Link Meta Business Suite</Label>
-                  <Input
-                    type="url"
-                    placeholder="https://business.facebook.com/..."
-                    value={linkMetaLocal}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setLinkMetaLocal(v);
-                      debounce(linkMetaTimer, () => updatePost(post.id, { link_post: v.trim() || undefined }));
-                    }}
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div className="md:col-span-2">
+
                   <Label className="text-[11px]">Legenda</Label>
                   <Textarea
                     placeholder="Texto final da publicação (Instagram/Facebook)..."
