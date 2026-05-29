@@ -198,7 +198,7 @@ export function useHistoricoEventos({ tipo, id, createdAt, statusAtual }: HookOp
       {
         id: "synth-created",
         created_at: createdAt,
-        texto: "Tarefa criada",
+        texto: "Tarefa criada por usuário não identificado",
         status_entrada: statusAtual ?? null,
         duracao_label: statusAtual ? `${dur} em ${statusAtual} (atual)` : dur,
       },
