@@ -748,7 +748,6 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
               }}
             />
 
-            />
 
 
             <AlterarStatusPopover
