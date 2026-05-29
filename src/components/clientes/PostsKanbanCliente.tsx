@@ -759,6 +759,60 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
               }}
             />
 
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 gap-1.5"
+              disabled={selectedIds.size === 0}
+              onClick={async () => {
+                const ids = Array.from(selectedIds);
+                if (!ids.length) return;
+
+                // Garante reuniões carregadas
+                if (!reunioes.length) await loadReunioes();
+                const lista = useReunioes.getState().reunioes.filter((r) => r.cliente_id === clienteId);
+                const reuniaoAlvo = [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0];
+
+                if (!reuniaoAlvo) {
+                  toast.info("Nenhuma reunião encontrada para este cliente.");
+                  return;
+                }
+
+                // Map cada card selecionado para o post correspondente
+                const postIds = ids
+                  .map((cid) => posts.find((p) => p.card_id === cid)?.id)
+                  .filter((x): x is string => !!x);
+
+                const semReuniao = ids.length - postIds.length;
+
+                if (user) {
+                  await registrarResumoView(postIds, reuniaoAlvo.id, user.id);
+                }
+
+                // Histórico em massa
+                if (clienteId) {
+                  await useCRM.getState().addAtividade({
+                    clienteId,
+                    acao: "Visualização em Massa",
+                    descricao: `Resumo da reunião visualizado para ${postIds.length} post${postIds.length === 1 ? "" : "s"} selecionado${postIds.length === 1 ? "" : "s"}.`,
+                    area: "Posts",
+                    tipo: "post",
+                  });
+                }
+
+                setVerResumoMassa({ open: true, reuniaoId: reuniaoAlvo.id });
+                toast.success(
+                  `Resumo visualizado para ${postIds.length} post${postIds.length === 1 ? "" : "s"} selecionado${postIds.length === 1 ? "" : "s"}.${
+                    semReuniao ? ` (${semReuniao} sem reunião vinculada ignorado${semReuniao === 1 ? "" : "s"}.)` : ""
+                  }`,
+                );
+                setSelectedIds(new Set());
+                setSelectionMode(false);
+              }}
+            >
+              <FileText className="h-4 w-4" />
+              Ver resumo da reunião
+            </Button>
 
 
             <AlterarStatusPopover
