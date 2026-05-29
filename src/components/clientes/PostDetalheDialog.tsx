@@ -507,27 +507,8 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                   onChange={(e) => updateCard(card.id, { data_limite_tarefa: e.target.value || null })}
                 />
               </div>
-              <div>
-                <Label className="text-[11px]">Data de agendamento</Label>
-                <Input
-                  type="date"
-                  className="h-8 text-xs"
-                  value={card.data_agendada ? card.data_agendada.slice(0, 10) : ""}
-                  onChange={(e) => updateCard(card.id, { data_agendada: e.target.value ? new Date(e.target.value).toISOString() : null } as any)}
-                />
-              </div>
-              <div>
-                <Label className="text-[11px]">Data de postagem</Label>
-                <Input
-                  type="date"
-                  className="h-8 text-xs"
-                  value={(card as any).data_postagem ? String((card as any).data_postagem).slice(0, 10) : ""}
-                  onChange={(e) => updateCard(card.id, { data_postagem: e.target.value || null } as any)}
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Data real ou prevista da publicação. Só pode marcar como "Postado" se for hoje ou passada.
-                </p>
-              </div>
+              {/* Datas de agendamento/postagem ficam na seção "Campos de Post" abaixo (fonte oficial). */}
+
 
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                 {([
