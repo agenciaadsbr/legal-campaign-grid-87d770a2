@@ -908,7 +908,9 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
             const c = cardsCliente.find((x) => x.id === activeId);
             return c ? <CardItem card={c} onIniciar={(id) => abrirDetalhe(id, { focusTitulo: true })} abrirDetalhe={abrirDetalhe} /> : null;
           })() : null}
+        </DragOverlay>
       </DndContext>
+
 
       {verResumoMassa.open && verResumoMassa.reuniaoId && clienteId && (() => {
         const r = useReunioes.getState().reunioes.find((x) => x.id === verResumoMassa.reuniaoId);
