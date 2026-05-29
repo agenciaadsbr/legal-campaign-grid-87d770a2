@@ -86,17 +86,23 @@ function groupOf(t: UnifiedTask): GroupKey {
   return t.status as GroupKey;
 }
 
+function parseLocalDate(p: string): Date {
+  // Aceita "YYYY-MM-DD" e ISO completo, sem deslocar fuso para strings só-data.
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(p);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(p);
+}
+
 function formatPrazo(p: string | null): string {
   if (!p) return "—";
-  const d = new Date(p);
-  return d.toLocaleDateString("pt-BR");
+  return parseLocalDate(p).toLocaleDateString("pt-BR");
 }
 
 function formatCurto(p: string | null): string {
   if (!p) return "—";
-  const d = new Date(p);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return parseLocalDate(p).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
+
 
 function aprovacaoBadgeTone(dias: number): "secondary" | "warning" | "destructive" {
   if (dias >= 7) return "destructive";

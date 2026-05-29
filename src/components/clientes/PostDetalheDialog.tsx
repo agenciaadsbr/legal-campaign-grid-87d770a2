@@ -507,27 +507,8 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                   onChange={(e) => updateCard(card.id, { data_limite_tarefa: e.target.value || null })}
                 />
               </div>
-              <div>
-                <Label className="text-[11px]">Data de agendamento</Label>
-                <Input
-                  type="date"
-                  className="h-8 text-xs"
-                  value={card.data_agendada ? card.data_agendada.slice(0, 10) : ""}
-                  onChange={(e) => updateCard(card.id, { data_agendada: e.target.value ? new Date(e.target.value).toISOString() : null } as any)}
-                />
-              </div>
-              <div>
-                <Label className="text-[11px]">Data de postagem</Label>
-                <Input
-                  type="date"
-                  className="h-8 text-xs"
-                  value={(card as any).data_postagem ? String((card as any).data_postagem).slice(0, 10) : ""}
-                  onChange={(e) => updateCard(card.id, { data_postagem: e.target.value || null } as any)}
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Data real ou prevista da publicação. Só pode marcar como "Postado" se for hoje ou passada.
-                </p>
-              </div>
+              {/* Datas de agendamento/postagem ficam na seção "Campos de Post" abaixo (fonte oficial). */}
+
 
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                 {([
@@ -778,14 +759,24 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
                 Campos de Post
               </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Data postagem é o campo principal e controla quando o post é considerado publicado. Data agendamento é opcional (quando foi programado no Meta Business Suite).
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-[11px]">Data agendamento</Label>
+                  <Label className="text-[11px]">Data agendamento (opcional)</Label>
                   <Input
                     type="date"
                     className="h-8 text-xs"
                     value={post.data_agendamento ? post.data_agendamento.slice(0, 10) : ""}
-                    onChange={(e) => updatePost(post.id, { data_agendamento: e.target.value || undefined })}
+                    onChange={(e) => {
+                      const v = e.target.value || undefined;
+                      updatePost(post.id, { data_agendamento: v });
+                      // Sincroniza com o card (usado pelo Kanban e Central de Tarefas)
+                      updateCard(card.id, {
+                        data_agendada: v ? `${v}T12:00:00-03:00` : null,
+                      } as any);
+                    }}
                   />
                 </div>
                 <div>
@@ -794,9 +785,18 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                     type="date"
                     className="h-8 text-xs"
                     value={post.data_postagem ? post.data_postagem.slice(0, 10) : ""}
-                    onChange={(e) => updatePost(post.id, { data_postagem: e.target.value || undefined })}
+                    onChange={(e) => {
+                      const v = e.target.value || undefined;
+                      updatePost(post.id, { data_postagem: v });
+                      // Sincroniza com o card (validador "Postado" usa card.data_postagem)
+                      updateCard(card.id, { data_postagem: v || null } as any);
+                    }}
                   />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Só pode marcar como "Postado" se for hoje ou data passada.
+                  </p>
                 </div>
+
                 <div className="md:col-span-2">
                   <Label className="text-[11px]">Link Meta Business Suite</Label>
                   <Input

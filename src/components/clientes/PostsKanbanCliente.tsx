@@ -238,33 +238,28 @@ function CardItem({
           {card.data_inicio_tarefa && (
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Calendar className="h-2.5 w-2.5" />
-              <span>Início: {format(parseISO(card.data_inicio_tarefa), "dd/MM", { locale: ptBR })}</span>
+              <span>Início da tarefa: {format(parseISO(card.data_inicio_tarefa), "dd/MM", { locale: ptBR })}</span>
             </div>
           )}
           {card.data_limite_tarefa && (
             <div className={cn("flex items-center gap-1 text-[11px]", productionDue && productionDue < new Date() && card.status_card !== 'Postado' ? "text-destructive font-bold" : "text-muted-foreground")}>
               <CalendarX className="h-3 w-3" />
-              <span>Limite: {format(parseISO(card.data_limite_tarefa), "dd MMM", { locale: ptBR })}</span>
+              <span>Limite da criação: {format(parseISO(card.data_limite_tarefa), "dd MMM", { locale: ptBR })}</span>
             </div>
           )}
-          {card.data_agendada && !card.data_limite_tarefa && (
-            <div className={cn("flex items-center gap-1 text-[11px]", prazoColor)}>
-              <PrazoIcon className="h-3 w-3" />
-              <span>Prazo: {prazoLabel}</span>
-            </div>
-          )}
-          {card.data_agendada && card.data_limite_tarefa && (
+          {(card as any).data_postagem && (
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground italic">
               <Calendar className="h-2.5 w-2.5" />
-              <span>Editorial: {format(parseISO(card.data_agendada), "dd/MM", { locale: ptBR })}</span>
+              <span>Postagem: {format(parseISO(String((card as any).data_postagem).slice(0, 10)), "dd/MM", { locale: ptBR })}</span>
             </div>
           )}
-          {!card.data_limite_tarefa && !card.data_agendada && (
+          {!card.data_limite_tarefa && !(card as any).data_postagem && !card.data_inicio_tarefa && (
             <div className="text-[11px] text-muted-foreground">Definir prazo</div>
           )}
         </div>
         <AvatarStack responsaveis={resps} size="xs" max={3} />
       </div>
+
 
       {isPlanejamento && canWrite && !selectionMode ? (
         <Button
@@ -632,36 +627,64 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
           </Badge>
           <div className="ml-auto flex items-center gap-2">
             <AtribuirResponsaveisPopover
+
+
               responsaveis={responsaveis}
               count={selectedIds.size}
-              onApply={async (novosIds, modo) => {
+              postsMode
+              onApplyPosts={async ({ criacao, postagem, modo }) => {
                 const ids = Array.from(selectedIds);
-                const nomesResps = responsaveis
-                  .filter((r) => novosIds.includes(r.id))
+                const nomesCri = responsaveis
+                  .filter((r) => criacao.includes(r.id))
                   .map((r) => r.nome)
                   .join(", ");
-                
+                const nomesPost = responsaveis
+                  .filter((r) => postagem.includes(r.id))
+                  .map((r) => r.nome)
+                  .join(", ");
+
                 await Promise.all(
                   ids.map((id) => {
                     const atual = cards.find((c) => c.id === id);
-                    const atuais = atual?.responsaveis ?? [];
-                    const finalIds: string[] =
-                      modo === "substituir"
-                        ? novosIds
-                        : Array.from(new Set([...atuais, ...novosIds]));
-                    return updateCard(id, { responsaveis: finalIds });
+                    const patch: any = {};
+                    if (criacao.length > 0) {
+                      const atuaisCri = atual?.responsaveis ?? [];
+                      patch.responsaveis =
+                        modo === "substituir"
+                          ? criacao
+                          : Array.from(new Set([...atuaisCri, ...criacao]));
+                    }
+                    if (postagem.length > 0) {
+                      const atuaisPost = (atual as any)?.responsaveis_postagem ?? [];
+                      patch.responsaveis_postagem =
+                        modo === "substituir"
+                          ? postagem
+                          : Array.from(new Set([...atuaisPost, ...postagem]));
+                    }
+                    return updateCard(id, patch);
                   }),
                 );
 
                 if (clienteId) {
                   const s = ids.length === 1 ? "" : "s";
-                  await useCRM.getState().addAtividade({
-                    clienteId,
-                    acao: "Atribuição em Massa",
-                    descricao: `${ids.length} post${s} atribuído${s} para: ${nomesResps}`,
-                    area: "Posts",
-                    tipo: "post"
-                  });
+                  if (criacao.length > 0) {
+                    await useCRM.getState().addAtividade({
+                      clienteId,
+                      acao: "Atribuição em Massa",
+                      descricao: `${ids.length} post${s}: responsáveis pela criação definidos para ${nomesCri}`,
+                      area: "Posts",
+                      tipo: "post",
+                    });
+                  }
+                  if (postagem.length > 0) {
+                    await useCRM.getState().addAtividade({
+                      clienteId,
+                      acao: "Atribuição em Massa",
+                      descricao: `${ids.length} post${s}: responsáveis pela postagem definidos para ${nomesPost}`,
+                      area: "Posts",
+                      tipo: "post",
+                    });
+                  }
                 }
 
                 toast.success(
@@ -678,12 +701,26 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
               onApply={async (datas) => {
                 const ids = Array.from(selectedIds);
                 await Promise.all(
-                  ids.map((id) => updateCard(id, {
-                    ...(datas.data_inicio !== undefined ? { data_inicio_tarefa: datas.data_inicio } : {}),
-                    ...(datas.data_limite !== undefined ? { data_limite_tarefa: datas.data_limite } : {}),
-                    ...(datas.data_agendamento !== undefined ? { data_agendada: datas.data_agendamento } as any : {}),
-                    ...(datas.data_postagem !== undefined ? { data_postagem: datas.data_postagem } as any : {}),
-                  }))
+                  ids.map(async (id) => {
+                    // Atualiza o CARD (fonte usada pelo Kanban e Central de Tarefas)
+                    await updateCard(id, {
+                      ...(datas.data_inicio !== undefined ? { data_inicio_tarefa: datas.data_inicio } : {}),
+                      ...(datas.data_limite !== undefined ? { data_limite_tarefa: datas.data_limite } : {}),
+                      ...(datas.data_agendamento !== undefined
+                        ? { data_agendada: datas.data_agendamento ? `${datas.data_agendamento}T12:00:00-03:00` : null } as any
+                        : {}),
+                      ...(datas.data_postagem !== undefined ? { data_postagem: datas.data_postagem || null } as any : {}),
+                    });
+                    // Sincroniza também os "Campos de Post" oficiais (post.data_agendamento / post.data_postagem)
+                    const postRel = posts.find((p) => p.card_id === id);
+                    if (postRel && (datas.data_agendamento !== undefined || datas.data_postagem !== undefined)) {
+                      const { updatePost } = useCRM.getState();
+                      await updatePost(postRel.id, {
+                        ...(datas.data_agendamento !== undefined ? { data_agendamento: datas.data_agendamento || undefined } : {}),
+                        ...(datas.data_postagem !== undefined ? { data_postagem: datas.data_postagem || undefined } : {}),
+                      });
+                    }
+                  })
                 );
 
                 if (clienteId) {
@@ -713,6 +750,7 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
                 setSelectionMode(false);
               }}
             />
+
 
 
             <AlterarStatusPopover
