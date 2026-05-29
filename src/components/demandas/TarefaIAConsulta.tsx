@@ -268,6 +268,36 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
                 />
               </div>
 
+              {/* Status de visualização do resumo */}
+              <div className="rounded-md border bg-background/60 px-2.5 py-2 text-[11px] flex items-center gap-2 flex-wrap">
+                {minhaView ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                      Resumo visualizado
+                    </span>
+                    <span className="text-muted-foreground">
+                      {nomeViewer(minhaView.user_id)} • {formatViewedAt(minhaView.last_viewed_at)}
+                    </span>
+                  </>
+                ) : ultimaVisualizacao ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span className="text-muted-foreground">
+                      Visualizado por {nomeViewer(ultimaVisualizacao.user_id)} •{" "}
+                      {formatViewedAt(ultimaVisualizacao.last_viewed_at)} (você ainda não visualizou)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">
+                      Resumo da reunião ainda não visualizado
+                    </span>
+                  </>
+                )}
+              </div>
+
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[10px] text-muted-foreground">
                   {!ready ? "Carregando reuniões do cliente…" : ""}
@@ -282,22 +312,27 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
                         await loadReunioes();
                         setReunioesLoaded(true);
                       }
-                      const lista = useReunioes.getState().reunioes.filter((r) => r.cliente_id === demanda.cliente_id);
+                      const lista = useReunioes
+                        .getState()
+                        .reunioes.filter((r) => r.cliente_id === demanda.cliente_id);
                       const vinculada = (demanda as any).origem_reuniao_id
                         ? lista.find((r) => r.id === (demanda as any).origem_reuniao_id)
                         : null;
                       const alvo = vinculada || [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0];
                       if (!alvo) {
-                        toast.info("Nenhuma reunião encontrada para este cliente.");
+                        toast.info("Esta tarefa não possui resumo de reunião vinculado.");
                         return;
                       }
                       setVerResumoOpen(true);
+                      // Registra visualização (não bloqueia abertura do dialog)
+                      void registrarVisualizacao(alvo.id);
                     }}
                     className="h-8 gap-2"
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    Ver resumo da reunião
+                    {minhaView ? "Ver novamente" : "Ver resumo da reunião"}
                   </Button>
+
                   <Button
                     size="sm"
                     onClick={handleConsultar}
