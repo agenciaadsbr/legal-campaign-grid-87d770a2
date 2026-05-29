@@ -624,8 +624,9 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
           </label>
           <Badge variant="secondary" className="text-xs">
             {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
-          </Badge>
+          <div className="ml-auto flex items-center gap-2">
             <AtribuirResponsaveisPopover
+
               responsaveis={responsaveis}
               count={selectedIds.size}
               postsMode
