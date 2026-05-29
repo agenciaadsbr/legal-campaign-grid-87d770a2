@@ -12,10 +12,23 @@ import { cn } from "@/lib/utils";
 
 export type ModoAtribuicao = "substituir" | "adicionar";
 
+export interface AtribuicaoPostsPayload {
+  /** ids para "Responsáveis pela criação" — vazio = não alterar */
+  criacao: string[];
+  /** ids para "Responsáveis pela postagem" — vazio = não alterar */
+  postagem: string[];
+  modo: ModoAtribuicao;
+}
+
 interface Props {
   responsaveis: Responsavel[];
   count: number;
-  onApply: (ids: string[], modo: ModoAtribuicao) => Promise<void> | void;
+  /** Modo simples (legado): uma única lista. */
+  onApply?: (ids: string[], modo: ModoAtribuicao) => Promise<void> | void;
+  /** Modo Posts: lista separada para criação e postagem. */
+  onApplyPosts?: (payload: AtribuicaoPostsPayload) => Promise<void> | void;
+  /** Habilita seleção dupla "criação" + "postagem". */
+  postsMode?: boolean;
   disabled?: boolean;
 }
 
@@ -23,29 +36,84 @@ export function AtribuirResponsaveisPopover({
   responsaveis,
   count,
   onApply,
+  onApplyPosts,
+  postsMode = false,
   disabled,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [selecionados, setSelecionados] = useState<string[]>([]);
+  const [selCriacao, setSelCriacao] = useState<string[]>([]);
+  const [selPostagem, setSelPostagem] = useState<string[]>([]);
   const [modo, setModo] = useState<ModoAtribuicao>("substituir");
   const [aplicando, setAplicando] = useState(false);
 
-  const toggle = (id: string) =>
-    setSelecionados((prev) =>
+  const toggle = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    id: string,
+  ) =>
+    setter((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
 
+  const podeAplicar = postsMode
+    ? selCriacao.length > 0 || selPostagem.length > 0
+    : selCriacao.length > 0;
+
   const aplicar = async () => {
-    if (selecionados.length === 0 || count === 0) return;
+    if (!podeAplicar || count === 0) return;
     setAplicando(true);
     try {
-      await onApply(selecionados, modo);
-      setSelecionados([]);
+      if (postsMode && onApplyPosts) {
+        await onApplyPosts({ criacao: selCriacao, postagem: selPostagem, modo });
+      } else if (onApply) {
+        await onApply(selCriacao, modo);
+      }
+      setSelCriacao([]);
+      setSelPostagem([]);
       setOpen(false);
     } finally {
       setAplicando(false);
     }
   };
+
+  const renderLista = (
+    selecionados: string[],
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+  ) => (
+    <div className="max-h-44 overflow-auto space-y-0.5 -mx-1 px-1">
+      {responsaveis.map((r) => {
+        const checked = selecionados.includes(r.id);
+        return (
+          <button
+            type="button"
+            key={r.id}
+            onClick={() => toggle(setter, r.id)}
+            className={cn(
+              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
+              checked && "bg-accent",
+            )}
+          >
+            <Checkbox checked={checked} />
+            <div
+              className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0 overflow-hidden"
+              style={{ backgroundColor: r.avatar_url ? undefined : r.cor }}
+            >
+              {r.avatar_url ? (
+                <img src={r.avatar_url} alt={r.nome} className="h-full w-full object-cover" loading="lazy" />
+              ) : (
+                r.nome.split(" ").map((n) => n[0]).slice(0, 2).join("")
+              )}
+            </div>
+            <span className="truncate">{r.nome}</span>
+          </button>
+        );
+      })}
+      {responsaveis.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-2">
+          Nenhum responsável disponível
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -60,7 +128,7 @@ export function AtribuirResponsaveisPopover({
           Atribuir responsáveis
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-3" align="end">
+      <PopoverContent className="w-80 p-3" align="end">
         <div className="space-y-3">
           <div>
             <div className="text-xs font-semibold mb-1.5">Modo</div>
@@ -92,56 +160,39 @@ export function AtribuirResponsaveisPopover({
             </div>
             <p className="text-[10px] text-muted-foreground mt-1.5 leading-snug">
               {modo === "substituir"
-                ? "Os responsáveis selecionados substituirão os atuais."
-                : "Os selecionados serão somados aos responsáveis atuais."}
+                ? "Os selecionados substituirão os atuais."
+                : "Os selecionados serão somados aos atuais."}
             </p>
           </div>
 
-          <div>
-            <div className="text-xs font-semibold mb-1.5">Responsáveis</div>
-            <div className="max-h-56 overflow-auto space-y-0.5 -mx-1 px-1">
-              {responsaveis.map((r) => {
-                const checked = selecionados.includes(r.id);
-                return (
-                  <button
-                    type="button"
-                    key={r.id}
-                    onClick={() => toggle(r.id)}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent text-left text-sm",
-                      checked && "bg-accent",
-                    )}
-                  >
-                    <Checkbox checked={checked} />
-                    <div
-                      className="h-6 w-6 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0 overflow-hidden"
-                      style={{ backgroundColor: r.avatar_url ? undefined : r.cor }}
-                    >
-                      {r.avatar_url ? (
-                        <img src={r.avatar_url} alt={r.nome} className="h-full w-full object-cover" loading="lazy" />
-                      ) : (
-                        r.nome
-                          .split(" ")
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join("")
-                      )}
-                    </div>
-                    <span className="truncate">{r.nome}</span>
-                  </button>
-                );
-              })}
-              {responsaveis.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-2">
-                  Nenhum responsável disponível
+          {postsMode ? (
+            <>
+              <div>
+                <div className="text-xs font-semibold mb-1.5">
+                  Responsáveis pela criação
+                </div>
+                {renderLista(selCriacao, setSelCriacao)}
+              </div>
+              <div className="pt-2 border-t border-border/60">
+                <div className="text-xs font-semibold mb-1.5">
+                  Responsáveis pela postagem
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug mb-1.5">
+                  Quem fica responsável por agendar/postar no Meta Business Suite.
                 </p>
-              )}
+                {renderLista(selPostagem, setSelPostagem)}
+              </div>
+            </>
+          ) : (
+            <div>
+              <div className="text-xs font-semibold mb-1.5">Responsáveis</div>
+              {renderLista(selCriacao, setSelCriacao)}
             </div>
-          </div>
+          )}
 
           <Button
             onClick={aplicar}
-            disabled={selecionados.length === 0 || count === 0 || aplicando}
+            disabled={!podeAplicar || count === 0 || aplicando}
             className="w-full h-8 text-xs"
             size="sm"
           >
