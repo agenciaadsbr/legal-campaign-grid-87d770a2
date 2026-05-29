@@ -760,25 +760,10 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                 Campos de Post
               </div>
               <p className="text-[11px] text-muted-foreground leading-snug">
-                Data postagem é o campo principal e controla quando o post é considerado publicado. Data agendamento é opcional (quando foi programado no Meta Business Suite).
+                Data postagem é o campo principal e controla quando o post é considerado publicado.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-[11px]">Data agendamento (opcional)</Label>
-                  <Input
-                    type="date"
-                    className="h-8 text-xs"
-                    value={post.data_agendamento ? post.data_agendamento.slice(0, 10) : ""}
-                    onChange={(e) => {
-                      const v = e.target.value || undefined;
-                      updatePost(post.id, { data_agendamento: v });
-                      // Sincroniza com o card (usado pelo Kanban e Central de Tarefas)
-                      updateCard(card.id, {
-                        data_agendada: v ? `${v}T12:00:00-03:00` : null,
-                      } as any);
-                    }}
-                  />
-                </div>
+
                 <div>
                   <Label className="text-[11px]">Data postagem</Label>
                   <Input

@@ -115,15 +115,6 @@ export function DefinirDatasPopover({ count, onApply, disabled, postsMode = fals
                 Data limite é o prazo da tarefa. Data de postagem é a data real ou prevista da publicação.
               </p>
               <div className="space-y-2">
-                <Label className="text-xs">Data de agendamento</Label>
-                <Input
-                  type="date"
-                  value={dataAgendamento}
-                  onChange={(e) => setDataAgendamento(e.target.value)}
-                  className="h-8 text-xs"
-                />
-              </div>
-              <div className="space-y-2">
                 <Label className="text-xs">Data de postagem</Label>
                 <Input
                   type="date"
