@@ -68,7 +68,30 @@ function CardItem({
   const clienteIdLink = clienteIdRota ?? card.cliente_id;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id });
   const post = posts.find((p) => p.card_id === card.id);
-  const resps = responsaveis.filter((r) => card.responsaveis.includes(r.id));
+
+  // Regra operacional do card de Posts:
+  // - Criação: Planejamento, Criar, Aguardando aprovação do cliente
+  // - Postagem: Agendar, Agendado, Postado
+  // - Atrasado: decide pela data vencida (limite criação x data postagem)
+  const idsCriacao = card.responsaveis ?? [];
+  const idsPostagem = ((card as any).responsaveis_postagem as string[] | undefined) ?? [];
+  const hojeRef = new Date(); hojeRef.setHours(0, 0, 0, 0);
+  const dpStr = (card as any).data_postagem as string | null | undefined;
+  const dlStr = card.data_limite_tarefa as string | null | undefined;
+  const dpDate = dpStr ? new Date(dpStr) : null;
+  const dlDate = dlStr ? new Date(dlStr) : null;
+  let cicloCard: "criacao" | "postagem" = "criacao";
+  if (card.status_card === "Agendar" || card.status_card === "Agendado" || card.status_card === "Postado") {
+    cicloCard = "postagem";
+  } else if (card.status_card === "Atrasado") {
+    if (dlDate && dlDate < hojeRef) cicloCard = "criacao";
+    else if (dpDate && dpDate < hojeRef) cicloCard = "postagem";
+    else cicloCard = "criacao";
+  }
+  const idsCiclo = cicloCard === "postagem" ? idsPostagem : idsCriacao;
+  const resps = responsaveis.filter((r) => idsCiclo.includes(r.id));
+  const semResponsavelCiclo = resps.length === 0;
+  const labelSemResp = cicloCard === "postagem" ? "Sem postador" : "Sem criador";
   const isUrgent = !!card.is_urgent;
   const isPlanejamento = card.status_card === "Planejamento";
   const isAtrasadoStatus = card.status_card === "Atrasado";
