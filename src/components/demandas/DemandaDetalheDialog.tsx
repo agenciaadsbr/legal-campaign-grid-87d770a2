@@ -21,6 +21,7 @@ import { Demanda, useDemandas, getResponsaveisIds } from "@/store/demandas";
 import { isAguardandoDependencia, getDemandasPais } from "@/lib/workflow";
 import { WorkflowSection } from "./WorkflowSection";
 import { EtapasRelacionadas } from "./EtapasRelacionadas";
+import { isoToSaoPauloInput, saoPauloInputToISO } from "@/lib/saoPauloTime";
 import { EtapasProcesso } from "./EtapasProcesso";
 import { Badge } from "@/components/ui/badge";
 import { useCRM } from "@/store/crm";
@@ -807,13 +808,11 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   <Input
                     type="datetime-local"
                     className="h-8 text-xs"
-                    value={
-                      demanda.data_inicio ? demanda.data_inicio.slice(0, 16) : ""
-                    }
+                    value={isoToSaoPauloInput(demanda.data_inicio)}
                     onChange={(e) =>
                       updateDemanda(demanda.id, {
                         data_inicio: e.target.value
-                          ? new Date(e.target.value).toISOString()
+                          ? saoPauloInputToISO(e.target.value)
                           : null,
                       })
                     }
@@ -824,13 +823,11 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   <Input
                     type="datetime-local"
                     className="h-8 text-xs"
-                    value={
-                      demanda.data_limite ? demanda.data_limite.slice(0, 16) : ""
-                    }
+                    value={isoToSaoPauloInput(demanda.data_limite)}
                     onChange={(e) =>
                       updateDemanda(demanda.id, {
                         data_limite: e.target.value
-                          ? new Date(e.target.value).toISOString()
+                          ? saoPauloInputToISO(e.target.value)
                           : null,
                       })
                     }

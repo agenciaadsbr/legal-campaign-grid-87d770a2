@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users } from "lucide-react";
 import { useCRM } from "@/store/crm";
 import { useReunioes } from "@/store/reunioes";
+import { isoToSaoPauloInput, saoPauloInputToISO, nowSaoPauloInputValue } from "@/lib/saoPauloTime";
 
 interface Props {
   open: boolean;
@@ -17,9 +18,7 @@ interface Props {
 }
 
 function toLocalDateTimeInput(iso?: string | null) {
-  const d = iso ? new Date(iso) : new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return iso ? isoToSaoPauloInput(iso) : nowSaoPauloInputValue();
 }
 
 export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
@@ -53,7 +52,7 @@ export function DelegarTarefasDialog({ open, onOpenChange, meetingId }: Props) {
         status,
         acao_nao_delegada: acaoNaoDelegada,
         responsavel_delegacao_id: responsavel || null,
-        delegada_em: dataDelegacao ? new Date(dataDelegacao).toISOString() : null,
+        delegada_em: dataDelegacao ? saoPauloInputToISO(dataDelegacao) : null,
         prazo_delegacao: null,
         qtd_tarefas_delegadas: qtd.trim() ? Number(qtd) : null,
         observacoes_delegacao: null,
