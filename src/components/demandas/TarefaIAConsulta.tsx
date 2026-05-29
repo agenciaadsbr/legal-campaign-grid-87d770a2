@@ -106,6 +106,7 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
             loadSetorPrompts(),
             loadReunioes(),
             loadConsultasByDemanda(demanda.id),
+            loadViews([demanda.id]),
           ]);
         } finally {
           if (!cancelado) setReady(true);
@@ -117,6 +118,51 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, demanda.id]);
+
+  /**
+   * Registra a visualização do resumo da reunião pelo usuário logado.
+   * Propaga para etapas filhas se a tarefa for um Card Pai.
+   */
+  const registrarVisualizacao = async (meetingId: string | null) => {
+    if (!user) return;
+    try {
+      const ids: string[] = [demanda.id];
+      // Card Pai: propagar para etapas filhas (parent_process_id = demanda.id)
+      if ((demanda as any).is_card_pai) {
+        try {
+          const filhas = useDemandas
+            .getState()
+            .demandas.filter((d: any) => d.parent_process_id === demanda.id)
+            .map((d: any) => d.id);
+          ids.push(...filhas);
+        } catch {
+          /* ignore */
+        }
+      }
+      await registrarView(ids, meetingId, user.id);
+
+      // Histórico — registra atividade de visualização
+      if (cliente?.id) {
+        try {
+          await useCRM.getState().addAtividade({
+            clienteId: cliente.id,
+            acao: "Visualização de resumo",
+            descricao: `${nomeViewer(user.id)} visualizou o resumo da reunião.`,
+            refId: demanda.id,
+            tipo: "demanda",
+            area: "Reuniões",
+            titulo_tarefa: demanda.titulo,
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch (err) {
+      console.error("[TarefaIAConsulta] erro ao registrar visualização", err);
+      toast.error("Não foi possível registrar a visualização do resumo.");
+    }
+  };
+
 
   const handleConsultar = async () => {
     if (!pergunta.trim() || loading || !ready) return;
