@@ -52,13 +52,10 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
     loading,
     tarefaConsultas,
     loadConsultasByDemanda,
-    setorPrompts,
-    loadSetorPrompts
-  } = useIAConsultas();
-
   const { reunioes, load: loadReunioes } = useReunioes();
-  const { clientes, authoresPorAuthId } = useCRM();
+  const { clientes, authoresPorAuthId, responsaveis } = useCRM();
   const { user } = useAuth();
+  const { views, load: loadViews, registrar: registrarView, getMinha } = useResumoViews();
 
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
   const clienteNome = (cliente as any)?.nome_cliente || (cliente as any)?.nome || "Cliente";
@@ -66,6 +63,34 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
   const reuniaoSelecionada = useMemo(() => {
     const lista = reunioes.filter((r) => r.cliente_id === demanda.cliente_id);
     const vinculada = (demanda as any).origem_reuniao_id
+      ? lista.find((r) => r.id === (demanda as any).origem_reuniao_id)
+      : null;
+    if (vinculada) return vinculada;
+    return [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0] || null;
+  }, [reunioes, demanda]);
+
+  const minhaView = user ? getMinha(demanda.id, user.id) : undefined;
+  const ultimaVisualizacao = useMemo(() => {
+    const lista = views[demanda.id] || [];
+    if (!lista.length) return null;
+    return [...lista].sort((a, b) => (a.last_viewed_at < b.last_viewed_at ? 1 : -1))[0];
+  }, [views, demanda.id]);
+
+  const nomeViewer = (uid: string) => {
+    const resp = responsaveis.find((r) => (r as any).auth_user_id === uid || r.id === uid);
+    if (resp) return resp.nome;
+    return authoresPorAuthId?.[uid]?.nome || "Usuário";
+  };
+
+  const formatViewedAt = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      return `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    } catch {
+      return iso;
+    }
+  };
+
       ? lista.find((r) => r.id === (demanda as any).origem_reuniao_id)
       : null;
     if (vinculada) return vinculada;
