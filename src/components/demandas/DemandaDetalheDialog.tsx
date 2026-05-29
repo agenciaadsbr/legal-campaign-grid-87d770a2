@@ -1299,13 +1299,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
           </CardContent>
         </Card>
 
-        <TarefaIAConsulta 
-          demanda={demanda}
-          comentarios_texto={meusComentarios.map(c => c.texto).join("\n")}
-          onAddComment={(txt) => {
-            if (user) addComentario(demanda.id, user.id, txt);
-          }}
-        />
+
 
         {demanda.is_card_pai ? (
           <EtapasProcesso cardPai={demanda} />
