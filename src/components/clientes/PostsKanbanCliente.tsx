@@ -26,7 +26,8 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X, RefreshCw, Trash2 } from "lucide-react";
+import { Zap, Play, Calendar, CalendarX, Search, Plus, CheckSquare, X, RefreshCw, Trash2, FileText } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -40,6 +41,10 @@ import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
 import { AlterarStatusPopover } from "@/components/demandas/AlterarStatusPopover";
 import { CriarCicloModal } from "./CriarCicloModal";
 import { HistoricoRapidoHover } from "@/components/HistoricoRapido";
+import { useReunioes } from "@/store/reunioes";
+import { useResumoViews } from "@/store/resumoViews";
+import { ReuniaoDialog } from "@/components/projeto/ReuniaoDialog";
+
 
 function CardItem({
   card,
@@ -397,7 +402,10 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
   const { clienteId } = useParams();
   const navigate = useNavigate();
   const { cards, posts, moveCard, contratos, statusPostOptions, responsaveis, createCardRascunho, updateCard, deleteCard } = useCRM();
-  const { canWrite } = useAuth();
+  const { canWrite, user } = useAuth();
+  const { reunioes, load: loadReunioes } = useReunioes();
+  const { registrar: registrarResumoView } = useResumoViews();
+  const [verResumoMassa, setVerResumoMassa] = useState<{ open: boolean; reuniaoId: string | null }>({ open: false, reuniaoId: null });
   const [filtroMes, setFiltroMes] = useState<string>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [criandoTarefa, setCriandoTarefa] = useState(false);
@@ -751,6 +759,60 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
               }}
             />
 
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 gap-1.5"
+              disabled={selectedIds.size === 0}
+              onClick={async () => {
+                const ids = Array.from(selectedIds);
+                if (!ids.length) return;
+
+                // Garante reuniões carregadas
+                if (!reunioes.length) await loadReunioes();
+                const lista = useReunioes.getState().reunioes.filter((r) => r.cliente_id === clienteId);
+                const reuniaoAlvo = [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0];
+
+                if (!reuniaoAlvo) {
+                  toast.info("Nenhuma reunião encontrada para este cliente.");
+                  return;
+                }
+
+                // Map cada card selecionado para o post correspondente
+                const postIds = ids
+                  .map((cid) => posts.find((p) => p.card_id === cid)?.id)
+                  .filter((x): x is string => !!x);
+
+                const semReuniao = ids.length - postIds.length;
+
+                if (user) {
+                  await registrarResumoView(postIds, reuniaoAlvo.id, user.id);
+                }
+
+                // Histórico em massa
+                if (clienteId) {
+                  await useCRM.getState().addAtividade({
+                    clienteId,
+                    acao: "Visualização em Massa",
+                    descricao: `Resumo da reunião visualizado para ${postIds.length} post${postIds.length === 1 ? "" : "s"} selecionado${postIds.length === 1 ? "" : "s"}.`,
+                    area: "Posts",
+                    tipo: "post",
+                  });
+                }
+
+                setVerResumoMassa({ open: true, reuniaoId: reuniaoAlvo.id });
+                toast.success(
+                  `Resumo visualizado para ${postIds.length} post${postIds.length === 1 ? "" : "s"} selecionado${postIds.length === 1 ? "" : "s"}.${
+                    semReuniao ? ` (${semReuniao} sem reunião vinculada ignorado${semReuniao === 1 ? "" : "s"}.)` : ""
+                  }`,
+                );
+                setSelectedIds(new Set());
+                setSelectionMode(false);
+              }}
+            >
+              <FileText className="h-4 w-4" />
+              Ver resumo da reunião
+            </Button>
 
 
             <AlterarStatusPopover
@@ -848,6 +910,21 @@ export function PostsKanbanCliente(_props: { onAdicionarTarefa?: () => void } = 
           })() : null}
         </DragOverlay>
       </DndContext>
+
+
+      {verResumoMassa.open && verResumoMassa.reuniaoId && clienteId && (() => {
+        const r = useReunioes.getState().reunioes.find((x) => x.id === verResumoMassa.reuniaoId);
+        if (!r) return null;
+        return (
+          <ReuniaoDialog
+            open={verResumoMassa.open}
+            onOpenChange={(o) => setVerResumoMassa({ open: o, reuniaoId: o ? verResumoMassa.reuniaoId : null })}
+            clienteId={clienteId}
+            reuniao={r}
+          />
+        );
+      })()}
     </div>
   );
 }
+

@@ -13,16 +13,21 @@ import {
   Bot,
   User as UserIcon,
   FileText,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { useIAConsultas } from "@/store/iaConsultas";
 import { useReunioes } from "@/store/reunioes";
 import { useCRM } from "@/store/crm";
+import { useDemandas } from "@/store/demandas";
+import { useResumoViews } from "@/store/resumoViews";
 import { useAuth } from "@/hooks/useAuth";
 import { Demanda } from "@/store/demandas";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ReuniaoDialog } from "@/components/projeto/ReuniaoDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   demanda: Demanda;
@@ -48,12 +53,13 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
     tarefaConsultas,
     loadConsultasByDemanda,
     setorPrompts,
-    loadSetorPrompts
+    loadSetorPrompts,
   } = useIAConsultas();
 
   const { reunioes, load: loadReunioes } = useReunioes();
-  const { clientes, authoresPorAuthId } = useCRM();
+  const { clientes, authoresPorAuthId, responsaveis } = useCRM();
   const { user } = useAuth();
+  const { views, load: loadViews, registrar: registrarView, getMinha } = useResumoViews();
 
   const cliente = clientes.find((c) => c.id === demanda.cliente_id);
   const clienteNome = (cliente as any)?.nome_cliente || (cliente as any)?.nome || "Cliente";
@@ -67,6 +73,29 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
     return [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0] || null;
   }, [reunioes, demanda]);
 
+  const minhaView = user ? getMinha(demanda.id, user.id) : undefined;
+  const ultimaVisualizacao = useMemo(() => {
+    const lista = views[demanda.id] || [];
+    if (!lista.length) return null;
+    return [...lista].sort((a, b) => (a.last_viewed_at < b.last_viewed_at ? 1 : -1))[0];
+  }, [views, demanda.id]);
+
+  const nomeViewer = (uid: string) => {
+    const resp = responsaveis.find((r) => (r as any).auth_user_id === uid || r.id === uid);
+    if (resp) return resp.nome;
+    return authoresPorAuthId?.[uid]?.nome || "Usuário";
+  };
+
+  const formatViewedAt = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      return `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    } catch {
+      return iso;
+    }
+  };
+
+
   useEffect(() => {
     let cancelado = false;
     if (isOpen) {
@@ -77,6 +106,7 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
             loadSetorPrompts(),
             loadReunioes(),
             loadConsultasByDemanda(demanda.id),
+            loadViews([demanda.id]),
           ]);
         } finally {
           if (!cancelado) setReady(true);
@@ -88,6 +118,51 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, demanda.id]);
+
+  /**
+   * Registra a visualização do resumo da reunião pelo usuário logado.
+   * Propaga para etapas filhas se a tarefa for um Card Pai.
+   */
+  const registrarVisualizacao = async (meetingId: string | null) => {
+    if (!user) return;
+    try {
+      const ids: string[] = [demanda.id];
+      // Card Pai: propagar para etapas filhas (parent_process_id = demanda.id)
+      if ((demanda as any).is_card_pai) {
+        try {
+          const filhas = useDemandas
+            .getState()
+            .demandas.filter((d: any) => d.parent_process_id === demanda.id)
+            .map((d: any) => d.id);
+          ids.push(...filhas);
+        } catch {
+          /* ignore */
+        }
+      }
+      await registrarView(ids, meetingId, user.id);
+
+      // Histórico — registra atividade de visualização
+      if (cliente?.id) {
+        try {
+          await useCRM.getState().addAtividade({
+            clienteId: cliente.id,
+            acao: "Visualização de resumo",
+            descricao: `${nomeViewer(user.id)} visualizou o resumo da reunião.`,
+            refId: demanda.id,
+            tipo: "demanda",
+            area: "Reuniões",
+            titulo_tarefa: demanda.titulo,
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch (err) {
+      console.error("[TarefaIAConsulta] erro ao registrar visualização", err);
+      toast.error("Não foi possível registrar a visualização do resumo.");
+    }
+  };
+
 
   const handleConsultar = async () => {
     if (!pergunta.trim() || loading || !ready) return;
@@ -193,6 +268,36 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
                 />
               </div>
 
+              {/* Status de visualização do resumo */}
+              <div className="rounded-md border bg-background/60 px-2.5 py-2 text-[11px] flex items-center gap-2 flex-wrap">
+                {minhaView ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                      Resumo visualizado
+                    </span>
+                    <span className="text-muted-foreground">
+                      {nomeViewer(minhaView.user_id)} • {formatViewedAt(minhaView.last_viewed_at)}
+                    </span>
+                  </>
+                ) : ultimaVisualizacao ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span className="text-muted-foreground">
+                      Visualizado por {nomeViewer(ultimaVisualizacao.user_id)} •{" "}
+                      {formatViewedAt(ultimaVisualizacao.last_viewed_at)} (você ainda não visualizou)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">
+                      Resumo da reunião ainda não visualizado
+                    </span>
+                  </>
+                )}
+              </div>
+
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[10px] text-muted-foreground">
                   {!ready ? "Carregando reuniões do cliente…" : ""}
@@ -207,22 +312,27 @@ export function TarefaIAConsulta({ demanda, comentarios_texto, onAddComment }: P
                         await loadReunioes();
                         setReunioesLoaded(true);
                       }
-                      const lista = useReunioes.getState().reunioes.filter((r) => r.cliente_id === demanda.cliente_id);
+                      const lista = useReunioes
+                        .getState()
+                        .reunioes.filter((r) => r.cliente_id === demanda.cliente_id);
                       const vinculada = (demanda as any).origem_reuniao_id
                         ? lista.find((r) => r.id === (demanda as any).origem_reuniao_id)
                         : null;
                       const alvo = vinculada || [...lista].sort((a, b) => (a.data < b.data ? 1 : -1))[0];
                       if (!alvo) {
-                        toast.info("Nenhuma reunião encontrada para este cliente.");
+                        toast.info("Esta tarefa não possui resumo de reunião vinculado.");
                         return;
                       }
                       setVerResumoOpen(true);
+                      // Registra visualização (não bloqueia abertura do dialog)
+                      void registrarVisualizacao(alvo.id);
                     }}
                     className="h-8 gap-2"
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    Ver resumo da reunião
+                    {minhaView ? "Ver novamente" : "Ver resumo da reunião"}
                   </Button>
+
                   <Button
                     size="sm"
                     onClick={handleConsultar}

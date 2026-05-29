@@ -2477,6 +2477,42 @@ export type Database = {
           },
         ]
       }
+      task_meeting_summary_views: {
+        Row: {
+          created_at: string
+          demanda_id: string
+          first_viewed_at: string
+          id: string
+          last_viewed_at: string
+          meeting_id: string | null
+          updated_at: string
+          user_id: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          demanda_id: string
+          first_viewed_at?: string
+          id?: string
+          last_viewed_at?: string
+          meeting_id?: string | null
+          updated_at?: string
+          user_id: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          demanda_id?: string
+          first_viewed_at?: string
+          id?: string
+          last_viewed_at?: string
+          meeting_id?: string | null
+          updated_at?: string
+          user_id?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
