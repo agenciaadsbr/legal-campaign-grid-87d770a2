@@ -17,6 +17,7 @@ interface UpdateBody {
   ativo?: boolean;
   role?: Role;
   responsavel_id?: string | null;
+  new_password?: string;
 }
 
 Deno.serve(async (req) => {
