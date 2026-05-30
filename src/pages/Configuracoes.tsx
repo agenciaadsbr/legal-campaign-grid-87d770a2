@@ -98,6 +98,12 @@ export default function Configuracoes() {
             <EstruturasAutomaticasManager />
           </TabsContent>
         )}
+
+        {isAdmin && (
+          <TabsContent value="documentacao" className="mt-3">
+            <DocumentacaoSistemaManager />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
