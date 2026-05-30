@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
+import { SignedImg, SignedVideo, SignedLink } from "@/components/anexos/SignedAnexo";
 import {
   Dialog,
   DialogContent,

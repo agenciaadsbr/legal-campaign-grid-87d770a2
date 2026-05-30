@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { SignedImg, SignedVideo, SignedLink } from "@/components/anexos/SignedAnexo";
 import { displayStatusPostLabel } from "@/lib/statusDisplay";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
