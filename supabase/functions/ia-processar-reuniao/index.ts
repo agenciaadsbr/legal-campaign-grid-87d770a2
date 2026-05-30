@@ -199,9 +199,12 @@ Deno.serve(async (req) => {
             const tIn2 = r2.usage?.inputTokens ?? 0;
             const tOut2 = r2.usage?.outputTokens ?? 0;
             await supa.from("ia_logs").insert({
-              tipo: "agente_operacional_tarefas", modelo: modelId, tokens_input: tIn2, tokens_output: tOut2,
+              tipo: "agente_operacional_tarefas", modelo: modelId, provider: agOper.provider,
+              source_module: "ia-processar-reuniao", reuniao_id, cliente_id: reuniao.cliente_id,
+              tokens_input: tIn2, tokens_output: tOut2,
               custo: estimateCost(agOper.provider, modelId, tIn2, tOut2),
               input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+              status: "success", latency_ms: tFinal - startTime,
             });
 
             const { data: existentes } = await supa.from("tarefas_sugeridas")
