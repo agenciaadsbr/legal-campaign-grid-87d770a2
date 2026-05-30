@@ -124,9 +124,12 @@ Deno.serve(async (req) => {
           const tOut = result.usage?.outputTokens ?? 0;
           resumoClienteOut = result.text;
           await supa.from("ia_logs").insert({
-            tipo: "agente_cliente", modelo: modelId, tokens_input: tIn, tokens_output: tOut,
+            tipo: "agente_cliente", modelo: modelId, provider: agCliente.provider,
+            source_module: "ia-processar-reuniao", reuniao_id, cliente_id: reuniao.cliente_id,
+            tokens_input: tIn, tokens_output: tOut,
             custo: estimateCost(agCliente.provider, modelId, tIn, tOut),
             input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+            status: "success", latency_ms: Date.now() - t0,
           });
           status.cliente = { ok: true, latency_ms: Date.now() - t0 };
         } catch (e) {
@@ -177,9 +180,12 @@ Deno.serve(async (req) => {
             const tIn1 = r1.usage?.inputTokens ?? 0;
             const tOut1 = r1.usage?.outputTokens ?? 0;
             await supa.from("ia_logs").insert({
-              tipo: "agente_operacional", modelo: modelId, tokens_input: tIn1, tokens_output: tOut1,
+              tipo: "agente_operacional", modelo: modelId, provider: agOper.provider,
+              source_module: "ia-processar-reuniao", reuniao_id, cliente_id: reuniao.cliente_id,
+              tokens_input: tIn1, tokens_output: tOut1,
               custo: estimateCost(agOper.provider, modelId, tIn1, tOut1),
               input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+              status: "success", latency_ms: tFinal - startTime,
             });
             status.operacional = { ok: true, latency_ms: tFinal - startTime };
           } else {
@@ -193,9 +199,12 @@ Deno.serve(async (req) => {
             const tIn2 = r2.usage?.inputTokens ?? 0;
             const tOut2 = r2.usage?.outputTokens ?? 0;
             await supa.from("ia_logs").insert({
-              tipo: "agente_operacional_tarefas", modelo: modelId, tokens_input: tIn2, tokens_output: tOut2,
+              tipo: "agente_operacional_tarefas", modelo: modelId, provider: agOper.provider,
+              source_module: "ia-processar-reuniao", reuniao_id, cliente_id: reuniao.cliente_id,
+              tokens_input: tIn2, tokens_output: tOut2,
               custo: estimateCost(agOper.provider, modelId, tIn2, tOut2),
               input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+              status: "success", latency_ms: tFinal - startTime,
             });
 
             const { data: existentes } = await supa.from("tarefas_sugeridas")

@@ -41,6 +41,14 @@ export interface IALog {
   input_resumo: string | null;
   criado_por: string | null;
   created_at: string;
+  provider?: string | null;
+  source_module?: string | null;
+  cliente_id?: string | null;
+  reuniao_id?: string | null;
+  demanda_id?: string | null;
+  status?: string | null;
+  error_message?: string | null;
+  latency_ms?: number | null;
 }
 
 interface State {

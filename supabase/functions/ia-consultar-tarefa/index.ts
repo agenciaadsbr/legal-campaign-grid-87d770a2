@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js";
 import { generateText } from "npm:ai";
-import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId } from "../_shared/ai-gateway.ts";
+import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId, estimateCost } from "../_shared/ai-gateway.ts";
 
 // ----- Helpers -----
 function trunc(s: any, max: number): string {
@@ -161,11 +161,16 @@ Comentários: ${trunc(tarefa_comentarios, 3000) || "—"}
 ${blocoReunioes}`;
 
     // 4. Chamar IA
-    const { text } = await generateText({
+    const t0 = Date.now();
+    const aiResult = await generateText({
       model: client(realModel),
       system: systemPrompt,
       prompt: pergunta,
     });
+    const latency_ms = Date.now() - t0;
+    const text = aiResult.text;
+    const tIn = aiResult.usage?.inputTokens ?? 0;
+    const tOut = aiResult.usage?.outputTokens ?? 0;
 
     // 5. Parse robusto
     let result: { resposta: string; fontes: string[]; nivel_confianca: "Alto" | "Médio" | "Baixo" } = {
@@ -217,6 +222,22 @@ ${blocoReunioes}`;
       resposta: result.resposta,
       fontes: result.fontes,
       nivel_confianca: result.nivel_confianca,
+    });
+
+    // 7. Log de consumo de IA
+    await supa.from("ia_logs").insert({
+      tipo: "consultar_tarefa",
+      modelo: modelId,
+      provider,
+      source_module: "ia-consultar-tarefa",
+      demanda_id,
+      tokens_input: tIn,
+      tokens_output: tOut,
+      custo: estimateCost(provider, modelId, tIn, tOut),
+      input_resumo: String(pergunta).slice(0, 280),
+      criado_por: user.user?.id ?? null,
+      status: "success",
+      latency_ms,
     });
 
     return jsonResponse(result);

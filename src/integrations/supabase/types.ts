@@ -1500,34 +1500,58 @@ export type Database = {
       }
       ia_logs: {
         Row: {
+          cliente_id: string | null
           created_at: string
           criado_por: string | null
           custo: number | null
+          demanda_id: string | null
+          error_message: string | null
           id: string
           input_resumo: string | null
+          latency_ms: number | null
           modelo: string | null
+          provider: string | null
+          reuniao_id: string | null
+          source_module: string | null
+          status: string | null
           tipo: string
           tokens_input: number | null
           tokens_output: number | null
         }
         Insert: {
+          cliente_id?: string | null
           created_at?: string
           criado_por?: string | null
           custo?: number | null
+          demanda_id?: string | null
+          error_message?: string | null
           id?: string
           input_resumo?: string | null
+          latency_ms?: number | null
           modelo?: string | null
+          provider?: string | null
+          reuniao_id?: string | null
+          source_module?: string | null
+          status?: string | null
           tipo: string
           tokens_input?: number | null
           tokens_output?: number | null
         }
         Update: {
+          cliente_id?: string | null
           created_at?: string
           criado_por?: string | null
           custo?: number | null
+          demanda_id?: string | null
+          error_message?: string | null
           id?: string
           input_resumo?: string | null
+          latency_ms?: number | null
           modelo?: string | null
+          provider?: string | null
+          reuniao_id?: string | null
+          source_module?: string | null
+          status?: string | null
           tipo?: string
           tokens_input?: number | null
           tokens_output?: number | null
