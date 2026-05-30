@@ -2,12 +2,12 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCRM } from "@/store/crm";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, Upload, User, X } from "lucide-react";
+import { Loader2, Save, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -54,38 +54,27 @@ export function MeuPerfil() {
       const fileExt = file.name.split(".").pop();
       const filePath = `${user.id}/${Math.random()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file);
-
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl })
         .eq("id", user.id);
-
       if (updateError) throw updateError;
 
-      // Propaga foto para o responsável vinculado (aparece em cards/ícones do sistema)
       const { data: prof } = await supabase
         .from("profiles")
         .select("responsavel_id")
         .eq("id", user.id)
         .maybeSingle();
       if (prof?.responsavel_id) {
-        await supabase
-          .from("responsaveis")
-          .update({ avatar_url: publicUrl })
-          .eq("id", prof.responsavel_id);
+        await supabase.from("responsaveis").update({ avatar_url: publicUrl }).eq("id", prof.responsavel_id);
       }
 
       setForm((f) => ({ ...f, avatar_url: publicUrl }));
-      // Recarrega o store global para refletir a nova foto em toda a UI
       try { await reloadCRM(); } catch {}
       toast.success("Foto de perfil atualizada!");
     } catch (error: any) {
@@ -104,7 +93,6 @@ export function MeuPerfil() {
         .from("profiles")
         .update({ avatar_url: null })
         .eq("id", user.id);
-
       if (updateError) throw updateError;
 
       const { data: prof } = await supabase
@@ -113,10 +101,7 @@ export function MeuPerfil() {
         .eq("id", user.id)
         .maybeSingle();
       if (prof?.responsavel_id) {
-        await supabase
-          .from("responsaveis")
-          .update({ avatar_url: null })
-          .eq("id", prof.responsavel_id);
+        await supabase.from("responsaveis").update({ avatar_url: null }).eq("id", prof.responsavel_id);
       }
 
       setForm((f) => ({ ...f, avatar_url: "" }));
@@ -157,26 +142,23 @@ export function MeuPerfil() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Meu perfil</CardTitle>
-        <CardDescription>Atualize suas informações pessoais</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6 max-w-md">
-        <div className="flex flex-col items-center gap-4 py-2">
-          <div className="relative group">
-            <Avatar className="h-24 w-24 border-2 border-muted">
-              <AvatarImage src={form.avatar_url} />
-              <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
-                {form.nome ? form.nome.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            {uploading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
-                <Loader2 className="h-6 w-6 animate-spin text-white" />
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2">
+      <CardContent className="p-4">
+        <div className="grid gap-4 md:grid-cols-[minmax(220px,35%)_1fr]">
+          {/* Coluna Esquerda: Avatar + identidade */}
+          <div className="flex flex-col items-center text-center gap-3 p-3 rounded-lg border bg-muted/30">
+            <div className="relative">
+              <Avatar className="h-20 w-20 border-2 border-background shadow-sm">
+                <AvatarImage src={form.avatar_url} />
+                <AvatarFallback className="text-lg font-bold bg-primary/10 text-primary">
+                  {form.nome ? form.nome.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {uploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                </div>
+              )}
+            </div>
             <input
               type="file"
               id="avatar-upload"
@@ -186,89 +168,119 @@ export function MeuPerfil() {
               ref={fileInputRef}
               disabled={uploading}
             />
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 text-xs"
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="h-3 w-3" />
-              {form.avatar_url ? "Alterar foto" : "Adicionar foto"}
-            </Button>
-            {form.avatar_url && (
+            <div className="flex items-center gap-1.5">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="gap-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="gap-1.5 text-xs h-7"
                 disabled={uploading}
-                onClick={removeAvatar}
+                onClick={() => fileInputRef.current?.click()}
               >
-                <X className="h-3 w-3" />
-                Remover
+                <Upload className="h-3 w-3" />
+                {form.avatar_url ? "Alterar" : "Adicionar"}
               </Button>
-            )}
+              {form.avatar_url && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  disabled={uploading}
+                  onClick={removeAvatar}
+                >
+                  <X className="h-3 w-3" />
+                  Remover
+                </Button>
+              )}
+            </div>
+            <div className="w-full space-y-0.5 pt-1 border-t">
+              <div className="text-sm font-semibold truncate">{form.nome || "—"}</div>
+              <div className="text-xs text-muted-foreground truncate">{form.cargo || "Sem cargo"}</div>
+              <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+            </div>
           </div>
-        </div>
 
-        <div className="grid gap-4">
-          <div className="space-y-1.5">
-            <Label>Email</Label>
-            <Input value={user?.email ?? ""} disabled />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Nome</Label>
-            <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Cargo</Label>
-            {cargoMode === "select" ? (
-              <Select
-                value={form.cargo || "__none__"}
-                onValueChange={(v) => {
-                  if (v === "__custom__") {
-                    setCargoMode("custom");
-                    setForm((f) => ({ ...f, cargo: "" }));
-                  } else {
-                    setForm((f) => ({ ...f, cargo: v === "__none__" ? "" : v }));
-                  }
-                }}
-              >
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Nenhum —</SelectItem>
-                  {cargos.map((c) => <SelectItem key={c.id} value={c.label}>{c.label}</SelectItem>)}
-                  <SelectItem value="__custom__">+ Outro (digitar)</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Digite o cargo"
-                  value={form.cargo}
-                  onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
-                />
-                <Button variant="outline" type="button" onClick={() => { setCargoMode("select"); setForm((f) => ({ ...f, cargo: "" })); }}>
-                  Lista
+          {/* Coluna Direita: Dados pessoais + Segurança */}
+          <div className="space-y-4">
+            <section>
+              <h3 className="text-sm font-semibold mb-2">Dados pessoais</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Nome</Label>
+                  <Input
+                    className="h-9"
+                    value={form.nome}
+                    onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Cargo</Label>
+                  {cargoMode === "select" ? (
+                    <Select
+                      value={form.cargo || "__none__"}
+                      onValueChange={(v) => {
+                        if (v === "__custom__") {
+                          setCargoMode("custom");
+                          setForm((f) => ({ ...f, cargo: "" }));
+                        } else {
+                          setForm((f) => ({ ...f, cargo: v === "__none__" ? "" : v }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Nenhum —</SelectItem>
+                        {cargos.map((c) => <SelectItem key={c.id} value={c.label}>{c.label}</SelectItem>)}
+                        <SelectItem value="__custom__">+ Outro (digitar)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <Input
+                        className="h-9"
+                        placeholder="Digite o cargo"
+                        value={form.cargo}
+                        onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9"
+                        type="button"
+                        onClick={() => { setCargoMode("select"); setForm((f) => ({ ...f, cargo: "" })); }}
+                      >
+                        Lista
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Telefone</Label>
+                  <Input
+                    className="h-9"
+                    placeholder="(11) 99999-9999"
+                    value={form.telefone}
+                    onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Email</Label>
+                  <Input className="h-9" value={user?.email ?? ""} disabled />
+                </div>
+              </div>
+              <div className="flex justify-end mt-3">
+                <Button onClick={salvar} disabled={saving} size="sm" className="gap-2 h-8">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  Salvar
                 </Button>
               </div>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label>Telefone</Label>
-            <Input
-              placeholder="(11) 99999-9999"
-              value={form.telefone}
-              onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
-            />
+            </section>
+
+            <div className="border-t" />
+
+            <SegurancaContaSection />
           </div>
         </div>
-        <Button onClick={salvar} disabled={saving} className="gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Salvar
-        </Button>
       </CardContent>
-      <SegurancaContaSection />
     </Card>
   );
 }
@@ -291,7 +303,6 @@ function SegurancaContaSection() {
       return;
     }
     setSubmitting(true);
-    // Valida senha atual reautenticando
     const { error: signInErr } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: currentPassword,
@@ -314,24 +325,26 @@ function SegurancaContaSection() {
   };
 
   return (
-    <CardContent className="space-y-4 max-w-md border-t pt-6">
-      <div>
+    <section>
+      <div className="mb-2">
         <h3 className="text-sm font-semibold">Segurança da conta</h3>
         <p className="text-xs text-muted-foreground">Altere a sua senha de acesso</p>
       </div>
-      <div className="grid gap-3">
-        <div className="space-y-1.5">
-          <Label>Senha atual</Label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label className="text-xs">Senha atual</Label>
           <Input
+            className="h-9"
             type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             autoComplete="current-password"
           />
         </div>
-        <div className="space-y-1.5">
-          <Label>Nova senha</Label>
+        <div className="space-y-1">
+          <Label className="text-xs">Nova senha</Label>
           <Input
+            className="h-9"
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
@@ -339,9 +352,10 @@ function SegurancaContaSection() {
             minLength={6}
           />
         </div>
-        <div className="space-y-1.5">
-          <Label>Confirmar nova senha</Label>
+        <div className="space-y-1">
+          <Label className="text-xs">Confirmar nova senha</Label>
           <Input
+            className="h-9"
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -349,15 +363,18 @@ function SegurancaContaSection() {
             minLength={6}
           />
         </div>
+        <div className="flex items-end justify-end">
+          <Button
+            onClick={handleChangePassword}
+            disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
+            size="sm"
+            className="gap-2 h-9 w-full sm:w-auto"
+          >
+            {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Atualizar senha
+          </Button>
+        </div>
       </div>
-      <Button
-        onClick={handleChangePassword}
-        disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
-        className="gap-2"
-      >
-        {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-        Atualizar senha
-      </Button>
-    </CardContent>
+    </section>
   );
 }
