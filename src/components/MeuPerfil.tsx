@@ -268,6 +268,96 @@ export function MeuPerfil() {
           Salvar
         </Button>
       </CardContent>
+      <SegurancaContaSection />
     </Card>
+  );
+}
+
+function SegurancaContaSection() {
+  const { user } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+    if (newPassword.length < 6) {
+      toast.error("A nova senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    setSubmitting(true);
+    // Valida senha atual reautenticando
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (signInErr) {
+      setSubmitting(false);
+      toast.error("Senha atual incorreta");
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setSubmitting(false);
+    if (error) {
+      toast.error("Falha ao atualizar senha", { description: error.message });
+      return;
+    }
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    toast.success("Senha atualizada com sucesso.");
+  };
+
+  return (
+    <CardContent className="space-y-4 max-w-md border-t pt-6">
+      <div>
+        <h3 className="text-sm font-semibold">Segurança da conta</h3>
+        <p className="text-xs text-muted-foreground">Altere a sua senha de acesso</p>
+      </div>
+      <div className="grid gap-3">
+        <div className="space-y-1.5">
+          <Label>Senha atual</Label>
+          <Input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Nova senha</Label>
+          <Input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            autoComplete="new-password"
+            minLength={6}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Confirmar nova senha</Label>
+          <Input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+            minLength={6}
+          />
+        </div>
+      </div>
+      <Button
+        onClick={handleChangePassword}
+        disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
+        className="gap-2"
+      >
+        {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+        Atualizar senha
+      </Button>
+    </CardContent>
   );
 }
