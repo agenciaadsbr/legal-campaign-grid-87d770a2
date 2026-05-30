@@ -664,7 +664,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                           className="block w-full h-full"
                           title={a.nome}
                         >
-                          <img src={a.url} alt={a.nome} className="w-full h-full object-cover" />
+                          <SignedImg url={a.url} alt={a.nome} className="w-full h-full object-cover" />
                         </button>
                       ) : vid ? (
                         <button
@@ -673,8 +673,8 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                           className="block w-full h-full relative bg-black"
                           title={a.nome}
                         >
-                          <video
-                            src={a.url}
+                          <SignedVideo
+                            url={a.url}
                             preload="metadata"
                             muted
                             playsInline
@@ -682,8 +682,8 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                           />
                         </button>
                       ) : (
-                        <a
-                          href={a.url}
+                        <SignedLink
+                          url={a.url}
                           target="_blank"
                           rel="noreferrer"
                           download={a.nome}
@@ -692,7 +692,7 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
                         >
                           <FileText className="h-5 w-5 text-muted-foreground" />
                           <span className="text-[9px] mt-0.5 truncate w-full leading-tight">{a.nome}</span>
-                        </a>
+                        </SignedLink>
                       )}
                       {canWrite && (
                         <button
@@ -934,10 +934,10 @@ export function PostDetalheDialog({ postId, onVoltar }: Props) {
               <X className="h-4 w-4" />
             </button>
             {isVideoUrl(previewAnexo.url, previewAnexo.nome) ? (
-              <video src={previewAnexo.url} controls autoPlay className="max-h-[85vh] w-full" />
+              <SignedVideo url={previewAnexo.url} controls autoPlay className="max-h-[85vh] w-full" />
             ) : (
-              <img
-                src={previewAnexo.url}
+              <SignedImg
+                url={previewAnexo.url}
                 alt={previewAnexo.nome}
                 className="max-h-[85vh] w-full object-contain"
               />

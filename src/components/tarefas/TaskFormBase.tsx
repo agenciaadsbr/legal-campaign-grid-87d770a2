@@ -531,9 +531,9 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
-                    <a href={a.url} target="_blank" rel="noopener noreferrer">
+                    <SignedLink url={a.url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-3 w-3" />
-                    </a>
+                    </SignedLink>
                   </Button>
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeAnexo(a.id)}>
                     <Trash2 className="h-3 w-3" />
