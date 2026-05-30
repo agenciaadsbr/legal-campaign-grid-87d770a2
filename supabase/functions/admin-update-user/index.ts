@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type Role = "admin" | "editor" | "viewer";
+type Role = "super_admin" | "admin" | "editor" | "viewer";
 
 interface UpdateBody {
   user_id: string;
