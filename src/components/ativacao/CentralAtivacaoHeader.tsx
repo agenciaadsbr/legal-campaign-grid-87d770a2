@@ -1,0 +1,33 @@
+import { Button } from "@/components/ui/button";
+import { Rocket, Settings2, Upload } from "lucide-react";
+
+interface Props {
+  onAbrirRegras: () => void;
+  onImportar: () => void;
+}
+
+export function CentralAtivacaoHeader({ onAbrirRegras, onImportar }: Props) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
+          <Rocket className="h-6 w-6 text-primary" />
+          Central de Ativação
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Gerencie clientes em onboarding até a ativação da operação.
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={onAbrirRegras}>
+          <Settings2 className="h-4 w-4 mr-2" />
+          Regras de Ativação
+        </Button>
+        <Button size="sm" onClick={onImportar}>
+          <Upload className="h-4 w-4 mr-2" />
+          Importar clientes
+        </Button>
+      </div>
+    </div>
+  );
+}
