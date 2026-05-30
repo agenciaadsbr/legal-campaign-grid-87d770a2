@@ -64,6 +64,9 @@ export function EquipeAcessosManager() {
   });
   const [cargoModeEdit, setCargoModeEdit] = useState<"select" | "custom">("select");
   const [editSaving, setEditSaving] = useState(false);
+  const [pwNova, setPwNova] = useState("");
+  const [pwConfirma, setPwConfirma] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
