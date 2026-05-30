@@ -64,6 +64,9 @@ export function EquipeAcessosManager() {
   });
   const [cargoModeEdit, setCargoModeEdit] = useState<"select" | "custom">("select");
   const [editSaving, setEditSaving] = useState(false);
+  const [pwNova, setPwNova] = useState("");
+  const [pwConfirma, setPwConfirma] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -129,7 +132,30 @@ export function EquipeAcessosManager() {
     });
     const isInList = !p.cargo || cargos.some((c) => c.label === p.cargo);
     setCargoModeEdit(p.cargo && !isInList ? "custom" : "select");
+    setPwNova("");
+    setPwConfirma("");
     setEditOpen(true);
+  };
+
+  const atualizarSenhaUsuario = async () => {
+    if (!editing) return;
+    if (pwNova.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+    if (pwNova !== pwConfirma) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    setPwSaving(true);
+    const { error } = await supabase.functions.invoke("admin-update-user", {
+      body: { user_id: editing.id, new_password: pwNova },
+    });
+    setPwSaving(false);
+    if (error) return toast.error("Falha", { description: error.message });
+    setPwNova("");
+    setPwConfirma("");
+    toast.success("Senha atualizada com sucesso.");
   };
 
   const copiarLinkAcesso = async (p: ProfileRow) => {
@@ -465,6 +491,45 @@ Recomendamos trocar a senha no primeiro acesso.`;
                   onCheckedChange={(v) => setEditForm((f) => ({ ...f, ativo: v }))}
                   disabled={editing.id === user?.id}
                 />
+              </div>
+
+              <div className="border rounded-md p-3 space-y-3">
+                <div>
+                  <div className="text-sm font-medium">Alterar senha do usuário</div>
+                  <div className="text-xs text-muted-foreground">
+                    Apenas administradores. Mínimo 6 caracteres.
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Nova senha</Label>
+                  <Input
+                    type="password"
+                    value={pwNova}
+                    onChange={(e) => setPwNova(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={6}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Confirmar nova senha</Label>
+                  <Input
+                    type="password"
+                    value={pwConfirma}
+                    onChange={(e) => setPwConfirma(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={6}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={atualizarSenhaUsuario}
+                  disabled={pwSaving || !pwNova || !pwConfirma}
+                >
+                  {pwSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Atualizar senha
+                </Button>
               </div>
             </div>
           )}

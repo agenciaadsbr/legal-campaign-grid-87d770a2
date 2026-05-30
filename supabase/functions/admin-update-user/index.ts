@@ -17,6 +17,7 @@ interface UpdateBody {
   ativo?: boolean;
   role?: Role;
   responsavel_id?: string | null;
+  new_password?: string;
 }
 
 Deno.serve(async (req) => {
@@ -101,6 +102,18 @@ Deno.serve(async (req) => {
         { ban_duration } as { ban_duration: string },
       );
       if (bErr) return json({ error: bErr.message }, 400);
+    }
+
+    // 4. alterar senha (apenas admin/super_admin via essa função)
+    if (body.new_password !== undefined && body.new_password !== "") {
+      if (typeof body.new_password !== "string" || body.new_password.length < 6) {
+        return json({ error: "Senha deve ter no mínimo 6 caracteres" }, 400);
+      }
+      const { error: pwErr } = await adminClient.auth.admin.updateUserById(
+        body.user_id,
+        { password: body.new_password },
+      );
+      if (pwErr) return json({ error: pwErr.message }, 400);
     }
 
     return json({ ok: true });
