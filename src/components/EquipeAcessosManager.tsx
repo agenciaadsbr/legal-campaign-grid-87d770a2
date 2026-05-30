@@ -132,7 +132,30 @@ export function EquipeAcessosManager() {
     });
     const isInList = !p.cargo || cargos.some((c) => c.label === p.cargo);
     setCargoModeEdit(p.cargo && !isInList ? "custom" : "select");
+    setPwNova("");
+    setPwConfirma("");
     setEditOpen(true);
+  };
+
+  const atualizarSenhaUsuario = async () => {
+    if (!editing) return;
+    if (pwNova.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+    if (pwNova !== pwConfirma) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    setPwSaving(true);
+    const { error } = await supabase.functions.invoke("admin-update-user", {
+      body: { user_id: editing.id, new_password: pwNova },
+    });
+    setPwSaving(false);
+    if (error) return toast.error("Falha", { description: error.message });
+    setPwNova("");
+    setPwConfirma("");
+    toast.success("Senha atualizada com sucesso.");
   };
 
   const copiarLinkAcesso = async (p: ProfileRow) => {
