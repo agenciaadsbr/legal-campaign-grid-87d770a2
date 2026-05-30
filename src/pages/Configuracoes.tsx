@@ -37,6 +37,7 @@ export default function Configuracoes() {
           {isAdmin && <TabsTrigger value="ia" className="text-xs h-7">IA</TabsTrigger>}
           {isAdmin && <TabsTrigger value="delegacao" className="text-xs h-7">Delegação</TabsTrigger>}
           {isAdmin && <TabsTrigger value="estruturas" className="text-xs h-7">Estruturas automáticas</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="documentacao" className="text-xs h-7">Documentação</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="perfil" className="mt-3">
