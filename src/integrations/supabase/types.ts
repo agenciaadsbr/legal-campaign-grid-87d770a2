@@ -97,6 +97,54 @@ export type Database = {
           },
         ]
       }
+      ativacao_regras: {
+        Row: {
+          id: string
+          modo_regra: string
+          quantidade_minima: number
+          requer_checklist: boolean
+          requer_crm: boolean
+          requer_gmn: boolean
+          requer_google_ads: boolean
+          requer_lp: boolean
+          requer_meta_ads: boolean
+          requer_posts: boolean
+          requer_reuniao_performance: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          modo_regra?: string
+          quantidade_minima?: number
+          requer_checklist?: boolean
+          requer_crm?: boolean
+          requer_gmn?: boolean
+          requer_google_ads?: boolean
+          requer_lp?: boolean
+          requer_meta_ads?: boolean
+          requer_posts?: boolean
+          requer_reuniao_performance?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          modo_regra?: string
+          quantidade_minima?: number
+          requer_checklist?: boolean
+          requer_crm?: boolean
+          requer_gmn?: boolean
+          requer_google_ads?: boolean
+          requer_lp?: boolean
+          requer_meta_ads?: boolean
+          requer_posts?: boolean
+          requer_reuniao_performance?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       atividade_cliente: {
         Row: {
           acao: string
