@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
+import { SignedImg, SignedVideo, SignedLink } from "@/components/anexos/SignedAnexo";
 import {
   Dialog,
   DialogContent,
@@ -970,8 +971,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                             className="block w-full h-full"
                             title={a.nome}
                           >
-                            <img
-                              src={a.url}
+                            <SignedImg
+                              url={a.url}
                               alt={a.nome}
                               className="w-full h-full object-cover"
                             />
@@ -983,8 +984,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                             className="block w-full h-full relative bg-black"
                             title={a.nome}
                           >
-                            <video
-                              src={a.url}
+                            <SignedVideo
+                              url={a.url}
                               preload="metadata"
                               muted
                               playsInline
@@ -997,8 +998,8 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                             </span>
                           </button>
                         ) : (
-                          <a
-                            href={a.url}
+                          <SignedLink
+                            url={a.url}
                             target="_blank"
                             rel="noreferrer"
                             download={a.nome}
@@ -1009,7 +1010,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                             <span className="text-[9px] mt-0.5 truncate w-full leading-tight">
                               {a.nome}
                             </span>
-                          </a>
+                          </SignedLink>
                         )}
                         {canWrite && (
                           <button
@@ -1402,15 +1403,15 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                 )}
 
                 {isVideoUrl(previewAnexo.url, previewAnexo.nome) ? (
-                  <video
-                    src={previewAnexo.url}
+                  <SignedVideo
+                    url={previewAnexo.url}
                     controls
                     autoPlay
                     className="max-h-[80vh] max-w-full"
                   />
                 ) : (
-                  <img
-                    src={previewAnexo.url}
+                  <SignedImg
+                    url={previewAnexo.url}
                     alt={previewAnexo.nome}
                     className="max-h-[80vh] max-w-full object-contain"
                   />
