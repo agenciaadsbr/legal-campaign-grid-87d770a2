@@ -10,6 +10,7 @@ import { ResponsabilidadesEquipeManager } from "@/components/configuracoes/Respo
 import { IAConfigManager } from "@/components/configuracoes/IAConfigManager";
 import { EstruturasAutomaticasManager } from "@/components/configuracoes/EstruturasAutomaticasManager";
 import { DelegationSettingsManager } from "@/components/configuracoes/DelegationSettingsManager";
+import { DocumentacaoSistemaManager } from "@/components/configuracoes/DocumentacaoSistemaManager";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Configuracoes() {
@@ -36,6 +37,7 @@ export default function Configuracoes() {
           {isAdmin && <TabsTrigger value="ia" className="text-xs h-7">IA</TabsTrigger>}
           {isAdmin && <TabsTrigger value="delegacao" className="text-xs h-7">Delegação</TabsTrigger>}
           {isAdmin && <TabsTrigger value="estruturas" className="text-xs h-7">Estruturas automáticas</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="documentacao" className="text-xs h-7">Documentação</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="perfil" className="mt-3">
@@ -94,6 +96,12 @@ export default function Configuracoes() {
         {isAdmin && (
           <TabsContent value="estruturas" className="mt-3">
             <EstruturasAutomaticasManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="documentacao" className="mt-3">
+            <DocumentacaoSistemaManager />
           </TabsContent>
         )}
       </Tabs>
