@@ -54,14 +54,14 @@ Deno.serve(async (req) => {
     const isSelf = body.user_id === callerId;
 
     // Self-protection: admin não pode rebaixar nem se desativar
-    if (isSelf && body.role && body.role !== "admin") {
+    if (isSelf && body.role && body.role !== "admin" && body.role !== "super_admin") {
       return json({ error: "Você não pode alterar seu próprio papel" }, 400);
     }
     if (isSelf && body.ativo === false) {
       return json({ error: "Você não pode desativar a si mesmo" }, 400);
     }
 
-    if (body.role && !["admin", "editor", "viewer"].includes(body.role)) {
+    if (body.role && !["super_admin", "admin", "editor", "viewer"].includes(body.role)) {
       return json({ error: "role inválida" }, 400);
     }
 
