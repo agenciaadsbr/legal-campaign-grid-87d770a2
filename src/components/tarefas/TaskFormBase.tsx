@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { WorkflowSection } from "@/components/demandas/WorkflowSection";
 import { TarefaIAConsulta } from "@/components/demandas/TarefaIAConsulta";
 import { isAguardandoDependencia } from "@/lib/workflow";
+import { SignedLink } from "@/components/anexos/SignedAnexo";
 
 interface TaskFormBaseProps {
   initialDemandaId?: string;
