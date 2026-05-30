@@ -224,6 +224,22 @@ ${blocoReunioes}`;
       nivel_confianca: result.nivel_confianca,
     });
 
+    // 7. Log de consumo de IA
+    await supa.from("ia_logs").insert({
+      tipo: "consultar_tarefa",
+      modelo: modelId,
+      provider,
+      source_module: "ia-consultar-tarefa",
+      demanda_id,
+      tokens_input: tIn,
+      tokens_output: tOut,
+      custo: estimateCost(provider, modelId, tIn, tOut),
+      input_resumo: String(pergunta).slice(0, 280),
+      criado_por: user.user?.id ?? null,
+      status: "success",
+      latency_ms,
+    });
+
     return jsonResponse(result);
   } catch (e) {
     console.error("ia-consultar-tarefa error", e);
