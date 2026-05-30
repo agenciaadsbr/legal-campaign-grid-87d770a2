@@ -180,9 +180,12 @@ Deno.serve(async (req) => {
             const tIn1 = r1.usage?.inputTokens ?? 0;
             const tOut1 = r1.usage?.outputTokens ?? 0;
             await supa.from("ia_logs").insert({
-              tipo: "agente_operacional", modelo: modelId, tokens_input: tIn1, tokens_output: tOut1,
+              tipo: "agente_operacional", modelo: modelId, provider: agOper.provider,
+              source_module: "ia-processar-reuniao", reuniao_id, cliente_id: reuniao.cliente_id,
+              tokens_input: tIn1, tokens_output: tOut1,
               custo: estimateCost(agOper.provider, modelId, tIn1, tOut1),
               input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+              status: "success", latency_ms: tFinal - startTime,
             });
             status.operacional = { ok: true, latency_ms: tFinal - startTime };
           } else {
