@@ -219,11 +219,22 @@ function buildConsumo(logs: IALog[], provider: string, periodo: string) {
   }
 
   const providerPrefix = provider === "gpt" ? "openai/" : "google/";
+  const modelPrefixesFallback = provider === "gpt"
+    ? ["openai/", "gpt-", "o1", "o3", "o4"]
+    : ["google/", "gemini"];
   const filtrados = logs.filter((l) => {
-    if (!l.modelo?.startsWith(providerPrefix)) return false;
+    const logProv = (l as any).provider as string | null | undefined;
+    if (logProv) {
+      if (logProv !== provider) return false;
+    } else {
+      // Fallback retrocompat: logs antigos sem coluna provider
+      const m = l.modelo ?? "";
+      if (!modelPrefixesFallback.some((p) => m.startsWith(p))) return false;
+    }
     const d = new Date(l.created_at);
     return d >= start && d <= end;
   });
+  void providerPrefix;
 
   // Agrupa por dia
   const buckets: Record<string, { custo: number; chamadas: number }> = {};
