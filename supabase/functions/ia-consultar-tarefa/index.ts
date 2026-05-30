@@ -161,11 +161,16 @@ Comentários: ${trunc(tarefa_comentarios, 3000) || "—"}
 ${blocoReunioes}`;
 
     // 4. Chamar IA
-    const { text } = await generateText({
+    const t0 = Date.now();
+    const aiResult = await generateText({
       model: client(realModel),
       system: systemPrompt,
       prompt: pergunta,
     });
+    const latency_ms = Date.now() - t0;
+    const text = aiResult.text;
+    const tIn = aiResult.usage?.inputTokens ?? 0;
+    const tOut = aiResult.usage?.outputTokens ?? 0;
 
     // 5. Parse robusto
     let result: { resposta: string; fontes: string[]; nivel_confianca: "Alto" | "Médio" | "Baixo" } = {
