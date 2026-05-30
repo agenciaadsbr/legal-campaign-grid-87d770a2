@@ -139,11 +139,16 @@ ${transcricao}`,
     await supa.from("ia_logs").insert({
       tipo: "tarefas_sugeridas",
       modelo: modelId,
+      provider: cfg.provider,
+      source_module: "ia-gerar-tarefas",
+      cliente_id,
+      reuniao_id,
       tokens_input: tokensIn,
       tokens_output: tokensOut,
       custo,
       input_resumo: transcricao.slice(0, 280),
       criado_por: userData.user.id,
+      status: "success",
     });
 
     return jsonResponse({ count: inseridas, tarefas, modelo: modelId, custo });
