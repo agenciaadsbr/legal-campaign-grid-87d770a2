@@ -10,6 +10,7 @@ import { ResponsabilidadesEquipeManager } from "@/components/configuracoes/Respo
 import { IAConfigManager } from "@/components/configuracoes/IAConfigManager";
 import { EstruturasAutomaticasManager } from "@/components/configuracoes/EstruturasAutomaticasManager";
 import { DelegationSettingsManager } from "@/components/configuracoes/DelegationSettingsManager";
+import { DocumentacaoSistemaManager } from "@/components/configuracoes/DocumentacaoSistemaManager";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Configuracoes() {
