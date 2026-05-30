@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js";
 import { generateText } from "npm:ai";
-import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId } from "../_shared/ai-gateway.ts";
+import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveRealModelId, estimateCost } from "../_shared/ai-gateway.ts";
 
 // ----- Helpers -----
 function trunc(s: any, max: number): string {
