@@ -59,11 +59,15 @@ Deno.serve(async (req) => {
     await supa.from("ia_logs").insert({
       tipo,
       modelo: modelId,
+      provider: cfg.provider,
+      source_module: "ia-gerar-resumo",
       tokens_input: tokensIn,
       tokens_output: tokensOut,
       custo,
       input_resumo: transcricao.slice(0, 280),
       criado_por: userData.user.id,
+      status: "success",
+      latency_ms: latency,
     });
 
     return jsonResponse({ texto: result.text, tokens_input: tokensIn, tokens_output: tokensOut, custo, modelo: modelId, latency_ms: latency });
