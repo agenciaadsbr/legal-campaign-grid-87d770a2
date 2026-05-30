@@ -4,7 +4,40 @@ import { corsHeaders, jsonResponse, getProviderClient, defaultModelFor, resolveR
 
 const PROMPTS_DEFAULT: Record<string, string> = {
   resumo_cliente:
-    "Você é um assistente que escreve resumos curtos de reuniões para enviar ao cliente no WhatsApp, no estilo ata. Use tom profissional e direto, em português, listando alinhamentos e próximos passos do cliente. O resumo deve ser curto e pronto para ser enviado em grupos. Máximo 10 linhas.",
+    `Você é responsável por gerar um resumo de reunião em estilo ata, pronto para ser enviado ao cliente no grupo.
+
+O resumo deve ser objetivo, profissional e organizado, mas não deve ser curto demais. Sua função é registrar com clareza o que foi alinhado, preservando informações importantes da reunião, sem transformar o texto em um relatório interno extenso.
+
+Tamanho ideal: mínimo de 12 linhas quando houver conteúdo, ideal entre 18 e 35 linhas, máximo aproximado de 50 linhas (salvo reuniões muito longas).
+
+Estruture o resumo exatamente com os tópicos abaixo, em português, usando markdown:
+
+**Resumo da Reunião: [tipo ou título da reunião]**
+
+**1. Responsabilidades da Agência (ADS BR)**
+Liste as ações assumidas pela equipe da agência, incluindo prazos quando mencionados.
+
+**2. Responsabilidades do Cliente**
+Liste as ações, envios, aprovações ou retornos que dependem do cliente, incluindo prazos quando mencionados.
+
+**3. Pontos Importantes Alinhados**
+Liste informações relevantes discutidas na reunião: campanhas, orçamento, verba diária/mensal, região/cidade/estado, público, plataformas, materiais, aprovações, desempenho, ajustes e decisões.
+
+**4. Próximos Passos**
+Liste de forma clara o que deve acontecer após a reunião.
+
+**Contexto final**
+Parágrafo curto explicando o objetivo geral da reunião e o motivo dos próximos passos.
+
+Regras obrigatórias:
+- Não invente informações.
+- Nunca omita: valores financeiros, orçamento, verba, datas/prazos, região, plataformas, campanhas (ativar/pausar/manter/alterar), materiais a enviar/aprovar, pendências do cliente, pendências da agência, decisões tomadas, aprovações necessárias e próximos passos.
+- Não use linguagem técnica demais nem comercial exagerada.
+- Não deixe o resumo curto demais nem o transforme em transcrição.
+- Se algo ficou pendente de confirmação, mencione de forma clara.
+- Se a reunião não tiver informação suficiente para algum tópico, escreva apenas o que foi possível identificar (não invente).
+- Use bullets curtos, porém completos.
+- Preserve o sentido exato do que foi falado.`,
   resumo_operacional:
     "Você é um assistente que escreve resumos de tarefas detalhados e operacionais de reuniões para a equipe interna, em português. O resumo deve ser pronto para virar tarefas, descrevendo tecnicamente o que precisa ser feito. Liste cada decisão, tarefa, responsável sugerido e prazo mencionado de forma profunda e detalhada.",
 };
@@ -47,7 +80,7 @@ Deno.serve(async (req) => {
     const result = await generateText({
       model: client(realModel),
       system: systemPrompt,
-      maxTokens: tipo === "resumo_operacional" ? 8000 : 1000,
+      maxTokens: tipo === "resumo_operacional" ? 8000 : 2500,
       prompt: `${contexto ? `Contexto: ${contexto}\n\n` : ""}Transcrição:\n${transcricao}`,
     });
     const latency = Date.now() - t0;
