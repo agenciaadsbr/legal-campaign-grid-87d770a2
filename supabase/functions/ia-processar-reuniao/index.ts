@@ -124,9 +124,12 @@ Deno.serve(async (req) => {
           const tOut = result.usage?.outputTokens ?? 0;
           resumoClienteOut = result.text;
           await supa.from("ia_logs").insert({
-            tipo: "agente_cliente", modelo: modelId, tokens_input: tIn, tokens_output: tOut,
+            tipo: "agente_cliente", modelo: modelId, provider: agCliente.provider,
+            source_module: "ia-processar-reuniao", reuniao_id, cliente_id: reuniao.cliente_id,
+            tokens_input: tIn, tokens_output: tOut,
             custo: estimateCost(agCliente.provider, modelId, tIn, tOut),
             input_resumo: transcricao.slice(0, 280), criado_por: userData.user.id,
+            status: "success", latency_ms: Date.now() - t0,
           });
           status.cliente = { ok: true, latency_ms: Date.now() - t0 };
         } catch (e) {
