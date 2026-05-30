@@ -19,6 +19,7 @@ type MenuItem = { title: string; url: string; icon: typeof LayoutDashboard; end?
 
 const MENU_ITEMS: MenuItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
+  { title: "Central de Ativação", url: "/central-ativacao", icon: Rocket },
   { title: "Central de Tarefas", url: "/minhas-tarefas", icon: CheckSquare },
   { title: "Central de Reuniões", url: "/central-reunioes", icon: CalendarClock },
   { title: "Clientes", url: "/clientes", icon: Users },
