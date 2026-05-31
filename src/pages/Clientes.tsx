@@ -634,10 +634,11 @@ function EditarClienteDialog({
 }
 
 function AcoesCliente({ cliente }: { cliente: any }) {
-  const { deleteCliente } = useCRM();
+  const { deleteCliente, updateCliente } = useCRM();
   const { isAdmin, canWrite } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
+  const [enviandoCentral, setEnviandoCentral] = useState(false);
 
   const handleDelete = async () => {
     try {
@@ -646,6 +647,28 @@ function AcoesCliente({ cliente }: { cliente: any }) {
       setDelOpen(false);
     } catch (e: any) {
       toast.error(`Erro ao excluir: ${e?.message ?? "tente novamente"}`);
+    }
+  };
+
+  const jaOnboarding = (cliente.status_global ?? "Onboarding") === "Onboarding";
+
+  const enviarParaCentral = async () => {
+    if (jaOnboarding) {
+      toast.info("Cliente já está em Onboarding");
+      return;
+    }
+    if (!confirm(
+      `Enviar "${cliente.nome_cliente}" para a Central de Ativação? ` +
+      `O status global será alterado para Onboarding.`,
+    )) return;
+    setEnviandoCentral(true);
+    try {
+      await updateCliente(cliente.id, { status_global: "Onboarding" } as any);
+      toast.success("Cliente enviado para a Central de Ativação");
+    } catch (e: any) {
+      toast.error(`Erro: ${e?.message ?? "tente novamente"}`);
+    } finally {
+      setEnviandoCentral(false);
     }
   };
 
