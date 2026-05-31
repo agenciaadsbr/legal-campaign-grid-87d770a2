@@ -1738,6 +1738,7 @@ export default function Clientes() {
         open={!!historicoClienteId}
         onOpenChange={(v) => !v && setHistoricoClienteId(null)}
       />
+      <ImportarClientesDialog open={openImportarCentral} onOpenChange={setOpenImportarCentral} />
     </div>
   );
 }
