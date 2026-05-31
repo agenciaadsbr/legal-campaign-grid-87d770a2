@@ -13,7 +13,7 @@ const ITENS: { status: StatusVisual; desc: string }[] = [
 export function LegendaStatusCard() {
   return (
     <Card className="p-4">
-      <div className="text-sm font-semibold text-foreground">Legenda de Status</div>
+      <div className="text-sm font-semibold text-foreground">Legenda de Status (Central de Ativação)</div>
       <ul className="mt-3 space-y-2">
         {ITENS.map((i) => (
           <li key={i.status} className="flex items-start gap-2">

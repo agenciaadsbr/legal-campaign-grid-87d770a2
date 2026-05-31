@@ -8,9 +8,10 @@ import { canonicalStatus } from "@/lib/demandas-categorias";
 
 interface Props {
   linhas: AtivacaoLinha[];
+  onVerTarefas?: (responsavelId: string) => void;
 }
 
-export function AlertaResponsavelCard({ linhas }: Props) {
+export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
   const navigate = useNavigate();
   const { responsavel, responsavelId } = useResponsavelAtual();
 
@@ -63,8 +64,8 @@ export function AlertaResponsavelCard({ linhas }: Props) {
 
   return (
     <Card className="p-4">
-      <div className="text-sm font-semibold text-foreground">Alerta por Responsável</div>
-      <p className="text-[10px] uppercase text-muted-foreground mt-0.5">Dashboard diário</p>
+      <div className="text-sm font-semibold text-foreground">Alerta por Responsável (Onboarding)</div>
+      <p className="text-[10px] uppercase text-muted-foreground mt-0.5">Resumo diário · Central de Ativação</p>
 
       <div className="mt-3 rounded-md bg-muted/30 p-3">
         <div className="text-sm text-foreground">
@@ -101,8 +102,12 @@ export function AlertaResponsavelCard({ linhas }: Props) {
         </div>
       )}
 
-      <Button size="sm" className="w-full mt-4" onClick={() => navigate("/minhas-tarefas")}>
-        Ver minhas tarefas
+      <Button
+        size="sm"
+        className="w-full mt-4"
+        onClick={() => (onVerTarefas ? onVerTarefas(responsavelId) : navigate("/minhas-tarefas"))}
+      >
+        Ver tarefas (Onboarding)
       </Button>
     </Card>
   );

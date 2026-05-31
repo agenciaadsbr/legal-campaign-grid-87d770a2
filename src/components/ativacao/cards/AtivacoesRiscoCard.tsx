@@ -19,7 +19,7 @@ export function AtivacoesRiscoCard({ linhas, onAbrirDetalhe, onVerTodos }: Props
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-foreground">Ativações em risco</div>
+        <div className="text-sm font-semibold text-foreground">Ativações em risco (Onboarding)</div>
         <span className="text-xs text-muted-foreground tabular-nums">({criticas.length})</span>
       </div>
       {visiveis.length === 0 ? (
