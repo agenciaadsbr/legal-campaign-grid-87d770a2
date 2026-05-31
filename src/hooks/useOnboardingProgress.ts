@@ -9,26 +9,35 @@ import type { Cliente } from "@/store/crm";
 import type { Demanda } from "@/store/demandas";
 import type { CardPai, CardPaiEtapa } from "@/store/cardPai";
 import {
+  calcularBadgeAtual,
   calcularProgresso,
+  calcularProximaAcao,
   calcularRisco,
   calcularStatusPrincipal,
+  calcularStatusVisual,
   calcularUltimoAvanco,
   clientePodeAtivar,
   diasNoOnboarding,
+  diasRestantesMeta,
   modulosDoCliente,
-  proximoBloqueio,
+  proximoBloqueioDetalhado,
   pendenciasCriticasParaAtivar,
   type AtivacaoRegras,
   type Risco,
+  type StatusVisual,
+  type ModuloAtivacao,
 } from "@/lib/ativacaoRules";
 
 export interface AtivacaoLinha {
   cliente: Cliente;
   diasOnboarding: number;
+  diasRestantes: number;
   progresso: { resolvidas: number; total: number; pct: number };
   statusPrincipal: string;
+  statusVisual: StatusVisual;
   badgeAtual: string | null;
-  proximoBloqueio: string | null;
+  proximoBloqueio: string;
+  proximaAcao: { titulo: string; modulo: string | null };
   responsavelAtualId: string | null;
   risco: Risco;
   motivosRisco: string[];
@@ -37,6 +46,7 @@ export interface AtivacaoLinha {
   pendenciasRegra: string[];
   atendidasRegra: string[];
   pendenciasCriticas: string[];
+  modulos: ModuloAtivacao[];
   cardsPai: CardPai[];
   etapas: CardPaiEtapa[];
   demandas: Demanda[];
@@ -114,20 +124,33 @@ export function useOnboardingAgregado(clientes: Cliente[], regras: AtivacaoRegra
       const ativar = clientePodeAtivar({ cliente, cardsPai: c, etapas: e, demandas: d, regras });
       const criticas = pendenciasCriticasParaAtivar({ demandas: d, etapas: e });
 
-      const badgeAtual = status.demanda?.status_motivo ?? null;
+      const badgeAtual = calcularBadgeAtual(d) ?? status.demanda?.status_motivo ?? null;
       const respAtual =
         status.demanda?.responsavel_id ||
         status.demanda?.responsaveis_ids?.[0] ||
         cliente.responsaveis?.[0] ||
         null;
+      const diasOnb = diasNoOnboarding(cliente);
+      const diasRest = diasRestantesMeta(cliente);
+      const statusVisual = calcularStatusVisual({
+        cliente,
+        demandas: d,
+        diasRestantes: diasRest,
+        risco,
+        badgeAtual,
+      });
+      const proxAcao = calcularProximaAcao({ modulos, demandas: d });
 
       return {
         cliente,
-        diasOnboarding: diasNoOnboarding(cliente),
+        diasOnboarding: diasOnb,
+        diasRestantes: diasRest,
         progresso,
         statusPrincipal: status.label,
+        statusVisual,
         badgeAtual,
-        proximoBloqueio: proximoBloqueio(modulos),
+        proximoBloqueio: proximoBloqueioDetalhado({ demandas: d, etapas: e, modulos }),
+        proximaAcao: proxAcao,
         responsavelAtualId: respAtual,
         risco,
         motivosRisco: motivos,
@@ -136,6 +159,7 @@ export function useOnboardingAgregado(clientes: Cliente[], regras: AtivacaoRegra
         pendenciasRegra: ativar.pendencias,
         atendidasRegra: ativar.atendidas,
         pendenciasCriticas: criticas,
+        modulos,
         cardsPai: c,
         etapas: e,
         demandas: d,
