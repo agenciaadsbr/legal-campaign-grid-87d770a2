@@ -25,6 +25,35 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { AtivacaoLinha } from "@/hooks/useOnboardingProgress";
 
+const STATUS_TAREFA_STYLE: Record<string, string> = {
+  Criar: "bg-sky-500/15 text-sky-600 border-sky-500/30 dark:text-sky-400",
+  Planejamento: "bg-slate-500/15 text-slate-600 border-slate-500/30 dark:text-slate-300",
+  Revisar: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
+  "Aguardando aprovação do cliente": "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
+  "Aguardando ação do cliente": "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
+  "Aguardando etapa anterior": "bg-violet-500/15 text-violet-600 border-violet-500/30 dark:text-violet-400",
+  "Aguardando etapa interna": "bg-violet-500/15 text-violet-600 border-violet-500/30 dark:text-violet-400",
+  Entregue: "bg-teal-500/15 text-teal-600 border-teal-500/30 dark:text-teal-400",
+  Agendado: "bg-indigo-500/15 text-indigo-600 border-indigo-500/30 dark:text-indigo-400",
+  Postado: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
+  Concluido: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
+  "Concluído": "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
+  Atrasado: "bg-destructive/15 text-destructive border-destructive/30",
+};
+
+function StatusTarefaBadge({ status }: { status: string }) {
+  const cls = STATUS_TAREFA_STYLE[status] ?? "bg-muted text-muted-foreground border-border";
+  return <Badge className={`text-[10px] border ${cls} hover:${cls}`}>{status}</Badge>;
+}
+
+function BadgeMotivo({ motivo }: { motivo: string }) {
+  return (
+    <Badge className="text-[10px] border bg-amber-500/15 text-amber-600 border-amber-500/30 hover:bg-amber-500/15 dark:text-amber-400">
+      {motivo}
+    </Badge>
+  );
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -385,11 +414,11 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                           {d.data_limite ? new Date(d.data_limite).toLocaleDateString("pt-BR") : "—"}
                         </td>
                         <td className="p-2">
-                          <Badge variant="outline" className="text-[10px]">{canonicalStatus(d.status)}</Badge>
+                          <StatusTarefaBadge status={canonicalStatus(d.status)} />
                         </td>
                         <td className="p-2">
                           {d.status_motivo ? (
-                            <Badge variant="outline" className="text-[10px]">{d.status_motivo}</Badge>
+                            <BadgeMotivo motivo={d.status_motivo} />
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
