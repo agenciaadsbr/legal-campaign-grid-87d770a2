@@ -8,9 +8,10 @@ import { canonicalStatus } from "@/lib/demandas-categorias";
 
 interface Props {
   linhas: AtivacaoLinha[];
+  onVerTarefas?: (responsavelId: string) => void;
 }
 
-export function AlertaResponsavelCard({ linhas }: Props) {
+export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
   const navigate = useNavigate();
   const { responsavel, responsavelId } = useResponsavelAtual();
 
