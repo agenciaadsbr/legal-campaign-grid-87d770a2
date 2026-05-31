@@ -364,3 +364,123 @@ export function proximoBloqueio(modulos: ModuloAtivacao[]): string | null {
 
 // Suprime warning de "Card" não usado se import futuro for removido
 export type _Card = Card;
+
+/** Dias restantes em relação à meta (30d). Pode ser negativo. */
+export function diasRestantesMeta(cliente: Cliente): number {
+  return META_ATIVACAO_DIAS - diasNoOnboarding(cliente);
+}
+
+/** Badge atual mais relevante do cliente (status_motivo de demanda ativa em espera). */
+export function calcularBadgeAtual(demandas: Demanda[]): string | null {
+  const prioridade = [
+    "Aguardando ação do cliente",
+    "Aguardando aprovação do cliente",
+    "Aguardando etapa anterior",
+    "Aguardando etapa interna",
+  ];
+  for (const status of prioridade) {
+    const d = demandas.find(
+      (x) => !isStatusResolvido(x.status) && canonicalStatus(x.status) === status && x.status_motivo,
+    );
+    if (d?.status_motivo) return d.status_motivo;
+  }
+  // fallback: qualquer status_motivo em demanda ativa
+  const d = demandas.find((x) => !isStatusResolvido(x.status) && x.status_motivo);
+  return d?.status_motivo ?? null;
+}
+
+/** Próximo bloqueio com prioridade explícita conforme especificação da Central. */
+export function proximoBloqueioDetalhado(args: {
+  demandas: Demanda[];
+  etapas: CardPaiEtapa[];
+  modulos: ModuloAtivacao[];
+}): string {
+  const { demandas, etapas, modulos } = args;
+  const ativas = demandas.filter((d) => !isStatusResolvido(d.status));
+
+  const atrasada = ativas.find((d) => canonicalStatus(d.status) === "Atrasado");
+  if (atrasada) return `Tarefa atrasada: ${atrasada.titulo}`;
+
+  const cardTravado = modulos.find(
+    (m) => m.etapaAtual && (m.pct === 0 || (m.etapaAtual && !m.etapaAtual.liberado)),
+  );
+  if (cardTravado) return `Card Pai travado: ${cardTravado.card.titulo}`;
+
+  const aguardandoAcao = ativas.find((d) => canonicalStatus(d.status) === "Aguardando ação do cliente");
+  if (aguardandoAcao)
+    return `Aguardando ação do cliente — ${aguardandoAcao.titulo}`;
+
+  const aguardandoAprov = ativas.find((d) => canonicalStatus(d.status) === "Aguardando aprovação do cliente");
+  if (aguardandoAprov)
+    return `Aguardando aprovação do cliente — ${aguardandoAprov.titulo}`;
+
+  const badge = ativas.find((d) => d.status_motivo);
+  if (badge) return `Badge pendente: ${badge.status_motivo}`;
+
+  const semResp = ativas.find((d) => (d.responsaveis_ids?.length ?? 0) === 0 && !d.responsavel_id);
+  if (semResp) return `Sem responsável: ${semResp.titulo}`;
+
+  const semPrazo = ativas.find((d) => !d.data_limite);
+  if (semPrazo) return `Sem prazo: ${semPrazo.titulo}`;
+
+  const cardIncompleto = modulos.find((m) => m.etapaAtual);
+  if (cardIncompleto)
+    return `${cardIncompleto.card.titulo} — ${cardIncompleto.etapaAtual?.titulo ?? "etapa em andamento"}`;
+
+  const etapaSemResp = etapas.find((e) => !isEtapaResolvida(e) && e.tipo === "tarefa_real" && !e.responsavel_id);
+  if (etapaSemResp) return `Etapa sem responsável: ${etapaSemResp.titulo}`;
+
+  return "Sem bloqueio identificado";
+}
+
+/** Status visual (apenas leitura gerencial). Não altera status real das tarefas. */
+export function calcularStatusVisual(args: {
+  cliente: Cliente;
+  demandas: Demanda[];
+  diasRestantes: number;
+  risco: Risco;
+  badgeAtual: string | null;
+}): StatusVisual {
+  const { cliente, demandas, diasRestantes, risco, badgeAtual } = args;
+  const ativas = demandas.filter((d) => !isStatusResolvido(d.status));
+
+  // Atrasado: meta vencida OU alguma tarefa em status "Atrasado"
+  if (diasRestantes < 0 || diasNoOnboarding(cliente) > META_ATIVACAO_DIAS) return "Atrasado";
+  if (ativas.some((d) => canonicalStatus(d.status) === "Atrasado")) return "Atrasado";
+
+  // Travado: aguardando cliente ou dependência externa
+  const travado = ativas.some((d) => {
+    const s = canonicalStatus(d.status);
+    return s === "Aguardando ação do cliente" || s === "Aguardando aprovação do cliente";
+  });
+  if (travado) return "Travado";
+
+  // Risco
+  if (diasRestantes <= 2 || risco === "Critico") return "Risco";
+
+  // Atenção
+  if (diasRestantes <= 7 || risco === "Atencao" || !!badgeAtual) return "Atenção";
+
+  return "No prazo";
+}
+
+/** Próxima ação humanizada (curta) — mostrar na tabela. */
+export function calcularProximaAcao(args: {
+  modulos: ModuloAtivacao[];
+  demandas: Demanda[];
+}): { titulo: string; modulo: string | null } {
+  const { modulos, demandas } = args;
+  const ativas = demandas.filter((d) => !isStatusResolvido(d.status));
+
+  const atrasada = ativas.find((d) => canonicalStatus(d.status) === "Atrasado");
+  if (atrasada) return { titulo: atrasada.titulo, modulo: atrasada.categoria };
+
+  const mod = modulos.find((m) => m.etapaAtual);
+  if (mod) return { titulo: mod.etapaAtual?.titulo ?? mod.card.titulo, modulo: mod.card.titulo };
+
+  const d = ativas[0];
+  if (d) return { titulo: d.titulo, modulo: d.categoria };
+
+  return { titulo: "Pronto para ativação", modulo: null };
+}
+
