@@ -9,26 +9,35 @@ import type { Cliente } from "@/store/crm";
 import type { Demanda } from "@/store/demandas";
 import type { CardPai, CardPaiEtapa } from "@/store/cardPai";
 import {
+  calcularBadgeAtual,
   calcularProgresso,
+  calcularProximaAcao,
   calcularRisco,
   calcularStatusPrincipal,
+  calcularStatusVisual,
   calcularUltimoAvanco,
   clientePodeAtivar,
   diasNoOnboarding,
+  diasRestantesMeta,
   modulosDoCliente,
-  proximoBloqueio,
+  proximoBloqueioDetalhado,
   pendenciasCriticasParaAtivar,
   type AtivacaoRegras,
   type Risco,
+  type StatusVisual,
+  type ModuloAtivacao,
 } from "@/lib/ativacaoRules";
 
 export interface AtivacaoLinha {
   cliente: Cliente;
   diasOnboarding: number;
+  diasRestantes: number;
   progresso: { resolvidas: number; total: number; pct: number };
   statusPrincipal: string;
+  statusVisual: StatusVisual;
   badgeAtual: string | null;
-  proximoBloqueio: string | null;
+  proximoBloqueio: string;
+  proximaAcao: { titulo: string; modulo: string | null };
   responsavelAtualId: string | null;
   risco: Risco;
   motivosRisco: string[];
@@ -37,6 +46,7 @@ export interface AtivacaoLinha {
   pendenciasRegra: string[];
   atendidasRegra: string[];
   pendenciasCriticas: string[];
+  modulos: ModuloAtivacao[];
   cardsPai: CardPai[];
   etapas: CardPaiEtapa[];
   demandas: Demanda[];
