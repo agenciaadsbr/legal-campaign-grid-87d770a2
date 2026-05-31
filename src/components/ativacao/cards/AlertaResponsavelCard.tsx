@@ -64,8 +64,8 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
 
   return (
     <Card className="p-4">
-      <div className="text-sm font-semibold text-foreground">Alerta por Responsável</div>
-      <p className="text-[10px] uppercase text-muted-foreground mt-0.5">Dashboard diário</p>
+      <div className="text-sm font-semibold text-foreground">Alerta por Responsável (Onboarding)</div>
+      <p className="text-[10px] uppercase text-muted-foreground mt-0.5">Resumo diário · Central de Ativação</p>
 
       <div className="mt-3 rounded-md bg-muted/30 p-3">
         <div className="text-sm text-foreground">
