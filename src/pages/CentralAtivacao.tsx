@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useCRM } from "@/store/crm";
 import { CentralAtivacaoHeader } from "@/components/ativacao/CentralAtivacaoHeader";
 import { CentralAtivacaoKpis } from "@/components/ativacao/CentralAtivacaoKpis";
@@ -30,6 +30,7 @@ export default function CentralAtivacao() {
   const [openImportar, setOpenImportar] = useState(false);
   const [ativandoLinha, setAtivandoLinha] = useState<AtivacaoLinha | null>(null);
   const [detalheLinha, setDetalheLinha] = useState<AtivacaoLinha | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const statusDisponiveis = useMemo(() => {
     const s = new Set<string>();
@@ -50,42 +51,49 @@ export default function CentralAtivacao() {
     });
   }, [linhas, filtros]);
 
+  const handleVerTarefasResponsavel = (responsavelId: string) => {
+    setFiltros((f) => ({ ...f, responsavelId }));
+    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div className="p-4 sm:p-6 max-w-[1700px] mx-auto">
+    <div className="p-4 sm:p-6 max-w-[1700px] mx-auto space-y-5">
       <CentralAtivacaoHeader
         onAbrirRegras={() => setOpenRegras(true)}
         onImportar={() => setOpenImportar(true)}
       />
 
-      <div className="mt-5 grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
-        {/* COLUNA PRINCIPAL */}
-        <div className="space-y-5 min-w-0">
-          <CentralAtivacaoKpis linhas={linhas} />
-          <CentralAtivacaoFiltros
-            filtros={filtros}
-            onChange={setFiltros}
-            statusDisponiveis={statusDisponiveis}
-          />
-          {loading && linhas.length === 0 ? (
-            <div className="rounded-md border border-border bg-card p-12 text-center text-sm text-muted-foreground">
-              Carregando...
-            </div>
-          ) : (
-            <CentralAtivacaoTable
-              linhas={filtradas}
-              onAbrirDetalhe={(l) => setDetalheLinha(l)}
-              onMarcarAtivo={(l) => setAtivandoLinha(l)}
-            />
-          )}
-        </div>
+      {/* KPIs + Meta de Ativação fixa no topo */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-3">
+        <CentralAtivacaoKpis linhas={linhas} />
+        <MetaAtivacaoCard />
+      </div>
 
-        {/* SIDEBAR */}
-        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-          <MetaAtivacaoCard />
-          <LegendaStatusCard />
-          <AlertaResponsavelCard linhas={linhas} />
-          <AtivacoesRiscoCard linhas={linhas} onAbrirDetalhe={(l) => setDetalheLinha(l)} />
-        </aside>
+      {/* Cards informativos: Alerta → Risco → Legenda */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <AlertaResponsavelCard linhas={linhas} onVerTarefas={handleVerTarefasResponsavel} />
+        <AtivacoesRiscoCard linhas={linhas} onAbrirDetalhe={(l) => setDetalheLinha(l)} />
+        <LegendaStatusCard />
+      </div>
+
+      {/* Tabela em largura total */}
+      <div ref={tableRef} className="space-y-3">
+        <CentralAtivacaoFiltros
+          filtros={filtros}
+          onChange={setFiltros}
+          statusDisponiveis={statusDisponiveis}
+        />
+        {loading && linhas.length === 0 ? (
+          <div className="rounded-md border border-border bg-card p-12 text-center text-sm text-muted-foreground">
+            Carregando...
+          </div>
+        ) : (
+          <CentralAtivacaoTable
+            linhas={filtradas}
+            onAbrirDetalhe={(l) => setDetalheLinha(l)}
+            onMarcarAtivo={(l) => setAtivandoLinha(l)}
+          />
+        )}
       </div>
 
       <RegrasAtivacaoDialog open={openRegras} onOpenChange={setOpenRegras} />
