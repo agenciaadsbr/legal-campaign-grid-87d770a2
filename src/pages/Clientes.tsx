@@ -1454,6 +1454,7 @@ export default function Clientes() {
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
+  const [openImportarCentral, setOpenImportarCentral] = useState(false);
   const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
   const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
     () => localStorage.getItem("clientes:filtroStatusGlobal") ?? "todos",
