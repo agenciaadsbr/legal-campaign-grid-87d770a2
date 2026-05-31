@@ -14,17 +14,15 @@ export function LegendaStatusCard() {
   return (
     <Card className="p-4">
       <div className="text-sm font-semibold text-foreground">Legenda de Status (Central de Ativação)</div>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-2 space-y-1.5">
         {ITENS.map((i) => (
-          <li key={i.status} className="flex items-start gap-2">
-            <div className="pt-0.5">
-              <StatusVisualBadge status={i.status} />
-            </div>
-            <span className="text-xs text-muted-foreground leading-snug">{i.desc}</span>
+          <li key={i.status} className="flex items-center gap-2">
+            <StatusVisualBadge status={i.status} />
+            <span className="text-xs text-muted-foreground leading-snug truncate">{i.desc}</span>
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-[10px] text-muted-foreground/80 italic">
+      <p className="mt-2 text-[10px] text-muted-foreground/80 italic">
         Esses status são exclusivos da Central — não alteram os status reais das tarefas.
       </p>
     </Card>
