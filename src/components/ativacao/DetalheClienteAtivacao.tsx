@@ -385,11 +385,11 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                           {d.data_limite ? new Date(d.data_limite).toLocaleDateString("pt-BR") : "—"}
                         </td>
                         <td className="p-2">
-                          <Badge variant="outline" className="text-[10px]">{canonicalStatus(d.status)}</Badge>
+                          <StatusTarefaBadge status={canonicalStatus(d.status)} />
                         </td>
                         <td className="p-2">
                           {d.status_motivo ? (
-                            <Badge variant="outline" className="text-[10px]">{d.status_motivo}</Badge>
+                            <BadgeMotivo motivo={d.status_motivo} />
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
