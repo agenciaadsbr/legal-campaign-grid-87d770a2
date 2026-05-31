@@ -9,6 +9,11 @@ import { canonicalStatus } from "@/lib/demandas-categorias";
 
 export type Risco = "OK" | "Atencao" | "Critico";
 
+/** Status exclusivamente visual/gerencial da Central. Não altera status reais. */
+export type StatusVisual = "No prazo" | "Atenção" | "Risco" | "Atrasado" | "Travado";
+
+export const META_ATIVACAO_DIAS = 30;
+
 export interface AtivacaoRegras {
   id: string;
   requer_meta_ads: boolean;
