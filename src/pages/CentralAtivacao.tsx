@@ -61,6 +61,9 @@ export default function CentralAtivacao() {
       <CentralAtivacaoHeader
         onAbrirRegras={() => setOpenRegras(true)}
         onImportar={() => setOpenImportar(true)}
+        filtros={filtros}
+        onChangeFiltros={setFiltros}
+        statusDisponiveis={statusDisponiveis}
       />
 
       {/* KPIs + Meta de Ativação fixa no topo */}
@@ -78,11 +81,6 @@ export default function CentralAtivacao() {
 
       {/* Tabela em largura total */}
       <div ref={tableRef} className="space-y-3">
-        <CentralAtivacaoFiltros
-          filtros={filtros}
-          onChange={setFiltros}
-          statusDisponiveis={statusDisponiveis}
-        />
         {loading && linhas.length === 0 ? (
           <div className="rounded-md border border-border bg-card p-12 text-center text-sm text-muted-foreground">
             Carregando...
