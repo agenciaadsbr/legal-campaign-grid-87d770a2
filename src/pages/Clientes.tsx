@@ -1698,6 +1698,17 @@ export default function Clientes() {
           )}
           {isAdmin && <ConfiguracoesSheet />}
           {isAdmin && <GerenciarColunas />}
+          {canWrite && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => setOpenImportarCentral(true)}
+              title="Enviar clientes selecionados para a Central de Ativação"
+            >
+              <Rocket className="h-4 w-4" /> Enviar p/ Central
+            </Button>
+          )}
           {canWrite && <NovoClienteDialog />}
         </div>
       </div>
