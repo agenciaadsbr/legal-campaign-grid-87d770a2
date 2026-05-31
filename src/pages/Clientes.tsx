@@ -2,7 +2,8 @@ import { useCRM, ColumnConfig, DropdownOption } from "@/store/crm";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X, Settings, Zap, AlertCircle, Clock, ChevronsUpDown, Pencil } from "lucide-react";
+import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X, Settings, Zap, AlertCircle, Clock, ChevronsUpDown, Pencil, Rocket } from "lucide-react";
+import { ImportarClientesDialog } from "@/components/ativacao/ImportarClientesDialog";
 import {
   AlertDialog,
   AlertDialogAction,
