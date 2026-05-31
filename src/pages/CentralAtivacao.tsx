@@ -10,6 +10,10 @@ import { RegrasAtivacaoDialog } from "@/components/ativacao/RegrasAtivacaoDialog
 import { ImportarClientesDialog } from "@/components/ativacao/ImportarClientesDialog";
 import { MarcarAtivoDialog } from "@/components/ativacao/MarcarAtivoDialog";
 import { DetalheClienteAtivacao } from "@/components/ativacao/DetalheClienteAtivacao";
+import { MetaAtivacaoCard } from "@/components/ativacao/cards/MetaAtivacaoCard";
+import { LegendaStatusCard } from "@/components/ativacao/cards/LegendaStatusCard";
+import { AlertaResponsavelCard } from "@/components/ativacao/cards/AlertaResponsavelCard";
+import { AtivacoesRiscoCard } from "@/components/ativacao/cards/AtivacoesRiscoCard";
 import { useAtivacaoRegras } from "@/hooks/useAtivacaoRegras";
 import { useOnboardingAgregado, type AtivacaoLinha } from "@/hooks/useOnboardingProgress";
 import { clienteNaCentral } from "@/lib/ativacaoRules";
@@ -47,28 +51,42 @@ export default function CentralAtivacao() {
   }, [linhas, filtros]);
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
+    <div className="p-4 sm:p-6 max-w-[1700px] mx-auto">
       <CentralAtivacaoHeader
         onAbrirRegras={() => setOpenRegras(true)}
         onImportar={() => setOpenImportar(true)}
       />
-      <CentralAtivacaoKpis linhas={linhas} />
-      <CentralAtivacaoFiltros
-        filtros={filtros}
-        onChange={setFiltros}
-        statusDisponiveis={statusDisponiveis}
-      />
-      {loading && linhas.length === 0 ? (
-        <div className="rounded-md border border-border bg-card p-12 text-center text-sm text-muted-foreground">
-          Carregando...
+
+      <div className="mt-5 grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
+        {/* COLUNA PRINCIPAL */}
+        <div className="space-y-5 min-w-0">
+          <CentralAtivacaoKpis linhas={linhas} />
+          <CentralAtivacaoFiltros
+            filtros={filtros}
+            onChange={setFiltros}
+            statusDisponiveis={statusDisponiveis}
+          />
+          {loading && linhas.length === 0 ? (
+            <div className="rounded-md border border-border bg-card p-12 text-center text-sm text-muted-foreground">
+              Carregando...
+            </div>
+          ) : (
+            <CentralAtivacaoTable
+              linhas={filtradas}
+              onAbrirDetalhe={(l) => setDetalheLinha(l)}
+              onMarcarAtivo={(l) => setAtivandoLinha(l)}
+            />
+          )}
         </div>
-      ) : (
-        <CentralAtivacaoTable
-          linhas={filtradas}
-          onAbrirDetalhe={(l) => setDetalheLinha(l)}
-          onMarcarAtivo={(l) => setAtivandoLinha(l)}
-        />
-      )}
+
+        {/* SIDEBAR */}
+        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+          <MetaAtivacaoCard />
+          <LegendaStatusCard />
+          <AlertaResponsavelCard linhas={linhas} />
+          <AtivacoesRiscoCard linhas={linhas} onAbrirDetalhe={(l) => setDetalheLinha(l)} />
+        </aside>
+      </div>
 
       <RegrasAtivacaoDialog open={openRegras} onOpenChange={setOpenRegras} />
       <ImportarClientesDialog open={openImportar} onOpenChange={setOpenImportar} />
