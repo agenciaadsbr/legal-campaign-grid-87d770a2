@@ -2,7 +2,8 @@ import { useCRM, ColumnConfig, DropdownOption } from "@/store/crm";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X, Settings, Zap, AlertCircle, Clock, ChevronsUpDown, Pencil } from "lucide-react";
+import { Plus, Search, Settings2, ChevronDown, ChevronRight, Trash2, Eye, EyeOff, GripVertical, Pin, PinOff, Save, BookmarkCheck, Filter, CheckCircle2, X, Settings, Zap, AlertCircle, Clock, ChevronsUpDown, Pencil, Rocket } from "lucide-react";
+import { ImportarClientesDialog } from "@/components/ativacao/ImportarClientesDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -633,10 +634,11 @@ function EditarClienteDialog({
 }
 
 function AcoesCliente({ cliente }: { cliente: any }) {
-  const { deleteCliente } = useCRM();
+  const { deleteCliente, updateCliente } = useCRM();
   const { isAdmin, canWrite } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
+  const [enviandoCentral, setEnviandoCentral] = useState(false);
 
   const handleDelete = async () => {
     try {
@@ -648,10 +650,44 @@ function AcoesCliente({ cliente }: { cliente: any }) {
     }
   };
 
+  const jaOnboarding = (cliente.status_global ?? "Onboarding") === "Onboarding";
+
+  const enviarParaCentral = async () => {
+    if (jaOnboarding) {
+      toast.info("Cliente já está em Onboarding");
+      return;
+    }
+    if (!confirm(
+      `Enviar "${cliente.nome_cliente}" para a Central de Ativação? ` +
+      `O status global será alterado para Onboarding.`,
+    )) return;
+    setEnviandoCentral(true);
+    try {
+      await updateCliente(cliente.id, { status_global: "Onboarding" } as any);
+      toast.success("Cliente enviado para a Central de Ativação");
+    } catch (e: any) {
+      toast.error(`Erro: ${e?.message ?? "tente novamente"}`);
+    } finally {
+      setEnviandoCentral(false);
+    }
+  };
+
   if (!canWrite && !isAdmin) return null;
 
   return (
     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      {canWrite && !jaOnboarding && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
+          title="Enviar para Central de Ativação"
+          onClick={enviarParaCentral}
+          disabled={enviandoCentral}
+        >
+          <Rocket className="h-3.5 w-3.5" />
+        </Button>
+      )}
       {canWrite && (
         <Button
           size="icon"
@@ -1418,6 +1454,7 @@ export default function Clientes() {
   const { canWrite, isAdmin } = useAuth();
   const [busca, setBusca] = useState("");
   const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
+  const [openImportarCentral, setOpenImportarCentral] = useState(false);
   const [filtroResponsaveis, setFiltroResponsaveis] = useState<string[]>([]);
   const [filtroStatusGlobal, setFiltroStatusGlobal] = useState<string>(
     () => localStorage.getItem("clientes:filtroStatusGlobal") ?? "todos",
@@ -1661,6 +1698,17 @@ export default function Clientes() {
           )}
           {isAdmin && <ConfiguracoesSheet />}
           {isAdmin && <GerenciarColunas />}
+          {canWrite && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => setOpenImportarCentral(true)}
+              title="Enviar clientes selecionados para a Central de Ativação"
+            >
+              <Rocket className="h-4 w-4" /> Enviar p/ Central
+            </Button>
+          )}
           {canWrite && <NovoClienteDialog />}
         </div>
       </div>
@@ -1690,6 +1738,7 @@ export default function Clientes() {
         open={!!historicoClienteId}
         onOpenChange={(v) => !v && setHistoricoClienteId(null)}
       />
+      <ImportarClientesDialog open={openImportarCentral} onOpenChange={setOpenImportarCentral} />
     </div>
   );
 }
