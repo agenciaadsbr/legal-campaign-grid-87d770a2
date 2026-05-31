@@ -32,7 +32,7 @@ export function CentralAtivacaoFiltros({ filtros, onChange, statusDisponiveis }:
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative flex-1 min-w-[200px] max-w-xs">
+      <div className="relative w-[220px]">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Buscar cliente..."
@@ -43,7 +43,7 @@ export function CentralAtivacaoFiltros({ filtros, onChange, statusDisponiveis }:
       </div>
 
       <Select value={filtros.responsavelId} onValueChange={(v) => set("responsavelId", v)}>
-        <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
+        <SelectTrigger className="h-9 w-[160px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="todos">Todos responsáveis</SelectItem>
           {responsaveis.map((r) => (
@@ -53,7 +53,7 @@ export function CentralAtivacaoFiltros({ filtros, onChange, statusDisponiveis }:
       </Select>
 
       <Select value={filtros.risco} onValueChange={(v) => set("risco", v)}>
-        <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Risco" /></SelectTrigger>
+        <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Risco" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="todos">Todos riscos</SelectItem>
           <SelectItem value="Critico">Crítico</SelectItem>
@@ -63,7 +63,7 @@ export function CentralAtivacaoFiltros({ filtros, onChange, statusDisponiveis }:
       </Select>
 
       <Select value={filtros.statusPrincipal} onValueChange={(v) => set("statusPrincipal", v)}>
-        <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Status principal" /></SelectTrigger>
+        <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Status principal" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="todos">Todos status</SelectItem>
           {statusDisponiveis.map((s) => (
@@ -76,7 +76,7 @@ export function CentralAtivacaoFiltros({ filtros, onChange, statusDisponiveis }:
         variant="ghost"
         size="sm"
         onClick={() => onChange(FILTROS_VAZIOS)}
-        className="text-muted-foreground"
+        className="text-muted-foreground h-9"
       >
         <X className="h-4 w-4 mr-1" />
         Limpar
