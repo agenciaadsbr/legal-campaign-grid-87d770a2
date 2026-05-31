@@ -102,8 +102,12 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
         </div>
       )}
 
-      <Button size="sm" className="w-full mt-4" onClick={() => navigate("/minhas-tarefas")}>
-        Ver minhas tarefas
+      <Button
+        size="sm"
+        className="w-full mt-4"
+        onClick={() => (onVerTarefas ? onVerTarefas(responsavelId) : navigate("/minhas-tarefas"))}
+      >
+        Ver tarefas (Onboarding)
       </Button>
     </Card>
   );
