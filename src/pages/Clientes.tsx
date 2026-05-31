@@ -676,6 +676,18 @@ function AcoesCliente({ cliente }: { cliente: any }) {
 
   return (
     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      {canWrite && !jaOnboarding && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
+          title="Enviar para Central de Ativação"
+          onClick={enviarParaCentral}
+          disabled={enviandoCentral}
+        >
+          <Rocket className="h-3.5 w-3.5" />
+        </Button>
+      )}
       {canWrite && (
         <Button
           size="icon"
