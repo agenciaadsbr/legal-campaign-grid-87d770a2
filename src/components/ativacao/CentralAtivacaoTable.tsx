@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useCRM } from "@/store/crm";
 import type { AtivacaoLinha } from "@/hooks/useOnboardingProgress";
 import { StatusVisualBadge } from "@/components/ativacao/StatusVisualBadge";
+import { EstrategiasBadges } from "@/components/estrategias/EstrategiasBadges";
 
 interface Props {
   linhas: AtivacaoLinha[];
@@ -42,6 +43,7 @@ export function CentralAtivacaoTable({ linhas, onAbrirDetalhe, onMarcarAtivo }: 
           <TableRow>
             <TableHead className="w-10 text-center">#</TableHead>
             <TableHead className="min-w-[180px]">Cliente</TableHead>
+            <TableHead className="min-w-[160px]">Estratégias</TableHead>
             <TableHead className="min-w-[130px]">Progresso</TableHead>
             <TableHead className="whitespace-nowrap">Dias decorridos</TableHead>
             <TableHead className="whitespace-nowrap">Dias restantes</TableHead>
@@ -72,6 +74,9 @@ export function CentralAtivacaoTable({ linhas, onAbrirDetalhe, onMarcarAtivo }: 
                       {new Date(l.cliente.data_inicio_onboarding).toLocaleDateString("pt-BR")}
                     </div>
                   )}
+                </TableCell>
+                <TableCell>
+                  <EstrategiasBadges clienteId={l.cliente.id} size="xs" />
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
