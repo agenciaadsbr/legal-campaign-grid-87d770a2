@@ -413,7 +413,7 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      <TableHead className="min-w-[180px]">Estratégias</TableHead>
+                      
                       <TableHead className="whitespace-nowrap">
                         <SortHeader
                           label="Período do contrato"
