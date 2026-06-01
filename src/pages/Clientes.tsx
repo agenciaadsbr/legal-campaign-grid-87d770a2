@@ -198,6 +198,10 @@ function NovoClienteDialog() {
   const resetAll = () => {
     setForm(initialForm());
     setCreatedId(null);
+    setEstrategias({
+      meta_ads: "nao_usar", google_ads: "nao_usar", posts: "nao_usar",
+      gmn: "nao_usar", crm: "nao_usar",
+    });
   };
 
   const handleOpenChange = (v: boolean) => {
