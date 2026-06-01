@@ -391,6 +391,7 @@ function NovoClienteDialog() {
             <Label>Observações</Label>
             <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </div>
+          <EstrategiasConfigEditor value={estrategias} onChange={setEstrategias} />
         </div>
         <DialogFooter className="gap-2 sm:gap-2 flex-wrap">
           {!isEdit ? (
