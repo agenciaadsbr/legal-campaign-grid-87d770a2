@@ -473,7 +473,7 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
   return (
     <Dialog open={!!demanda} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl w-[92vw] max-h-[90vh] overflow-hidden p-3 gap-2 flex flex-col">
-        <fieldset disabled={!canWrite || isAguardando} className="contents">
+        <fieldset disabled={!canWrite} className="contents">
           {/* Voltar para Visão Geral */}
           <div className="shrink-0">
             <VoltarVisaoGeralButton onClick={() => handleOpenChange(false)} />
