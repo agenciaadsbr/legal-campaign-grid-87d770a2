@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { HistoricoComentariosDialog } from "@/components/HistoricoComentariosDialog";
 import { MessageSquare, MessageSquarePlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { NATIVE_CLIENT_COLUMNS, useColunasNativasClientes } from "@/lib/clientesColunasNativas";
 import {
   DndContext,
   closestCenter,
