@@ -225,6 +225,10 @@ function NovoClienteDialog() {
       };
       const id = await addCliente(payload as any);
       setCreatedId(id);
+      // Salva estratégias dentro de campos_personalizados
+      await updateCliente(id, {
+        custom: { estrategias_ativas: estrategias },
+      } as any);
       toast.success(`Cliente criado — ${totalCards} cards e contrato gerados automaticamente`);
     } catch (e: any) {
       toast.error(`Erro ao criar: ${e?.message ?? "tente novamente"}`);
