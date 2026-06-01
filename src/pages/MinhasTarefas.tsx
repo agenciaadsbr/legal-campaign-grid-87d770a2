@@ -12,6 +12,8 @@ import {
 import { MinhasTarefasFiltros, type FiltrosState } from "@/components/tarefas/MinhasTarefasFiltros";
 import { MinhasTarefasTabela } from "@/components/tarefas/MinhasTarefasTabela";
 import { ConcluirTarefaDialog } from "@/components/tarefas/ConcluirTarefaDialog";
+import { deriveEstrategias, estrategiasVisiveis } from "@/lib/estrategiasAtivas";
+import { useAtivacaoRegras } from "@/hooks/useAtivacaoRegras";
 import { KpiCard } from "@/components/relatorios/KpiCard";
 import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
 import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
@@ -135,8 +137,19 @@ export default function MinhasTarefas() {
     [responsavelId, user?.id, scopeResp, scopeAuth, demandas, cards, planejamento, documentacao, clientes, contratos, dependencies],
   );
 
+  const { regras } = useAtivacaoRegras();
+
+  const estrategiasPorCliente = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const c of clientes) {
+      const visiveis = estrategiasVisiveis(deriveEstrategias(c, demandas, cards, regras));
+      map.set(c.id, new Set(visiveis.map((v) => v.id)));
+    }
+    return map;
+  }, [clientes, demandas, cards, regras]);
+
   const tarefasFiltradas = useMemo(() => {
-    const { cliente, areas, status, busca, periodo, contexto } = filtros;
+    const { cliente, areas, status, busca, periodo, contexto, estrategia } = filtros;
     const buscaLower = busca.trim().toLowerCase();
     const ini = periodo.inicio;
     const fim = periodo.fim;
