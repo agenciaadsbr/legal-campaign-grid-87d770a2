@@ -563,6 +563,7 @@ export function ClientesGeralTable({
                             >
                               {cliente.nome_cliente}
                             </Link>
+                            <EstrategiasBadges clienteId={cliente.id} size="xs" className="mt-0.5" />
                           </TableCell>
                           <TableCell>
                             <StatusClienteBadge status={cliente.status_global} />
