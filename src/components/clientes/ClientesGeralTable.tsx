@@ -583,214 +583,240 @@ export function ClientesGeralTable({
                           <TableCell className="text-xs text-muted-foreground tabular-nums w-10">
                             {idx + 1}
                           </TableCell>
-                          <TableCell className="min-w-[200px] max-w-[260px]">
-                            <Link
-                              to={`/clientes/${cliente.id}`}
-                              className="text-primary text-xs font-medium hover:underline break-words leading-snug block"
-                            >
-                              {cliente.nome_cliente}
-                            </Link>
-                            <EstrategiasBadges clienteId={cliente.id} size="xs" className="mt-0.5" />
-                          </TableCell>
-                          <TableCell>
-                            <StatusClienteBadge status={cliente.status_global} />
-                          </TableCell>
-                          <TableCell className="text-xs max-w-[240px]">
-                            {!heavyDataLoaded ? (
-                              <div className="h-4 w-full bg-muted animate-pulse rounded max-w-[150px]" />
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onAbrirHistorico?.(cliente.id);
-                                }}
-                                className="text-left hover:text-primary line-clamp-2 break-words leading-snug w-full"
-                                title={cliente.ultimo_comentario}
+                          {isVisible("cliente") && (
+                            <TableCell className="min-w-[200px] max-w-[260px]">
+                              <Link
+                                to={`/clientes/${cliente.id}`}
+                                className="text-primary text-xs font-medium hover:underline break-words leading-snug block"
                               >
-                                {cliente.ultimo_comentario || (
-                                  <span className="text-muted-foreground">—</span>
-                                )}
-                              </button>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {cliente.nicho && nichoOpt ? (
-                              <ColorBadge label={nichoOpt.label} color={nichoOpt.cor} />
-                            ) : (
-                              <EmptyDash />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">
-                            {inicioContrato ? (
-                              <>
-                                {new Date(inicioContrato).toLocaleDateString("pt-BR")}
-                                {" → "}
-                                {fimContrato
-                                  ? new Date(fimContrato).toLocaleDateString("pt-BR")
-                                  : "—"}
-                              </>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
+                                {cliente.nome_cliente}
+                              </Link>
+                              <EstrategiasBadges clienteId={cliente.id} size="xs" className="mt-0.5" />
+                            </TableCell>
+                          )}
+                          {isVisible("status") && (
+                            <TableCell>
+                              <StatusClienteBadge status={cliente.status_global} />
+                            </TableCell>
+                          )}
+                          {isVisible("ultimo_comentario") && (
+                            <TableCell className="text-xs max-w-[240px]">
+                              {!heavyDataLoaded ? (
+                                <div className="h-4 w-full bg-muted animate-pulse rounded max-w-[150px]" />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAbrirHistorico?.(cliente.id);
+                                  }}
+                                  className="text-left hover:text-primary line-clamp-2 break-words leading-snug w-full"
+                                  title={cliente.ultimo_comentario}
+                                >
+                                  {cliente.ultimo_comentario || (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </button>
+                              )}
+                            </TableCell>
+                          )}
+                          {isVisible("nicho") && (
+                            <TableCell>
+                              {cliente.nicho && nichoOpt ? (
+                                <ColorBadge label={nichoOpt.label} color={nichoOpt.cor} />
+                              ) : (
+                                <EmptyDash />
+                              )}
+                            </TableCell>
+                          )}
+                          {isVisible("periodo") && (
+                            <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">
+                              {inicioContrato ? (
+                                <>
+                                  {new Date(inicioContrato).toLocaleDateString("pt-BR")}
+                                  {" → "}
+                                  {fimContrato
+                                    ? new Date(fimContrato).toLocaleDateString("pt-BR")
+                                    : "—"}
+                                </>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                          )}
 
                           {/* Posts atrasados */}
-                          <TableCell className="text-center">
-                            {!heavyDataLoaded ? renderSkeleton() : (
-                              postsAtrasados === 0 ? (
-                                <EmptyDash />
-                              ) : (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" className="inline-flex">
-                                      <AlertBadge
-                                        count={postsAtrasados}
-                                        icon={AlertTriangle}
-                                        tone="destructive"
-                                      />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="bottom"
-                                    align="center"
-                                    className={tooltipContentClass}
-                                  >
-                                    <div className="p-3 space-y-2 text-xs">
-                                      <div className="font-semibold text-sm">
-                                        {postsAtrasados} post{postsAtrasados > 1 ? "s" : ""} atrasado
-                                        {postsAtrasados > 1 ? "s" : ""}
-                                      </div>
-                                      <ul className="space-y-1">
-                                        {postsAtrasadosList.slice(0, 5).map((p) => (
-                                          <li
-                                            key={p.id}
-                                            className="border-b border-border/60 last:border-0 pb-1 last:pb-0"
-                                          >
-                                            <div className="font-medium line-clamp-2 break-words">
-                                              Criar post — {p.titulo_card}
-                                            </div>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                      {postsAtrasados > 5 && (
-                                        <div className="text-muted-foreground pt-1 border-t border-border/60">
-                                          + {postsAtrasados - 5} post
-                                          {postsAtrasados - 5 > 1 ? "s" : ""} atrasado
-                                          {postsAtrasados - 5 > 1 ? "s" : ""}
+                          {isVisible("posts_atrasados") && (
+                            <TableCell className="text-center">
+                              {!heavyDataLoaded ? renderSkeleton() : (
+                                postsAtrasados === 0 ? (
+                                  <EmptyDash />
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button type="button" className="inline-flex">
+                                        <AlertBadge
+                                          count={postsAtrasados}
+                                          icon={AlertTriangle}
+                                          tone="destructive"
+                                        />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      align="center"
+                                      className={tooltipContentClass}
+                                    >
+                                      <div className="p-3 space-y-2 text-xs">
+                                        <div className="font-semibold text-sm">
+                                          {postsAtrasados} post{postsAtrasados > 1 ? "s" : ""} atrasado
+                                          {postsAtrasados > 1 ? "s" : ""}
                                         </div>
-                                      )}
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )
-                            )}
-                          </TableCell>
+                                        <ul className="space-y-1">
+                                          {postsAtrasadosList.slice(0, 5).map((p) => (
+                                            <li
+                                              key={p.id}
+                                              className="border-b border-border/60 last:border-0 pb-1 last:pb-0"
+                                            >
+                                              <div className="font-medium line-clamp-2 break-words">
+                                                Criar post — {p.titulo_card}
+                                              </div>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                        {postsAtrasados > 5 && (
+                                          <div className="text-muted-foreground pt-1 border-t border-border/60">
+                                            + {postsAtrasados - 5} post
+                                            {postsAtrasados - 5 > 1 ? "s" : ""} atrasado
+                                            {postsAtrasados - 5 > 1 ? "s" : ""}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )
+                              )}
+                            </TableCell>
+                          )}
 
                           {/* Tarefas atrasadas */}
-                          <TableCell className="text-center">
-                            {!heavyDataLoaded ? renderSkeleton() : (
-                              demAtrasadas === 0 ? (
+                          {isVisible("tarefas_atrasadas") && (
+                            <TableCell className="text-center">
+                              {!heavyDataLoaded ? renderSkeleton() : (
+                                demAtrasadas === 0 ? (
+                                  <EmptyDash />
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button type="button" className="inline-flex">
+                                        <AlertBadge
+                                          count={demAtrasadas}
+                                          icon={Hourglass}
+                                          tone="amber"
+                                        />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      align="center"
+                                      className={tooltipContentClass}
+                                    >
+                                      {renderTaskList(
+                                        demAtrasadasList,
+                                        demAtrasadas,
+                                        "tarefa atrasada",
+                                        "tarefas atrasadas",
+                                      )}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )
+                              )}
+                            </TableCell>
+                          )}
+
+                          {/* Tarefas urgentes */}
+                          {isVisible("tarefas_urgentes") && (
+                            <TableCell className="text-center">
+                              {!heavyDataLoaded ? renderSkeleton() : (
+                                demUrgentes === 0 ? (
+                                  <EmptyDash />
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button type="button" className="inline-flex">
+                                        <AlertBadge count={demUrgentes} icon={Zap} tone="primary" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      align="center"
+                                      className={tooltipContentClass}
+                                    >
+                                      {renderTaskList(
+                                        demUrgentesList,
+                                        demUrgentes,
+                                        "tarefa urgente",
+                                        "tarefas urgentes",
+                                      )}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )
+                              )}
+                            </TableCell>
+                          )}
+
+                          {/* Onboarding */}
+                          {isVisible("onboarding") && (
+                            <TableCell className="text-center">
+                              {onboardingState === null ? (
                                 <EmptyDash />
                               ) : (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <button type="button" className="inline-flex">
                                       <AlertBadge
-                                        count={demAtrasadas}
-                                        icon={Hourglass}
-                                        tone="amber"
+                                        count={0}
+                                        icon={CalendarX}
+                                        tone={onboardingState === "vencido" ? "destructive" : "amber"}
+                                        label={onboardingState === "vencido" ? "Vencido" : "Pendente"}
                                       />
                                     </button>
                                   </TooltipTrigger>
                                   <TooltipContent
                                     side="bottom"
                                     align="center"
-                                    className={tooltipContentClass}
+                                    className="bg-popover text-popover-foreground border border-border shadow-lg"
                                   >
-                                    {renderTaskList(
-                                      demAtrasadasList,
-                                      demAtrasadas,
-                                      "tarefa atrasada",
-                                      "tarefas atrasadas",
-                                    )}
+                                    {onboardingState === "vencido"
+                                      ? "Onboarding com prazo vencido"
+                                      : "Onboarding pendente"}
                                   </TooltipContent>
                                 </Tooltip>
-                              )
-                            )}
-                          </TableCell>
+                              )}
+                            </TableCell>
+                          )}
 
-                          {/* Tarefas urgentes */}
-                          <TableCell className="text-center">
-                            {!heavyDataLoaded ? renderSkeleton() : (
-                              demUrgentes === 0 ? (
-                                <EmptyDash />
-                              ) : (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" className="inline-flex">
-                                      <AlertBadge count={demUrgentes} icon={Zap} tone="primary" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="bottom"
-                                    align="center"
-                                    className={tooltipContentClass}
-                                  >
-                                    {renderTaskList(
-                                      demUrgentesList,
-                                      demUrgentes,
-                                      "tarefa urgente",
-                                      "tarefas urgentes",
-                                    )}
-                                  </TooltipContent>
-                                </Tooltip>
-                              )
-                            )}
-                          </TableCell>
-
-                          {/* Onboarding */}
-                          <TableCell className="text-center">
-                            {onboardingState === null ? (
-                              <EmptyDash />
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button type="button" className="inline-flex">
-                                    <AlertBadge
-                                      count={0}
-                                      icon={CalendarX}
-                                      tone={onboardingState === "vencido" ? "destructive" : "amber"}
-                                      label={onboardingState === "vencido" ? "Vencido" : "Pendente"}
-                                    />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="bottom"
-                                  align="center"
-                                  className="bg-popover text-popover-foreground border border-border shadow-lg"
-                                >
-                                  {onboardingState === "vencido"
-                                    ? "Onboarding com prazo vencido"
-                                    : "Onboarding pendente"}
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </TableCell>
-
-                          <TableCell className="whitespace-nowrap">
-                            <DataContratacaoCell clienteId={cliente.id} value={cliente.data_contratacao} />
-                          </TableCell>
-                          <TableCell>
-                            <StatusRelacionamentoCell clienteId={cliente.id} value={cliente.status_relacionamento} />
-                          </TableCell>
-                          <TableCell>
-                            <StatusPerformanceCell clienteId={cliente.id} value={cliente.status_performance} />
-                          </TableCell>
-                          <TableCell>
-                            <LinkRelatorioCell clienteId={cliente.id} value={cliente.link_relatorio} />
-                          </TableCell>
-                          {acoesSlot && (
+                          {isVisible("contratacao") && (
+                            <TableCell className="whitespace-nowrap">
+                              <DataContratacaoCell clienteId={cliente.id} value={cliente.data_contratacao} />
+                            </TableCell>
+                          )}
+                          {isVisible("relacionamento") && (
+                            <TableCell>
+                              <StatusRelacionamentoCell clienteId={cliente.id} value={cliente.status_relacionamento} />
+                            </TableCell>
+                          )}
+                          {isVisible("performance") && (
+                            <TableCell>
+                              <StatusPerformanceCell clienteId={cliente.id} value={cliente.status_performance} />
+                            </TableCell>
+                          )}
+                          {isVisible("relatorio") && (
+                            <TableCell>
+                              <LinkRelatorioCell clienteId={cliente.id} value={cliente.link_relatorio} />
+                            </TableCell>
+                          )}
+                          {acoesSlot && isVisible("acoes") && (
                             <TableCell className="text-right">{acoesSlot(cliente.id)}</TableCell>
                           )}
                         </TableRow>
