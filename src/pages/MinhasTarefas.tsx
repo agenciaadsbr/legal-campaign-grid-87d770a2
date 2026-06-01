@@ -12,6 +12,8 @@ import {
 import { MinhasTarefasFiltros, type FiltrosState } from "@/components/tarefas/MinhasTarefasFiltros";
 import { MinhasTarefasTabela } from "@/components/tarefas/MinhasTarefasTabela";
 import { ConcluirTarefaDialog } from "@/components/tarefas/ConcluirTarefaDialog";
+import { deriveEstrategias, estrategiasVisiveis } from "@/lib/estrategiasAtivas";
+import { useAtivacaoRegras } from "@/hooks/useAtivacaoRegras";
 import { KpiCard } from "@/components/relatorios/KpiCard";
 import { AtribuirResponsaveisPopover } from "@/components/demandas/AtribuirResponsaveisPopover";
 import { DefinirDatasPopover } from "@/components/demandas/DefinirDatasPopover";
@@ -40,6 +42,7 @@ const FILTROS_INICIAIS: FiltrosState = {
   busca: "",
   periodo: { preset: "todos", inicio: null, fim: null },
   contexto: "todos",
+  estrategia: "todas",
 };
 
 type Visualizacao = "minhas" | "todos" | string; // string = responsavel_id
@@ -134,8 +137,19 @@ export default function MinhasTarefas() {
     [responsavelId, user?.id, scopeResp, scopeAuth, demandas, cards, planejamento, documentacao, clientes, contratos, dependencies],
   );
 
+  const { regras } = useAtivacaoRegras();
+
+  const estrategiasPorCliente = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const c of clientes) {
+      const visiveis = estrategiasVisiveis(deriveEstrategias(c, demandas, cards, regras));
+      map.set(c.id, new Set(visiveis.map((v) => v.id)));
+    }
+    return map;
+  }, [clientes, demandas, cards, regras]);
+
   const tarefasFiltradas = useMemo(() => {
-    const { cliente, areas, status, busca, periodo, contexto } = filtros;
+    const { cliente, areas, status, busca, periodo, contexto, estrategia } = filtros;
     const buscaLower = busca.trim().toLowerCase();
     const ini = periodo.inicio;
     const fim = periodo.fim;
@@ -147,6 +161,10 @@ export default function MinhasTarefas() {
       if (status.length > 0 && !status.includes(t.status)) return false;
       // Filtro de contexto: aplica apenas a posts; demais fontes passam livres.
       if (contexto !== "todos" && t.fonte === "post" && t.post_ciclo !== contexto) return false;
+      if (estrategia !== "todas") {
+        const set = estrategiasPorCliente.get(t.cliente_id);
+        if (!set || !set.has(estrategia)) return false;
+      }
       if (buscaLower) {
         const hay = `${t.titulo} ${t.cliente_nome}`.toLowerCase();
         if (!hay.includes(buscaLower)) return false;
@@ -174,7 +192,7 @@ export default function MinhasTarefas() {
       return true;
     });
     return ordenarTarefas(filtradas);
-  }, [todasTarefas, filtros]);
+  }, [todasTarefas, filtros, estrategiasPorCliente]);
 
   const kpis = useMemo(() => {
     const total = tarefasFiltradas.length;

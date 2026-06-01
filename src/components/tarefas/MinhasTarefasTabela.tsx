@@ -16,6 +16,7 @@ import { displayStatusPostLabel } from "@/lib/statusDisplay";
 import { PRIORIDADE_COR, PRIORIDADE_LABEL } from "@/lib/demandas-categorias";
 import { useCRM } from "@/store/crm";
 import { CadenciaCell } from "./CadenciaCell";
+import { EstrategiasBadges } from "@/components/estrategias/EstrategiasBadges";
 
 interface Props {
   tasks: UnifiedTask[];
@@ -254,7 +255,10 @@ export function MinhasTarefasTabela({
                             />
                           </TableCell>
                           <TableCell className={cn("font-medium text-xs", isConcluido && "text-muted-foreground")}>
-                            {t.cliente_nome}
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                              <span className="truncate">{t.cliente_nome}</span>
+                              <EstrategiasBadges clienteId={t.cliente_id} size="xs" />
+                            </div>
                           </TableCell>
                           {mostrarResponsavel && (
                             <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">
