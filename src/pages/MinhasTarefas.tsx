@@ -161,6 +161,10 @@ export default function MinhasTarefas() {
       if (status.length > 0 && !status.includes(t.status)) return false;
       // Filtro de contexto: aplica apenas a posts; demais fontes passam livres.
       if (contexto !== "todos" && t.fonte === "post" && t.post_ciclo !== contexto) return false;
+      if (estrategia !== "todas") {
+        const set = estrategiasPorCliente.get(t.cliente_id);
+        if (!set || !set.has(estrategia)) return false;
+      }
       if (buscaLower) {
         const hay = `${t.titulo} ${t.cliente_nome}`.toLowerCase();
         if (!hay.includes(buscaLower)) return false;
@@ -188,7 +192,7 @@ export default function MinhasTarefas() {
       return true;
     });
     return ordenarTarefas(filtradas);
-  }, [todasTarefas, filtros]);
+  }, [todasTarefas, filtros, estrategiasPorCliente]);
 
   const kpis = useMemo(() => {
     const total = tarefasFiltradas.length;
