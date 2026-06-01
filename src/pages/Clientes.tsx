@@ -57,6 +57,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { StatusClienteBadge, STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
+import { EstrategiasConfigEditor } from "@/components/estrategias/EstrategiasConfigEditor";
+import { lerEstrategiasManuais, type EstrategiaId, type EstrategiaStatus } from "@/lib/estrategiasAtivas";
 
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
