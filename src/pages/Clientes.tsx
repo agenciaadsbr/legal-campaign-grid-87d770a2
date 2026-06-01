@@ -57,6 +57,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { StatusClienteBadge, STATUS_CLIENTE_OPCOES } from "@/components/StatusClienteBadge";
+import { EstrategiasConfigEditor } from "@/components/estrategias/EstrategiasConfigEditor";
+import { lerEstrategiasManuais, type EstrategiaId, type EstrategiaStatus } from "@/lib/estrategiasAtivas";
 
 
 function ResponsaveisPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
@@ -164,6 +166,13 @@ function NovoClienteDialog() {
     observacoes: "",
   });
   const [form, setForm] = useState(initialForm());
+  const [estrategias, setEstrategias] = useState<Record<EstrategiaId, EstrategiaStatus>>({
+    meta_ads: "nao_usar",
+    google_ads: "nao_usar",
+    posts: "nao_usar",
+    gmn: "nao_usar",
+    crm: "nao_usar",
+  });
 
   const setInicio = (v: string) =>
     setForm((f) => ({ ...f, data_inicio_contrato: v, data_fim_contrato: calcFim(v, f.duracao_meses) }));
@@ -189,6 +198,10 @@ function NovoClienteDialog() {
   const resetAll = () => {
     setForm(initialForm());
     setCreatedId(null);
+    setEstrategias({
+      meta_ads: "nao_usar", google_ads: "nao_usar", posts: "nao_usar",
+      gmn: "nao_usar", crm: "nao_usar",
+    });
   };
 
   const handleOpenChange = (v: boolean) => {
@@ -212,6 +225,10 @@ function NovoClienteDialog() {
       };
       const id = await addCliente(payload as any);
       setCreatedId(id);
+      // Salva estratégias dentro de campos_personalizados
+      await updateCliente(id, {
+        custom: { estrategias_ativas: estrategias },
+      } as any);
       toast.success(`Cliente criado — ${totalCards} cards e contrato gerados automaticamente`);
     } catch (e: any) {
       toast.error(`Erro ao criar: ${e?.message ?? "tente novamente"}`);
@@ -229,11 +246,17 @@ function NovoClienteDialog() {
     setSaving(true);
     try {
       const { duracao_meses, prazo_onboarding, valor_venda, ...patch } = form;
+      const atual = useCRM.getState().clientes.find((c) => c.id === createdId);
+      const customMerged = {
+        ...(atual?.custom ?? {}),
+        estrategias_ativas: estrategias,
+      };
       await updateCliente(createdId, {
         ...(patch as any),
         prazo_onboarding: prazo_onboarding || null,
         valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
-      });
+        custom: customMerged,
+      } as any);
       toast.success("Alterações salvas");
     } catch (e: any) {
       toast.error(`Erro ao atualizar: ${e?.message ?? "tente novamente"}`);
@@ -368,6 +391,7 @@ function NovoClienteDialog() {
             <Label>Observações</Label>
             <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </div>
+          <EstrategiasConfigEditor value={estrategias} onChange={setEstrategias} />
         </div>
         <DialogFooter className="gap-2 sm:gap-2 flex-wrap">
           {!isEdit ? (
@@ -467,6 +491,10 @@ function EditarClienteDialog({
     oculto: !!cliente?.oculto,
   });
 
+  const [estrategias, setEstrategias] = useState<Record<EstrategiaId, EstrategiaStatus>>(() =>
+    lerEstrategiasManuais(cliente),
+  );
+
   const setInicio = (v: string) =>
     setForm((f) => ({ ...f, data_inicio_contrato: v, data_fim_contrato: calcFim(v, f.duracao_meses) }));
   const setMeses = (m: number) =>
@@ -491,11 +519,16 @@ function EditarClienteDialog({
     try {
       const { duracao_meses, prazo_onboarding, valor_venda, ...patch } = form;
       const ocultoMudou = !!cliente?.oculto !== !!form.oculto;
+      const customMerged = {
+        ...(cliente?.custom ?? {}),
+        estrategias_ativas: estrategias,
+      };
       await updateCliente(cliente.id, {
         ...(patch as any),
         prazo_onboarding: prazo_onboarding || null,
         valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
-      });
+        custom: customMerged,
+      } as any);
       if (ocultoMudou) {
         toast.success(form.oculto ? "Cliente ocultado do painel" : "Cliente reexibido no painel");
       } else {
@@ -609,6 +642,7 @@ function EditarClienteDialog({
             <Label>Observações</Label>
             <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </div>
+          <EstrategiasConfigEditor value={estrategias} onChange={setEstrategias} />
           <div className="rounded-md border border-border bg-muted/30 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-0.5">

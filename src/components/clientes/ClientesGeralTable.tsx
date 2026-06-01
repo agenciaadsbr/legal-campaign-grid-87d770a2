@@ -413,7 +413,7 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
-                      <TableHead className="min-w-[180px]">Estratégias</TableHead>
+                      
                       <TableHead className="whitespace-nowrap">
                         <SortHeader
                           label="Período do contrato"
@@ -563,6 +563,7 @@ export function ClientesGeralTable({
                             >
                               {cliente.nome_cliente}
                             </Link>
+                            <EstrategiasBadges clienteId={cliente.id} size="xs" className="mt-0.5" />
                           </TableCell>
                           <TableCell>
                             <StatusClienteBadge status={cliente.status_global} />
@@ -592,9 +593,6 @@ export function ClientesGeralTable({
                             ) : (
                               <EmptyDash />
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <EstrategiasBadges clienteId={cliente.id} size="xs" />
                           </TableCell>
                           <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">
                             {inicioContrato ? (
