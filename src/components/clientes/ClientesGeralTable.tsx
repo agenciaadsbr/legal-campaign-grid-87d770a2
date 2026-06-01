@@ -594,9 +594,6 @@ export function ClientesGeralTable({
                               <EmptyDash />
                             )}
                           </TableCell>
-                          <TableCell>
-                            <EstrategiasBadges clienteId={cliente.id} size="xs" />
-                          </TableCell>
                           <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">
                             {inicioContrato ? (
                               <>
