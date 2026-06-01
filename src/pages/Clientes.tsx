@@ -519,11 +519,16 @@ function EditarClienteDialog({
     try {
       const { duracao_meses, prazo_onboarding, valor_venda, ...patch } = form;
       const ocultoMudou = !!cliente?.oculto !== !!form.oculto;
+      const customMerged = {
+        ...(cliente?.custom ?? {}),
+        estrategias_ativas: estrategias,
+      };
       await updateCliente(cliente.id, {
         ...(patch as any),
         prazo_onboarding: prazo_onboarding || null,
         valor_venda: valor_venda ? Number(String(valor_venda).replace(",", ".")) : null,
-      });
+        custom: customMerged,
+      } as any);
       if (ocultoMudou) {
         toast.success(form.oculto ? "Cliente ocultado do painel" : "Cliente reexibido no painel");
       } else {
