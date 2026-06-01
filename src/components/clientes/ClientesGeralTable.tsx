@@ -36,6 +36,7 @@ import {
   StatusPerformanceCell,
   LinkRelatorioCell,
 } from "@/components/clientes/ClienteCellEditors";
+import { EstrategiasBadges } from "@/components/estrategias/EstrategiasBadges";
 
 export type SortKey = "cliente" | "status" | "nicho" | "periodo";
 export type SortDir = "asc" | "desc";
@@ -412,6 +413,7 @@ export function ClientesGeralTable({
                           onSortChange={onSortChange}
                         />
                       </TableHead>
+                      <TableHead className="min-w-[180px]">Estratégias</TableHead>
                       <TableHead className="whitespace-nowrap">
                         <SortHeader
                           label="Período do contrato"
@@ -590,6 +592,9 @@ export function ClientesGeralTable({
                             ) : (
                               <EmptyDash />
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <EstrategiasBadges clienteId={cliente.id} size="xs" />
                           </TableCell>
                           <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">
                             {inicioContrato ? (
