@@ -884,12 +884,17 @@ function GerenciarColunas() {
       <SheetContent className="w-96 overflow-y-auto">
         <SheetHeader><SheetTitle>Gerenciar Colunas</SheetTitle></SheetHeader>
 
-        <div className="mt-4">
+        <NativeColumnsSection />
+
+        <div className="mt-6">
+          <div className="text-sm font-medium mb-2">Colunas personalizadas</div>
           <div className="text-xs text-muted-foreground mb-2">Arraste pelo ícone <GripVertical className="h-3 w-3 inline" /> para reordenar</div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={sorted.map((c) => c.key)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
-                {sorted.map((c) => (
+                {sorted.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">Nenhuma coluna personalizada.</div>
+                ) : sorted.map((c) => (
                   <SortableColunaRow
                     key={c.key}
                     c={c}
