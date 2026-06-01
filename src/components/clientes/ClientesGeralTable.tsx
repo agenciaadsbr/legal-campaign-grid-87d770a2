@@ -246,6 +246,7 @@ export function ClientesGeralTable({
   mostrarOcultos = false,
 }: Props) {
   const { clientes, cards, contratos, nichos, responsaveis, heavyDataLoaded } = useCRM();
+  const { isVisible } = useColunasNativasClientes();
   useDemandasBootstrap();
   const demandas = useDemandas((s) => s.demandas);
 
