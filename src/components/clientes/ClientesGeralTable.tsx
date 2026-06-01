@@ -37,6 +37,7 @@ import {
   LinkRelatorioCell,
 } from "@/components/clientes/ClienteCellEditors";
 import { EstrategiasBadges } from "@/components/estrategias/EstrategiasBadges";
+import { useColunasNativasClientes } from "@/lib/clientesColunasNativas";
 
 export type SortKey = "cliente" | "status" | "nicho" | "periodo";
 export type SortDir = "asc" | "desc";
