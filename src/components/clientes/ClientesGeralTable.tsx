@@ -382,73 +382,98 @@ export function ClientesGeralTable({
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10 text-xs text-muted-foreground">#</TableHead>
-                      <TableHead className="min-w-[220px]">
-                        <SortHeader
-                          label="Cliente"
-                          sortKey="cliente"
-                          current={sortKey}
-                          dir={sortDir}
-                          onSortChange={onSortChange}
-                        />
-                      </TableHead>
-                      <TableHead>
-                        <SortHeader
-                          label="Status"
-                          sortKey="status"
-                          current={sortKey}
-                          dir={sortDir}
-                          onSortChange={onSortChange}
-                        />
-                      </TableHead>
-                      <TableHead className="min-w-[160px]">
-                        <div className="leading-tight">
-                          <div>Último</div>
-                          <div>comentário</div>
-                        </div>
-                      </TableHead>
-                      <TableHead>
-                        <SortHeader
-                          label="Nicho"
-                          sortKey="nicho"
-                          current={sortKey}
-                          dir={sortDir}
-                          onSortChange={onSortChange}
-                        />
-                      </TableHead>
-                      
-                      <TableHead className="whitespace-nowrap">
-                        <SortHeader
-                          label="Período do contrato"
-                          sortKey="periodo"
-                          current={sortKey}
-                          dir={sortDir}
-                          onSortChange={onSortChange}
-                        />
-                      </TableHead>
-                      <TableHead className="text-center w-[90px]">
-                        <div className="leading-tight">
-                          <div>Posts</div>
-                          <div>atrasados</div>
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center w-[90px]">
-                        <div className="leading-tight">
-                          <div>Tarefas</div>
-                          <div>atrasadas</div>
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center w-[90px]">
-                        <div className="leading-tight">
-                          <div>Tarefas</div>
-                          <div>urgentes</div>
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center w-[110px]">Onboarding</TableHead>
-                      <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Contratação</TableHead>
-                      <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Relacionamento</TableHead>
-                      <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Performance</TableHead>
-                      <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Relatório</TableHead>
-                      {acoesSlot && <TableHead className="text-right">Ações</TableHead>}
+                      {isVisible("cliente") && (
+                        <TableHead className="min-w-[220px]">
+                          <SortHeader
+                            label="Cliente"
+                            sortKey="cliente"
+                            current={sortKey}
+                            dir={sortDir}
+                            onSortChange={onSortChange}
+                          />
+                        </TableHead>
+                      )}
+                      {isVisible("status") && (
+                        <TableHead>
+                          <SortHeader
+                            label="Status"
+                            sortKey="status"
+                            current={sortKey}
+                            dir={sortDir}
+                            onSortChange={onSortChange}
+                          />
+                        </TableHead>
+                      )}
+                      {isVisible("ultimo_comentario") && (
+                        <TableHead className="min-w-[160px]">
+                          <div className="leading-tight">
+                            <div>Último</div>
+                            <div>comentário</div>
+                          </div>
+                        </TableHead>
+                      )}
+                      {isVisible("nicho") && (
+                        <TableHead>
+                          <SortHeader
+                            label="Nicho"
+                            sortKey="nicho"
+                            current={sortKey}
+                            dir={sortDir}
+                            onSortChange={onSortChange}
+                          />
+                        </TableHead>
+                      )}
+                      {isVisible("periodo") && (
+                        <TableHead className="whitespace-nowrap">
+                          <SortHeader
+                            label="Período do contrato"
+                            sortKey="periodo"
+                            current={sortKey}
+                            dir={sortDir}
+                            onSortChange={onSortChange}
+                          />
+                        </TableHead>
+                      )}
+                      {isVisible("posts_atrasados") && (
+                        <TableHead className="text-center w-[90px]">
+                          <div className="leading-tight">
+                            <div>Posts</div>
+                            <div>atrasados</div>
+                          </div>
+                        </TableHead>
+                      )}
+                      {isVisible("tarefas_atrasadas") && (
+                        <TableHead className="text-center w-[90px]">
+                          <div className="leading-tight">
+                            <div>Tarefas</div>
+                            <div>atrasadas</div>
+                          </div>
+                        </TableHead>
+                      )}
+                      {isVisible("tarefas_urgentes") && (
+                        <TableHead className="text-center w-[90px]">
+                          <div className="leading-tight">
+                            <div>Tarefas</div>
+                            <div>urgentes</div>
+                          </div>
+                        </TableHead>
+                      )}
+                      {isVisible("onboarding") && (
+                        <TableHead className="text-center w-[110px]">Onboarding</TableHead>
+                      )}
+                      {isVisible("contratacao") && (
+                        <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Contratação</TableHead>
+                      )}
+                      {isVisible("relacionamento") && (
+                        <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Relacionamento</TableHead>
+                      )}
+                      {isVisible("performance") && (
+                        <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Performance</TableHead>
+                      )}
+                      {isVisible("relatorio") && (
+                        <TableHead className="whitespace-nowrap text-xs text-muted-foreground">Relatório</TableHead>
+                      )}
+                      {acoesSlot && isVisible("acoes") && <TableHead className="text-right">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
