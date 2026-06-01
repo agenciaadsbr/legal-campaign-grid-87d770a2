@@ -1,13 +1,9 @@
 import { useMemo } from "react";
 import { useCRM } from "@/store/crm";
-import { useDemandas } from "@/store/demandas";
-import { useAtivacaoRegras } from "@/hooks/useAtivacaoRegras";
 import {
   deriveEstrategias,
-  estrategiasVisiveis,
-  statusIcone,
-  statusLabel,
-  type EstrategiaItem,
+  badgesParaExibir,
+  type BadgeVisual,
 } from "@/lib/estrategiasAtivas";
 import { cn } from "@/lib/utils";
 import {
@@ -19,20 +15,22 @@ import {
 
 interface Props {
   clienteId: string;
-  /** Mostrar inclusive os "não iniciados" (•). Default false → mais limpo. */
-  mostrarTodos?: boolean;
   /** Tamanho: padrão "sm". "xs" para uso inline em tabelas densas. */
   size?: "xs" | "sm";
   className?: string;
+  /** @deprecated mantido por compatibilidade — ignorado. */
+  mostrarTodos?: boolean;
 }
 
-function EstrategiaBadge({ item, size }: { item: EstrategiaItem; size: "xs" | "sm" }) {
-  const icone = statusIcone(item.status);
-  const dim = item.status === "nao_iniciado" ? "opacity-60" : "";
+function Badge({ item, size }: { item: BadgeVisual; size: "xs" | "sm" }) {
   const sizeClass =
     size === "xs"
-      ? "h-4 px-1 text-[9px] gap-0.5"
-      : "h-5 px-1.5 text-[10px] gap-1";
+      ? "h-[14px] px-1 text-[9px]"
+      : "h-4 px-1.5 text-[10px]";
+
+  const pendenteClass = item.pendente
+    ? "opacity-70 border-dashed bg-transparent"
+    : "";
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -40,45 +38,40 @@ function EstrategiaBadge({ item, size }: { item: EstrategiaItem; size: "xs" | "s
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "inline-flex items-center rounded-md border font-semibold tabular-nums whitespace-nowrap leading-none",
+              "inline-flex items-center rounded border font-medium leading-none whitespace-nowrap",
               sizeClass,
               item.colorClass,
-              dim,
+              pendenteClass,
             )}
           >
-            <span>{item.label}</span>
-            <span aria-hidden>{icone}</span>
+            {item.label}
           </span>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
           <div className="font-medium">{item.ariaLabel}</div>
-          <div className="text-muted-foreground">{statusLabel(item.status)}</div>
+          <div className="text-muted-foreground">
+            {item.pendente ? "Pendente" : "Ativo"}
+          </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
 
-export function EstrategiasBadges({ clienteId, mostrarTodos = false, size = "sm", className }: Props) {
+export function EstrategiasBadges({ clienteId, size = "sm", className }: Props) {
   const cliente = useCRM((s) => s.clientes.find((c) => c.id === clienteId));
-  const cards = useCRM((s) => s.cards);
-  const demandas = useDemandas((s) => s.demandas);
-  const { regras } = useAtivacaoRegras();
 
   const itens = useMemo(() => {
     if (!cliente) return [];
-    const all = deriveEstrategias(cliente, demandas, cards, regras);
-    return mostrarTodos ? all : estrategiasVisiveis(all);
-  }, [cliente, demandas, cards, regras, mostrarTodos]);
+    return badgesParaExibir(deriveEstrategias(cliente));
+  }, [cliente]);
 
-  if (!cliente || itens.length === 0) {
-    return <span className="text-[10px] text-muted-foreground">—</span>;
-  }
+  if (!cliente || itens.length === 0) return null;
 
   return (
-    <div className={cn("flex flex-nowrap items-center gap-1 overflow-hidden", className)}>
+    <div className={cn("flex flex-wrap items-center gap-1", className)}>
       {itens.map((i) => (
-        <EstrategiaBadge key={i.id} item={i} size={size} />
+        <Badge key={i.key} item={i} size={size} />
       ))}
     </div>
   );
