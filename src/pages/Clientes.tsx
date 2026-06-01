@@ -491,6 +491,10 @@ function EditarClienteDialog({
     oculto: !!cliente?.oculto,
   });
 
+  const [estrategias, setEstrategias] = useState<Record<EstrategiaId, EstrategiaStatus>>(() =>
+    lerEstrategiasManuais(cliente),
+  );
+
   const setInicio = (v: string) =>
     setForm((f) => ({ ...f, data_inicio_contrato: v, data_fim_contrato: calcFim(v, f.duracao_meses) }));
   const setMeses = (m: number) =>
