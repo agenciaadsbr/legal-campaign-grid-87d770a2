@@ -642,6 +642,7 @@ function EditarClienteDialog({
             <Label>Observações</Label>
             <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </div>
+          <EstrategiasConfigEditor value={estrategias} onChange={setEstrategias} />
           <div className="rounded-md border border-border bg-muted/30 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-0.5">
