@@ -166,6 +166,13 @@ function NovoClienteDialog() {
     observacoes: "",
   });
   const [form, setForm] = useState(initialForm());
+  const [estrategias, setEstrategias] = useState<Record<EstrategiaId, EstrategiaStatus>>({
+    meta_ads: "nao_usar",
+    google_ads: "nao_usar",
+    posts: "nao_usar",
+    gmn: "nao_usar",
+    crm: "nao_usar",
+  });
 
   const setInicio = (v: string) =>
     setForm((f) => ({ ...f, data_inicio_contrato: v, data_fim_contrato: calcFim(v, f.duracao_meses) }));
