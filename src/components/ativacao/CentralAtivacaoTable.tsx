@@ -42,8 +42,7 @@ export function CentralAtivacaoTable({ linhas, onAbrirDetalhe, onMarcarAtivo }: 
         <TableHeader>
           <TableRow>
             <TableHead className="w-10 text-center">#</TableHead>
-            <TableHead className="min-w-[180px]">Cliente</TableHead>
-            <TableHead className="min-w-[160px]">Estratégias</TableHead>
+            <TableHead className="min-w-[220px]">Cliente</TableHead>
             <TableHead className="min-w-[130px]">Progresso</TableHead>
             <TableHead className="whitespace-nowrap">Dias decorridos</TableHead>
             <TableHead className="whitespace-nowrap">Dias restantes</TableHead>
