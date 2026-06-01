@@ -147,7 +147,6 @@ export function deriveEstrategias(
   const itens: EstrategiaItem[] = [
     {
       id: "meta_ads",
-      ...CATALOGO.meta_ads.label && {},
       label: CATALOGO.meta_ads.label,
       ariaLabel: CATALOGO.meta_ads.aria,
       colorClass: CATALOGO.meta_ads.colorClass,
