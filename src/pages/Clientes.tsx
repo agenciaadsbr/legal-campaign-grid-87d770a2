@@ -826,6 +826,100 @@ function SortableColunaRow({
   );
 }
 
+function NativeColumnsSection() {
+  const { state, isVisible, toggle, reorder } = useColunasNativasClientes();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const ordered = state.order
+    .map((k) => NATIVE_CLIENT_COLUMNS.find((c) => c.key === k))
+    .filter(Boolean) as typeof NATIVE_CLIENT_COLUMNS;
+
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = ordered.findIndex((c) => c.key === active.id);
+    const newIndex = ordered.findIndex((c) => c.key === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const next = arrayMove(ordered, oldIndex, newIndex);
+    reorder(next.map((c) => c.key));
+  };
+
+  return (
+    <div className="mt-4">
+      <div className="text-sm font-medium mb-2">Colunas da tabela</div>
+      <div className="text-xs text-muted-foreground mb-2">Arraste pelo ícone <GripVertical className="h-3 w-3 inline" /> para reordenar</div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={ordered.map((c) => c.key)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {ordered.map((c) => (
+              <SortableNativeRow
+                key={c.key}
+                colKey={c.key}
+                label={c.label}
+                visible={isVisible(c.key)}
+                onToggle={() => toggle(c.key)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+}
+
+function SortableNativeRow({
+  colKey,
+  label,
+  visible,
+  onToggle,
+}: {
+  colKey: string;
+  label: string;
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: colKey });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 p-2 rounded-md border bg-card",
+        isDragging && "ring-2 ring-primary shadow-lg",
+      )}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+        aria-label="Arrastar coluna"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="flex-1 text-sm px-2 py-1 rounded bg-muted/40 truncate" title={label}>
+        {label}
+      </div>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-7 w-7"
+        onClick={onToggle}
+        title={visible ? "Ocultar" : "Mostrar"}
+      >
+        {visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+      </Button>
+    </div>
+  );
+}
+
 function GerenciarColunas() {
   const {
     colunasCliente,
