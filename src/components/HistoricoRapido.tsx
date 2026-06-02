@@ -67,14 +67,22 @@ function useNomes() {
 export function useHistoricoEventos({ tipo, id, createdAt, statusAtual }: HookOpts) {
   const [raw, setRaw] = useState<RawEvent[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const nomes = useNomes();
-  const responsaveis = useCRM((s) => s.responsaveis);
+  const [extraNomes, setExtraNomes] = useState<Map<string, string>>(new Map());
+  const respNomes = useNomes();
+
+  // Mapa unificado: responsaveis (por id) + usuários auth (via RPC)
+  const nomes = useMemo(() => {
+    const m = new Map<string, string>(respNomes);
+    for (const [k, v] of extraNomes) if (!m.has(k)) m.set(k, v);
+    return m;
+  }, [respNomes, extraNomes]);
 
   useEffect(() => {
     let cancel = false;
     async function load() {
       setLoading(true);
       try {
+        let rawData: RawEvent[] = [];
         if (tipo === "demanda") {
           const { data } = await supabase
             .from("historico_demandas" as any)
@@ -82,7 +90,7 @@ export function useHistoricoEventos({ tipo, id, createdAt, statusAtual }: HookOp
             .eq("demanda_id", id)
             .order("created_at", { ascending: true })
             .limit(200);
-          if (!cancel) setRaw((data as any) ?? []);
+          rawData = ((data as any) ?? []) as RawEvent[];
         } else {
           const { data } = await supabase
             .from("atividade_cliente" as any)
@@ -91,19 +99,41 @@ export function useHistoricoEventos({ tipo, id, createdAt, statusAtual }: HookOp
             .eq("tipo", "post")
             .order("created_at", { ascending: true })
             .limit(200);
-          if (!cancel) {
-            setRaw(
-              ((data as any[]) ?? []).map((d) => ({
-                id: d.id,
-                created_at: d.created_at,
-                acao: d.acao,
-                de_status: d.payload?.de ?? null,
-                para_status: d.payload?.para ?? null,
-                payload: d.payload,
-                usuario_id: d.usuario_id,
-              })),
-            );
+          rawData = ((data as any[]) ?? []).map((d) => ({
+            id: d.id,
+            created_at: d.created_at,
+            acao: d.acao,
+            de_status: d.payload?.de ?? null,
+            para_status: d.payload?.para ?? null,
+            payload: d.payload,
+            usuario_id: d.usuario_id,
+          }));
+        }
+        if (cancel) return;
+        setRaw(rawData);
+
+        const uids = Array.from(
+          new Set(
+            rawData
+              .map((r) => r.usuario_id)
+              .filter((u): u is string => !!u && !respNomes.has(u)),
+          ),
+        );
+        if (uids.length > 0) {
+          const { data: nomesData } = await supabase.rpc(
+            "get_user_display_names" as any,
+            { _ids: uids },
+          );
+          if (cancel) return;
+          const map = new Map<string, string>();
+          if (Array.isArray(nomesData)) {
+            for (const row of nomesData as any[]) {
+              if (row?.id && row?.nome) map.set(row.id, row.nome);
+            }
           }
+          setExtraNomes(map);
+        } else {
+          setExtraNomes(new Map());
         }
       } finally {
         if (!cancel) setLoading(false);
@@ -113,7 +143,7 @@ export function useHistoricoEventos({ tipo, id, createdAt, statusAtual }: HookOp
     return () => {
       cancel = true;
     };
-  }, [tipo, id]);
+  }, [tipo, id, respNomes]);
 
   const eventos = useMemo<HistoricoEvento[]>(() => {
     if (!raw) return [];

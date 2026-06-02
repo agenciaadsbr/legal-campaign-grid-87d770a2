@@ -2648,6 +2648,13 @@ export type Database = {
     Functions: {
       can_write: { Args: { _user_id: string }; Returns: boolean }
       current_responsavel_id: { Args: never; Returns: string }
+      get_user_display_names: {
+        Args: { _ids: string[] }
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
