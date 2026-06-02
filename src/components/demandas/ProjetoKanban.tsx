@@ -39,10 +39,15 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
     e.preventDefault();
     e.stopPropagation();
     if (bloqueadas.has(d.id)) {
-      toast.error("Aguardando liberação da etapa anterior");
-      return;
+      toast.warning("Iniciando tarefa com dependência pendente", {
+        description: "A etapa anterior ainda não foi concluída.",
+      });
     }
     updateDemanda(d.id, {
+      status: "Criar",
+      data_inicio: new Date().toISOString(),
+    });
+  };
       status: "Criar",
       data_inicio: new Date().toISOString(),
     });
