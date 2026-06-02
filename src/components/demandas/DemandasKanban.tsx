@@ -51,10 +51,11 @@ export function DemandasKanban({ demandas, onOpen, selectionMode, selectedIds, o
               const id = e.dataTransfer.getData("text/demanda");
               if (id) {
                 if (bloqueadas.has(id)) {
-                  toast.error("Aguardando liberação da etapa anterior");
-                } else {
-                  moveStatus(id, status);
+                  toast.warning("Tarefa com dependência pendente", {
+                    description: "A etapa anterior ainda não foi concluída.",
+                  });
                 }
+                moveStatus(id, status);
               }
               setDragOver(null);
             }}
@@ -80,12 +81,8 @@ export function DemandasKanban({ demandas, onOpen, selectionMode, selectedIds, o
                   key={d.id}
                   demanda={d}
                   onClick={() => onOpen(d)}
-                  draggable={!selectionMode && !bloqueadas.has(d.id)}
+                  draggable={!selectionMode}
                   onDragStart={(e) => {
-                    if (bloqueadas.has(d.id)) {
-                      e.preventDefault();
-                      return;
-                    }
                     e.dataTransfer.setData("text/demanda", d.id);
                   }}
                   selectionMode={selectionMode}
