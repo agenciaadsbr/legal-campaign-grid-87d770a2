@@ -48,10 +48,6 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
       data_inicio: new Date().toISOString(),
     });
   };
-      status: "Criar",
-      data_inicio: new Date().toISOString(),
-    });
-  };
 
   return (
     <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-3">
