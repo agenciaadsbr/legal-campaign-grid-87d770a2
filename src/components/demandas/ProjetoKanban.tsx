@@ -39,8 +39,9 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
     e.preventDefault();
     e.stopPropagation();
     if (bloqueadas.has(d.id)) {
-      toast.error("Aguardando liberação da etapa anterior");
-      return;
+      toast.warning("Iniciando tarefa com dependência pendente", {
+        description: "A etapa anterior ainda não foi concluída.",
+      });
     }
     updateDemanda(d.id, {
       status: "Criar",
@@ -67,10 +68,11 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
               const id = e.dataTransfer.getData("text/demanda");
               if (id) {
                 if (bloqueadas.has(id)) {
-                  toast.error("Aguardando liberação da etapa anterior");
-                } else {
-                  moveStatus(id, status);
+                  toast.warning("Tarefa com dependência pendente", {
+                    description: "A etapa anterior ainda não foi concluída.",
+                  });
                 }
+                moveStatus(id, status);
               }
               setDragOver(null);
             }}
@@ -98,12 +100,8 @@ export function ProjetoKanban({ demandas, onOpen, selectionMode, selectedIds, on
                   key={d.id}
                   demanda={d}
                   onClick={() => onOpen(d)}
-                  draggable={!selectionMode && !bloqueadas.has(d.id)}
+                  draggable={!selectionMode}
                   onDragStart={(e) => {
-                    if (bloqueadas.has(d.id)) {
-                      e.preventDefault();
-                      return;
-                    }
                     e.dataTransfer.setData("text/demanda", d.id);
                   }}
                   selectionMode={selectionMode}

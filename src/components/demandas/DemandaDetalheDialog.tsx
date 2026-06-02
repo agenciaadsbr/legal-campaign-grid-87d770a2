@@ -574,22 +574,20 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                   </Button>
                   <Select
                     value={canonicalStatus(demanda.status as string)}
-                    disabled={aguardando}
                     onValueChange={(v) => {
                       if (aguardando) {
-                        toast.error("Tarefa bloqueada", {
+                        toast.warning("Alterando status com dependência pendente", {
                           description: tituloPaiAguardando
-                            ? `Aguardando conclusão de: ${tituloPaiAguardando}`
-                            : "Esta tarefa depende de outra etapa.",
+                            ? `Etapa anterior ainda não concluída: ${tituloPaiAguardando}`
+                            : "A etapa anterior ainda não foi concluída.",
                         });
-                        return;
                       }
                       updateDemanda(demanda.id, { status: v as any });
                     }}
                   >
                     <SelectTrigger
                       className="w-40"
-                      title={aguardando ? `Aguardando: ${tituloPaiAguardando}` : undefined}
+                      title={aguardando ? `Dependência pendente: ${tituloPaiAguardando}` : undefined}
                     >
                       <SelectValue />
                     </SelectTrigger>

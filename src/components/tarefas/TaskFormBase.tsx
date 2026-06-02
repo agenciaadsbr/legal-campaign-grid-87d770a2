@@ -324,10 +324,10 @@ export const TaskFormBase = forwardRef((props: TaskFormBaseProps, ref) => {
 
       {isAguardando && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-md text-xs flex items-start gap-2">
-          <span className="mt-0.5">🔒</span>
+          <span className="mt-0.5">⚠️</span>
           <div>
-            <div className="font-semibold text-amber-600">Aguardando etapa anterior</div>
-            <div className="text-muted-foreground">Esta tarefa está bloqueada até que a anterior seja concluída.</div>
+            <div className="font-semibold text-amber-600">Dependência pendente</div>
+            <div className="text-muted-foreground">A etapa anterior ainda não foi concluída. Você pode continuar editando normalmente.</div>
           </div>
         </div>
       )}
