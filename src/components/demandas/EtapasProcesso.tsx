@@ -255,7 +255,7 @@ export function EtapasProcesso({ cardPai }: Props) {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={bloqueada || !canWrite}
+                      disabled={!canWrite}
                       onClick={() => handleConcluirStatus(etapa)}
                     >
                       <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir etapa
