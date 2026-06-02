@@ -266,7 +266,7 @@ export function CardPaiDetalheDialog({
                       </div>
                       <div className="flex items-center gap-1 flex-wrap pt-1">
                         {etapa.tipo === "tarefa_real" && !dem && (
-                          <Button size="sm" variant="outline" disabled={bloqueada} onClick={async () => {
+                          <Button size="sm" variant="outline" onClick={async () => {
                             const id = await criarTarefaRealParaEtapa(etapa.id);
                             if (id) toast.success("Tarefa real criada/vinculada");
                           }}>
@@ -279,7 +279,7 @@ export function CardPaiDetalheDialog({
                           </Button>
                         )}
                         {etapa.tipo === "status_interno" && !etapa.concluido && (
-                          <Button size="sm" variant="outline" disabled={bloqueada} onClick={() => concluirEtapaInterna(etapa.id)}>
+                          <Button size="sm" variant="outline" onClick={() => concluirEtapaInterna(etapa.id)}>
                             <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir etapa
                           </Button>
                         )}
