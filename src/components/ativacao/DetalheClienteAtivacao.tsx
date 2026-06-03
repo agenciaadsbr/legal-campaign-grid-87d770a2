@@ -66,6 +66,7 @@ interface Props {
 export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou }: Props) {
   const navigate = useNavigate();
   const responsaveis = useCRM((s) => s.responsaveis);
+  const cards = useCRM((s) => s.cards);
   const atualizarEtapa = useCardPai((s) => s.atualizarEtapa);
   const respMap = useMemo(() => new Map(responsaveis.map((r) => [r.id, r])), [responsaveis]);
   const atividadesPorCliente = useAtividades((s) => s.porCliente);
@@ -81,6 +82,7 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
   const modulos = modulosDoCliente(linha.cardsPai, linha.etapas);
   const atividades = atividadesPorCliente[linha.cliente.id] ?? [];
   const respAtual = linha.responsavelAtualId ? respMap.get(linha.responsavelAtualId) : null;
+  const cardsCliente = useMemo(() => cards.filter(c => c.cliente_id === linha.cliente.id), [cards, linha.cliente.id]);
 
   const marcar = async (etapaId: string, valor: "ja_existente" | "nao_aplicavel") => {
     await atualizarEtapa(etapaId, {
@@ -398,7 +400,7 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                   </tr>
                 </thead>
                 <tbody>
-                  {linha.demandas.length === 0 && (
+                  {linha.demandas.length === 0 && cardsCliente.length === 0 && (
                     <tr>
                       <td colSpan={7} className="p-4 text-center text-muted-foreground">
                         Sem tarefas vinculadas a este cliente.
@@ -437,7 +439,39 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                               navigate(`/clientes/${linha.cliente.id}/projeto?tab=${aba}&demanda=${d.id}`);
                             }}
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <Link className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {cardsCliente.map((c) => {
+                    const respId = c.responsaveis?.[0];
+                    const resp = respId ? respMap.get(respId) : null;
+                    const status_card = c.status_card === "Postado" ? "Postado" : c.status_card === "Agendar" || c.status_card === "Agendado" ? "Agendado" : c.status_card;
+                    return (
+                      <tr key={c.id} className="border-t border-border">
+                        <td className="p-2 text-foreground">{c.titulo_card}</td>
+                        <td className="p-2 text-muted-foreground">Postagem</td>
+                        <td className="p-2 text-muted-foreground">{resp?.nome ?? "—"}</td>
+                        <td className="p-2 text-muted-foreground">
+                          {c.data_postagem ? new Date(c.data_postagem).toLocaleDateString("pt-BR") : c.data_limite_tarefa ? new Date(c.data_limite_tarefa).toLocaleDateString("pt-BR") : "—"}
+                        </td>
+                        <td className="p-2">
+                          <StatusTarefaBadge status={status_card} />
+                        </td>
+                        <td className="p-2 text-muted-foreground">—</td>
+                        <td className="p-2 text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors flex items-center justify-center mx-auto"
+                            title="Abrir tarefa no Projeto Completo do Cliente"
+                            onClick={() => {
+                              navigate(`/clientes/${linha.cliente.id}/projeto?tab=postagens&card=${c.id}`);
+                            }}
+                          >
+                            <Link className="h-4 w-4" />
                           </Button>
                         </td>
                       </tr>
