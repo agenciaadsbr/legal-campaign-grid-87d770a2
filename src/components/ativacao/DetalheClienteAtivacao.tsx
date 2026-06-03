@@ -442,6 +442,7 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
+                        </td>
                         <td className="p-2 text-center">
                           <Button
                             variant="ghost"
