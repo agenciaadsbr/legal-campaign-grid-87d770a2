@@ -87,6 +87,7 @@ import { ProjectNotesModal } from "@/components/projeto/ProjectNotesModal";
 import { ProjectNotesButton } from "@/components/projeto/ProjectNotesButton";
 import { ProjectNotesAlert } from "@/components/projeto/ProjectNotesAlert";
 import { useProjectNotes } from "@/store/projectNotes";
+import { categoriaParaAba } from "@/lib/minhasTarefas";
 
 // ===== Filtros canônicos por área =====
 const URGENCIA_OUTRO_CATS: DemandaCategoria[] = [
