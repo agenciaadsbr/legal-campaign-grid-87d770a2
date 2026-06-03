@@ -60,10 +60,12 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   linha: AtivacaoLinha | null;
+  responsavelIdFilter?: string;
   onAtualizou?: () => void;
 }
 
-export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou }: Props) {
+
+export function DetalheClienteAtivacao({ open, onOpenChange, linha, responsavelIdFilter, onAtualizou }: Props) {
   const navigate = useNavigate();
   const responsaveis = useCRM((s) => s.responsaveis);
   const cards = useCRM((s) => s.cards);
@@ -109,7 +111,15 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
   }
   for (const d of linha.demandas) {
     if (isStatusResolvido(d.status)) continue;
+    
+    // Se estiver filtrando um responsável, ignora tarefas de outros no detalhe (conforme pedido)
+    if (responsavelIdFilter && responsavelIdFilter !== "todos") {
+      const isResp = d.responsavel_id === responsavelIdFilter || d.responsaveis_ids?.includes(responsavelIdFilter);
+      if (!isResp) continue;
+    }
+
     const s = canonicalStatus(d.status);
+
     const respId = d.responsavel_id || d.responsaveis_ids?.[0];
     const respNome = respId ? respMap.get(respId)?.nome : undefined;
     const diasParado = d.updated_at
@@ -183,7 +193,15 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
           </Card2>
           <Card2 label="Risco" value={linha.risco === "Critico" ? "Crítico" : linha.risco === "Atencao" ? "Atenção" : "OK"} danger={linha.risco === "Critico"} />
           <Card2 label="Próximo bloqueio" value={linha.proximoBloqueio} small />
-          <Card2 label="Responsável atual" value={respAtual?.nome ?? "—"} small />
+          <Card2 
+            label="Responsável atual" 
+            value={responsavelIdFilter && responsavelIdFilter !== "todos" 
+              ? (respMap.get(responsavelIdFilter)?.nome ?? "—")
+              : (respAtual?.nome ?? "—")
+            } 
+            small 
+          />
+
         </div>
 
         <Tabs defaultValue="visao" className="mt-5">
@@ -412,7 +430,11 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                       </td>
                     </tr>
                   )}
-                  {linha.demandas.map((d) => {
+                  {linha.demandas.filter(d => {
+                    if (!responsavelIdFilter || responsavelIdFilter === "todos") return true;
+                    return d.responsavel_id === responsavelIdFilter || d.responsaveis_ids?.includes(responsavelIdFilter);
+                  }).map((d) => {
+
                     const respId = d.responsavel_id || d.responsaveis_ids?.[0];
                     const resp = respId ? respMap.get(respId) : null;
                     return (
@@ -450,7 +472,11 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                       </tr>
                     );
                   })}
-                  {cardsCliente.map((c) => {
+                  {cardsCliente.filter(c => {
+                    if (!responsavelIdFilter || responsavelIdFilter === "todos") return true;
+                    return c.responsaveis?.includes(responsavelIdFilter);
+                  }).map((c) => {
+
                     const respId = c.responsaveis?.[0];
                     const resp = respId ? respMap.get(respId) : null;
                     const status_card = c.status_card === "Postado" ? "Postado" : c.status_card === "Agendar" || c.status_card === "Agendado" ? "Agendado" : c.status_card;
