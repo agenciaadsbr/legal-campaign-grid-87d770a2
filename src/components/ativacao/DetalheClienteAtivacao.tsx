@@ -437,7 +437,7 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                               navigate(`/clientes/${linha.cliente.id}/projeto?tab=${aba}&demanda=${d.id}`);
                             }}
                           >
-                            <Link className="h-4 w-4" />
+                            <ExternalLink className="h-4 w-4" />
                           </Button>
                         </td>
                       </tr>
