@@ -157,12 +157,16 @@ Conceito de processo multi-etapas:
 
 ## Central de Ativação / Onboarding
 
-- Contagem regressiva de ativação (prazo padrão 30 dias).
-- Clientes em onboarding e ativações em risco.
-- Clientes travados.
-- SLA operacional e responsáveis.
-- Alertas por responsável.
-- Etapas atrasadas e previsão de ativação.
+- Controle total do ciclo de vida de ativação (SLA padrão: 30 dias).
+- KPIs em tempo real: Ativações concluídas, Em onboarding, Em risco e Concluídas no prazo.
+- Filtros dinâmicos: Busca por cliente, Responsável, Risco (Crítico/Atenção/OK) e Status.
+- **Alerta por Responsável**: Card inteligente que isola métricas (atrasadas, urgentes, vencendo hoje) e sugere prioridades baseadas no responsável selecionado.
+- **Pop-up Detalhado**: Ao clicar em um cliente, abre um painel lateral com:
+  - Progresso geral e por módulo.
+  - Alertas críticos e motivos de travamento.
+  - Tabela de tarefas com link direto para o Projeto Completo (sincronizado com abas de Tráfego, Posts, etc.).
+  - Linha do tempo de atividades e histórico de avanço.
+- Previsão de ativação e acompanhamento de etapas atrasadas.
 
 ## Regras de Negócio
 
