@@ -430,14 +430,14 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors flex items-center justify-center mx-auto"
                             title="Abrir tarefa no Projeto Completo do Cliente"
                             onClick={() => {
-                              const aba = categoriaParaAba(d.categoria as any);
+                              const aba = categoriaParaAba(d.categoria);
                               navigate(`/clientes/${linha.cliente.id}/projeto?tab=${aba}&demanda=${d.id}`);
                             }}
                           >
-                            <ExternalLink className="h-3.5 w-3.5" />
+                            <Link className="h-4 w-4" />
                           </Button>
                         </td>
                       </tr>
