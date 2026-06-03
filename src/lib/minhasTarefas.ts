@@ -152,6 +152,7 @@ export function categoriaParaAba(cat: string): string {
     case "IAAtendimento": return "ia";
     case "Briefing": return "briefing";
     case "Planejamento": return "planejamento";
+    case "Operacional": return "operacional";
     case "Personalizado":
     case "Suporte":
     case "Designer":   // legado

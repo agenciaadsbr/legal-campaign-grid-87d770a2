@@ -87,6 +87,7 @@ import { ProjectNotesModal } from "@/components/projeto/ProjectNotesModal";
 import { ProjectNotesButton } from "@/components/projeto/ProjectNotesButton";
 import { ProjectNotesAlert } from "@/components/projeto/ProjectNotesAlert";
 import { useProjectNotes } from "@/store/projectNotes";
+import { categoriaParaAba } from "@/lib/minhasTarefas";
 
 // ===== Filtros canônicos por área =====
 const URGENCIA_OUTRO_CATS: DemandaCategoria[] = [
@@ -121,23 +122,7 @@ function filtrarPorArea(demandas: Demanda[], area: string): Demanda[] {
   }
 }
 
-// Mapeia categoria -> aba
-function categoriaParaAba(cat: DemandaCategoria): string {
-  switch (cat) {
-    case "EditorVideo": return "videos";
-    case "TrafegoPago": return "trafego";
-    case "LandingPage": return "lp";
-    case "IAAtendimento": return "ia";
-    case "Briefing": return "briefing";
-    case "Planejamento": return "planejamento";
-    case "Operacional": return "operacional";
-    case "Personalizado":
-    case "Suporte":
-    case "Designer":      // legado
-    case "Tecnologia":    // legado
-    default: return "urgencias";
-  }
-}
+// categoriaParaAba importada de @/lib/minhasTarefas para consistência.
 
 export default function ProjetoCliente() {
   const { clienteId } = useParams<{ clienteId: string }>();

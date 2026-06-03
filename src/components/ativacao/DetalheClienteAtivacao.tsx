@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ExternalLink, MoreVertical, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
+import { ExternalLink, MoreVertical, AlertTriangle, Clock, CheckCircle2, Link } from "lucide-react";
 import { useCRM } from "@/store/crm";
 import { useCardPai } from "@/store/cardPai";
 import { useAtividades } from "@/store/atividades";
@@ -25,24 +25,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { AtivacaoLinha } from "@/hooks/useOnboardingProgress";
 import type { DemandaCategoria } from "@/lib/demandas-categorias";
-
-// Mapeia categoria -> aba (idêntico ao ProjetoCliente.tsx para consistência)
-function categoriaParaAba(cat: DemandaCategoria): string {
-  switch (cat) {
-    case "EditorVideo": return "videos";
-    case "TrafegoPago": return "trafego";
-    case "LandingPage": return "lp";
-    case "IAAtendimento": return "ia";
-    case "Briefing": return "briefing";
-    case "Planejamento": return "planejamento";
-    case "Operacional": return "operacional";
-    case "Personalizado":
-    case "Suporte":
-    case "Designer":      // legado
-    case "Tecnologia":    // legado
-    default: return "urgencias";
-  }
-}
+import { categoriaParaAba } from "@/lib/minhasTarefas";
 
 const STATUS_TAREFA_STYLE: Record<string, string> = {
   Criar: "bg-sky-500/15 text-sky-600 border-sky-500/30 dark:text-sky-400",
@@ -447,14 +430,14 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors flex items-center justify-center mx-auto"
                             title="Abrir tarefa no Projeto Completo do Cliente"
                             onClick={() => {
-                              const aba = categoriaParaAba(d.categoria as any);
+                              const aba = categoriaParaAba(d.categoria);
                               navigate(`/clientes/${linha.cliente.id}/projeto?tab=${aba}&demanda=${d.id}`);
                             }}
                           >
-                            <ExternalLink className="h-3.5 w-3.5" />
+                            <Link className="h-4 w-4" />
                           </Button>
                         </td>
                       </tr>
