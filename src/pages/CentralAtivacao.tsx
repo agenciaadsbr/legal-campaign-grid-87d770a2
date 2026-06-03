@@ -74,7 +74,11 @@ export default function CentralAtivacao() {
 
       {/* Cards informativos: Alerta (maior) → Risco → Legenda */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3">
-        <AlertaResponsavelCard linhas={linhas} onVerTarefas={handleVerTarefasResponsavel} />
+        <AlertaResponsavelCard 
+          linhas={linhas} 
+          onVerTarefas={handleVerTarefasResponsavel} 
+          responsavelIdOverride={filtros.responsavelId}
+        />
         <AtivacoesRiscoCard linhas={linhas} onAbrirDetalhe={(l) => setDetalheLinha(l)} />
         <LegendaStatusCard />
       </div>
