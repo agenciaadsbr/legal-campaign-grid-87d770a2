@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ExternalLink, MoreVertical, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
+import { ExternalLink, MoreVertical, AlertTriangle, Clock, CheckCircle2, Link } from "lucide-react";
 import { useCRM } from "@/store/crm";
 import { useCardPai } from "@/store/cardPai";
 import { useAtividades } from "@/store/atividades";
