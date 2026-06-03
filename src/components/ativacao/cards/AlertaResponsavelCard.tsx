@@ -3,27 +3,37 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Users, ShieldAlert, Clock, AlertTriangle } from "lucide-react";
 import { useResponsavelAtual } from "@/hooks/useResponsavelAtual";
+import { useCRM } from "@/store/crm";
 import type { AtivacaoLinha } from "@/hooks/useOnboardingProgress";
 import { canonicalStatus } from "@/lib/demandas-categorias";
+import { useMemo } from "react";
 
 interface Props {
   linhas: AtivacaoLinha[];
   onVerTarefas?: (responsavelId: string) => void;
+  responsavelIdOverride?: string;
 }
 
-export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
+export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverride }: Props) {
   const navigate = useNavigate();
-  const { responsavel, responsavelId } = useResponsavelAtual();
+  const { responsavel: meuResponsavel, responsavelId: meuResponsavelId } = useResponsavelAtual();
+  const responsaveis = useCRM((s) => s.responsaveis);
 
-  if (!responsavelId) return null;
+  const finalId = responsavelIdOverride && responsavelIdOverride !== "todos" 
+    ? responsavelIdOverride 
+    : meuResponsavelId;
+
+  const responsavel = responsaveis.find(r => r.id === finalId) || meuResponsavel;
+
+  if (!finalId) return null;
 
   const minhas = linhas.filter(
     (l) =>
-      l.responsavelAtualId === responsavelId ||
+      l.responsavelAtualId === finalId ||
       l.demandas.some(
         (d) =>
-          d.responsavel_id === responsavelId ||
-          d.responsaveis_ids?.includes(responsavelId),
+          d.responsavel_id === finalId ||
+          d.responsaveis_ids?.includes(finalId),
       ),
   );
 
@@ -31,13 +41,14 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
     l.demandas
       .filter(
         (d) =>
-          (d.responsavel_id === responsavelId ||
-            d.responsaveis_ids?.includes(responsavelId)),
+          (d.responsavel_id === finalId ||
+            d.responsaveis_ids?.includes(finalId)),
       )
       .map((d) => ({ ...d, _cliente: l.cliente })),
   );
 
   const atrasadas = tarefasMinhas.filter((d) => canonicalStatus(d.status) === "Atrasado").length;
+  const urgentes = tarefasMinhas.filter((d) => d.prioridade === "Urgente").length;
 
   const hoje = new Date();
   hoje.setHours(23, 59, 59, 999);
@@ -49,17 +60,27 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
   ).length;
 
   const criticos = minhas.filter((l) => l.risco === "Critico").length;
-  const aguardando = minhas.filter((l) => l.statusVisual === "Travado").length;
 
-  const prioridade = [...minhas]
-    .sort((a, b) => {
-      if (a.risco !== b.risco) {
-        const order = { Critico: 0, Atencao: 1, OK: 2 } as const;
-        return order[a.risco] - order[b.risco];
-      }
-      return a.diasRestantes - b.diasRestantes;
-    })
-    .slice(0, 3);
+  // Sugestão de prioridade baseada em tarefas (conforme exemplo visual)
+  const sugestaoTarefas = useMemo(() => {
+    return [...tarefasMinhas]
+      .filter(d => canonicalStatus(d.status) !== "Concluido")
+      .sort((a, b) => {
+        // 1. Prioridade Urgente primeiro
+        if (a.prioridade === "Urgente" && b.prioridade !== "Urgente") return -1;
+        if (a.prioridade !== "Urgente" && b.prioridade === "Urgente") return 1;
+        
+        // 2. Atrasadas depois
+        if (canonicalStatus(a.status) === "Atrasado" && canonicalStatus(b.status) !== "Atrasado") return -1;
+        if (canonicalStatus(a.status) !== "Atrasado" && canonicalStatus(b.status) === "Atrasado") return 1;
+
+        // 3. Deadline
+        const dateA = a.data_limite ? new Date(a.data_limite).getTime() : Infinity;
+        const dateB = b.data_limite ? new Date(b.data_limite).getTime() : Infinity;
+        return dateA - dateB;
+      })
+      .slice(0, 3);
+  }, [tarefasMinhas]);
 
   return (
     <Card className="p-4 flex flex-col">
@@ -69,27 +90,27 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
           <p className="text-[10px] uppercase text-muted-foreground mt-0.5">Resumo diário · Central de Ativação</p>
         </div>
         <div className="text-xs text-muted-foreground truncate">
-          Olá, <span className="font-semibold text-foreground">{responsavel?.nome ?? "você"}</span> 👋 — seu resumo do dia
+          RESPONSÁVEL: <span className="font-semibold text-foreground uppercase">{responsavel?.nome ?? "NÃO IDENTIFICADO"}</span> 👋
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Metric icon={Users} value={aguardando} label="Aguardando suas tarefas" />
-        <Metric icon={ShieldAlert} value={atrasadas} label="Tarefas atrasadas" />
+        <Metric icon={ShieldAlert} value={atrasadas} label="Tarefas atrasadas" danger={atrasadas > 0} />
+        <Metric icon={AlertTriangle} value={urgentes} label="Tarefas urgentes" danger={urgentes > 0} />
         <Metric icon={Clock} value={vencendoHoje} label="Vencendo hoje" />
-        <Metric icon={AlertTriangle} value={criticos} label="Críticos sob você" danger />
+        <Metric icon={AlertTriangle} value={criticos} label="Críticos sob você" danger={criticos > 0} />
       </div>
 
-      {prioridade.length > 0 && (
+      {sugestaoTarefas.length > 0 && (
         <div className="mt-3">
           <div className="text-[10px] uppercase text-muted-foreground mb-1">Sugestão de prioridade</div>
           <ol className="space-y-0.5 text-xs text-foreground">
-            {prioridade.map((l, idx) => (
-              <li key={l.cliente.id} className="flex items-start gap-2 min-w-0">
+            {sugestaoTarefas.map((d, idx) => (
+              <li key={d.id} className="flex items-start gap-2 min-w-0">
                 <span className="text-muted-foreground tabular-nums shrink-0">{idx + 1}.</span>
                 <span className="flex-1 min-w-0 truncate">
-                  <span className="font-medium">{l.cliente.nome_cliente}</span>
-                  <span className="text-muted-foreground"> — {l.proximaAcao.titulo}</span>
+                  <span className="font-medium">{d.titulo}</span>
+                  <span className="text-muted-foreground"> — {d._cliente?.nome_cliente}</span>
                 </span>
               </li>
             ))}
@@ -101,7 +122,7 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
         size="sm"
         variant="outline"
         className="w-full mt-3"
-        onClick={() => (onVerTarefas ? onVerTarefas(responsavelId) : navigate("/minhas-tarefas"))}
+        onClick={() => (onVerTarefas ? onVerTarefas(finalId) : navigate("/minhas-tarefas"))}
       >
         Ver tarefas (Onboarding)
       </Button>

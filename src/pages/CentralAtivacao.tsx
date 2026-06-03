@@ -42,8 +42,11 @@ export default function CentralAtivacao() {
     return linhas.filter((l) => {
       if (filtros.busca && !l.cliente.nome_cliente.toLowerCase().includes(filtros.busca.toLowerCase()))
         return false;
-      if (filtros.responsavelId !== "todos" && l.responsavelAtualId !== filtros.responsavelId)
-        return false;
+      if (filtros.responsavelId !== "todos") {
+        const isResp = l.responsavelAtualId === filtros.responsavelId || 
+                      l.demandas.some(d => d.responsavel_id === filtros.responsavelId || d.responsaveis_ids?.includes(filtros.responsavelId));
+        if (!isResp) return false;
+      }
       if (filtros.risco !== "todos" && l.risco !== filtros.risco) return false;
       if (filtros.statusPrincipal !== "todos" && l.statusPrincipal !== filtros.statusPrincipal)
         return false;
@@ -74,7 +77,12 @@ export default function CentralAtivacao() {
 
       {/* Cards informativos: Alerta (maior) → Risco → Legenda */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3">
-        <AlertaResponsavelCard linhas={linhas} onVerTarefas={handleVerTarefasResponsavel} />
+        <AlertaResponsavelCard 
+          linhas={filtradas} 
+
+          onVerTarefas={handleVerTarefasResponsavel} 
+          responsavelIdOverride={filtros.responsavelId}
+        />
         <AtivacoesRiscoCard linhas={linhas} onAbrirDetalhe={(l) => setDetalheLinha(l)} />
         <LegendaStatusCard />
       </div>
