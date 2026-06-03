@@ -47,6 +47,7 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
   );
 
   const atrasadas = tarefasMinhas.filter((d) => canonicalStatus(d.status) === "Atrasado").length;
+  const urgentes = tarefasMinhas.filter((d) => d.prioridade === "Urgente").length;
 
   const hoje = new Date();
   hoje.setHours(23, 59, 59, 999);
@@ -58,15 +59,23 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
   ).length;
 
   const criticos = minhas.filter((l) => l.risco === "Critico").length;
-  const aguardando = minhas.filter((l) => l.statusVisual === "Travado").length;
 
-  const prioridade = [...minhas]
+  // Sugestão de prioridade baseada em tarefas (conforme exemplo visual)
+  const sugestaoTarefas = [...tarefasMinhas]
+    .filter(d => canonicalStatus(d.status) !== "Concluido")
     .sort((a, b) => {
-      if (a.risco !== b.risco) {
-        const order = { Critico: 0, Atencao: 1, OK: 2 } as const;
-        return order[a.risco] - order[b.risco];
-      }
-      return a.diasRestantes - b.diasRestantes;
+      // 1. Prioridade Urgente primeiro
+      if (a.prioridade === "Urgente" && b.prioridade !== "Urgente") return -1;
+      if (a.prioridade !== "Urgente" && b.prioridade === "Urgente") return 1;
+      
+      // 2. Atrasadas depois
+      if (canonicalStatus(a.status) === "Atrasado" && canonicalStatus(b.status) !== "Atrasado") return -1;
+      if (canonicalStatus(a.status) !== "Atrasado" && canonicalStatus(b.status) === "Atrasado") return 1;
+
+      // 3. Deadline
+      const dateA = a.data_limite ? new Date(a.data_limite).getTime() : Infinity;
+      const dateB = b.data_limite ? new Date(b.data_limite).getTime() : Infinity;
+      return dateA - dateB;
     })
     .slice(0, 3);
 
