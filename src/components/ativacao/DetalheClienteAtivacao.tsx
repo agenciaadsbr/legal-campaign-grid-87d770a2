@@ -25,24 +25,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { AtivacaoLinha } from "@/hooks/useOnboardingProgress";
 import type { DemandaCategoria } from "@/lib/demandas-categorias";
-
-// Mapeia categoria -> aba (idêntico ao ProjetoCliente.tsx para consistência)
-function categoriaParaAba(cat: DemandaCategoria): string {
-  switch (cat) {
-    case "EditorVideo": return "videos";
-    case "TrafegoPago": return "trafego";
-    case "LandingPage": return "lp";
-    case "IAAtendimento": return "ia";
-    case "Briefing": return "briefing";
-    case "Planejamento": return "planejamento";
-    case "Operacional": return "operacional";
-    case "Personalizado":
-    case "Suporte":
-    case "Designer":      // legado
-    case "Tecnologia":    // legado
-    default: return "urgencias";
-  }
-}
+import { categoriaParaAba } from "@/lib/minhasTarefas";
 
 const STATUS_TAREFA_STYLE: Record<string, string> = {
   Criar: "bg-sky-500/15 text-sky-600 border-sky-500/30 dark:text-sky-400",
