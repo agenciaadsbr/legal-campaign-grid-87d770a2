@@ -71,7 +71,7 @@ export default function CentralAtivacao() {
 
       {/* KPIs + Meta de Ativação fixa no topo */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-3">
-        <CentralAtivacaoKpis linhas={linhas} />
+        <CentralAtivacaoKpis linhas={filtradas} />
         <MetaAtivacaoCard />
       </div>
 
@@ -83,7 +83,7 @@ export default function CentralAtivacao() {
           onVerTarefas={handleVerTarefasResponsavel} 
           responsavelIdOverride={filtros.responsavelId}
         />
-        <AtivacoesRiscoCard linhas={linhas} onAbrirDetalhe={(l) => setDetalheLinha(l)} />
+        <AtivacoesRiscoCard linhas={filtradas} onAbrirDetalhe={(l) => setDetalheLinha(l)} />
         <LegendaStatusCard />
       </div>
 
@@ -96,9 +96,11 @@ export default function CentralAtivacao() {
         ) : (
           <CentralAtivacaoTable
             linhas={filtradas}
+            responsavelIdFilter={filtros.responsavelId}
             onAbrirDetalhe={(l) => setDetalheLinha(l)}
             onMarcarAtivo={(l) => setAtivandoLinha(l)}
           />
+
         )}
       </div>
 
@@ -114,7 +116,9 @@ export default function CentralAtivacao() {
         open={!!detalheLinha}
         onOpenChange={(v) => !v && setDetalheLinha(null)}
         linha={detalheLinha}
+        responsavelIdFilter={filtros.responsavelId}
         onAtualizou={reload}
+
       />
     </div>
   );

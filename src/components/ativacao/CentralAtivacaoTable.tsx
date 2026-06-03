@@ -11,9 +11,11 @@ import { EstrategiasBadges } from "@/components/estrategias/EstrategiasBadges";
 
 interface Props {
   linhas: AtivacaoLinha[];
+  responsavelIdFilter?: string;
   onAbrirDetalhe: (l: AtivacaoLinha) => void;
   onMarcarAtivo: (l: AtivacaoLinha) => void;
 }
+
 
 function RiscoBadge({ r }: { r: AtivacaoLinha["risco"] }) {
   if (r === "Critico")
@@ -23,7 +25,7 @@ function RiscoBadge({ r }: { r: AtivacaoLinha["risco"] }) {
   return <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15 dark:text-emerald-400 border text-[10px] px-1.5 py-0">OK</Badge>;
 }
 
-export function CentralAtivacaoTable({ linhas, onAbrirDetalhe, onMarcarAtivo }: Props) {
+export function CentralAtivacaoTable({ linhas, responsavelIdFilter, onAbrirDetalhe, onMarcarAtivo }: Props) {
   const navigate = useNavigate();
   const responsaveis = useCRM((s) => s.responsaveis);
   const respMap = new Map(responsaveis.map((r) => [r.id, r]));
@@ -55,13 +57,30 @@ export function CentralAtivacaoTable({ linhas, onAbrirDetalhe, onMarcarAtivo }: 
         </TableHeader>
         <TableBody>
           {linhas.map((l, idx) => {
-            const resp = l.responsavelAtualId ? respMap.get(l.responsavelAtualId) : null;
+            const isSpecificResp = responsavelIdFilter && responsavelIdFilter !== "todos";
+            const resp = isSpecificResp 
+              ? respMap.get(responsavelIdFilter) 
+              : (l.responsavelAtualId ? respMap.get(l.responsavelAtualId) : null);
+            
+            // Se estiver filtrando um responsável específico, tenta mostrar a próxima ação DELE
+            let proximaAcao = l.proximaAcao;
+            if (isSpecificResp) {
+              const demandaResp = l.demandas.find(d => 
+                (d.responsavel_id === responsavelIdFilter || d.responsaveis_ids?.includes(responsavelIdFilter)) &&
+                !["Concluido", "Concluído", "Entregue", "Postado"].includes(d.status)
+              );
+              if (demandaResp) {
+                proximaAcao = { titulo: demandaResp.titulo, modulo: demandaResp.categoria };
+              }
+            }
+
             return (
               <TableRow
                 key={l.cliente.id}
                 className="hover:bg-muted/30 cursor-pointer"
                 onClick={() => onAbrirDetalhe(l)}
               >
+
                 <TableCell className="text-center text-muted-foreground tabular-nums">
                   {idx + 1}
                 </TableCell>
@@ -101,13 +120,14 @@ export function CentralAtivacaoTable({ linhas, onAbrirDetalhe, onMarcarAtivo }: 
                 <TableCell className="whitespace-nowrap">{resp?.nome ?? "—"}</TableCell>
                 <TableCell>
                   <div className="text-foreground truncate max-w-[200px] leading-tight">
-                    {l.proximaAcao.titulo}
+                    {proximaAcao.titulo}
                   </div>
-                  {l.proximaAcao.modulo && (
+                  {proximaAcao.modulo && (
                     <div className="text-[10px] text-muted-foreground truncate max-w-[200px] leading-tight">
-                      {l.proximaAcao.modulo}
+                      {proximaAcao.modulo}
                     </div>
                   )}
+
                 </TableCell>
                 <TableCell><RiscoBadge r={l.risco} /></TableCell>
                 <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
