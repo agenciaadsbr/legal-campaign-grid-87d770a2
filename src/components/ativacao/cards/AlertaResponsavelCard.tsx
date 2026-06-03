@@ -9,13 +9,21 @@ import { canonicalStatus } from "@/lib/demandas-categorias";
 interface Props {
   linhas: AtivacaoLinha[];
   onVerTarefas?: (responsavelId: string) => void;
+  responsavelIdOverride?: string;
 }
 
-export function AlertaResponsavelCard({ linhas, onVerTarefas }: Props) {
+export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverride }: Props) {
   const navigate = useNavigate();
-  const { responsavel, responsavelId } = useResponsavelAtual();
+  const { responsavel: meuResponsavel, responsavelId: meuResponsavelId } = useResponsavelAtual();
+  const responsaveis = useCRM((s) => s.responsaveis);
 
-  if (!responsavelId) return null;
+  const finalId = responsavelIdOverride && responsavelIdOverride !== "todos" 
+    ? responsavelIdOverride 
+    : meuResponsavelId;
+
+  const responsavel = responsaveis.find(r => r.id === finalId) || meuResponsavel;
+
+  if (!finalId) return null;
 
   const minhas = linhas.filter(
     (l) =>
