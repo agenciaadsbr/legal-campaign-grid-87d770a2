@@ -25,27 +25,29 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
 
   const responsavel = responsaveis.find(r => r.id === finalId) || meuResponsavel;
 
-  if (!finalId) return null;
-
-  const minhas = linhas.filter(
-    (l) =>
-      l.responsavelAtualId === finalId ||
-      l.demandas.some(
-        (d) =>
-          d.responsavel_id === finalId ||
-          d.responsaveis_ids?.includes(finalId),
-      ),
-  );
-
-  const tarefasMinhas = linhas.flatMap((l) =>
-    l.demandas
-      .filter(
-        (d) =>
-          (d.responsavel_id === finalId ||
-            d.responsaveis_ids?.includes(finalId)),
+  const minhas = finalId
+    ? linhas.filter(
+        (l) =>
+          l.responsavelAtualId === finalId ||
+          l.demandas.some(
+            (d) =>
+              d.responsavel_id === finalId ||
+              d.responsaveis_ids?.includes(finalId),
+          ),
       )
-      .map((d) => ({ ...d, _cliente: l.cliente })),
-  );
+    : [];
+
+  const tarefasMinhas = finalId
+    ? linhas.flatMap((l) =>
+        l.demandas
+          .filter(
+            (d) =>
+              d.responsavel_id === finalId ||
+              d.responsaveis_ids?.includes(finalId),
+          )
+          .map((d) => ({ ...d, _cliente: l.cliente })),
+      )
+    : [];
 
   const atrasadas = tarefasMinhas.filter((d) => canonicalStatus(d.status) === "Atrasado").length;
   const urgentes = tarefasMinhas.filter((d) => d.prioridade === "Urgente").length;
@@ -66,21 +68,19 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
     return [...tarefasMinhas]
       .filter(d => canonicalStatus(d.status) !== "Concluido")
       .sort((a, b) => {
-        // 1. Prioridade Urgente primeiro
         if (a.prioridade === "Urgente" && b.prioridade !== "Urgente") return -1;
         if (a.prioridade !== "Urgente" && b.prioridade === "Urgente") return 1;
-        
-        // 2. Atrasadas depois
         if (canonicalStatus(a.status) === "Atrasado" && canonicalStatus(b.status) !== "Atrasado") return -1;
         if (canonicalStatus(a.status) !== "Atrasado" && canonicalStatus(b.status) === "Atrasado") return 1;
-
-        // 3. Deadline
         const dateA = a.data_limite ? new Date(a.data_limite).getTime() : Infinity;
         const dateB = b.data_limite ? new Date(b.data_limite).getTime() : Infinity;
         return dateA - dateB;
       })
       .slice(0, 3);
-  }, [tarefasMinhas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linhas, finalId]);
+
+  if (!finalId) return null;
 
   return (
     <Card className="p-4 flex flex-col">
