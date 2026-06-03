@@ -136,7 +136,7 @@ function Metric({
   label,
   danger,
 }: {
-  icon: any;
+  icon: typeof Users;
   value: number;
   label: string;
   danger?: boolean;
