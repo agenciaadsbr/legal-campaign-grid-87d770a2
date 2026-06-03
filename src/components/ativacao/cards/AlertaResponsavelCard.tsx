@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Users, ShieldAlert, Clock, AlertTriangle } from "lucide-react";
 import { useResponsavelAtual } from "@/hooks/useResponsavelAtual";
+import { useCRM } from "@/store/crm";
 import type { AtivacaoLinha } from "@/hooks/useOnboardingProgress";
 import { canonicalStatus } from "@/lib/demandas-categorias";
 
@@ -27,11 +28,11 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
 
   const minhas = linhas.filter(
     (l) =>
-      l.responsavelAtualId === responsavelId ||
+      l.responsavelAtualId === finalId ||
       l.demandas.some(
         (d) =>
-          d.responsavel_id === responsavelId ||
-          d.responsaveis_ids?.includes(responsavelId),
+          d.responsavel_id === finalId ||
+          d.responsaveis_ids?.includes(finalId),
       ),
   );
 
@@ -39,8 +40,8 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
     l.demandas
       .filter(
         (d) =>
-          (d.responsavel_id === responsavelId ||
-            d.responsaveis_ids?.includes(responsavelId)),
+          (d.responsavel_id === finalId ||
+            d.responsaveis_ids?.includes(finalId)),
       )
       .map((d) => ({ ...d, _cliente: l.cliente })),
   );
@@ -109,7 +110,7 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
         size="sm"
         variant="outline"
         className="w-full mt-3"
-        onClick={() => (onVerTarefas ? onVerTarefas(responsavelId) : navigate("/minhas-tarefas"))}
+        onClick={() => (onVerTarefas ? onVerTarefas(finalId) : navigate("/minhas-tarefas"))}
       >
         Ver tarefas (Onboarding)
       </Button>
