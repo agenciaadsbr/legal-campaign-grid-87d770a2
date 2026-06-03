@@ -19,53 +19,56 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
   const { responsavel: meuResponsavel, responsavelId: meuResponsavelId } = useResponsavelAtual();
   const responsaveis = useCRM((s) => s.responsaveis);
 
-  const finalId = responsavelIdOverride && responsavelIdOverride !== "todos" 
-    ? responsavelIdOverride 
-    : meuResponsavelId;
+  const isFilteringAll = !responsavelIdOverride || responsavelIdOverride === "todos";
+  const finalId = isFilteringAll ? null : responsavelIdOverride;
 
-  const responsavel = responsaveis.find(r => r.id === finalId) || meuResponsavel;
+  const responsavel = finalId 
+    ? (responsaveis.find(r => r.id === finalId) || { nome: "NÃO IDENTIFICADO" })
+    : { nome: "TODOS OS RESPONSÁVEIS" };
 
-  const minhas = finalId
-    ? linhas.filter(
-        (l) =>
-          l.responsavelAtualId === finalId ||
-          l.demandas.some(
-            (d) =>
-              d.responsavel_id === finalId ||
-              d.responsaveis_ids?.includes(finalId),
-          ),
-      )
-    : [];
+  // Se não estiver filtrando um específico, usamos 'meuResponsavelId' apenas para as métricas individuais?
+  // NÃO! O usuário quer que o card reflita o filtro. 
+  // Se o filtro for 'todos', o card deve refletir o total das 'linhas' (que já estão filtradas por risco/status no pai).
+  
+  const targetId = finalId;
 
-  const tarefasMinhas = finalId
-    ? linhas.flatMap((l) =>
-        l.demandas
-          .filter(
-            (d) =>
-              d.responsavel_id === finalId ||
-              d.responsaveis_ids?.includes(finalId),
-          )
-          .map((d) => ({ ...d, _cliente: l.cliente })),
-      )
-    : [];
+  const tarefasExibidas = useMemo(() => {
+    return linhas.flatMap((l) =>
+      l.demandas
+        .filter((d) => {
+          if (!targetId) return true; // Se for todos, pega todas as tarefas das linhas filtradas
+          return (
+            d.responsavel_id === targetId ||
+            d.responsaveis_ids?.includes(targetId)
+          );
+        })
+        .map((d) => ({ ...d, _cliente: l.cliente })),
+    );
+  }, [linhas, targetId]);
 
-  const atrasadas = tarefasMinhas.filter((d) => canonicalStatus(d.status) === "Atrasado").length;
-  const urgentes = tarefasMinhas.filter((d) => d.prioridade === "Urgente").length;
+  const atrasadas = tarefasExibidas.filter((d) => canonicalStatus(d.status) === "Atrasado").length;
+  const urgentes = tarefasExibidas.filter((d) => d.prioridade === "Urgente").length;
 
   const hoje = new Date();
   hoje.setHours(23, 59, 59, 999);
-  const vencendoHoje = tarefasMinhas.filter(
+  const vencendoHoje = tarefasExibidas.filter(
     (d) =>
       d.data_limite &&
       new Date(d.data_limite).getTime() >= Date.now() - 86_400_000 &&
       new Date(d.data_limite).getTime() <= hoje.getTime(),
   ).length;
 
-  const criticos = minhas.filter((l) => l.risco === "Critico").length;
+  const criticos = linhas.filter((l) => {
+    if (l.risco !== "Critico") return false;
+    if (!targetId) return true;
+    return (
+      l.responsavelAtualId === targetId ||
+      l.demandas.some(d => d.responsavel_id === targetId || d.responsaveis_ids?.includes(targetId))
+    );
+  }).length;
 
-  // Sugestão de prioridade baseada em tarefas (conforme exemplo visual)
   const sugestaoTarefas = useMemo(() => {
-    return [...tarefasMinhas]
+    return [...tarefasExibidas]
       .filter(d => canonicalStatus(d.status) !== "Concluido")
       .sort((a, b) => {
         if (a.prioridade === "Urgente" && b.prioridade !== "Urgente") return -1;
@@ -77,10 +80,10 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
         return dateA - dateB;
       })
       .slice(0, 3);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [linhas, finalId]);
+  }, [tarefasExibidas]);
 
-  if (!finalId) return null;
+
+  if (!responsavel) return null;
 
   return (
     <Card className="p-4 flex flex-col">
@@ -89,8 +92,9 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
           <div className="text-sm font-semibold text-foreground">Alerta por Responsável (Onboarding)</div>
           <p className="text-[10px] uppercase text-muted-foreground mt-0.5">Resumo diário · Central de Ativação</p>
         </div>
-        <div className="text-xs text-muted-foreground truncate">
-          RESPONSÁVEL: <span className="font-semibold text-foreground uppercase">{responsavel?.nome ?? "NÃO IDENTIFICADO"}</span> 👋
+        <div className="text-xs text-muted-foreground truncate uppercase">
+          {finalId ? "Responsável:" : "Visão:"} <span className="font-semibold text-foreground">{responsavel?.nome}</span> {finalId ? "👋" : "📊"}
+
         </div>
       </div>
 
@@ -98,7 +102,7 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
         <Metric icon={ShieldAlert} value={atrasadas} label="Tarefas atrasadas" danger={atrasadas > 0} />
         <Metric icon={AlertTriangle} value={urgentes} label="Tarefas urgentes" danger={urgentes > 0} />
         <Metric icon={Clock} value={vencendoHoje} label="Vencendo hoje" />
-        <Metric icon={AlertTriangle} value={criticos} label="Críticos sob você" danger={criticos > 0} />
+        <Metric icon={AlertTriangle} value={criticos} label={finalId ? "Críticos sob você" : "Total Críticos"} danger={criticos > 0} />
       </div>
 
       {sugestaoTarefas.length > 0 && (
@@ -122,7 +126,7 @@ export function AlertaResponsavelCard({ linhas, onVerTarefas, responsavelIdOverr
         size="sm"
         variant="outline"
         className="w-full mt-3"
-        onClick={() => (onVerTarefas ? onVerTarefas(finalId) : navigate("/minhas-tarefas"))}
+        onClick={() => (onVerTarefas && finalId ? onVerTarefas(finalId) : navigate("/minhas-tarefas"))}
       >
         Ver tarefas (Onboarding)
       </Button>
