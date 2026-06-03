@@ -78,11 +78,16 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
     }
   }, [open, linha?.cliente.id, loadAtividades]);
 
+  const clienteId = linha?.cliente.id;
+  const cardsCliente = useMemo(
+    () => (clienteId ? cards.filter((c) => c.cliente_id === clienteId) : []),
+    [cards, clienteId],
+  );
+
   if (!linha) return null;
   const modulos = modulosDoCliente(linha.cardsPai, linha.etapas);
   const atividades = atividadesPorCliente[linha.cliente.id] ?? [];
   const respAtual = linha.responsavelAtualId ? respMap.get(linha.responsavelAtualId) : null;
-  const cardsCliente = useMemo(() => cards.filter(c => c.cliente_id === linha.cliente.id), [cards, linha.cliente.id]);
 
   const marcar = async (etapaId: string, valor: "ja_existente" | "nao_aplicavel") => {
     await atualizarEtapa(etapaId, {
