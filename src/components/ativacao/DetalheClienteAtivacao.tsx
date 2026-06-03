@@ -24,6 +24,25 @@ import { useEffect, useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { AtivacaoLinha } from "@/hooks/useOnboardingProgress";
+import type { DemandaCategoria } from "@/lib/demandas-categorias";
+
+// Mapeia categoria -> aba (idêntico ao ProjetoCliente.tsx para consistência)
+function categoriaParaAba(cat: DemandaCategoria): string {
+  switch (cat) {
+    case "EditorVideo": return "videos";
+    case "TrafegoPago": return "trafego";
+    case "LandingPage": return "lp";
+    case "IAAtendimento": return "ia";
+    case "Briefing": return "briefing";
+    case "Planejamento": return "planejamento";
+    case "Operacional": return "operacional";
+    case "Personalizado":
+    case "Suporte":
+    case "Designer":      // legado
+    case "Tecnologia":    // legado
+    default: return "urgencias";
+  }
+}
 
 const STATUS_TAREFA_STYLE: Record<string, string> = {
   Criar: "bg-sky-500/15 text-sky-600 border-sky-500/30 dark:text-sky-400",
@@ -392,12 +411,13 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                     <th className="text-left p-2">Prazo</th>
                     <th className="text-left p-2">Status</th>
                     <th className="text-left p-2">Badge</th>
+                    <th className="text-center p-2">Abrir Tarefa</th>
                   </tr>
                 </thead>
                 <tbody>
                   {linha.demandas.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                      <td colSpan={7} className="p-4 text-center text-muted-foreground">
                         Sem tarefas vinculadas a este cliente.
                       </td>
                     </tr>
@@ -422,6 +442,20 @@ export function DetalheClienteAtivacao({ open, onOpenChange, linha, onAtualizou 
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
+                        </td>
+                        <td className="p-2 text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors"
+                            title="Abrir tarefa no Projeto Completo do Cliente"
+                            onClick={() => {
+                              const aba = categoriaParaAba(d.categoria as any);
+                              navigate(`/clientes/${linha.cliente.id}/projeto?tab=${aba}&demanda=${d.id}`);
+                            }}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
                         </td>
                       </tr>
                     );
