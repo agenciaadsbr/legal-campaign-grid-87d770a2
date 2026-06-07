@@ -1690,6 +1690,30 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          plano: string
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          plano: string
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          plano?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       meeting_tasks: {
         Row: {
           assigned_to: string | null
