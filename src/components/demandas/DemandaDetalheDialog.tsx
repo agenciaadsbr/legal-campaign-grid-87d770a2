@@ -1350,9 +1350,17 @@ export function DemandaDetalheDialog({ demanda: demandaProp, onOpenChange, isRas
                     className="shrink-0 text-xs text-primary hover:underline px-2"
                     onClick={async () => {
                       try {
-                        const response = await fetch(previewAnexo.url);
-                        if (!response.ok) throw new Error("download falhou");
-                        const blob = await response.blob();
+                        const path = extractAnexoPath(previewAnexo.url);
+                        let blob: Blob;
+                        if (path) {
+                          const { data, error } = await supabase.storage.from("anexos").download(path);
+                          if (error || !data) throw new Error(error?.message || "download falhou");
+                          blob = data;
+                        } else {
+                          const response = await fetch(previewAnexo.url);
+                          if (!response.ok) throw new Error("download falhou");
+                          blob = await response.blob();
+                        }
                         const blobUrl = URL.createObjectURL(blob);
                         const a = document.createElement("a");
                         a.href = blobUrl;
