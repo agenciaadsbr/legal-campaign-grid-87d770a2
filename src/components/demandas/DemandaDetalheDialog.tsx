@@ -74,6 +74,7 @@ import { StatusMotivoSelector } from "./StatusMotivoSelector";
 import { VoltarVisaoGeralButton } from "@/components/projeto/VoltarVisaoGeralButton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { extractAnexoPath } from "@/lib/anexoUrl";
 import { toast } from "sonner";
 import { HistoricoRapidoConteudo } from "@/components/HistoricoRapido";
 
