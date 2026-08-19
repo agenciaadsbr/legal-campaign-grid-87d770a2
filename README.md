@@ -293,7 +293,11 @@ A aba **Configurações → Documentação do Sistema** oferece:
 3. Backup **não inclui**: `node_modules/`, `.env*`, `dist/`, caches, logs, tokens, secrets ou dados de banco.
 4. Apenas **admin** e **super_admin** visualizam e executam o backup.
 
-Para backup externo recomenda-se também versionar o repositório no GitHub.
+Para backup externo recomenda-se também versionar o repositório no GitHub:
+
+- **Repositório:** https://github.com/agenciaadsbr/legal-campaign-grid-87d770a2
+- **Publicação:** https://legal-campaign-grid.lovable.app
+- **Domínio customizado:** https://dashtasks.com.br
 
 ## Segurança
 
