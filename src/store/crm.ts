@@ -877,22 +877,41 @@ export const useCRM = create<State>()((set, get) => ({
     // Patch otimista local — UI responde imediatamente
     set({ cards: get().cards.map(c => c.id === cardId ? { ...c, status_card: novoStatus } : c) });
 
-    await supabase.from("cards").update({ status: novoStatus as any }).eq("id", cardId);
+    const { data, error } = await supabase
+      .from("cards")
+      .update({ status: novoStatus as any })
+      .eq("id", cardId)
+      .select("status")
+      .single();
 
-    if (novoStatus !== prev.status_card) {
+    if (error) {
+      // Rollback: sem persistência o card não pode "ficar" na nova coluna
+      set({ cards: get().cards.map(c => c.id === cardId ? prev : c) });
+      toast.error("Erro ao mover card", { description: error.message });
+      return;
+    }
+
+    // O banco pode ajustar o status (ex.: regras automáticas). Reflete o valor real.
+    const statusFinal = (data?.status as StatusCard) ?? novoStatus;
+    if (statusFinal !== novoStatus) {
+      set({ cards: get().cards.map(c => c.id === cardId ? { ...c, status_card: statusFinal } : c) });
+    }
+
+    if (statusFinal !== prev.status_card) {
       void get().addAtividade({
         clienteId: prev.cliente_id,
         acao: "status",
-        descricao: `Status alterado: ${prev.status_card} → ${novoStatus}`,
+        descricao: `Status alterado: ${prev.status_card} → ${statusFinal}`,
         refId: cardId,
         tipo: "post",
         area: "Posts",
         titulo_tarefa: prev.titulo_card,
-        payload: { de: prev.status_card, para: novoStatus }
+        payload: { de: prev.status_card, para: statusFinal }
       });
     }
 
     get()._scheduleReload();
+
   },
 
   updateCard: async (id, patch) => {
