@@ -392,8 +392,17 @@ Recomendamos trocar a senha no primeiro acesso.`;
                         <Badge variant={badge.variant} className={badge.className}>{badge.label}</Badge>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {responsavel?.nome ?? <span className="text-muted-foreground">—</span>}
+                        {responsavel?.nome ?? (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] border-amber-500/60 text-amber-600 dark:text-amber-400 gap-1"
+                            title="Usuário sem vínculo — não pode receber tarefas"
+                          >
+                            <ShieldAlert className="h-3 w-3" /> sem vínculo
+                          </Badge>
+                        )}
                       </TableCell>
+
                       <TableCell>
                         <Switch
                           checked={p.ativo}
