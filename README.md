@@ -1,3 +1,23 @@
+> **⚠️ NOTA (04/Set/2026):** Este repositório é um **backup secundário / mais novo** do Dash Tasks.
+> O outro repositório `agenciaadsbr/legal-campaign-grid` (sem sufixo) corresponde ao deploy
+> **ativo** no Lovable (pid `975e0162-2c93-45ba-90ec-1f6421d3b72b`, URL `legal-campaign-grid.lovable.app`).
+>
+> **Diferenças** entre os dois (verificadas em 04/Set/2026):
+> - 369 arquivos aqui vs 366 no outro
+> - 8 arquivos com código divergente (EquipeAcessosManager, DemandaDetalheDialog, crm store, types, etc)
+> - 3 arquivos exclusivos deste: 2 migrations Supabase (19/Ago e 03/Set) + previewAuthStorage
+> - **Último commit aqui: 03/Set/2026** (mais novo)
+> - **Último commit no outro: 03/Jun/2026** (mais antigo)
+>
+> **Recomendação:** manter ambos. Cada um tem valor histórico:
+> - `legal-campaign-grid` = estado de junho (deploy ativo no Lovable)
+> - `legal-campaign-grid-87d770a2` (este) = estado de setembro (código mais novo, offline no Lovable)
+>
+> Origem: migrado do Lovable via skill `lovable-to-github-backup` (ADS BR).
+> Origem do sufixo `-87d770a2`: convenção de fork com hash curto para distinguir versões.
+
+---
+
 # Dash Tasks
 
 Sistema interno de gestão operacional da ADS BR — tarefas, clientes, reuniões, onboarding, posts, campanhas e rotinas centralizadas em uma única plataforma.
