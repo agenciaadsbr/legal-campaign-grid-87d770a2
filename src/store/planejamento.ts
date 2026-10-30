@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export type PlanStatus = "pendente" | "em_andamento" | "concluido" | "atrasado";
 export type PlanSituacao = "precisa_criar" | "ja_possui" | "nao_aplicavel";
@@ -118,10 +119,15 @@ export const usePlanejamento = create<State>((set, get) => ({
   async load() {
     if (get().loading) return;
     set({ loading: true });
-    const { data, error } = await supabase
-      .from("cliente_planejamento_itens")
-      .select("*")
-      .order("ordem", { ascending: true });
+    // Paginado: a tabela já ultrapassa o limite de 1.000 linhas do Supabase.
+    const { data, error } = await fetchAllRows<any>((from, to) =>
+      supabase
+        .from("cliente_planejamento_itens")
+        .select("*")
+        .order("ordem", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
     if (error) {
       toast.error("Erro ao carregar planejamento", { description: error.message });
       set({ loading: false });
