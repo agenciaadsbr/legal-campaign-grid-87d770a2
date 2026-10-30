@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      advbox_consultas_log: {
+        Row: {
+          advbox_status: number | null
+          contact_phone: string | null
+          cpf_hash: string
+          cpf_last4: string | null
+          created_at: string
+          crm_ticket_id: string | null
+          error: string | null
+          found: boolean
+          id: string
+          integration_id: string | null
+          latency_ms: number | null
+          lawsuits_count: number
+        }
+        Insert: {
+          advbox_status?: number | null
+          contact_phone?: string | null
+          cpf_hash: string
+          cpf_last4?: string | null
+          created_at?: string
+          crm_ticket_id?: string | null
+          error?: string | null
+          found: boolean
+          id?: string
+          integration_id?: string | null
+          latency_ms?: number | null
+          lawsuits_count?: number
+        }
+        Update: {
+          advbox_status?: number | null
+          contact_phone?: string | null
+          cpf_hash?: string
+          cpf_last4?: string | null
+          created_at?: string
+          crm_ticket_id?: string | null
+          error?: string | null
+          found?: boolean
+          id?: string
+          integration_id?: string | null
+          latency_ms?: number | null
+          lawsuits_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advbox_consultas_log_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "advbox_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advbox_integrations: {
+        Row: {
+          active: boolean
+          client_name: string
+          created_at: string
+          crm_channel_id: number | null
+          crm_queue_id: number | null
+          id: string
+          secret_name: string
+          slug: string
+        }
+        Insert: {
+          active?: boolean
+          client_name: string
+          created_at?: string
+          crm_channel_id?: number | null
+          crm_queue_id?: number | null
+          id?: string
+          secret_name: string
+          slug: string
+        }
+        Update: {
+          active?: boolean
+          client_name?: string
+          created_at?: string
+          crm_channel_id?: number | null
+          crm_queue_id?: number | null
+          id?: string
+          secret_name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       alertas: {
         Row: {
           cliente_id: string
