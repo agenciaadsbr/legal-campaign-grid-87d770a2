@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import type {
   DemandaStatus,
   DemandaPrioridade,
@@ -242,12 +243,34 @@ export const useDemandasStore = create<State>((set, get) => ({
   async load(silent = false) {
     if (!silent) set({ loading: true });
     try {
+      // Todas as tabelas são paginadas (limite de 1.000 linhas do Supabase) com
+      // ordenação estável (coluna + id) para não perder nem duplicar registros.
       const [d, c, a, h, deps] = await Promise.all([
-        supabase.from("demandas").select("*").order("created_at", { ascending: false }),
-        supabase.from("comentarios_demandas").select("*").order("created_at"),
-        supabase.from("anexos_demandas").select("*").order("created_at"),
-        supabase.from("historico_demandas").select("*").order("created_at", { ascending: false }),
-        (supabase as any).from("task_dependencies").select("*").order("created_at"),
+        fetchAllRows<any>((from, to) =>
+          supabase.from("demandas").select("*")
+            .order("created_at", { ascending: false }).order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase.from("comentarios_demandas").select("*")
+            .order("created_at", { ascending: true }).order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase.from("anexos_demandas").select("*")
+            .order("created_at", { ascending: true }).order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase.from("historico_demandas").select("*")
+            .order("created_at", { ascending: false }).order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows<any>((from, to) =>
+          (supabase as any).from("task_dependencies").select("*")
+            .order("created_at", { ascending: true }).order("id", { ascending: true })
+            .range(from, to),
+        ),
       ]);
 
       if (d.error) console.error("Erro ao carregar demandas:", d.error);

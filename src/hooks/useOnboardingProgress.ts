@@ -5,6 +5,7 @@
  */
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import type { Cliente } from "@/store/crm";
 import type { Demanda } from "@/store/demandas";
 import type { CardPai, CardPaiEtapa } from "@/store/cardPai";
@@ -69,9 +70,18 @@ export function useOnboardingAgregado(clientes: Cliente[], regras: AtivacaoRegra
     }
     setLoading(true);
     try {
+      // Paginado: o conjunto de demandas dos clientes ultrapassa 1.000 linhas.
       const [{ data: dms }, { data: cps }] = await Promise.all([
-        supabase.from("demandas").select("*").in("cliente_id", ids),
-        supabase.from("card_pai").select("*").in("cliente_id", ids),
+        fetchAllRows<any>((from, to) =>
+          supabase.from("demandas").select("*").in("cliente_id", ids)
+            .order("created_at", { ascending: false }).order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase.from("card_pai").select("*").in("cliente_id", ids)
+            .order("created_at", { ascending: false }).order("id", { ascending: true })
+            .range(from, to),
+        ),
       ]);
       const cardIds = (cps ?? []).map((c: any) => c.id);
       let eps: any[] = [];
