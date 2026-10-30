@@ -573,31 +573,26 @@ export const useCRM = create<State>()((set, get) => ({
       if (!get().heavyDataLoading) {
         set({ heavyDataLoading: true });
         
-        const fetchAll = async (
-          table: "cards" | "posts" | "comentarios",
-          orderBy?: { column: string; ascending?: boolean },
-        ): Promise<{ data: any[]; error: any }> => {
-          const PAGE = 1000;
-          const all: any[] = [];
-          let from = 0;
-          while (true) {
-            let q = supabase.from(table).select("*").range(from, from + PAGE - 1);
-            if (orderBy) q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
-            const { data, error } = await q;
-            if (error) return { data: all, error };
-            const rows = data ?? [];
-            all.push(...rows);
-            if (rows.length < PAGE) break;
-            from += PAGE;
-          }
-          return { data: all, error: null };
-        };
+        // Paginação via helper compartilhado, com desempate por `id` para
+        // garantir ordenação estável entre páginas (posicao/created_at repetem).
+        const fetchAll = (
+          table: "cards" | "posts" | "comentarios" | "alertas",
+          orderBy: { column: string; ascending?: boolean },
+        ) =>
+          fetchAllRows<any>((from, to) =>
+            supabase
+              .from(table)
+              .select("*")
+              .order(orderBy.column, { ascending: orderBy.ascending ?? true })
+              .order("id", { ascending: true })
+              .range(from, to),
+          );
 
         const [cardsRes, postsRes, comentariosRes, alertasRes] = await Promise.all([
           fetchAll("cards", { column: "posicao", ascending: true }),
-          fetchAll("posts"),
+          fetchAll("posts", { column: "created_at", ascending: true }),
           fetchAll("comentarios", { column: "created_at", ascending: true }),
-          supabase.from("alertas").select("*").order("created_at", { ascending: false }),
+          fetchAll("alertas", { column: "created_at", ascending: false }),
         ]);
 
         const comentarios = (comentariosRes.data ?? []).map(mapComentario);
